@@ -1,0 +1,46 @@
+# EPUB/PDF to Audiobook Stack
+# - Kokoro-FastAPI: TTS engine at http://khpi5:8880
+# - Web UI: Upload and convert at http://khpi5:8881
+
+services:
+  kokoro-tts:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    container_name: kokoro-tts
+    ports:
+      - "8880:8880"
+    restart: unless-stopped
+    volumes:
+      - kokoro-cache:/app/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8880/v1/audio/voices"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  webapp:
+    build: ./webapp
+    container_name: epub-to-audiobook-ui
+    ports:
+      - "8881:8881"
+    restart: unless-stopped
+    environment:
+      - KOKORO_URL=http://kokoro-tts:8880/v1
+      - UPLOAD_DIR=/data/uploads
+      - OUTPUT_DIR=/data/audiobooks
+      - PREVIEWS_DIR=/data/previews
+      - HOST_STACK_DIR=/home/dave/stacks/epub-to-audiobook
+      - AUDIOBOOKSHELF_DIR=/opt/stacks/audiobookshelf/audiobooks
+    volumes:
+      # Use bind mounts so paths are predictable for spawned containers
+      - ./data/uploads:/data/uploads
+      - ./data/audiobooks:/data/audiobooks
+      - ./data/previews:/data/previews
+      - /var/run/docker.sock:/var/run/docker.sock
+      # SSH key for rsync to docker-vm
+      - /home/dave/.ssh:/root/.ssh:ro
+    depends_on:
+      kokoro-tts:
+        condition: service_healthy
+
+volumes:
+  kokoro-cache:
