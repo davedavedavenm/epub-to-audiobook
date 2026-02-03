@@ -1,0 +1,70 @@
+# EPUB/PDF to Audiobook Stack
+# - Kokoro-FastAPI: TTS engine at http://localhost:8880
+# - Piper TTS: Fast local TTS at http://localhost:5000 (optional)
+# - Web UI: Upload and convert at http://localhost:8881
+
+services:
+  kokoro-tts:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    container_name: kokoro-tts
+    ports:
+      - "8880:8880"
+    restart: unless-stopped
+    volumes:
+      - kokoro-cache:/app/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8880/v1/audio/voices"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Piper TTS with OpenAI-compatible API
+  # Uses openedai-speech as a wrapper for Piper
+  piper-tts:
+    image: ghcr.io/matatonic/openedai-speech:latest
+    container_name: piper-tts
+    ports:
+      - "5000:8000"
+    restart: unless-stopped
+    environment:
+      - TTS_HOME=/data
+      - HF_HOME=/data
+    volumes:
+      - piper-data:/data
+    profiles:
+      - piper  # Only start with: docker compose --profile piper up
+
+  webapp:
+    build: ./webapp
+    container_name: epub-to-audiobook-ui
+    extra_hosts:
+      - "docker-vm:192.168.1.113"
+    ports:
+      - "8881:8881"
+    restart: unless-stopped
+    environment:
+      - KOKORO_URL=http://kokoro-tts:8880/v1
+      - PIPER_URL=http://piper-tts:8000/v1
+      - UPLOAD_DIR=/data/uploads
+      - OUTPUT_DIR=/data/audiobooks
+      - PREVIEWS_DIR=/data/previews
+      - DB_PATH=/data/jobs.db
+      - HOST_STACK_DIR=/home/dave/stacks/epub-to-audiobook
+      - AUDIOBOOKSHELF_DIR=/opt/stacks/audiobookshelf/audiobooks
+    volumes:
+      # Use bind mounts so paths are predictable for spawned containers
+      - ./data/uploads:/data/uploads
+      - ./data/audiobooks:/data/audiobooks
+      - ./data/previews:/data/previews
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      # SSH key for rsync to docker-vm
+      - ./ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
+      - ./ssh-keys/config:/root/.ssh/config:ro
+    depends_on:
+      kokoro-tts:
+        condition: service_healthy
+
+volumes:
+  kokoro-cache:
+  piper-data:

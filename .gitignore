@@ -1,0 +1,22 @@
+# Data directories (contain user files)
+data/uploads/
+data/audiobooks/
+data/previews/
+data/*.db
+
+# SSH keys (sensitive)
+ssh-keys/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
