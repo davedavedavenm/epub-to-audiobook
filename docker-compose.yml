@@ -51,7 +51,10 @@ services:
       - DB_PATH=/data/jobs.db
       - HOST_STACK_DIR=/home/dave/stacks/epub-to-audiobook
       - AUDIOBOOKSHELF_DIR=/opt/stacks/audiobookshelf/audiobooks
-      - LIBRARY_DIR=/data/library
+      - LIBRARY_DIR=/mnt/openbooks
+      - EVOLUTION_API_URL=http://192.168.1.172:8084
+      - EVOLUTION_API_KEY=eb0fce1a53c497206310701517ef98c9139c723104670b52496417651ab1f983
+      - DEFAULT_WHATSAPP_NUMBER=27763156632
     volumes:
       # Use bind mounts so paths are predictable for spawned containers
       - ./data/uploads:/data/uploads
@@ -63,7 +66,7 @@ services:
       - ./ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
       - ./ssh-keys/config:/root/.ssh/config:ro
       # OpenBooks library for browsing available EPUBs
-      - ./data/library:/data/library:ro
+      - /mnt/openbooks:/mnt/openbooks:ro
     depends_on:
       kokoro-tts:
         condition: service_healthy
