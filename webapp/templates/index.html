@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPUB/PDF to Audiobook</title>
+    <title>EPUB to Audiobook</title>
     <style>
         :root {
             /* Midnight Theme (default) */
@@ -90,643 +90,1457 @@
         * {
             box-sizing: border-box;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
-            transition: background 0.3s, color 0.3s;
+            transition: background 0.2s ease, color 0.2s ease;
         }
-        .header {
+
+        /* ============ Header ============ */
+        .app-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            height: 60px;
         }
-        h1 {
+
+        .logo {
+            font-size: 1.4em;
+            font-weight: 700;
             color: var(--accent);
-            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+
+        .logo-icon {
+            font-size: 1.2em;
+        }
+
         .theme-selector {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
         }
-        .theme-selector label {
-            font-size: 0.85em;
-            color: var(--text-secondary);
-        }
+
         .theme-btn {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             border: 2px solid transparent;
             cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s ease, border-color 0.2s ease;
         }
+
         .theme-btn:hover {
             transform: scale(1.15);
         }
+
         .theme-btn.active {
             border-color: var(--text-primary);
         }
+
         .theme-btn[data-theme="midnight"] { background: linear-gradient(135deg, #00d4ff, #16213e); }
         .theme-btn[data-theme="charcoal"] { background: linear-gradient(135deg, #bb86fc, #1e1e1e); }
         .theme-btn[data-theme="forest"] { background: linear-gradient(135deg, #4ade80, #132713); }
         .theme-btn[data-theme="crimson"] { background: linear-gradient(135deg, #f87171, #2d1515); }
         .theme-btn[data-theme="purple"] { background: linear-gradient(135deg, #c084fc, #1e1029); }
         .theme-btn[data-theme="ocean"] { background: linear-gradient(135deg, #38bdf8, #0f2942); }
-        .subtitle {
-            text-align: center;
-            color: var(--text-secondary);
-            margin-bottom: 30px;
+
+        /* ============ Navigation Tabs ============ */
+        .nav-tabs {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
         }
+
+        .tabs-container {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 6px;
+            margin: 16px 0;
+            width: fit-content;
+        }
+
+        .nav-tab {
+            padding: 10px 24px;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-element);
+        }
+
+        .nav-tab.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .nav-tab .badge {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .nav-tab.active .badge {
+            background: var(--bg-primary);
+            color: var(--accent);
+        }
+
+        /* ============ Main Content ============ */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px 40px;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============ Cards ============ */
         .card {
             background: var(--bg-card);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 24px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             border: 1px solid var(--border);
-            transition: background 0.3s, border-color 0.3s;
+            transition: all 0.2s ease;
         }
-        h2 {
-            margin-top: 0;
-            color: var(--accent);
-            font-size: 1.2em;
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.1);
         }
-        .upload-area {
-            border: 2px dashed var(--border);
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .upload-area:hover, .upload-area.dragover {
-            border-color: var(--accent);
-            background: rgba(0, 0, 0, 0.2);
-        }
-        .upload-area.has-file {
-            border-color: var(--success);
-            background: rgba(74, 222, 128, 0.1);
-        }
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-        #file-input {
-            display: none;
-        }
-        .file-name {
-            color: var(--success);
-            font-weight: 500;
-            margin-top: 10px;
-        }
-        .accent-group {
-            margin-bottom: 16px;
-        }
-        .accent-label {
-            font-size: 0.85em;
-            color: var(--accent);
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .voice-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 10px;
-        }
-        .voice-card {
-            background: var(--bg-element);
-            border-radius: 8px;
-            padding: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-        .voice-card:hover {
-            background: var(--bg-hover);
-        }
-        .voice-card.selected {
-            border-color: var(--accent);
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .voice-name {
-            font-weight: 600;
-            font-size: 1em;
-            margin-bottom: 2px;
-        }
-        .voice-meta {
-            color: var(--text-secondary);
-            font-size: 0.8em;
-        }
-        .voice-preview {
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .preview-btn {
-            background: var(--accent);
-            border: none;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--bg-primary);
-            font-size: 12px;
-            transition: background 0.2s;
-        }
-        .preview-btn:hover {
-            background: var(--accent-hover);
-        }
-        .preview-btn.loading {
-            opacity: 0.5;
-            cursor: wait;
-        }
-        .convert-btn {
-            width: 100%;
-            padding: 16px;
-            font-size: 1.1em;
-            background: var(--accent);
-            border: none;
-            border-radius: 8px;
-            color: var(--bg-primary);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .convert-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px var(--accent-glow);
-        }
-        .convert-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .jobs-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .job-item {
-            background: var(--bg-element);
-            border-radius: 8px;
-            padding: 16px;
-        }
-        .job-header {
+
+        .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 16px;
         }
-        .job-title {
+
+        .card-title {
+            font-size: 1.1em;
             font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
         }
-        .job-status {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 500;
-        }
-        .status-queued { background: var(--warning); color: #000; }
-        .status-converting { background: #3b82f6; color: #fff; }
-        .status-completed { background: var(--success); color: #000; }
-        .status-failed { background: var(--error); color: #fff; }
-        .job-meta {
+
+        .card-subtitle {
             color: var(--text-secondary);
             font-size: 0.85em;
+            margin-top: 4px;
         }
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #fff;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
+
+        /* ============ Convert Tab Layout ============ */
+        .convert-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+
+        @media (max-width: 900px) {
+            .convert-grid {
+                grid-template-columns: 1fr;
+            }
         }
-        .hidden {
-            display: none !important;
+
+        .convert-left {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
-        /* Options section styles */
+
+        .convert-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ============ Upload Area ============ */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .upload-area.has-file {
+            border-color: var(--success);
+            background: rgba(74, 222, 128, 0.08);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .upload-formats {
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        .file-name {
+            color: var(--success);
+            font-weight: 600;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .file-badge {
+            background: var(--success);
+            color: var(--bg-primary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* ============ Options Panel ============ */
+        .options-grid {
+            display: grid;
+            gap: 16px;
+        }
+
         .option-group {
-            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
+
         .option-label {
-            display: block;
-            font-size: 0.9em;
-            color: var(--text-primary);
-            margin-bottom: 8px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
             font-weight: 500;
         }
+
         .option-select {
             width: 100%;
             padding: 10px 12px;
             background: var(--bg-element);
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-primary);
-            font-size: 0.95em;
+            font-size: 0.9em;
             cursor: pointer;
+            transition: border-color 0.2s ease;
         }
+
         .option-select:focus {
             outline: none;
             border-color: var(--accent);
         }
-        .option-hint {
-            font-size: 0.8em;
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
+
         .chapter-range {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         .chapter-input {
             flex: 1;
             padding: 10px 12px;
             background: var(--bg-element);
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-primary);
-            font-size: 0.95em;
+            font-size: 0.9em;
+            text-align: center;
         }
+
         .chapter-input:focus {
             outline: none;
             border-color: var(--accent);
         }
+
         .range-separator {
             color: var(--text-secondary);
+            font-size: 0.9em;
         }
+
+        .checkbox-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
         .checkbox-label {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             cursor: pointer;
-            font-size: 0.95em;
+            font-size: 0.9em;
+            color: var(--text-primary);
         }
+
         .checkbox-label input[type="checkbox"] {
             width: 18px;
             height: 18px;
             accent-color: var(--accent);
             cursor: pointer;
         }
-        /* Progress bar styles */
-        .progress-bar {
-            height: 6px;
-            background: var(--bg-primary);
-            border-radius: 3px;
-            overflow: hidden;
-            margin: 10px 0;
+
+        .whatsapp-input-container {
+            margin-top: 8px;
+            display: none;
         }
-        .progress-fill {
-            height: 100%;
-            background: var(--accent);
-            transition: width 0.3s ease;
-            border-radius: 3px;
+
+        .whatsapp-input-container.visible {
+            display: block;
         }
-        .progress-info {
-            font-size: 0.85em;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-        /* Job action buttons */
-        .job-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border);
-        }
-        .job-btn {
-            padding: 6px 14px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85em;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .job-btn:hover {
-            transform: translateY(-1px);
-        }
-        .job-btn-primary {
-            background: var(--accent);
-            color: var(--bg-primary);
-        }
-        .job-btn-primary:hover {
-            box-shadow: 0 2px 10px var(--accent-glow);
-        }
-        .job-btn-secondary {
-            background: var(--bg-hover);
+
+        .whatsapp-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
             color: var(--text-primary);
+            font-size: 0.9em;
         }
-        .job-btn-danger {
-            background: var(--error);
-            color: #fff;
+
+        .whatsapp-input:focus {
+            outline: none;
+            border-color: var(--accent);
         }
-        .job-btn-success {
-            background: var(--success);
-            color: #000;
-        }
-        .status-cancelled { background: #6b7280; color: #fff; }
-        .status-converting-PDF { background: #8b5cf6; color: #fff; }
-        .status-converting-to-audio { background: #3b82f6; color: #fff; }
-        /* Engine tabs */
+
+        /* ============ Engine Tabs ============ */
         .engine-tabs {
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 16px;
         }
+
         .engine-tab {
             flex: 1;
             padding: 12px 16px;
             background: var(--bg-element);
             border: 2px solid transparent;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             text-align: left;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
+
         .engine-tab:hover {
             background: var(--bg-hover);
         }
+
         .engine-tab.active {
             border-color: var(--accent);
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 212, 255, 0.1);
         }
+
         .engine-name {
             display: block;
             font-weight: 600;
             color: var(--text-primary);
-            margin-bottom: 2px;
+            font-size: 0.95em;
         }
+
         .engine-desc {
             display: block;
             font-size: 0.8em;
             color: var(--text-secondary);
+            margin-top: 2px;
         }
-        .engine-voices {
-            transition: opacity 0.2s;
-        }
-        /* History section */
-        .section-tabs {
-            display: flex;
-            gap: 8px;
+
+        /* ============ Voice Search ============ */
+        .voice-search-container {
             margin-bottom: 16px;
         }
-        .section-tab {
-            padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.2s;
-        }
-        .section-tab:hover {
+
+        .voice-search {
+            width: 100%;
+            padding: 10px 14px;
+            padding-left: 36px;
             background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+            transition: border-color 0.2s ease;
         }
-        .section-tab.active {
-            background: var(--accent);
-            color: var(--bg-primary);
+
+        .voice-search:focus {
+            outline: none;
             border-color: var(--accent);
         }
-        .history-item {
+
+        .voice-search-wrapper {
+            position: relative;
+        }
+
+        .voice-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        /* ============ Voice Pills ============ */
+        .voice-section {
+            margin-bottom: 16px;
+        }
+
+        .voice-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .voice-section-label {
+            font-size: 0.8em;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .voice-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .voice-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--bg-element);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .voice-pill:hover {
+            background: var(--bg-hover);
+        }
+
+        .voice-pill.selected {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.15);
+        }
+
+        .voice-pill.hidden {
+            display: none;
+        }
+
+        .voice-pill-name {
+            font-weight: 500;
+            font-size: 0.9em;
+            color: var(--text-primary);
+        }
+
+        .voice-pill-meta {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        .voice-pill .preview-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: none;
+            color: var(--bg-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .voice-pill .preview-btn:hover {
+            transform: scale(1.1);
+            background: var(--accent-hover);
+        }
+
+        .voice-pill .preview-btn.loading {
+            opacity: 0.5;
+            cursor: wait;
+        }
+
+        .engine-voices {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .engine-voices::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .engine-voices::-webkit-scrollbar-track {
+            background: var(--bg-element);
+            border-radius: 3px;
+        }
+
+        .engine-voices::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .piper-note {
+            margin-top: 16px;
+            padding: 12px;
             background: var(--bg-element);
             border-radius: 8px;
-            padding: 14px;
-            margin-bottom: 10px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .piper-note code {
+            background: var(--bg-primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        /* ============ Convert Button ============ */
+        .convert-btn-container {
+            margin-top: 20px;
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 16px 24px;
+            font-size: 1.05em;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            border: none;
+            border-radius: 12px;
+            color: var(--bg-primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ============ Queue Tab ============ */
+        .queue-section {
+            margin-bottom: 24px;
+        }
+
+        .queue-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .queue-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .queue-count {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .active-job-card {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-element));
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .active-job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .active-job-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: var(--text-primary);
+        }
+
+        .active-job-chapter {
+            color: var(--accent);
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .active-job-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .active-job-voice {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .waiting-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .waiting-item {
+            background: var(--bg-element);
+            border-radius: 10px;
+            padding: 12px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .history-info {
-            flex: 1;
+
+        .waiting-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .history-title {
+
+        .waiting-item-number {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
             font-weight: 600;
-            margin-bottom: 4px;
         }
-        .history-meta {
-            font-size: 0.85em;
+
+        .waiting-item-title {
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .no-jobs-message {
+            text-align: center;
+            padding: 48px 24px;
             color: var(--text-secondary);
         }
-        .history-actions {
+
+        .no-jobs-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* ============ Job Actions ============ */
+        .job-actions {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
+        }
+
+        .job-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .job-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .job-btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .job-btn-primary:hover {
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .job-btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .job-btn-danger {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .job-btn-success {
+            background: var(--success);
+            color: #000;
+        }
+
+        /* ============ Library Tab ============ */
+        .library-header {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .library-search {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+        }
+
+        .library-search:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .library-stats {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .library-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .library-item {
+            background: var(--bg-element);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .library-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .library-item-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .library-item-icon {
+            font-size: 1.5em;
+        }
+
+        .library-item-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .library-item-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .library-item-meta {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 12px;
+            margin-top: 2px;
+        }
+
+        .library-item-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-badge.done {
+            background: var(--success);
+            color: #000;
+        }
+
+        .status-badge.converting {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .library-convert-btn {
+            padding: 8px 16px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-primary);
+            font-weight: 500;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .library-convert-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .library-convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ============ History Tab ============ */
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .history-search {
+            flex: 1;
+            max-width: 300px;
+            padding: 10px 14px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+        }
+
+        .history-search:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .history-clear-btn {
+            padding: 8px 14px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-clear-btn:hover {
+            background: var(--error);
+            color: #fff;
+            border-color: var(--error);
+        }
+
+        .history-group {
+            margin-bottom: 24px;
+        }
+
+        .history-group-title {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-item {
+            background: var(--bg-element);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-item-title {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-item-meta {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .history-item-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .history-action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 8px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .history-action-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .history-action-btn.danger:hover {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .history-action-btn.success:hover {
+            background: var(--success);
+            color: #000;
+        }
+
+        /* ============ Status Tags ============ */
+        .status-tag {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-queued { background: var(--warning); color: #000; }
+        .status-converting { background: #3b82f6; color: #fff; }
+        .status-completed { background: var(--success); color: #000; }
+        .status-failed { background: var(--error); color: #fff; }
+        .status-cancelled { background: #6b7280; color: #fff; }
+
+        /* ============ Spinner ============ */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ============ Hidden ============ */
+        .hidden {
+            display: none !important;
+        }
+
+        /* ============ Audio Player ============ */
+        #preview-audio {
+            display: none;
+        }
+
+        /* ============ Responsive ============ */
+        @media (max-width: 600px) {
+            .header-content {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 12px 0;
+                gap: 12px;
+            }
+
+            .tabs-container {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .nav-tab {
+                padding: 8px 12px;
+                font-size: 0.85em;
+            }
+
+            .nav-tab span:not(.badge) {
+                display: none;
+            }
+
+            .library-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .history-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .history-search {
+                max-width: none;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>EPUB/PDF to Audiobook</h1>
-        <div class="theme-selector">
-            <label>Theme:</label>
-            <button class="theme-btn active" data-theme="midnight" title="Midnight"></button>
-            <button class="theme-btn" data-theme="charcoal" title="Charcoal"></button>
-            <button class="theme-btn" data-theme="forest" title="Forest"></button>
-            <button class="theme-btn" data-theme="crimson" title="Crimson"></button>
-            <button class="theme-btn" data-theme="purple" title="Purple Haze"></button>
-            <button class="theme-btn" data-theme="ocean" title="Ocean"></button>
-        </div>
-    </div>
-    <p class="subtitle">Convert your ebooks to audiobooks using AI voices</p>
-
-    <form id="convert-form">
-        <div class="card">
-            <h2>1. Upload EPUB or PDF</h2>
-            <div class="upload-area" id="upload-area">
-                <div class="upload-icon">📖</div>
-                <div>Drop your EPUB or PDF here or click to browse</div>
-                <div class="file-name hidden" id="file-name"></div>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🎧</span>
+                <span>Audiobook Studio</span>
             </div>
-            <input type="file" id="file-input" accept=".epub,.pdf">
-        </div>
-
-        <div class="card">
-            <h2>2. Choose a Voice</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 16px;">Select TTS engine, then click play to preview voices</p>
-
-            <!-- TTS Engine Tabs -->
-            <div class="engine-tabs">
-                <button type="button" class="engine-tab active" data-engine="kokoro">
-                    <span class="engine-name">Kokoro</span>
-                    <span class="engine-desc">High quality, voice mixing</span>
-                </button>
-                <button type="button" class="engine-tab" data-engine="piper">
-                    <span class="engine-name">Piper</span>
-                    <span class="engine-desc">Fast, lightweight</span>
-                </button>
-            </div>
-
-            <!-- Kokoro Voices -->
-            <div class="engine-voices" id="kokoro-voices">
-                <div class="accent-group">
-                    <div class="accent-label">British</div>
-                    <div class="voice-grid">
-                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'kokoro' %}
-                        <div class="voice-card" data-voice="{{ voice_id }}" data-engine="kokoro">
-                            <div class="voice-name">{{ voice.name }}</div>
-                            <div class="voice-meta">{{ voice.gender }}</div>
-                            <div class="voice-preview">
-                                <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="accent-group">
-                    <div class="accent-label">European</div>
-                    <div class="voice-grid">
-                        {% for voice_id, voice in voices.items() if voice.accent == 'European' and voice.engine == 'kokoro' %}
-                        <div class="voice-card" data-voice="{{ voice_id }}" data-engine="kokoro">
-                            <div class="voice-name">{{ voice.name }}</div>
-                            <div class="voice-meta">{{ voice.gender }}</div>
-                            <div class="voice-preview">
-                                <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="accent-group">
-                    <div class="accent-label">American</div>
-                    <div class="voice-grid">
-                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'kokoro' %}
-                        <div class="voice-card" data-voice="{{ voice_id }}" data-engine="kokoro">
-                            <div class="voice-name">{{ voice.name }}</div>
-                            <div class="voice-meta">{{ voice.gender }}</div>
-                            <div class="voice-preview">
-                                <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Piper Voices -->
-            <div class="engine-voices hidden" id="piper-voices">
-                <div class="accent-group">
-                    <div class="accent-label">British</div>
-                    <div class="voice-grid">
-                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'piper' %}
-                        <div class="voice-card" data-voice="{{ voice_id }}" data-engine="piper">
-                            <div class="voice-name">{{ voice.name }}</div>
-                            <div class="voice-meta">{{ voice.gender }}</div>
-                            <div class="voice-preview">
-                                <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="accent-group">
-                    <div class="accent-label">American</div>
-                    <div class="voice-grid">
-                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'piper' %}
-                        <div class="voice-card" data-voice="{{ voice_id }}" data-engine="piper">
-                            <div class="voice-name">{{ voice.name }}</div>
-                            <div class="voice-meta">{{ voice.gender }}</div>
-                            <div class="voice-preview">
-                                <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="piper-note" style="margin-top: 16px; padding: 12px; background: var(--bg-element); border-radius: 8px; font-size: 0.9em;">
-                    <strong>Note:</strong> Piper requires <code>docker compose --profile piper up</code>. Uses OpenAI-compatible voices via openedai-speech.
-                </div>
-            </div>
-
-            <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
-            <input type="hidden" id="selected-engine" name="engine" value="kokoro">
-        </div>
-
-        <div class="card">
-            <h2>3. Options (Optional)</h2>
-
-            <div class="option-group">
-                <label class="option-label">Secondary Voice (for mixing):</label>
-                <select id="voice2-select" class="option-select">
-                    <option value="">None (single voice)</option>
-                    {% for voice_id, voice in voices.items() %}
-                    <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
-                    {% endfor %}
-                </select>
-                <div class="option-hint">Kokoro can blend two voices together for a unique sound</div>
-            </div>
-
-            <div class="option-group">
-                <label class="option-label">Chapter Range:</label>
-                <div class="chapter-range">
-                    <input type="number" id="start-chapter" class="chapter-input" placeholder="Start" min="1">
-                    <span class="range-separator">to</span>
-                    <input type="number" id="end-chapter" class="chapter-input" placeholder="End" min="1">
-                </div>
-                <div class="option-hint">Leave empty to convert entire book</div>
-            </div>
-
-            <div class="option-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="notify-telegram">
-                    <span>Notify me on Telegram when done</span>
-                </label>
+            <div class="theme-selector">
+                <button class="theme-btn active" data-theme="midnight" title="Midnight"></button>
+                <button class="theme-btn" data-theme="charcoal" title="Charcoal"></button>
+                <button class="theme-btn" data-theme="forest" title="Forest"></button>
+                <button class="theme-btn" data-theme="crimson" title="Crimson"></button>
+                <button class="theme-btn" data-theme="purple" title="Purple Haze"></button>
+                <button class="theme-btn" data-theme="ocean" title="Ocean"></button>
             </div>
         </div>
+    </header>
 
-        <div class="card">
-            <h2>4. Convert</h2>
-            <button type="submit" class="convert-btn" id="convert-btn" disabled>
-                Select a file and voice to start
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <div class="tabs-container">
+            <button class="nav-tab active" data-tab="convert">
+                <span>📝</span> <span>Convert</span>
+            </button>
+            <button class="nav-tab" data-tab="queue">
+                <span>⏳</span> <span>Queue</span>
+                <span class="badge hidden" id="queue-badge">0</span>
+            </button>
+            <button class="nav-tab" data-tab="library">
+                <span>📚</span> <span>Library</span>
+            </button>
+            <button class="nav-tab" data-tab="history">
+                <span>📋</span> <span>History</span>
             </button>
         </div>
-    </form>
+    </nav>
 
-    <div class="card" id="jobs-section">
-        <h2>Conversions</h2>
-        <div class="section-tabs">
-            <button class="section-tab active" data-section="active">Active Jobs</button>
-            <button class="section-tab" data-section="history">History</button>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Convert Tab -->
+        <div class="tab-panel active" id="tab-convert">
+            <form id="convert-form">
+                <div class="convert-grid">
+                    <!-- Left Column -->
+                    <div class="convert-left">
+                        <!-- Upload Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Upload File</h2>
+                                    <p class="card-subtitle">Drag & drop or click to browse</p>
+                                </div>
+                            </div>
+                            <div class="upload-area" id="upload-area">
+                                <div class="upload-icon">📖</div>
+                                <div class="upload-text">Drop your ebook here</div>
+                                <div class="upload-formats">EPUB, PDF, MOBI, AZW3, FB2, TXT, HTML, DOCX</div>
+                                <div class="file-name hidden" id="file-name"></div>
+                            </div>
+                            <input type="file" id="file-input" accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.html,.htm,.docx">
+                        </div>
+
+                        <!-- Options Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Options</h2>
+                            </div>
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <label class="option-label">Voice Mix (Kokoro only)</label>
+                                    <select id="voice2-select" class="option-select">
+                                        <option value="">None (single voice)</option>
+                                        {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
+                                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Chapter Range</label>
+                                    <div class="chapter-range">
+                                        <input type="number" id="start-chapter" class="chapter-input" placeholder="Start" min="1">
+                                        <span class="range-separator">to</span>
+                                        <input type="number" id="end-chapter" class="chapter-input" placeholder="End" min="1">
+                                    </div>
+                                </div>
+                                <div class="option-group">
+                                    <div class="checkbox-row">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="notify-whatsapp">
+                                            <span>WhatsApp alert</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="notify-telegram">
+                                            <span>Telegram alert</span>
+                                        </label>
+                                    </div>
+                                    <div class="whatsapp-input-container" id="whatsapp-container">
+                                        <input type="tel" id="whatsapp-number" class="whatsapp-input" placeholder="+44 7xxx xxx xxx">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="convert-right">
+                        <!-- Voice Selection Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Select Voice</h2>
+                                    <p class="card-subtitle">Click to select, play to preview</p>
+                                </div>
+                            </div>
+
+                            <!-- Engine Tabs -->
+                            <div class="engine-tabs">
+                                <button type="button" class="engine-tab active" data-engine="kokoro">
+                                    <span class="engine-name">Kokoro</span>
+                                    <span class="engine-desc">High quality, voice mixing</span>
+                                </button>
+                                <button type="button" class="engine-tab" data-engine="piper">
+                                    <span class="engine-name">Piper</span>
+                                    <span class="engine-desc">Fast, lightweight</span>
+                                </button>
+                            </div>
+
+                            <!-- Voice Search -->
+                            <div class="voice-search-container">
+                                <div class="voice-search-wrapper">
+                                    <span class="voice-search-icon">🔍</span>
+                                    <input type="text" class="voice-search" id="voice-search" placeholder="Search voices...">
+                                </div>
+                            </div>
+
+                            <!-- Kokoro Voices -->
+                            <div class="engine-voices" id="kokoro-voices">
+                                <div class="voice-section">
+                                    <div class="voice-section-label">British</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'kokoro' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">American</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'kokoro' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">European</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'European' and voice.engine == 'kokoro' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Piper Voices -->
+                            <div class="engine-voices hidden" id="piper-voices">
+                                <div class="voice-section">
+                                    <div class="voice-section-label">British</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'piper' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="piper" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">American</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'piper' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="piper" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="piper-note">
+                                    <strong>Note:</strong> Piper requires <code>docker compose --profile piper up</code>
+                                </div>
+                            </div>
+
+                            <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
+                            <input type="hidden" id="selected-engine" name="engine" value="kokoro">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Convert Button -->
+                <div class="convert-btn-container">
+                    <button type="submit" class="convert-btn" id="convert-btn" disabled>
+                        <span>🎧</span> Select a file and voice to start
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <div id="active-jobs-section">
-            <div class="jobs-list" id="jobs-list">
-                <div style="color: var(--text-secondary);">No active conversions</div>
+        <!-- Queue Tab -->
+        <div class="tab-panel" id="tab-queue">
+            <div id="queue-content">
+                <div class="no-jobs-message">
+                    <div class="no-jobs-icon">⏳</div>
+                    <div>No active conversions</div>
+                </div>
             </div>
         </div>
 
-        <div id="history-section" class="hidden">
-            <div class="jobs-list" id="history-list">
-                <div style="color: var(--text-secondary);">Loading history...</div>
+        <!-- Library Tab -->
+        <div class="tab-panel" id="tab-library">
+            <div class="card">
+                <div class="library-header">
+                    <select id="library-voice-select" class="option-select" style="width: auto; min-width: 150px;">
+                        <option value="bf_emma">Emma (British)</option>
+                        {% for voice_id, voice in voices.items() %}
+                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
+                        {% endfor %}
+                    </select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="library-notify-whatsapp">
+                        <span>WhatsApp</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="library-notify-telegram">
+                        <span>Telegram</span>
+                    </label>
+                    <input type="text" class="library-search" id="library-search" placeholder="🔍 Filter books...">
+                    <span class="library-stats" id="library-stats">Loading...</span>
+                </div>
+                <div class="library-grid" id="library-grid">
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">📚</div>
+                        <div>Loading library...</div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <audio id="preview-audio" style="display: none;"></audio>
+        <!-- History Tab -->
+        <div class="tab-panel" id="tab-history">
+            <div class="card">
+                <div class="history-header">
+                    <input type="text" class="history-search" id="history-search" placeholder="🔍 Search history...">
+                    <button class="history-clear-btn" id="clear-history-btn">Clear All</button>
+                </div>
+                <div id="history-content">
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">📋</div>
+                        <div>Loading history...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <audio id="preview-audio"></audio>
 
     <script>
-        // Theme handling
+        // ============ State ============
+        let selectedFile = null;
+        let selectedVoice = 'bf_emma';
+        let selectedEngine = 'kokoro';
+        let currentPreviewBtn = null;
+        let libraryBooks = [];
+        let allJobs = [];
+
+        // ============ DOM Elements ============
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileName = document.getElementById('file-name');
+        const selectedVoiceInput = document.getElementById('selected-voice');
+        const selectedEngineInput = document.getElementById('selected-engine');
+        const convertBtn = document.getElementById('convert-btn');
+        const convertForm = document.getElementById('convert-form');
+        const previewAudio = document.getElementById('preview-audio');
+        const queueBadge = document.getElementById('queue-badge');
+
+        // ============ Theme Handling ============
         const savedTheme = localStorage.getItem('audiobook-theme') || 'midnight';
         document.documentElement.setAttribute('data-theme', savedTheme);
         document.querySelector(`.theme-btn[data-theme="${savedTheme}"]`)?.classList.add('active');
@@ -741,40 +1555,47 @@
             });
         });
 
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
-        const fileName = document.getElementById('file-name');
-        const selectedVoiceInput = document.getElementById('selected-voice');
-        const selectedEngineInput = document.getElementById('selected-engine');
-        const convertBtn = document.getElementById('convert-btn');
-        const convertForm = document.getElementById('convert-form');
-        const jobsList = document.getElementById('jobs-list');
-        const historyList = document.getElementById('history-list');
-        const previewAudio = document.getElementById('preview-audio');
+        // ============ Tab Navigation ============
+        const savedTab = localStorage.getItem('audiobook-tab') || 'convert';
 
-        let selectedFile = null;
-        let selectedVoice = 'bf_emma';
-        let selectedEngine = 'kokoro';
-        let currentPreviewBtn = null;
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
 
-        // Engine tab handling
+            document.querySelector(`.nav-tab[data-tab="${tabId}"]`)?.classList.add('active');
+            document.getElementById(`tab-${tabId}`)?.classList.add('active');
+
+            localStorage.setItem('audiobook-tab', tabId);
+
+            // Load data for specific tabs
+            if (tabId === 'queue') loadJobs();
+            if (tabId === 'library') loadLibrary();
+            if (tabId === 'history') loadHistory();
+        }
+
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        });
+
+        // Initialize saved tab
+        switchTab(savedTab);
+
+        // ============ Engine Tab Handling ============
         document.querySelectorAll('.engine-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 const engine = tab.dataset.engine;
                 selectedEngine = engine;
                 selectedEngineInput.value = engine;
 
-                // Update tab active state
                 document.querySelectorAll('.engine-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
 
-                // Show/hide voice sections
                 document.querySelectorAll('.engine-voices').forEach(v => v.classList.add('hidden'));
                 document.getElementById(`${engine}-voices`).classList.remove('hidden');
 
-                // Deselect current voice and select first voice of new engine
-                document.querySelectorAll('.voice-card').forEach(c => c.classList.remove('selected'));
-                const firstVoice = document.querySelector(`#${engine}-voices .voice-card`);
+                // Select first voice of new engine
+                document.querySelectorAll('.voice-pill').forEach(c => c.classList.remove('selected'));
+                const firstVoice = document.querySelector(`#${engine}-voices .voice-pill`);
                 if (firstVoice) {
                     firstVoice.classList.add('selected');
                     selectedVoice = firstVoice.dataset.voice;
@@ -784,27 +1605,23 @@
             });
         });
 
-        // Section tabs (Active/History)
-        document.querySelectorAll('.section-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const section = tab.dataset.section;
+        // ============ Voice Search ============
+        document.getElementById('voice-search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const currentEngine = selectedEngine;
 
-                // Update tab active state
-                document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                // Show/hide sections
-                document.getElementById('active-jobs-section').classList.toggle('hidden', section !== 'active');
-                document.getElementById('history-section').classList.toggle('hidden', section !== 'history');
-
-                // Load history when tab is clicked
-                if (section === 'history') {
-                    loadHistory();
-                }
+            document.querySelectorAll(`#${currentEngine}-voices .voice-pill`).forEach(pill => {
+                const name = pill.dataset.name.toLowerCase();
+                pill.classList.toggle('hidden', !name.includes(query));
             });
         });
 
-        // File upload
+        // ============ WhatsApp Toggle ============
+        document.getElementById('notify-whatsapp').addEventListener('change', (e) => {
+            document.getElementById('whatsapp-container').classList.toggle('visible', e.target.checked);
+        });
+
+        // ============ File Upload ============
         uploadArea.addEventListener('click', () => fileInput.click());
 
         uploadArea.addEventListener('dragover', (e) => {
@@ -821,10 +1638,7 @@
             uploadArea.classList.remove('dragover');
             const files = e.dataTransfer.files;
             if (files.length) {
-                const name = files[0].name.toLowerCase();
-                if (name.endsWith('.epub') || name.endsWith('.pdf')) {
-                    handleFile(files[0]);
-                }
+                handleFile(files[0]);
             }
         });
 
@@ -835,26 +1649,38 @@
         });
 
         function handleFile(file) {
+            const validExtensions = ['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+
+            if (!validExtensions.includes(ext)) {
+                alert('Unsupported file format. Please use: ' + validExtensions.join(', '));
+                return;
+            }
+
             selectedFile = file;
-            fileName.textContent = file.name;
+            const format = ext.toUpperCase().replace('.', '');
+            fileName.innerHTML = `<span class="file-badge">${format}</span> ${escapeHtml(file.name)}`;
             fileName.classList.remove('hidden');
             uploadArea.classList.add('has-file');
             updateConvertButton();
         }
 
-        // Voice selection
-        document.querySelectorAll('.voice-card').forEach(card => {
-            card.addEventListener('click', (e) => {
+        // ============ Voice Selection ============
+        document.querySelectorAll('.voice-pill').forEach(pill => {
+            pill.addEventListener('click', (e) => {
                 if (e.target.classList.contains('preview-btn')) return;
-                document.querySelectorAll('.voice-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                selectedVoice = card.dataset.voice;
+                document.querySelectorAll('.voice-pill').forEach(c => c.classList.remove('selected'));
+                pill.classList.add('selected');
+                selectedVoice = pill.dataset.voice;
                 selectedVoiceInput.value = selectedVoice;
                 updateConvertButton();
             });
         });
 
-        // Voice preview
+        // Select default voice
+        document.querySelector('[data-voice="bf_emma"]')?.classList.add('selected');
+
+        // ============ Voice Preview ============
         document.querySelectorAll('.preview-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -896,24 +1722,25 @@
             }
         });
 
-        // Select default voice
-        document.querySelector('[data-voice="bf_emma"]')?.classList.add('selected');
-
+        // ============ Convert Button ============
         function updateConvertButton() {
             if (selectedFile && selectedVoice) {
                 convertBtn.disabled = false;
-                const voiceName = document.querySelector(`[data-voice="${selectedVoice}"] .voice-name`)?.textContent || selectedVoice;
-                convertBtn.textContent = `Convert "${selectedFile.name}" with ${voiceName}`;
+                const voiceName = document.querySelector(`[data-voice="${selectedVoice}"] .voice-pill-name`)?.textContent || selectedVoice;
+                convertBtn.innerHTML = `<span>🎧</span> Convert "${escapeHtml(selectedFile.name.substring(0, 30))}" with ${voiceName}`;
+            } else {
+                convertBtn.disabled = true;
+                convertBtn.innerHTML = '<span>🎧</span> Select a file and voice to start';
             }
         }
 
-        // Form submission
+        // ============ Form Submission ============
         convertForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!selectedFile) return;
 
             convertBtn.disabled = true;
-            convertBtn.innerHTML = '<span class="spinner"></span>Starting conversion...';
+            convertBtn.innerHTML = '<span class="spinner"></span> Starting conversion...';
 
             const formData = new FormData();
             formData.append('file', selectedFile);
@@ -922,6 +1749,8 @@
             formData.append('start_chapter', document.getElementById('start-chapter').value);
             formData.append('end_chapter', document.getElementById('end-chapter').value);
             formData.append('notify_telegram', document.getElementById('notify-telegram').checked ? '1' : '');
+            formData.append('notify_whatsapp', document.getElementById('notify-whatsapp').checked ? '1' : '');
+            formData.append('whatsapp_number', document.getElementById('whatsapp-number').value);
 
             try {
                 const response = await fetch('/api/convert', {
@@ -939,26 +1768,324 @@
                     fileInput.value = '';
                     fileName.classList.add('hidden');
                     uploadArea.classList.remove('has-file');
-                    convertBtn.disabled = true;
-                    convertBtn.textContent = 'Select a file and voice to start';
-                    // Reset options
                     document.getElementById('voice2-select').value = '';
                     document.getElementById('start-chapter').value = '';
                     document.getElementById('end-chapter').value = '';
                     document.getElementById('notify-telegram').checked = false;
+                    document.getElementById('notify-whatsapp').checked = false;
+                    document.getElementById('whatsapp-container').classList.remove('visible');
 
-                    // Refresh jobs list
-                    loadJobs();
+                    // Switch to queue tab
+                    switchTab('queue');
                 }
             } catch (err) {
                 alert('Failed to start conversion: ' + err.message);
             }
 
             convertBtn.disabled = true;
-            convertBtn.textContent = 'Select a file and voice to start';
+            convertBtn.innerHTML = '<span>🎧</span> Select a file and voice to start';
         });
 
-        // Job action functions
+        // ============ Queue/Jobs Loading ============
+        async function loadJobs() {
+            try {
+                const response = await fetch('/api/jobs');
+                allJobs = await response.json();
+
+                const activeJobs = allJobs.filter(j =>
+                    j.status === 'queued' || j.status.includes('converting')
+                );
+                const waitingJobs = allJobs.filter(j => j.status === 'queued');
+                const convertingJob = allJobs.find(j => j.status.includes('converting'));
+
+                // Update badge
+                if (activeJobs.length > 0) {
+                    queueBadge.textContent = activeJobs.length;
+                    queueBadge.classList.remove('hidden');
+                } else {
+                    queueBadge.classList.add('hidden');
+                }
+
+                const queueContent = document.getElementById('queue-content');
+
+                if (activeJobs.length === 0) {
+                    queueContent.innerHTML = `
+                        <div class="no-jobs-message">
+                            <div class="no-jobs-icon">⏳</div>
+                            <div>No active conversions</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+
+                // Currently converting
+                if (convertingJob) {
+                    const progress = convertingJob.progress_percent || 0;
+                    const voiceInfo = convertingJob.voice2_name
+                        ? `${convertingJob.voice_name} + ${convertingJob.voice2_name}`
+                        : convertingJob.voice_name;
+
+                    html += `
+                        <div class="queue-section">
+                            <div class="queue-section-header">
+                                <span class="queue-section-title">Converting Now</span>
+                            </div>
+                            <div class="active-job-card">
+                                <div class="active-job-header">
+                                    <span class="active-job-title">${escapeHtml(convertingJob.book_name)}</span>
+                                    <span class="active-job-chapter">
+                                        ${convertingJob.current_chapter ? `Ch ${convertingJob.current_chapter}/${convertingJob.total_chapters || '?'}` : 'Starting...'}
+                                        (${progress}%)
+                                    </span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${progress}%"></div>
+                                </div>
+                                <div class="progress-info">
+                                    <span>${convertingJob.current_chapter_name || 'Processing...'}</span>
+                                    <span>${convertingJob.eta_minutes ? `ETA: ${convertingJob.eta_minutes} min` : ''}</span>
+                                </div>
+                                <div class="active-job-meta">
+                                    <span class="active-job-voice">Voice: ${voiceInfo}</span>
+                                    <div class="job-actions">
+                                        <button class="job-btn job-btn-danger" onclick="cancelJob('${convertingJob.id}')">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Waiting queue
+                if (waitingJobs.length > 0) {
+                    html += `
+                        <div class="queue-section">
+                            <div class="queue-section-header">
+                                <span class="queue-section-title">Waiting</span>
+                                <span class="queue-count">${waitingJobs.length}</span>
+                            </div>
+                            <div class="waiting-list">
+                                ${waitingJobs.map((job, i) => `
+                                    <div class="waiting-item">
+                                        <div class="waiting-item-info">
+                                            <span class="waiting-item-number">${i + 1}</span>
+                                            <span class="waiting-item-title">${escapeHtml(job.book_name)}</span>
+                                        </div>
+                                        <div class="job-actions">
+                                            <button class="job-btn job-btn-danger" onclick="cancelJob('${job.id}')">Cancel</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                queueContent.innerHTML = html;
+
+                // Continue polling if jobs are active
+                if (activeJobs.length > 0) {
+                    setTimeout(loadJobs, 3000);
+                }
+            } catch (err) {
+                console.error('Failed to load jobs:', err);
+            }
+        }
+
+        // ============ History Loading ============
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const history = await response.json();
+
+                const historyContent = document.getElementById('history-content');
+
+                if (history.length === 0) {
+                    historyContent.innerHTML = `
+                        <div class="no-jobs-message">
+                            <div class="no-jobs-icon">📋</div>
+                            <div>No completed conversions yet</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Group by date
+                const grouped = {};
+                history.forEach(job => {
+                    const date = job.completed_at
+                        ? new Date(job.completed_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+                        : 'Unknown';
+                    if (!grouped[date]) grouped[date] = [];
+                    grouped[date].push(job);
+                });
+
+                let html = '';
+                for (const [date, jobs] of Object.entries(grouped)) {
+                    html += `
+                        <div class="history-group">
+                            <div class="history-group-title">${date}</div>
+                            <div class="history-list">
+                                ${jobs.map(job => {
+                                    const voiceInfo = job.voice2_name
+                                        ? `${job.voice_name} + ${job.voice2_name}`
+                                        : job.voice_name;
+                                    const engineBadge = job.tts_engine === 'piper'
+                                        ? '<span style="background:var(--success);color:#000;padding:2px 6px;border-radius:4px;font-size:0.7em;margin-left:6px;">Piper</span>'
+                                        : '';
+
+                                    return `
+                                        <div class="history-item" data-title="${escapeHtml(job.book_name.toLowerCase())}">
+                                            <div class="history-item-info">
+                                                <div class="history-item-title">
+                                                    ✅ ${escapeHtml(job.book_name)}${engineBadge}
+                                                </div>
+                                                <div class="history-item-meta">
+                                                    ${voiceInfo} · ${job.file_count || '?'} chapters
+                                                    ${job.synced_to_abs ? ' · Synced' : ''}
+                                                </div>
+                                            </div>
+                                            <div class="history-item-actions">
+                                                <button class="history-action-btn" onclick="downloadJob('${job.id}')" title="Download">⬇️</button>
+                                                ${!job.synced_to_abs ? `<button class="history-action-btn success" onclick="syncJob('${job.id}')" title="Sync to ABS">☁️</button>` : ''}
+                                                <button class="history-action-btn" onclick="retryJob('${job.id}')" title="Re-convert">🔄</button>
+                                                <button class="history-action-btn danger" onclick="deleteJob('${job.id}')" title="Delete">🗑️</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                historyContent.innerHTML = html;
+            } catch (err) {
+                console.error('Failed to load history:', err);
+                document.getElementById('history-content').innerHTML = `
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">❌</div>
+                        <div>Failed to load history</div>
+                    </div>
+                `;
+            }
+        }
+
+        // History search
+        document.getElementById('history-search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.history-item').forEach(item => {
+                const title = item.dataset.title || '';
+                item.style.display = title.includes(query) ? '' : 'none';
+            });
+        });
+
+        // ============ Library Loading ============
+        async function loadLibrary() {
+            try {
+                const response = await fetch('/api/library');
+                libraryBooks = await response.json();
+
+                renderLibrary();
+            } catch (err) {
+                console.error('Failed to load library:', err);
+                document.getElementById('library-grid').innerHTML = `
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">📚</div>
+                        <div>Library not available</div>
+                    </div>
+                `;
+                document.getElementById('library-stats').textContent = '';
+            }
+        }
+
+        function renderLibrary() {
+            const libraryGrid = document.getElementById('library-grid');
+            const searchQuery = document.getElementById('library-search').value.toLowerCase();
+
+            const filtered = libraryBooks.filter(book =>
+                book.title.toLowerCase().includes(searchQuery)
+            );
+
+            document.getElementById('library-stats').textContent = `${filtered.length} books`;
+
+            if (filtered.length === 0) {
+                libraryGrid.innerHTML = `
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">📚</div>
+                        <div>${searchQuery ? 'No matching books' : 'No books in library'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            libraryGrid.innerHTML = filtered.map(book => {
+                const sizeStr = book.size ? `${(book.size / 1024 / 1024).toFixed(1)} MB` : '';
+                let statusHtml = '';
+
+                if (book.status === 'completed') {
+                    statusHtml = '<span class="status-badge done">✅ Done</span>';
+                } else if (book.status === 'converting') {
+                    statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
+                } else {
+                    statusHtml = `<button class="library-convert-btn" onclick="convertFromLibrary('${escapeHtml(book.path)}', '${escapeHtml(book.title)}')">Convert</button>`;
+                }
+
+                const icon = book.format === 'pdf' ? '📕' : '📗';
+
+                return `
+                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}">
+                        <div class="library-item-info">
+                            <span class="library-item-icon">${icon}</span>
+                            <div class="library-item-details">
+                                <div class="library-item-title">${escapeHtml(book.title)}</div>
+                                <div class="library-item-meta">
+                                    <span>${book.format?.toUpperCase() || 'EPUB'}</span>
+                                    <span>${sizeStr}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="library-item-status">
+                            ${statusHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('library-search').addEventListener('input', renderLibrary);
+
+        async function convertFromLibrary(path, title) {
+            const voice = document.getElementById('library-voice-select').value;
+            const notifyWhatsapp = document.getElementById('library-notify-whatsapp').checked;
+            const notifyTelegram = document.getElementById('library-notify-telegram').checked;
+
+            try {
+                const response = await fetch('/api/library/convert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path,
+                        voice,
+                        notify_whatsapp: notifyWhatsapp,
+                        notify_telegram: notifyTelegram
+                    })
+                });
+
+                const result = await response.json();
+                if (result.error) {
+                    alert('Error: ' + result.error);
+                } else {
+                    switchTab('queue');
+                }
+            } catch (err) {
+                alert('Failed to start conversion: ' + err.message);
+            }
+        }
+
+        // ============ Job Actions ============
         async function cancelJob(jobId) {
             if (!confirm('Cancel this conversion?')) return;
             try {
@@ -972,7 +2099,7 @@
         async function retryJob(jobId) {
             try {
                 await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
-                loadJobs();
+                switchTab('queue');
             } catch (err) {
                 alert('Failed to retry job: ' + err.message);
             }
@@ -990,7 +2117,7 @@
                     alert('Sync failed: ' + result.error);
                 } else {
                     alert('Synced to Audiobookshelf!');
-                    loadJobs();
+                    loadHistory();
                 }
             } catch (err) {
                 alert('Failed to sync: ' + err.message);
@@ -1001,135 +2128,40 @@
             if (!confirm('Delete this job and its files?')) return;
             try {
                 await fetch(`/api/jobs/${jobId}/delete`, { method: 'DELETE' });
+                loadHistory();
                 loadJobs();
             } catch (err) {
                 alert('Failed to delete job: ' + err.message);
             }
         }
 
-        // Jobs list
-        async function loadJobs() {
+        // Clear all history
+        document.getElementById('clear-history-btn').addEventListener('click', async () => {
+            if (!confirm('Delete ALL completed conversions and their files?')) return;
+
             try {
-                const response = await fetch('/api/jobs');
-                const jobs = await response.json();
+                const response = await fetch('/api/history');
+                const history = await response.json();
 
-                if (jobs.length === 0) {
-                    jobsList.innerHTML = '<div style="color: var(--text-secondary);">No conversions yet</div>';
-                    return;
+                for (const job of history) {
+                    await fetch(`/api/jobs/${job.id}/delete`, { method: 'DELETE' });
                 }
 
-                jobsList.innerHTML = jobs.reverse().map(job => {
-                    const isRunning = job.status === 'queued' || job.status.includes('converting');
-                    const isFailed = job.status === 'failed' || job.status === 'cancelled';
-                    const isCompleted = job.status === 'completed';
-
-                    // Build voice info
-                    let voiceInfo = job.voice_name || job.voice;
-                    if (job.voice2_name) {
-                        voiceInfo += ` + ${job.voice2_name}`;
-                    }
-
-                    // Build chapter range info
-                    let chapterInfo = '';
-                    if (job.start_chapter || job.end_chapter) {
-                        chapterInfo = ` • Chapters ${job.start_chapter || 1}-${job.end_chapter || 'end'}`;
-                    }
-
-                    return `
-                    <div class="job-item">
-                        <div class="job-header">
-                            <span class="job-title">${escapeHtml(job.book_name)}</span>
-                            <span class="job-status status-${job.status.replace(/ /g, '-')}">
-                                ${isRunning ? '<span class="spinner"></span>' : ''}
-                                ${job.status}
-                            </span>
-                        </div>
-
-                        ${job.progress_percent != null && isRunning ? `
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${job.progress_percent}%"></div>
-                            </div>
-                            <div class="progress-info">
-                                ${job.current_chapter_name ? `Chapter: ${job.current_chapter_name}` : 'Processing...'}
-                                ${job.eta_minutes ? ` • ~${job.eta_minutes} min remaining` : ''}
-                            </div>
-                        ` : ''}
-
-                        <div class="job-meta">
-                            Voice: ${voiceInfo}${chapterInfo}<br>
-                            Started: ${new Date(job.created_at).toLocaleString()}
-                            ${isCompleted ? `<br>Files: ${job.file_count || '?'} MP3s${job.synced_to_abs ? ' • Synced to ABS' : ''}` : ''}
-                            ${job.error ? `<br><span style="color: var(--error);">Error: ${escapeHtml(job.error.substring(0, 200))}</span>` : ''}
-                        </div>
-
-                        <div class="job-actions">
-                            ${isRunning ? `<button class="job-btn job-btn-danger" onclick="cancelJob('${job.id}')">Cancel</button>` : ''}
-                            ${isFailed ? `<button class="job-btn job-btn-primary" onclick="retryJob('${job.id}')">Retry</button>` : ''}
-                            ${isCompleted ? `
-                                <button class="job-btn job-btn-primary" onclick="downloadJob('${job.id}')">Download</button>
-                                ${!job.synced_to_abs ? `<button class="job-btn job-btn-success" onclick="syncJob('${job.id}')">Sync to ABS</button>` : ''}
-                            ` : ''}
-                            ${!isRunning ? `<button class="job-btn job-btn-secondary" onclick="deleteJob('${job.id}')">Delete</button>` : ''}
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-
-                // Continue polling if any jobs are in progress
-                if (jobs.some(j => j.status === 'queued' || j.status.includes('converting'))) {
-                    setTimeout(loadJobs, 3000);
-                }
+                loadHistory();
             } catch (err) {
-                console.error('Failed to load jobs:', err);
+                alert('Failed to clear history: ' + err.message);
             }
-        }
+        });
 
+        // ============ Utility Functions ============
         function escapeHtml(str) {
+            if (!str) return '';
             const div = document.createElement('div');
             div.textContent = str;
             return div.innerHTML;
         }
 
-        // History loading
-        async function loadHistory() {
-            try {
-                const response = await fetch('/api/history');
-                const history = await response.json();
-
-                if (history.length === 0) {
-                    historyList.innerHTML = '<div style="color: var(--text-secondary);">No completed conversions yet</div>';
-                    return;
-                }
-
-                historyList.innerHTML = history.map(job => {
-                    const completedDate = job.completed_at ? new Date(job.completed_at).toLocaleDateString() : 'Unknown';
-                    const voiceInfo = job.voice2_name ? `${job.voice_name} + ${job.voice2_name}` : job.voice_name;
-                    const engineBadge = job.tts_engine === 'piper' ? '<span style="background:#4ade80;color:#000;padding:2px 6px;border-radius:4px;font-size:0.75em;margin-left:6px;">Piper</span>' : '';
-
-                    return `
-                    <div class="history-item">
-                        <div class="history-info">
-                            <div class="history-title">${escapeHtml(job.book_name)}${engineBadge}</div>
-                            <div class="history-meta">
-                                ${voiceInfo} • ${job.file_count || '?'} chapters • ${completedDate}
-                                ${job.synced_to_abs ? ' • Synced' : ''}
-                            </div>
-                        </div>
-                        <div class="history-actions">
-                            <button class="job-btn job-btn-primary" onclick="downloadJob('${job.id}')">Download</button>
-                            ${!job.synced_to_abs ? `<button class="job-btn job-btn-success" onclick="syncJob('${job.id}')">Sync</button>` : ''}
-                            <button class="job-btn job-btn-secondary" onclick="deleteJob('${job.id}'); loadHistory();">Delete</button>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-            } catch (err) {
-                console.error('Failed to load history:', err);
-                historyList.innerHTML = '<div style="color: var(--error);">Failed to load history</div>';
-            }
-        }
-
-        // Initial load
+        // ============ Initial Load ============
         loadJobs();
         setInterval(loadJobs, 15000);
     </script>

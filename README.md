@@ -1,8 +1,8 @@
 # EPUB to Audiobook Converter
 
-**Version:** 0.9.0
+**Version:** 1.0.0
 
-A self-hosted web application for converting EPUB and PDF files to audiobooks using AI text-to-speech. Features a modern dark-themed UI with voice previews, job management, and Audiobookshelf integration.
+A self-hosted web application for converting ebooks to audiobooks using AI text-to-speech. Features a modern tab-based UI with voice previews, library browsing, job management, and Audiobookshelf integration.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
@@ -17,16 +17,25 @@ A self-hosted web application for converting EPUB and PDF files to audiobooks us
   - Perfect for low-resource systems
 
 ### Core Features
-- **EPUB & PDF Support** - Upload EPUB files directly or PDFs (auto-converted via Calibre)
+- **Extended Format Support** - EPUB, PDF, MOBI, AZW3, FB2, TXT, HTML, DOCX
+- **Library Browser** - Browse and convert books from your OpenBooks collection
 - **Voice Preview** - Listen to each voice before converting
+- **Voice Search** - Quickly filter available voices
 - **Voice Mixing** - Blend two Kokoro voices (e.g., `Emma+George`)
 - **Chapter Selection** - Convert specific chapter ranges
 - **Human-Readable Output** - Files renamed to `01 - Chapter Name.mp3`
 - **Progress Tracking** - Real-time progress with ETA
 
+### UI Features
+- **Tab Navigation** - Convert, Queue, Library, History tabs
+- **Modern Design** - Clean 2-column layout with glassmorphism effects
+- **6 Color Themes** - Midnight, Charcoal, Forest, Crimson, Purple, Ocean
+- **Responsive** - Works on desktop and mobile
+
 ### Integration
 - **Audiobookshelf Sync** - Auto-sync completed books to ABS library
 - **Telegram Notifications** - Get notified when conversions complete
+- **WhatsApp Notifications** - Optional WhatsApp alerts
 - **Download as ZIP** - Download complete audiobooks
 
 ## Quick Start
@@ -74,6 +83,7 @@ open http://localhost:8881
 | `KOKORO_URL` | Kokoro TTS endpoint (default: `http://kokoro-tts:8880/v1`) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `AUDIOBOOKSHELF_DIR` | Path to sync completed books (empty = disabled) |
+| `LIBRARY_DIR` | Path to browse for ebooks (default: `/data/library`) |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token for notifications |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for notifications |
 
@@ -93,6 +103,9 @@ Set `AUDIOBOOKSHELF_DIR` and configure SSH access from the container to your ABS
 | `/api/jobs/<id>/retry` | POST | Retry failed job |
 | `/api/jobs/<id>/download` | GET | Download as ZIP |
 | `/api/jobs/<id>/sync` | POST | Sync to Audiobookshelf |
+| `/api/library` | GET | List books in library |
+| `/api/library/convert` | POST | Convert a library book |
+| `/api/history` | GET | List completed conversions |
 
 ## Roadmap
 

@@ -43,6 +43,12 @@ HOST_OUTPUT_DIR = f"{HOST_STACK_DIR}/data/audiobooks"
 # Audiobookshelf integration - copy completed books here
 AUDIOBOOKSHELF_DIR = os.environ.get('AUDIOBOOKSHELF_DIR', '')
 
+# OpenBooks/Library directory for browsing available EPUBs
+LIBRARY_DIR = Path(os.environ.get('LIBRARY_DIR', '/data/library'))
+
+# Supported ebook formats (converted to EPUB via Calibre)
+SUPPORTED_FORMATS = {'.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'}
+
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -247,6 +253,49 @@ def update_job(job_id: str, **kwargs):
 
 
 # ============ Utility Functions ============
+
+def convert_to_epub(input_path: Path) -> Path:
+    """Convert any supported ebook format to EPUB using Calibre's ebook-convert.
+
+    Args:
+        input_path: Path to the input ebook file
+
+    Returns:
+        Path to the EPUB file (same as input if already EPUB, otherwise converted)
+
+    Raises:
+        RuntimeError: If conversion fails
+    """
+    if input_path.suffix.lower() == '.epub':
+        return input_path
+
+    output_path = input_path.with_suffix('.epub')
+
+    # Skip if already converted
+    if output_path.exists():
+        return output_path
+
+    app.logger.info(f"Converting {input_path.name} to EPUB...")
+
+    try:
+        result = subprocess.run(
+            ['ebook-convert', str(input_path), str(output_path)],
+            capture_output=True,
+            text=True,
+            timeout=600  # 10 minute timeout for large files
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(f"ebook-convert failed: {result.stderr[:500]}")
+
+        app.logger.info(f"Converted to {output_path.name}")
+        return output_path
+
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Conversion timed out after 10 minutes")
+    except FileNotFoundError:
+        raise RuntimeError("Calibre ebook-convert not installed")
+
 
 def estimate_epub_size(epub_path: Path) -> int:
     """Extract approximate character count from EPUB for timeout estimation."""
@@ -694,7 +743,11 @@ def voice_preview(voice_id: str):
 
 @app.route('/api/convert', methods=['POST'])
 def start_conversion():
-    """Start EPUB/PDF to audiobook conversion."""
+    """Start ebook to audiobook conversion.
+
+    Supports: EPUB, PDF, MOBI, AZW3, FB2, TXT, HTML, DOCX
+    Non-EPUB formats are converted via Calibre's ebook-convert.
+    """
     if 'file' not in request.files and 'epub' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
@@ -704,17 +757,22 @@ def start_conversion():
     start_chapter = request.form.get('start_chapter', '').strip()
     end_chapter = request.form.get('end_chapter', '').strip()
     notify_telegram = request.form.get('notify_telegram') == '1'
+    notify_whatsapp = request.form.get('notify_whatsapp') == '1'
+    whatsapp_number = request.form.get('whatsapp_number', '').strip()
 
     # Parse chapter numbers
     start_chapter = int(start_chapter) if start_chapter else None
     end_chapter = int(end_chapter) if end_chapter else None
 
     filename_lower = uploaded_file.filename.lower()
-    is_pdf = filename_lower.endswith('.pdf')
-    is_epub = filename_lower.endswith('.epub')
+    file_ext = Path(filename_lower).suffix
 
-    if not (is_pdf or is_epub):
-        return jsonify({'error': 'File must be EPUB or PDF'}), 400
+    # Check if format is supported
+    if file_ext not in SUPPORTED_FORMATS:
+        return jsonify({'error': f'Unsupported format. Supported: {", ".join(sorted(SUPPORTED_FORMATS))}'}), 400
+
+    is_pdf = file_ext == '.pdf'
+    needs_conversion = file_ext not in {'.epub', '.pdf'}  # PDF handled separately by Docker
 
     if voice not in VOICES:
         return jsonify({'error': 'Invalid voice selected'}), 400
@@ -727,11 +785,19 @@ def start_conversion():
     book_name = Path(uploaded_file.filename).stem
     safe_name = "".join(c for c in book_name if c.isalnum() or c in ' -_').strip()
 
-    # Save file
-    ext = '.pdf' if is_pdf else '.epub'
-    input_filename = f"{job_id}_{safe_name}{ext}"
+    # Save file with original extension
+    input_filename = f"{job_id}_{safe_name}{file_ext}"
     input_path = UPLOAD_DIR / input_filename
     uploaded_file.save(input_path)
+
+    # Convert non-standard formats to EPUB using Calibre
+    if needs_conversion:
+        try:
+            epub_path = convert_to_epub(input_path)
+            input_filename = epub_path.name
+            input_path = epub_path
+        except RuntimeError as e:
+            return jsonify({'error': f'Format conversion failed: {str(e)}'}), 500
 
     # Create output directory
     output_dirname = f"{safe_name}_{job_id}"
@@ -948,6 +1014,154 @@ def delete_job(job_id: str):
         conn.commit()
 
     return jsonify({'status': 'deleted'})
+
+
+# ============ Library Routes ============
+
+@app.route('/api/library')
+def list_library():
+    """List available ebooks in the library directory.
+
+    Returns list of books with:
+    - title: Book name (filename without extension)
+    - path: Full path for conversion
+    - format: File format (epub, pdf, mobi, etc.)
+    - size: File size in bytes
+    - status: 'available', 'converting', or 'completed'
+    - progress: Conversion progress if converting
+    """
+    if not LIBRARY_DIR.exists():
+        return jsonify([])
+
+    books = []
+    all_jobs = get_all_jobs()
+
+    # Build a map of book names to their job status
+    job_status_map = {}
+    for job in all_jobs:
+        book_name = job.get('book_name', '').lower()
+        status = job.get('status', '')
+        progress = job.get('progress_percent', 0)
+
+        if status == 'completed':
+            job_status_map[book_name] = {'status': 'completed', 'progress': 100}
+        elif status in ('queued', 'converting', 'converting PDF', 'converting to audio'):
+            job_status_map[book_name] = {'status': 'converting', 'progress': progress or 0}
+
+    # Scan library directory for ebooks
+    for ext in SUPPORTED_FORMATS:
+        for file_path in LIBRARY_DIR.glob(f'**/*{ext}'):
+            if file_path.is_file():
+                title = file_path.stem
+                title_lower = title.lower()
+
+                # Check job status
+                job_info = job_status_map.get(title_lower, {'status': 'available', 'progress': 0})
+
+                books.append({
+                    'title': title,
+                    'path': str(file_path),
+                    'format': ext.lstrip('.'),
+                    'size': file_path.stat().st_size,
+                    'status': job_info['status'],
+                    'progress': job_info['progress']
+                })
+
+    # Sort by title
+    books.sort(key=lambda x: x['title'].lower())
+    return jsonify(books)
+
+
+@app.route('/api/library/convert', methods=['POST'])
+def convert_from_library():
+    """Start conversion of a book from the library.
+
+    Request JSON:
+    - path: Path to the ebook file
+    - voice: Voice ID to use
+    - notify_whatsapp: Whether to send WhatsApp notification
+    - notify_telegram: Whether to send Telegram notification
+    """
+    data = request.get_json() or {}
+    file_path = Path(data.get('path', ''))
+    voice = data.get('voice', 'bf_emma')
+    notify_telegram = data.get('notify_telegram', False)
+    notify_whatsapp = data.get('notify_whatsapp', False)
+
+    # Validate file exists
+    if not file_path.exists():
+        return jsonify({'error': 'File not found'}), 404
+
+    # Validate file is in library directory (security check)
+    try:
+        file_path.resolve().relative_to(LIBRARY_DIR.resolve())
+    except ValueError:
+        return jsonify({'error': 'File not in library directory'}), 403
+
+    # Validate voice
+    if voice not in VOICES:
+        return jsonify({'error': 'Invalid voice selected'}), 400
+
+    # Create job
+    job_id = str(uuid.uuid4())[:8]
+    book_name = file_path.stem
+    safe_name = "".join(c for c in book_name if c.isalnum() or c in ' -_').strip()
+    file_ext = file_path.suffix.lower()
+
+    is_pdf = file_ext == '.pdf'
+    needs_conversion = file_ext not in {'.epub', '.pdf'}
+
+    # Copy file to upload directory
+    input_filename = f"{job_id}_{safe_name}{file_ext}"
+    input_path = UPLOAD_DIR / input_filename
+    shutil.copy2(file_path, input_path)
+
+    # Convert non-standard formats to EPUB
+    if needs_conversion:
+        try:
+            epub_path = convert_to_epub(input_path)
+            input_filename = epub_path.name
+            input_path = epub_path
+        except RuntimeError as e:
+            return jsonify({'error': f'Format conversion failed: {str(e)}'}), 500
+
+    # Create output directory
+    output_dirname = f"{safe_name}_{job_id}"
+    output_dir = OUTPUT_DIR / output_dirname
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Determine TTS engine
+    tts_engine = VOICES[voice].get('engine', 'kokoro')
+
+    # Save job to database
+    job = {
+        'id': job_id,
+        'book_name': book_name,
+        'voice': voice,
+        'voice_name': VOICES[voice]['name'],
+        'voice2': None,
+        'voice2_name': None,
+        'tts_engine': tts_engine,
+        'status': 'queued',
+        'created_at': datetime.now().isoformat(),
+        'input_filename': input_filename,
+        'output_dirname': output_dirname,
+        'is_pdf': is_pdf,
+        'start_chapter': None,
+        'end_chapter': None,
+        'notify_telegram': notify_telegram
+    }
+    save_job(job)
+
+    # Start conversion
+    thread = threading.Thread(
+        target=convert_book,
+        args=(job_id, input_filename, output_dirname, voice, is_pdf)
+    )
+    thread.daemon = True
+    thread.start()
+
+    return jsonify({'job_id': job_id, 'status': 'queued'})
 
 
 # Initialize database on startup

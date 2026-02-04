@@ -51,6 +51,7 @@ services:
       - DB_PATH=/data/jobs.db
       - HOST_STACK_DIR=/home/dave/stacks/epub-to-audiobook
       - AUDIOBOOKSHELF_DIR=/opt/stacks/audiobookshelf/audiobooks
+      - LIBRARY_DIR=/data/library
     volumes:
       # Use bind mounts so paths are predictable for spawned containers
       - ./data/uploads:/data/uploads
@@ -61,6 +62,8 @@ services:
       # SSH key for rsync to docker-vm
       - ./ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
       - ./ssh-keys/config:/root/.ssh/config:ro
+      # OpenBooks library for browsing available EPUBs
+      - ./data/library:/data/library:ro
     depends_on:
       kokoro-tts:
         condition: service_healthy
