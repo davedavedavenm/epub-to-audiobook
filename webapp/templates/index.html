@@ -1389,6 +1389,9 @@
             <button class="nav-tab" data-tab="library">
                 <span>📚</span> <span>Library</span>
             </button>
+            <button class="nav-tab" data-tab="ops">
+                <span>🛠️</span> <span>Ops</span>
+            </button>
             <button class="nav-tab" data-tab="history">
                 <span>📋</span> <span>History</span>
             </button>
@@ -1619,6 +1622,59 @@
             </div>
         </div>
 
+        <!-- Ops Tab -->
+        <div class="tab-panel" id="tab-ops">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Queue Operations</h2>
+                        <p class="card-subtitle">Control queue, retries, and recovery</p>
+                    </div>
+                </div>
+                <div id="ops-controls" class="options-grid">
+                    <button class="job-btn" id="queue-pause-btn">Pause Queue</button>
+                    <button class="job-btn" id="queue-resume-btn">Resume Queue</button>
+                    <button class="job-btn" id="queue-retry-failed-btn">Bulk Retry Failed</button>
+                    <button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
+                </div>
+                <div id="ops-queue-status" class="progress-info" style="margin-top:12px;"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Conversion Timeline</h2>
+                        <p class="card-subtitle">Live stage + container logs</p>
+                    </div>
+                </div>
+                <div id="ops-timeline-content" class="no-jobs-message">
+                    <div class="no-jobs-icon">🧭</div>
+                    <div>No active conversion</div>
+                </div>
+                <pre id="ops-log-preview" style="margin-top:12px; max-height:280px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Recovery Center</h2>
+                        <p class="card-subtitle">Failed/cancelled jobs and fast actions</p>
+                    </div>
+                </div>
+                <div id="ops-recovery-content"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Diagnostics</h2>
+                        <p class="card-subtitle">Queue health and runtime resources</p>
+                    </div>
+                </div>
+                <pre id="ops-diagnostics" style="max-height:260px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
+            </div>
+        </div>
+
         <!-- History Tab -->
         <div class="tab-panel" id="tab-history">
             <div class="card">
@@ -1717,6 +1773,7 @@
             // Load data for specific tabs
             if (tabId === 'queue') loadJobs();
             if (tabId === 'library') loadLibrary();
+            if (tabId === 'ops') loadOps();
             if (tabId === 'history') loadHistory();
         }
 
@@ -2026,6 +2083,8 @@
                                             <span class="waiting-item-title">${escapeHtml(job.book_name)}</span>
                                         </div>
                                         <div class="job-actions">
+                                            <button class="job-btn" onclick="moveQueue('${job.id}', -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+                                            <button class="job-btn" onclick="moveQueue('${job.id}', 1)" ${i === waitingJobs.length - 1 ? 'disabled' : ''}>↓</button>
                                             <button class="job-btn job-btn-danger" onclick="cancelJob('${job.id}')">Cancel</button>
                                         </div>
                                     </div>
@@ -2045,6 +2104,144 @@
                 console.error('Failed to load jobs:', err);
             }
         }
+
+        async function moveQueue(jobId, delta) {
+            const waitingJobs = allJobs.filter(j => j.status === 'queued');
+            const idx = waitingJobs.findIndex(j => j.id === jobId);
+            if (idx < 0) return;
+            const target = idx + delta;
+            if (target < 0 || target >= waitingJobs.length) return;
+            const ordered = waitingJobs.map(j => j.id);
+            [ordered[idx], ordered[target]] = [ordered[target], ordered[idx]];
+            await fetch('/api/queue/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ordered_ids: ordered })
+            });
+            loadJobs();
+            if (document.getElementById('tab-ops').classList.contains('active')) {
+                loadOps();
+            }
+        }
+
+        // ============ Ops Loading ============
+        async function loadOps() {
+            try {
+                const [jobsResp, queueResp, diagResp] = await Promise.all([
+                    fetch('/api/jobs'),
+                    fetch('/api/queue/status'),
+                    fetch('/api/diagnostics')
+                ]);
+                const jobs = await jobsResp.json();
+                const queue = await queueResp.json();
+                const diag = await diagResp.json();
+
+                const converting = jobs.find(j => j.status && j.status.includes('converting'));
+                const failed = jobs.filter(j => j.status === 'failed' || j.status === 'cancelled');
+
+                document.getElementById('ops-queue-status').innerHTML =
+                    `Queue: <strong>${queue.queued_count}</strong> waiting · State: <strong>${queue.paused ? 'Paused' : 'Running'}</strong>`;
+
+                document.getElementById('queue-pause-btn').disabled = queue.paused;
+                document.getElementById('queue-resume-btn').disabled = !queue.paused;
+
+                if (converting) {
+                    const timelineResp = await fetch(`/api/jobs/${converting.id}/timeline`);
+                    const timeline = await timelineResp.json();
+                    const logsResp = await fetch(`/api/jobs/${converting.id}/logs?tail=120`);
+                    const logs = await logsResp.json();
+
+                    document.getElementById('ops-timeline-content').innerHTML = `
+                        <div class="active-job-card">
+                            <div class="active-job-header">
+                                <span class="active-job-title">${escapeHtml(converting.book_name)}</span>
+                                <span class="active-job-chapter">Ch ${converting.current_chapter || '?'} · ${converting.progress_percent || 0}%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width:${converting.progress_percent || 0}%"></div></div>
+                            <div class="progress-info">
+                                <span>Retry count: ${converting.retry_count || 0}</span>
+                                <span>${converting.eta_minutes ? `ETA ${converting.eta_minutes}m` : ''}</span>
+                            </div>
+                            <div class="waiting-list" style="margin-top:10px;">
+                                ${timeline.stages.map(s => `
+                                    <div class="waiting-item">
+                                        <div class="waiting-item-info">
+                                            <span class="waiting-item-number">${s.state === 'done' ? '✓' : s.state === 'active' ? '▶' : '•'}</span>
+                                            <span class="waiting-item-title">${escapeHtml(s.label)}</span>
+                                        </div>
+                                        <span class="status-tag status-${s.state === 'done' ? 'completed' : s.state === 'active' ? 'converting' : 'queued'}">${s.state}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('ops-log-preview').textContent = logs.logs || '(no logs)';
+                } else {
+                    document.getElementById('ops-timeline-content').innerHTML = `
+                        <div class="no-jobs-message"><div class="no-jobs-icon">🧭</div><div>No active conversion</div></div>
+                    `;
+                    document.getElementById('ops-log-preview').textContent = '';
+                }
+
+                if (failed.length === 0) {
+                    document.getElementById('ops-recovery-content').innerHTML = `
+                        <div class="no-jobs-message"><div class="no-jobs-icon">✅</div><div>No failed/cancelled jobs</div></div>
+                    `;
+                } else {
+                    document.getElementById('ops-recovery-content').innerHTML = `
+                        <div class="waiting-list">
+                            ${failed.slice(0, 20).map(j => `
+                                <div class="waiting-item">
+                                    <div class="waiting-item-info">
+                                        <span class="waiting-item-number">!</span>
+                                        <span class="waiting-item-title">${escapeHtml(j.book_name)}</span>
+                                    </div>
+                                    <div class="job-actions">
+                                        <button class="job-btn" onclick="retryJob('${j.id}')">Retry</button>
+                                        <button class="job-btn job-btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                document.getElementById('ops-diagnostics').textContent = JSON.stringify(diag, null, 2);
+            } catch (err) {
+                document.getElementById('ops-diagnostics').textContent = `Failed to load ops: ${err.message}`;
+            }
+        }
+
+        document.getElementById('queue-pause-btn')?.addEventListener('click', async () => {
+            await fetch('/api/queue/pause', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paused: true })
+            });
+            loadOps();
+        });
+
+        document.getElementById('queue-resume-btn')?.addEventListener('click', async () => {
+            await fetch('/api/queue/pause', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paused: false })
+            });
+            loadOps();
+            loadJobs();
+        });
+
+        document.getElementById('queue-retry-failed-btn')?.addEventListener('click', async () => {
+            await fetch('/api/queue/retry-failed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit: 20 })
+            });
+            loadOps();
+            loadJobs();
+        });
+
+        document.getElementById('ops-refresh-btn')?.addEventListener('click', loadOps);
 
         // ============ History Loading ============
         async function loadHistory() {

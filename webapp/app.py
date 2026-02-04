@@ -166,7 +166,8 @@ def init_db():
                 container_name TEXT,
                 start_chapter INTEGER,
                 end_chapter INTEGER,
-                notify_telegram INTEGER DEFAULT 0
+                notify_telegram INTEGER DEFAULT 0,
+                queue_rank INTEGER DEFAULT 0
             )
         ''')
         # Add tts_engine column if it doesn't exist (migration)
@@ -179,6 +180,19 @@ def init_db():
             conn.execute('ALTER TABLE jobs ADD COLUMN retry_count INTEGER DEFAULT 0')
         except sqlite3.OperationalError:
             pass  # Column already exists
+        # Add queue_rank column if it doesn't exist (queue ordering/reordering)
+        try:
+            conn.execute('ALTER TABLE jobs ADD COLUMN queue_rank INTEGER DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        # App settings table (pause state, feature flags)
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        ''')
 
         # Create conversion_metrics table for ETA learning
         conn.execute('''
@@ -235,8 +249,8 @@ def save_job(job: dict):
              completed_at, input_filename, output_dirname, is_pdf, char_count,
              timeout_minutes, total_chapters, current_chapter, current_chapter_name,
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
-             start_chapter, end_chapter, notify_telegram, retry_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             start_chapter, end_chapter, notify_telegram, retry_count, queue_rank)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -266,7 +280,8 @@ def save_job(job: dict):
             job.get('start_chapter'),
             job.get('end_chapter'),
             1 if job.get('notify_telegram') else 0,
-            job.get('retry_count', 0)
+            job.get('retry_count', 0),
+            job.get('queue_rank', 0)
         ))
         conn.commit()
 
@@ -281,7 +296,17 @@ def get_job(job_id: str) -> dict:
 def get_all_jobs() -> list:
     """Get all jobs from the database."""
     with get_db() as conn:
-        rows = conn.execute('SELECT * FROM jobs ORDER BY created_at DESC').fetchall()
+        rows = conn.execute('''
+            SELECT * FROM jobs
+            ORDER BY
+                CASE
+                    WHEN status IN ('converting', 'converting PDF', 'converting to audio') THEN 0
+                    WHEN status = 'queued' THEN 1
+                    ELSE 2
+                END,
+                CASE WHEN status = 'queued' THEN COALESCE(queue_rank, 0) END ASC,
+                created_at DESC
+        ''').fetchall()
         return [job_to_dict(row) for row in rows]
 
 
@@ -291,6 +316,41 @@ def update_job(job_id: str, **kwargs):
     if job:
         job.update(kwargs)
         save_job(job)
+
+
+def get_setting(key: str, default=None):
+    """Fetch app setting value from database."""
+    with get_db() as conn:
+        row = conn.execute('SELECT value FROM app_settings WHERE key = ?', (key,)).fetchone()
+        return row['value'] if row else default
+
+
+def set_setting(key: str, value):
+    """Store app setting value in database."""
+    with get_db() as conn:
+        conn.execute(
+            'INSERT INTO app_settings (key, value) VALUES (?, ?) '
+            'ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+            (key, str(value))
+        )
+        conn.commit()
+
+
+def is_queue_paused() -> bool:
+    """Check whether queue processing is paused."""
+    return str(get_setting('queue_paused', '0')).lower() in ('1', 'true', 'yes')
+
+
+def set_queue_paused(paused: bool):
+    """Pause or resume queue processing."""
+    set_setting('queue_paused', '1' if paused else '0')
+
+
+def next_queue_rank() -> int:
+    """Return next queue rank for FIFO ordering."""
+    with get_db() as conn:
+        row = conn.execute('SELECT COALESCE(MAX(queue_rank), 0) AS max_rank FROM jobs').fetchone()
+        return int((row['max_rank'] if row else 0) or 0) + 1
 
 
 # ============ ETA Learning Functions ============
@@ -507,7 +567,7 @@ def get_next_queued_job():
         result = conn.execute('''
             SELECT * FROM jobs
             WHERE status = 'queued'
-            ORDER BY created_at ASC
+            ORDER BY COALESCE(queue_rank, 0) ASC, created_at ASC
             LIMIT 1
         ''').fetchone()
         return job_to_dict(result) if result else None
@@ -515,6 +575,9 @@ def get_next_queued_job():
 
 def start_next_queued_job():
     """Start the next queued job if no job is currently running."""
+    if is_queue_paused():
+        app.logger.info("Queue is paused; not starting queued jobs")
+        return False
     if is_job_running():
         return False
 
@@ -562,6 +625,7 @@ def handle_job_failure(job_id, error_type, error_msg):
     if retry_count < MAX_RETRY_COUNT and error_type in ('container_died', 'timeout'):
         # Calculate backoff delay
         delay = RETRY_BACKOFF_BASE * (2 ** retry_count)  # 30s, 60s, 120s
+        new_rank = next_queue_rank()
 
         with get_db() as conn:
             conn.execute('''
@@ -572,9 +636,10 @@ def handle_job_failure(job_id, error_type, error_msg):
                     started_at = NULL,
                     progress_percent = 0,
                     current_chapter = NULL,
-                    current_chapter_name = NULL
+                    current_chapter_name = NULL,
+                    queue_rank = ?
                 WHERE id = ?
-            ''', (job_id,))
+            ''', (new_rank, job_id))
             conn.commit()
 
         app.logger.info(f"Auto-retrying job {job_id} (attempt {retry_count + 1}/{MAX_RETRY_COUNT}) after {delay}s delay")
@@ -1345,7 +1410,8 @@ def start_conversion():
         'is_pdf': is_pdf,
         'start_chapter': start_chapter,
         'end_chapter': end_chapter,
-        'notify_telegram': notify_telegram
+        'notify_telegram': notify_telegram,
+        'queue_rank': next_queue_rank()
     }
     save_job(job)
 
@@ -1370,6 +1436,112 @@ def list_jobs():
     return jsonify(get_all_jobs())
 
 
+@app.route('/api/queue/status')
+def queue_status():
+    """Get queue control status."""
+    with get_db() as conn:
+        queued_count = conn.execute("SELECT COUNT(*) AS n FROM jobs WHERE status='queued'").fetchone()['n']
+    return jsonify({
+        'paused': is_queue_paused(),
+        'queued_count': queued_count
+    })
+
+
+@app.route('/api/queue/pause', methods=['POST'])
+def queue_pause():
+    """Pause or resume queue processing."""
+    data = request.get_json(silent=True) or {}
+    paused = data.get('paused')
+    if paused is None:
+        paused = not is_queue_paused()
+    paused = bool(paused)
+    set_queue_paused(paused)
+    if not paused:
+        start_next_queued_job()
+    return jsonify({'paused': paused})
+
+
+@app.route('/api/queue/reorder', methods=['POST'])
+def queue_reorder():
+    """Reorder queued jobs by explicit ID order."""
+    data = request.get_json(silent=True) or {}
+    ordered_ids = data.get('ordered_ids') or []
+    if not isinstance(ordered_ids, list):
+        return jsonify({'error': 'ordered_ids must be a list'}), 400
+
+    with get_db() as conn:
+        queued_rows = conn.execute(
+            "SELECT id FROM jobs WHERE status='queued' ORDER BY COALESCE(queue_rank, 0), created_at"
+        ).fetchall()
+        queued_ids = [r['id'] for r in queued_rows]
+        known = set(queued_ids)
+
+        normalized = []
+        for jid in ordered_ids:
+            if jid in known and jid not in normalized:
+                normalized.append(jid)
+        for jid in queued_ids:
+            if jid not in normalized:
+                normalized.append(jid)
+
+        for rank, jid in enumerate(normalized, start=1):
+            conn.execute("UPDATE jobs SET queue_rank = ? WHERE id = ?", (rank, jid))
+        conn.commit()
+
+    return jsonify({'status': 'ok', 'ordered_ids': normalized})
+
+
+@app.route('/api/queue/retry-failed', methods=['POST'])
+def queue_retry_failed():
+    """Bulk queue failed/cancelled jobs that still have retry budget."""
+    data = request.get_json(silent=True) or {}
+    limit = int(data.get('limit', 20))
+    if limit < 1:
+        return jsonify({'error': 'limit must be >= 1'}), 400
+
+    queued = []
+    with get_db() as conn:
+        max_rank_row = conn.execute('SELECT COALESCE(MAX(queue_rank), 0) AS max_rank FROM jobs').fetchone()
+        rank_cursor = int((max_rank_row['max_rank'] if max_rank_row else 0) or 0)
+        rows = conn.execute('''
+            SELECT * FROM jobs
+            WHERE status IN ('failed', 'cancelled')
+            ORDER BY completed_at DESC
+            LIMIT ?
+        ''', (limit,)).fetchall()
+
+        for row in rows:
+            job = job_to_dict(row)
+            retry_count = job.get('retry_count', 0) or 0
+            if retry_count >= 3:
+                continue
+            input_path = UPLOAD_DIR / job['input_filename']
+            if not input_path.exists():
+                continue
+            new_retry = retry_count + 1
+            rank_cursor += 1
+            conn.execute('''
+                UPDATE jobs
+                SET status='queued',
+                    started_at=NULL,
+                    completed_at=NULL,
+                    error=NULL,
+                    current_chapter=NULL,
+                    current_chapter_name=NULL,
+                    progress_percent=NULL,
+                    eta_minutes=NULL,
+                    file_count=NULL,
+                    retry_count=?,
+                    queue_rank=?
+                WHERE id=?
+            ''', (new_retry, rank_cursor, job['id']))
+            queued.append(job['id'])
+        conn.commit()
+
+    start_next_queued_job()
+    return jsonify({'status': 'ok', 'queued_ids': queued})
+
+
 @app.route('/api/jobs/<job_id>')
 def get_job_status(job_id: str):
     """Get job status."""
@@ -1377,6 +1549,94 @@ def get_job_status(job_id: str):
     if not job:
         return jsonify({'error': 'Job not found'}), 404
     return jsonify(job)
+
+
+@app.route('/api/jobs/<job_id>/timeline')
+def get_job_timeline(job_id: str):
+    """Return derived timeline stages for a job."""
+    job = get_job(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+
+    status = job.get('status') or ''
+    current_chapter = job.get('current_chapter')
+    total_chapters = job.get('total_chapters')
+
+    stages = [
+        {'id': 'queued', 'label': 'Queued', 'state': 'done' if status != 'queued' else 'active'},
+        {'id': 'extract', 'label': 'Extract/Prepare', 'state': 'done' if status not in ('queued', 'converting PDF') else ('active' if status == 'converting PDF' else 'pending')},
+        {'id': 'tts', 'label': 'TTS Conversion', 'state': 'active' if 'converting' in status else ('done' if status == 'completed' else 'pending')},
+        {'id': 'sync', 'label': 'Sync/Finalize', 'state': 'done' if status == 'completed' else 'pending'}
+    ]
+
+    return jsonify({
+        'job_id': job_id,
+        'status': status,
+        'current_chapter': current_chapter,
+        'total_chapters': total_chapters,
+        'progress_percent': job.get('progress_percent'),
+        'retry_count': job.get('retry_count', 0),
+        'stages': stages
+    })
+
+
+@app.route('/api/jobs/<job_id>/logs')
+def get_job_logs(job_id: str):
+    """Return tail logs for the job container."""
+    job = get_job(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+
+    container_name = (job.get('container_name') or '').strip()
+    if not container_name:
+        return jsonify({'logs': '', 'container': None})
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', container_name):
+        return jsonify({'error': 'Invalid container name'}), 400
+
+    tail = request.args.get('tail', '120')
+    try:
+        tail = max(10, min(500, int(tail)))
+    except Exception:
+        tail = 120
+
+    try:
+        result = subprocess.run(
+            ['docker', 'logs', '--tail', str(tail), container_name],
+            capture_output=True, text=True, timeout=8
+        )
+        logs = (result.stdout or '') + (result.stderr or '')
+        return jsonify({'container': container_name, 'logs': logs[-15000:]})
+    except Exception as e:
+        return jsonify({'container': container_name, 'logs': '', 'error': str(e)}), 500
+
+
+@app.route('/api/diagnostics')
+def diagnostics():
+    """Return queue/runtime diagnostics for UI drawer."""
+    with get_db() as conn:
+        counts = conn.execute('''
+            SELECT status, COUNT(*) AS n
+            FROM jobs
+            GROUP BY status
+        ''').fetchall()
+    by_status = {row['status']: row['n'] for row in counts}
+
+    docker_summary = ''
+    try:
+        result = subprocess.run(
+            ['docker', 'stats', '--no-stream', '--format', '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}'],
+            capture_output=True, text=True, timeout=6
+        )
+        lines = [ln for ln in (result.stdout or '').splitlines() if 'epub' in ln or 'kokoro' in ln or 'piper' in ln or 'audiobook-' in ln]
+        docker_summary = '\n'.join(lines[:20])
+    except Exception as e:
+        docker_summary = f'Unavailable: {e}'
+
+    return jsonify({
+        'queue_paused': is_queue_paused(),
+        'jobs': by_status,
+        'docker': docker_summary
+    })
 
 
 @app.route('/api/jobs/<job_id>/cancel', methods=['POST'])
@@ -1461,7 +1721,8 @@ def retry_job(job_id: str):
         eta_minutes=None,
         file_count=None,
         synced_to_abs=False,
-        retry_count=new_retry_count
+        retry_count=new_retry_count,
+        queue_rank=next_queue_rank()
     )
 
     app.logger.info(f"Retrying job {job_id} (attempt {new_retry_count}/3)")
@@ -1693,7 +1954,8 @@ def convert_from_library():
         'is_pdf': is_pdf,
         'start_chapter': None,
         'end_chapter': None,
-        'notify_telegram': notify_telegram
+        'notify_telegram': notify_telegram,
+        'queue_rank': next_queue_rank()
     }
     save_job(job)
 
