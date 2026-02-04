@@ -380,8 +380,11 @@ def cleanup_orphan_jobs():
 
     Finds jobs marked as 'converting' but whose containers are no longer running,
     and marks them as failed so users can retry.
+
+    Also handles old 'queued' jobs that were orphaned after a restart.
     """
     with get_db() as conn:
+        # Handle converting jobs with dead containers
         converting_jobs = conn.execute(
             "SELECT id, container_name FROM jobs WHERE status IN ('converting', 'converting PDF', 'converting to audio')"
         ).fetchall()
@@ -397,7 +400,25 @@ def cleanup_orphan_jobs():
                     WHERE id = ?
                 ''', (datetime.now().isoformat(), job['id']))
                 orphan_count += 1
-                print(f"Marked orphan job {job['id']} as failed")
+                print(f"Marked orphan converting job {job['id']} as failed")
+
+        # Handle old queued jobs (orphaned after restart - older than 10 minutes)
+        stale_queued = conn.execute('''
+            SELECT id FROM jobs
+            WHERE status = 'queued'
+            AND datetime(created_at) < datetime('now', '-10 minutes')
+        ''').fetchall()
+
+        for job in stale_queued:
+            conn.execute('''
+                UPDATE jobs
+                SET status = 'failed',
+                    error = 'Job was orphaned after webapp restart. Click Retry to continue.',
+                    completed_at = ?
+                WHERE id = ?
+            ''', (datetime.now().isoformat(), job['id']))
+            orphan_count += 1
+            print(f"Marked stale queued job {job['id']} as failed")
 
         if orphan_count > 0:
             conn.commit()
