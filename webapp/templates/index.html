@@ -39,6 +39,36 @@
             --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
         }
 
+        [data-theme="midnight"] {
+            --bg-primary: #0c0a1d;
+            --bg-card: #13102a;
+            --bg-element: #1e1a3a;
+            --bg-hover: #2a2550;
+            --accent: #818cf8;
+            --accent-hover: #6366f1;
+            --accent-subtle: rgba(129, 140, 248, 0.15);
+            --text-primary: #e8e8ff;
+            --text-secondary: #a5a5c9;
+            --border: #2a2550;
+            --shadow: 0 1px 3px rgba(0,0,0,0.4);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        [data-theme="forest"] {
+            --bg-primary: #0a1a14;
+            --bg-card: #0f261c;
+            --bg-element: #163829;
+            --bg-hover: #1f4a36;
+            --accent: #4ade80;
+            --accent-hover: #22c55e;
+            --accent-subtle: rgba(74, 222, 128, 0.15);
+            --text-primary: #e8f5e9;
+            --text-secondary: #81c784;
+            --border: #1f4a36;
+            --shadow: 0 1px 3px rgba(0,0,0,0.4);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -1216,6 +1246,8 @@
             <div class="theme-toggle">
                 <button class="theme-btn active" data-theme="light">Light</button>
                 <button class="theme-btn" data-theme="dark">Dark</button>
+                <button class="theme-btn" data-theme="midnight">Midnight</button>
+                <button class="theme-btn" data-theme="forest">Forest</button>
             </div>
         </div>
     </header>
@@ -1345,8 +1377,7 @@
                                         {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'kokoro' %}
                                         <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
                                             <span class="voice-pill-name">{{ voice.name }}</span>
-                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
-                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
                                         </div>
                                         {% endfor %}
                                     </div>
@@ -1358,8 +1389,7 @@
                                         {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'kokoro' %}
                                         <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
                                             <span class="voice-pill-name">{{ voice.name }}</span>
-                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
-                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
                                         </div>
                                         {% endfor %}
                                     </div>
@@ -1371,8 +1401,7 @@
                                         {% for voice_id, voice in voices.items() if voice.accent == 'European' and voice.engine == 'kokoro' %}
                                         <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
                                             <span class="voice-pill-name">{{ voice.name }}</span>
-                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
-                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
                                         </div>
                                         {% endfor %}
                                     </div>
@@ -1387,8 +1416,7 @@
                                         {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'piper' %}
                                         <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="piper" data-name="{{ voice.name }}">
                                             <span class="voice-pill-name">{{ voice.name }}</span>
-                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
-                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
                                         </div>
                                         {% endfor %}
                                     </div>
@@ -1400,8 +1428,7 @@
                                         {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'piper' %}
                                         <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="piper" data-name="{{ voice.name }}">
                                             <span class="voice-pill-name">{{ voice.name }}</span>
-                                            <span class="voice-pill-meta">{{ voice.gender[0] }}</span>
-                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
                                         </div>
                                         {% endfor %}
                                     </div>
@@ -1508,8 +1535,8 @@
 
         // ============ Theme Handling ============
         const savedTheme = localStorage.getItem('audiobook-theme') || 'light';
-        if (savedTheme === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
+        if (savedTheme !== 'light') {
+            document.documentElement.setAttribute('data-theme', savedTheme);
         }
         document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
         document.querySelector(`.theme-btn[data-theme="${savedTheme}"]`)?.classList.add('active');
@@ -1517,10 +1544,10 @@
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const theme = btn.dataset.theme;
-                if (theme === 'dark') {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                } else {
+                if (theme === 'light') {
                     document.documentElement.removeAttribute('data-theme');
+                } else {
+                    document.documentElement.setAttribute('data-theme', theme);
                 }
                 localStorage.setItem('audiobook-theme', theme);
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
