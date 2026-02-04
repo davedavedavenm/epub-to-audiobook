@@ -22,6 +22,7 @@
             --warning: #f59e0b;
             --shadow: 0 1px 3px rgba(0,0,0,0.08);
             --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+            --font-ui: "Segoe UI", Roboto, sans-serif;
         }
 
         [data-theme="dark"] {
@@ -74,7 +75,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: var(--font-ui);
             margin: 0;
             padding: 0;
             background: var(--bg-primary);
@@ -156,6 +157,42 @@
         }
 
         .theme-btn.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+        }
+
+        .top-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .design-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-element);
+            padding: 6px;
+            border-radius: 20px;
+        }
+
+        .design-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.82em;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .design-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .design-btn.active {
             background: var(--bg-card);
             color: var(--text-primary);
             box-shadow: var(--shadow);
@@ -1214,6 +1251,12 @@
                 gap: 12px;
             }
 
+            .top-controls {
+                width: 100%;
+                flex-direction: column;
+                align-items: flex-end;
+            }
+
             .tabs-container {
                 width: 100%;
                 justify-content: space-between;
@@ -1242,6 +1285,70 @@
                 max-width: none;
             }
         }
+
+        /* ============ Design Mode Variants ============ */
+        [data-design="editorial"] {
+            --font-ui: "Source Serif 4", Georgia, serif;
+            --accent: #b45309;
+            --accent-hover: #92400e;
+            --accent-subtle: rgba(180, 83, 9, 0.14);
+            --shadow: 0 1px 0 rgba(0,0,0,0.08);
+            --shadow-lg: 0 3px 0 rgba(0,0,0,0.12);
+        }
+
+        [data-design="editorial"] .card,
+        [data-design="editorial"] .tabs-container,
+        [data-design="editorial"] .nav-tab,
+        [data-design="editorial"] .theme-toggle,
+        [data-design="editorial"] .design-toggle {
+            border-radius: 8px;
+        }
+
+        [data-design="editorial"] .card-title {
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            font-size: 1.05rem;
+        }
+
+        [data-design="technical"] {
+            --font-ui: "JetBrains Mono", "Fira Code", monospace;
+            --accent: #06b6d4;
+            --accent-hover: #0891b2;
+            --accent-subtle: rgba(6, 182, 212, 0.12);
+            --shadow: none;
+            --shadow-lg: none;
+        }
+
+        [data-design="technical"] .card,
+        [data-design="technical"] .tabs-container {
+            border-width: 2px;
+        }
+
+        [data-design="technical"] .nav-tab.active,
+        [data-design="technical"] .theme-btn.active,
+        [data-design="technical"] .design-btn.active {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+        }
+
+        [data-design="minimal"] {
+            --font-ui: "Manrope", "Segoe UI", sans-serif;
+            --accent: #0ea5e9;
+            --accent-hover: #0284c7;
+            --accent-subtle: rgba(14, 165, 233, 0.1);
+            --shadow: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        [data-design="minimal"] .card {
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        [data-design="minimal"] .tabs-container,
+        [data-design="minimal"] .nav-tab {
+            border-radius: 999px;
+        }
     </style>
 </head>
 <body>
@@ -1252,11 +1359,19 @@
                 <span class="logo-icon">🎧</span>
                 <span>Audiobook Studio</span>
             </div>
-            <div class="theme-toggle">
-                <button class="theme-btn active" data-theme="light">Light</button>
-                <button class="theme-btn" data-theme="dark">Dark</button>
-                <button class="theme-btn" data-theme="midnight">Midnight</button>
-                <button class="theme-btn" data-theme="forest">Forest</button>
+            <div class="top-controls">
+                <div class="design-toggle">
+                    <button class="design-btn active" data-design="studio">Studio</button>
+                    <button class="design-btn" data-design="editorial">Editorial</button>
+                    <button class="design-btn" data-design="technical">Technical</button>
+                    <button class="design-btn" data-design="minimal">Minimal</button>
+                </div>
+                <div class="theme-toggle">
+                    <button class="theme-btn active" data-theme="light">Light</button>
+                    <button class="theme-btn" data-theme="dark">Dark</button>
+                    <button class="theme-btn" data-theme="midnight">Midnight</button>
+                    <button class="theme-btn" data-theme="forest">Forest</button>
+                </div>
             </div>
         </div>
     </header>
@@ -1561,6 +1676,28 @@
                 }
                 localStorage.setItem('audiobook-theme', theme);
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // ============ Design Mode Handling ============
+        const savedDesign = localStorage.getItem('audiobook-design') || 'studio';
+        if (savedDesign !== 'studio') {
+            document.documentElement.setAttribute('data-design', savedDesign);
+        }
+        document.querySelectorAll('.design-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.design-btn[data-design="${savedDesign}"]`)?.classList.add('active');
+
+        document.querySelectorAll('.design-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const design = btn.dataset.design;
+                if (design === 'studio') {
+                    document.documentElement.removeAttribute('data-design');
+                } else {
+                    document.documentElement.setAttribute('data-design', design);
+                }
+                localStorage.setItem('audiobook-design', design);
+                document.querySelectorAll('.design-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
         });
