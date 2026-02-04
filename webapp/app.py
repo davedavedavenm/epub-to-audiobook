@@ -49,6 +49,13 @@ LIBRARY_DIR = Path(os.environ.get('LIBRARY_DIR', '/data/library'))
 # Supported ebook formats (converted to EPUB via Calibre)
 SUPPORTED_FORMATS = {'.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'}
 
+# Default voice when none specified (George Classic - British Male)
+DEFAULT_VOICE = 'bm_v0george'
+
+# Auto-retry configuration
+MAX_RETRY_COUNT = 3
+RETRY_BACKOFF_BASE = 30  # seconds (30, 60, 120 for attempts 1, 2, 3)
+
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -468,6 +475,132 @@ def start_next_queued_job():
     thread.start()
     app.logger.info(f"Started next queued job: {job['id']}")
     return True
+
+
+# ============ Auto-Retry Logic ============
+
+def handle_job_failure(job_id, error_type, error_msg):
+    """Handle job failure with auto-retry logic.
+
+    Auto-retries jobs that failed due to container_died or timeout errors,
+    up to MAX_RETRY_COUNT times with exponential backoff.
+
+    Args:
+        job_id: The job ID
+        error_type: Type of failure ('container_died', 'timeout', 'other')
+        error_msg: Error message to store
+
+    Returns:
+        True if job was queued for retry, False if marked as permanently failed
+    """
+    import time as time_module
+
+    job = get_job(job_id)
+    if not job:
+        return False
+
+    retry_count = job.get('retry_count', 0)
+
+    # Only auto-retry recoverable errors
+    if retry_count < MAX_RETRY_COUNT and error_type in ('container_died', 'timeout'):
+        # Calculate backoff delay
+        delay = RETRY_BACKOFF_BASE * (2 ** retry_count)  # 30s, 60s, 120s
+
+        with get_db() as conn:
+            conn.execute('''
+                UPDATE jobs
+                SET status = 'queued',
+                    retry_count = retry_count + 1,
+                    error = NULL,
+                    started_at = NULL,
+                    progress_percent = 0,
+                    current_chapter = NULL,
+                    current_chapter_name = NULL
+                WHERE id = ?
+            ''', (job_id,))
+            conn.commit()
+
+        app.logger.info(f"Auto-retrying job {job_id} (attempt {retry_count + 1}/{MAX_RETRY_COUNT}) after {delay}s delay")
+
+        # Schedule retry after delay
+        def delayed_retry():
+            time_module.sleep(delay)
+            start_next_queued_job()
+
+        retry_thread = threading.Thread(target=delayed_retry)
+        retry_thread.daemon = True
+        retry_thread.start()
+        return True
+    else:
+        # Max retries exceeded or non-recoverable error
+        final_error = f"Failed after {retry_count} retries: {error_msg}" if retry_count > 0 else error_msg
+        with get_db() as conn:
+            conn.execute('''
+                UPDATE jobs
+                SET status = 'failed',
+                    error = ?,
+                    completed_at = ?
+                WHERE id = ?
+            ''', (final_error, datetime.now().isoformat(), job_id))
+            conn.commit()
+        app.logger.error(f"Job {job_id} permanently failed: {final_error}")
+        return False
+
+
+# ============ Watchdog Thread ============
+
+def watchdog_loop():
+    """Background thread to monitor job health.
+
+    Runs every 60 seconds and checks for:
+    - Jobs running longer than 2x their ETA
+    - Jobs with dead containers
+
+    Stalled jobs are marked as failed and may be auto-retried.
+    """
+    import time as time_module
+
+    while True:
+        time_module.sleep(60)  # Check every minute
+
+        try:
+            with get_db() as conn:
+                # Find jobs that have been running for more than 2x their ETA
+                # Only check jobs that have an ETA and have been running for at least 10 minutes
+                overdue_jobs = conn.execute('''
+                    SELECT id, container_name, started_at, eta_minutes, book_name
+                    FROM jobs
+                    WHERE status IN ('converting', 'converting PDF', 'converting to audio')
+                    AND eta_minutes IS NOT NULL
+                    AND eta_minutes > 0
+                    AND datetime(started_at, '+' || (eta_minutes * 2) || ' minutes') < datetime('now')
+                ''').fetchall()
+
+                for job in overdue_jobs:
+                    job_id = job['id']
+                    container_name = job['container_name']
+
+                    # Check if container is still running
+                    if not check_container_running(container_name):
+                        app.logger.warning(f"Watchdog: Job {job_id} ({job['book_name'][:30]}) container died, handling failure")
+                        handle_job_failure(job_id, 'container_died', 'Container died unexpectedly (detected by watchdog)')
+                    else:
+                        # Container is running but exceeded 2x ETA - just log warning
+                        elapsed = (datetime.now() - datetime.fromisoformat(job['started_at'])).total_seconds() / 60
+                        app.logger.warning(
+                            f"Watchdog: Job {job_id} ({job['book_name'][:30]}) running {elapsed:.0f}min, "
+                            f"exceeds 2x ETA of {job['eta_minutes']}min - still processing"
+                        )
+
+        except Exception as e:
+            app.logger.error(f"Watchdog error: {e}")
+
+
+def start_watchdog():
+    """Start the watchdog background thread."""
+    watchdog_thread = threading.Thread(target=watchdog_loop, daemon=True)
+    watchdog_thread.start()
+    print("Watchdog thread started")
 
 
 # ============ Utility Functions ============
@@ -900,23 +1033,35 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 send_telegram_notification(job, success=True)
         else:
             error_msg = stderr.decode()[:1000] if stderr else 'No output files created'
-            update_job(job_id, status='failed', error=error_msg, completed_at=datetime.now().isoformat())
             app.logger.error(f"Job {job_id} failed: {error_msg}")
 
-            # Send Telegram notification if requested
-            job = get_job(job_id)
-            if job and job.get('notify_telegram'):
-                send_telegram_notification(job, success=False)
+            # Check if this looks like a container death (retryable)
+            if 'killed' in error_msg.lower() or 'died' in error_msg.lower() or 'oom' in error_msg.lower():
+                retried = handle_job_failure(job_id, 'container_died', error_msg)
+            else:
+                # Other errors - not auto-retried
+                update_job(job_id, status='failed', error=error_msg, completed_at=datetime.now().isoformat())
+                retried = False
+
+            # Send Telegram notification if NOT being retried
+            if not retried:
+                job = get_job(job_id)
+                if job and job.get('notify_telegram'):
+                    send_telegram_notification(job, success=False)
 
     except subprocess.TimeoutExpired:
         job = get_job(job_id)
         timeout_mins = job.get('timeout_minutes', 'unknown') if job else 'unknown'
-        update_job(job_id,
-            status='failed',
-            error=f'Conversion timed out after {timeout_mins} minutes',
-            completed_at=datetime.now().isoformat()
-        )
+        error_msg = f'Conversion timed out after {timeout_mins} minutes'
         app.logger.error(f"Job {job_id} timed out")
+        retried = handle_job_failure(job_id, 'timeout', error_msg)
+
+        # Send Telegram notification if NOT being retried
+        if not retried:
+            job = get_job(job_id)
+            if job and job.get('notify_telegram'):
+                send_telegram_notification(job, success=False)
+
     except Exception as e:
         update_job(job_id, status='failed', error=str(e), completed_at=datetime.now().isoformat())
         app.logger.error(f"Job {job_id} exception: {e}")
@@ -1011,7 +1156,7 @@ def start_conversion():
         return jsonify({'error': 'No file uploaded'}), 400
 
     uploaded_file = request.files.get('file') or request.files.get('epub')
-    voice = request.form.get('voice', 'bf_emma')
+    voice = request.form.get('voice', DEFAULT_VOICE)
     voice2 = request.form.get('voice2', '').strip() or None
     start_chapter = request.form.get('start_chapter', '').strip()
     end_chapter = request.form.get('end_chapter', '').strip()
@@ -1365,7 +1510,7 @@ def convert_from_library():
     """
     data = request.get_json() or {}
     file_path = Path(data.get('path', ''))
-    voice = data.get('voice', 'bf_emma')
+    voice = data.get('voice', DEFAULT_VOICE)
     notify_telegram = data.get('notify_telegram', False)
     notify_whatsapp = data.get('notify_whatsapp', False)
 
@@ -1454,6 +1599,9 @@ init_db()
 
 # Clean up any orphan jobs from previous runs
 cleanup_orphan_jobs()
+
+# Start watchdog thread to monitor job health
+start_watchdog()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8881, debug=True)
