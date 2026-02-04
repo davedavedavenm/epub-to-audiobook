@@ -49,22 +49,23 @@ services:
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
-      - HOST_STACK_DIR=/home/dave/stacks/epub-to-audiobook
+      # IMPORTANT: This must match the absolute path used in volumes below
+      - HOST_STACK_DIR=/home/dave/ai/lab/stacks/epub-to-audiobook
       - AUDIOBOOKSHELF_DIR=/opt/stacks/audiobookshelf/audiobooks
       - LIBRARY_DIR=/mnt/openbooks
       - EVOLUTION_API_URL=http://192.168.1.172:8084
       - EVOLUTION_API_KEY=eb0fce1a53c497206310701517ef98c9139c723104670b52496417651ab1f983
       - DEFAULT_WHATSAPP_NUMBER=27763156632
     volumes:
-      # Use bind mounts so paths are predictable for spawned containers
-      - ./data/uploads:/data/uploads
-      - ./data/audiobooks:/data/audiobooks
-      - ./data/previews:/data/previews
-      - ./data:/data
+      # Use ABSOLUTE paths so it works regardless of where docker compose is run from
+      - /home/dave/ai/lab/stacks/epub-to-audiobook/data/uploads:/data/uploads
+      - /home/dave/ai/lab/stacks/epub-to-audiobook/data/audiobooks:/data/audiobooks
+      - /home/dave/ai/lab/stacks/epub-to-audiobook/data/previews:/data/previews
+      - /home/dave/ai/lab/stacks/epub-to-audiobook/data:/data
       - /var/run/docker.sock:/var/run/docker.sock
       # SSH key for rsync to docker-vm
-      - ./ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
-      - ./ssh-keys/config:/root/.ssh/config:ro
+      - /home/dave/ai/lab/stacks/epub-to-audiobook/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
+      - /home/dave/ai/lab/stacks/epub-to-audiobook/ssh-keys/config:/root/.ssh/config:ro
       # OpenBooks library for browsing available EPUBs
       - /mnt/openbooks:/mnt/openbooks:ro
     depends_on:
