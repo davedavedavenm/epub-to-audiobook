@@ -161,6 +161,31 @@ def init_db():
             conn.execute('ALTER TABLE jobs ADD COLUMN tts_engine TEXT DEFAULT "kokoro"')
         except sqlite3.OperationalError:
             pass  # Column already exists
+        # Add retry_count column if it doesn't exist (migration for orphan recovery)
+        try:
+            conn.execute('ALTER TABLE jobs ADD COLUMN retry_count INTEGER DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        # Create conversion_metrics table for ETA learning
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS conversion_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                voice TEXT NOT NULL,
+                engine TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                char_count INTEGER NOT NULL,
+                chapter_count INTEGER NOT NULL,
+                actual_duration_seconds INTEGER NOT NULL,
+                chars_per_second REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Index for fast lookups on voice/engine/file_type
+        conn.execute('''
+            CREATE INDEX IF NOT EXISTS idx_metrics_lookup
+            ON conversion_metrics(voice, engine, file_type)
+        ''')
         conn.commit()
 
 
@@ -183,6 +208,8 @@ def job_to_dict(row):
     # Convert integer booleans back
     d['is_pdf'] = bool(d.get('is_pdf', 0))
     d['synced_to_abs'] = bool(d.get('synced_to_abs', 0))
+    # Ensure retry_count has a default value
+    d['retry_count'] = d.get('retry_count', 0) or 0
     return d
 
 
@@ -195,8 +222,8 @@ def save_job(job: dict):
              completed_at, input_filename, output_dirname, is_pdf, char_count,
              timeout_minutes, total_chapters, current_chapter, current_chapter_name,
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
-             start_chapter, end_chapter, notify_telegram)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             start_chapter, end_chapter, notify_telegram, retry_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -225,7 +252,8 @@ def save_job(job: dict):
             job.get('container_name'),
             job.get('start_chapter'),
             job.get('end_chapter'),
-            1 if job.get('notify_telegram') else 0
+            1 if job.get('notify_telegram') else 0,
+            job.get('retry_count', 0)
         ))
         conn.commit()
 
@@ -250,6 +278,130 @@ def update_job(job_id: str, **kwargs):
     if job:
         job.update(kwargs)
         save_job(job)
+
+
+# ============ ETA Learning Functions ============
+
+def record_conversion_metrics(job):
+    """Record actual conversion performance for learning.
+    
+    Called when a job completes successfully to store metrics that
+    can be used to improve future ETA estimates.
+    """
+    if not job.get('started_at') or not job.get('completed_at'):
+        return
+    
+    try:
+        started = datetime.fromisoformat(job['started_at'])
+        completed = datetime.fromisoformat(job['completed_at'])
+        duration_seconds = (completed - started).total_seconds()
+        
+        if duration_seconds <= 0 or not job.get('char_count'):
+            return
+        
+        chars_per_second = job['char_count'] / duration_seconds
+        file_type = 'pdf' if job.get('is_pdf') else 'epub'
+        
+        with get_db() as conn:
+            conn.execute('''
+                INSERT INTO conversion_metrics 
+                (voice, engine, file_type, char_count, chapter_count, actual_duration_seconds, chars_per_second)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (job['voice'], job.get('tts_engine', 'kokoro'), file_type, job['char_count'], 
+                  job.get('total_chapters', 1) or 1, int(duration_seconds), chars_per_second))
+            conn.commit()
+        
+        app.logger.info(f"Recorded conversion metrics: {chars_per_second:.2f} chars/sec for {job['voice']}/{file_type}")
+    except Exception as e:
+        app.logger.warning(f"Failed to record conversion metrics: {e}")
+
+
+def estimate_eta_minutes(voice, engine, file_type, char_count):
+    """Estimate conversion time using historical data.
+    
+    Uses a tiered fallback approach:
+    1. Exact match (voice + engine + format)
+    2. Engine + format only
+    3. Default rate (10 chars/second = 600 chars/min)
+    
+    Adds 20% buffer for safety.
+    """
+    with get_db() as conn:
+        # Try exact match (voice + engine + format)
+        result = conn.execute('''
+            SELECT AVG(chars_per_second) as avg_rate
+            FROM conversion_metrics
+            WHERE voice = ? AND engine = ? AND file_type = ?
+        ''', (voice, engine, file_type)).fetchone()
+        
+        if result and result['avg_rate']:
+            rate = result['avg_rate']
+            app.logger.debug(f"ETA using exact match rate: {rate:.2f} chars/sec")
+        else:
+            # Try engine + format only
+            result = conn.execute('''
+                SELECT AVG(chars_per_second) as avg_rate
+                FROM conversion_metrics
+                WHERE engine = ? AND file_type = ?
+            ''', (engine, file_type)).fetchone()
+            
+            if result and result['avg_rate']:
+                rate = result['avg_rate']
+                app.logger.debug(f"ETA using engine+format rate: {rate:.2f} chars/sec")
+            else:
+                # Default: 10 chars/second (600 chars/min)
+                rate = 10.0
+                app.logger.debug(f"ETA using default rate: {rate:.2f} chars/sec")
+    
+    # Add 20% buffer
+    eta_seconds = (char_count / rate) * 1.2
+    return max(1, int(eta_seconds / 60))
+
+
+
+# ============ Orphan Job Detection & Recovery ============
+
+def check_container_running(container_name):
+    """Check if a Docker container exists and is running."""
+    if not container_name:
+        return False
+    try:
+        result = subprocess.run(
+            ['docker', 'inspect', '-f', '{{.State.Running}}', container_name],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout.strip() == 'true'
+    except Exception:
+        return False
+
+
+def cleanup_orphan_jobs():
+    """Detect and handle orphan jobs on startup.
+
+    Finds jobs marked as 'converting' but whose containers are no longer running,
+    and marks them as failed so users can retry.
+    """
+    with get_db() as conn:
+        converting_jobs = conn.execute(
+            "SELECT id, container_name FROM jobs WHERE status IN ('converting', 'converting PDF', 'converting to audio')"
+        ).fetchall()
+
+        orphan_count = 0
+        for job in converting_jobs:
+            if not check_container_running(job['container_name']):
+                conn.execute('''
+                    UPDATE jobs
+                    SET status = 'failed',
+                        error = 'Container died unexpectedly. Click Retry to restart.',
+                        completed_at = ?
+                    WHERE id = ?
+                ''', (datetime.now().isoformat(), job['id']))
+                orphan_count += 1
+                print(f"Marked orphan job {job['id']} as failed")
+
+        if orphan_count > 0:
+            conn.commit()
+            print(f"Cleaned up {orphan_count} orphan jobs")
 
 
 # ============ Utility Functions ============
@@ -569,19 +721,19 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             epub_path = UPLOAD_DIR / epub_filename
             update_job(job_id, status='converting to audio')
 
-        # Calculate timeout
+        # Calculate timeout and initial ETA using learning algorithm
         char_count = estimate_epub_size(epub_path)
         timeout_seconds = calculate_timeout(char_count)
-        update_job(job_id, char_count=char_count, timeout_minutes=timeout_seconds // 60)
-        app.logger.info(f"Book has ~{char_count:,} chars, timeout set to {timeout_seconds // 60} minutes")
+        job = get_job(job_id)
+        tts_engine = job.get('tts_engine', 'kokoro') if job else 'kokoro'
+        file_type = 'pdf' if is_pdf else 'epub'
+        initial_eta = estimate_eta_minutes(voice, tts_engine, file_type, char_count)
+        update_job(job_id, char_count=char_count, timeout_minutes=timeout_seconds // 60, eta_minutes=initial_eta)
+        app.logger.info(f"Book has ~{char_count:,} chars, ETA {initial_eta} min, timeout {timeout_seconds // 60} min")
 
         # Generate unique container name
         container_name = f"audiobook-{job_id}"
         update_job(job_id, container_name=container_name)
-
-        # Get job for additional options
-        job = get_job(job_id)
-        tts_engine = job.get('tts_engine', 'kokoro') if job else 'kokoro'
 
         # Determine effective voice (combine if voice2 specified - Kokoro only)
         effective_voice = voice
@@ -670,8 +822,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             )
             app.logger.info(f"Job {job_id} completed with {len(output_files)} files")
 
-            # Send Telegram notification if requested
+            # Record conversion metrics for ETA learning
             job = get_job(job_id)
+            if job:
+                record_conversion_metrics(job)
+
+            # Send Telegram notification if requested
             if job and job.get('notify_telegram'):
                 send_telegram_notification(job, success=True)
         else:
@@ -713,6 +869,38 @@ def list_voices():
         'voices': VOICES,
         'engines': TTS_ENGINES
     })
+
+
+@app.route('/api/health')
+def health_check():
+    """System health check endpoint.
+
+    Checks:
+    - webapp: Always ok if this endpoint responds
+    - database: SQLite connection test
+    - kokoro: Kokoro TTS service availability
+
+    Returns 200 if all checks pass, 503 if any fail.
+    """
+    checks = {'webapp': 'ok'}
+
+    # Check database
+    try:
+        with get_db() as conn:
+            conn.execute('SELECT 1').fetchone()
+        checks['database'] = 'ok'
+    except Exception as e:
+        checks['database'] = str(e)
+
+    # Check Kokoro TTS
+    try:
+        resp = requests.get(f"{KOKORO_URL}/audio/voices", timeout=5)
+        checks['kokoro'] = 'ok' if resp.status_code == 200 else f'HTTP {resp.status_code}'
+    except Exception as e:
+        checks['kokoro'] = str(e)
+
+    all_ok = all(v == 'ok' for v in checks.values())
+    return jsonify(checks), 200 if all_ok else 503
 
 
 @app.route('/api/history')
@@ -893,13 +1081,23 @@ def cancel_job(job_id: str):
 
 @app.route('/api/jobs/<job_id>/retry', methods=['POST'])
 def retry_job(job_id: str):
-    """Retry a failed or cancelled job."""
+    """Retry a failed or cancelled job.
+
+    Limits retries to 3 attempts to prevent infinite retry loops.
+    """
     job = get_job(job_id)
     if not job:
         return jsonify({'error': 'Job not found'}), 404
 
     if job['status'] not in ('failed', 'cancelled'):
         return jsonify({'error': 'Can only retry failed or cancelled jobs'}), 400
+
+    # Check retry limit (max 3 retries)
+    retry_count = job.get('retry_count', 0) or 0
+    if retry_count >= 3:
+        return jsonify({
+            'error': f'Maximum retry limit (3) exceeded. Job has been retried {retry_count} times.'
+        }), 400
 
     # Check if input file still exists
     input_path = UPLOAD_DIR / job['input_filename']
@@ -912,7 +1110,8 @@ def retry_job(job_id: str):
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Reset job
+    # Increment retry count and reset job
+    new_retry_count = retry_count + 1
     update_job(job_id,
         status='queued',
         started_at=None,
@@ -923,8 +1122,11 @@ def retry_job(job_id: str):
         progress_percent=None,
         eta_minutes=None,
         file_count=None,
-        synced_to_abs=False
+        synced_to_abs=False,
+        retry_count=new_retry_count
     )
+
+    app.logger.info(f"Retrying job {job_id} (attempt {new_retry_count}/3)")
 
     # Start conversion
     thread = threading.Thread(
@@ -934,7 +1136,7 @@ def retry_job(job_id: str):
     thread.daemon = True
     thread.start()
 
-    return jsonify({'status': 'queued'})
+    return jsonify({'status': 'queued', 'retry_count': new_retry_count})
 
 
 @app.route('/api/jobs/<job_id>/download')
@@ -1166,6 +1368,9 @@ def convert_from_library():
 
 # Initialize database on startup
 init_db()
+
+# Clean up any orphan jobs from previous runs
+cleanup_orphan_jobs()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8881, debug=True)
