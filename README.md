@@ -1,6 +1,6 @@
 # EPUB to Audiobook Converter
 
-**Version:** 1.0.0
+**Version:** 1.3.0 (repo)
 
 A self-hosted web application for converting ebooks to audiobooks using AI text-to-speech. Features a modern tab-based UI with voice previews, library browsing, job management, and Audiobookshelf integration.
 
@@ -55,6 +55,23 @@ docker compose --profile piper up -d
 open http://localhost:8881
 ```
 
+## Production Deployment
+
+Use a single canonical stack path and deploy from a Git tag:
+
+```bash
+# On the target host
+git clone https://github.com/davedavedavenm/epub-to-audiobook.git /home/dave/ai/lab/stacks/epub-to-audiobook
+cd /home/dave/ai/lab/stacks/epub-to-audiobook
+cp .env.example .env
+
+# Deploy v1.3.0 (includes build metadata)
+./scripts/deploy.sh v1.3.0
+
+# Post-deploy smoke checks
+./scripts/smoke-check.sh http://localhost:8881
+```
+
 ## Available Voices
 
 ### Kokoro Voices (High Quality)
@@ -96,6 +113,7 @@ Set `AUDIOBOOKSHELF_DIR` and configure SSH access from the container to your ABS
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/voices` | GET | List available voices |
+| `/api/version` | GET | Build/deployment fingerprint (version + git SHA) |
 | `/api/preview/<voice_id>` | GET | Get voice preview audio |
 | `/api/convert` | POST | Start conversion job |
 | `/api/jobs` | GET | List all jobs |
@@ -113,6 +131,10 @@ See [ROADMAP.md](ROADMAP.md) for planned features including:
 - WhatsApp notifications
 - Smart text extraction for better TTS
 - Chatterbox voice cloning (experimental)
+
+## Deployment Notes
+
+- See [LIVE-DEPLOYMENT-STATUS.md](LIVE-DEPLOYMENT-STATUS.md) for the latest host/runtime audit and GitHub parity checks.
 
 ## Credits
 

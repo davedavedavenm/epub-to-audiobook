@@ -29,14 +29,20 @@ app = Flask(__name__)
 
 # Configuration
 KOKORO_URL = os.environ.get('KOKORO_URL', 'http://localhost:8880/v1')
-PIPER_URL = os.environ.get('PIPER_URL', 'http://piper-tts:5000')
+PIPER_URL = os.environ.get('PIPER_URL', 'http://piper-tts:8000/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
 DB_PATH = Path(os.environ.get('DB_PATH', '/data/jobs.db'))
+APP_VERSION = os.environ.get('APP_VERSION', 'dev')
+APP_GIT_SHA = os.environ.get('APP_GIT_SHA', 'unknown')
+APP_BUILD_TIME = os.environ.get('APP_BUILD_TIME', 'unknown')
+HEALTH_KOKORO_TIMEOUT = int(os.environ.get('HEALTH_KOKORO_TIMEOUT', '8'))
+HEALTH_KOKORO_RETRIES = int(os.environ.get('HEALTH_KOKORO_RETRIES', '2'))
 
 # Host paths for Docker volume mounts (where the stack is deployed)
 HOST_STACK_DIR = os.environ.get('HOST_STACK_DIR', '/home/dave/stacks/epub-to-audiobook')
+STACK_PATH = os.environ.get('STACK_PATH', HOST_STACK_DIR)
 HOST_UPLOAD_DIR = f"{HOST_STACK_DIR}/data/uploads"
 HOST_OUTPUT_DIR = f"{HOST_STACK_DIR}/data/audiobooks"
 
@@ -78,7 +84,7 @@ TTS_ENGINES = {
         'name': 'Piper',
         'description': 'Fast, lightweight neural TTS',
         'url_env': 'PIPER_URL',
-        'default_url': 'http://piper-tts:5000'
+        'default_url': 'http://piper-tts:8000/v1'
     }
 }
 
@@ -382,13 +388,82 @@ def check_container_running(container_name):
         return False
 
 
+def remove_stale_container(container_name):
+    """Remove an existing container by name to avoid name conflicts."""
+    if not container_name:
+        return False
+    try:
+        result = subprocess.run(
+            ['docker', 'rm', '-f', container_name],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            app.logger.warning(f"Removed stale container {container_name}")
+            return True
+    except Exception as e:
+        app.logger.warning(f"Could not remove stale container {container_name}: {e}")
+    return False
+
+
+def finalize_completed_job_if_outputs_exist(job_id):
+    """Mark an in-flight job completed when output files prove success.
+
+    This is mainly used after webapp restarts, where the original worker thread
+    may no longer be alive to update final job status.
+    """
+    job = get_job(job_id)
+    if not job:
+        return False
+
+    output_dirname = job.get('output_dirname')
+    if not output_dirname:
+        return False
+
+    output_path = OUTPUT_DIR / output_dirname
+    output_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
+    if not output_files:
+        return False
+
+    total_chapters = job.get('total_chapters')
+    if total_chapters:
+        try:
+            if len(output_files) < int(total_chapters):
+                return False
+        except Exception:
+            return False
+    else:
+        progress = job.get('progress_percent') or 0
+        if progress < 95:
+            return False
+
+    rename_output_files(output_path, job['book_name'])
+    output_files = list(output_path.glob('*.mp3'))
+    synced = copy_to_audiobookshelf(output_path, job['book_name'])
+    update_job(
+        job_id,
+        status='completed',
+        file_count=len(output_files),
+        progress_percent=100,
+        synced_to_abs=synced,
+        completed_at=datetime.now().isoformat()
+    )
+    app.logger.info(f"Recovered completion for job {job_id} with {len(output_files)} files")
+
+    job = get_job(job_id)
+    if job:
+        record_conversion_metrics(job)
+        if job.get('notify_telegram'):
+            send_telegram_notification(job, success=True)
+    return True
+
+
 def cleanup_orphan_jobs():
     """Detect and handle orphan jobs on startup.
 
     Finds jobs marked as 'converting' but whose containers are no longer running,
     and marks them as failed so users can retry.
 
-    Also handles old 'queued' jobs that were orphaned after a restart.
+    Queued jobs are preserved so they can resume after restart.
     """
     with get_db() as conn:
         # Handle converting jobs with dead containers
@@ -408,24 +483,6 @@ def cleanup_orphan_jobs():
                 ''', (datetime.now().isoformat(), job['id']))
                 orphan_count += 1
                 print(f"Marked orphan converting job {job['id']} as failed")
-
-        # Handle old queued jobs (orphaned after restart - older than 10 minutes)
-        stale_queued = conn.execute('''
-            SELECT id FROM jobs
-            WHERE status = 'queued'
-            AND datetime(created_at) < datetime('now', '-10 minutes')
-        ''').fetchall()
-
-        for job in stale_queued:
-            conn.execute('''
-                UPDATE jobs
-                SET status = 'failed',
-                    error = 'Job was orphaned after webapp restart. Click Retry to continue.',
-                    completed_at = ?
-                WHERE id = ?
-            ''', (datetime.now().isoformat(), job['id']))
-            orphan_count += 1
-            print(f"Marked stale queued job {job['id']} as failed")
 
         if orphan_count > 0:
             conn.commit()
@@ -565,32 +622,32 @@ def watchdog_loop():
 
         try:
             with get_db() as conn:
-                # Find jobs that have been running for more than 2x their ETA
-                # Only check jobs that have an ETA and have been running for at least 10 minutes
-                overdue_jobs = conn.execute('''
+                active_jobs = conn.execute('''
                     SELECT id, container_name, started_at, eta_minutes, book_name
                     FROM jobs
                     WHERE status IN ('converting', 'converting PDF', 'converting to audio')
-                    AND eta_minutes IS NOT NULL
-                    AND eta_minutes > 0
-                    AND datetime(started_at, '+' || (eta_minutes * 2) || ' minutes') < datetime('now')
                 ''').fetchall()
 
-                for job in overdue_jobs:
+                for job in active_jobs:
                     job_id = job['id']
                     container_name = job['container_name']
+                    container_running = check_container_running(container_name)
 
-                    # Check if container is still running
-                    if not check_container_running(container_name):
+                    if not container_running:
+                        if finalize_completed_job_if_outputs_exist(job_id):
+                            continue
                         app.logger.warning(f"Watchdog: Job {job_id} ({job['book_name'][:30]}) container died, handling failure")
                         handle_job_failure(job_id, 'container_died', 'Container died unexpectedly (detected by watchdog)')
-                    else:
-                        # Container is running but exceeded 2x ETA - just log warning
+                        continue
+
+                    eta_minutes = job.get('eta_minutes')
+                    if eta_minutes and eta_minutes > 0 and job.get('started_at'):
                         elapsed = (datetime.now() - datetime.fromisoformat(job['started_at'])).total_seconds() / 60
-                        app.logger.warning(
-                            f"Watchdog: Job {job_id} ({job['book_name'][:30]}) running {elapsed:.0f}min, "
-                            f"exceeds 2x ETA of {job['eta_minutes']}min - still processing"
-                        )
+                        if elapsed > (eta_minutes * 2):
+                            app.logger.warning(
+                                f"Watchdog: Job {job_id} ({job['book_name'][:30]}) running {elapsed:.0f}min, "
+                                f"exceeds 2x ETA of {eta_minutes}min - still processing"
+                            )
 
         except Exception as e:
             app.logger.error(f"Watchdog error: {e}")
@@ -600,7 +657,30 @@ def start_watchdog():
     """Start the watchdog background thread."""
     watchdog_thread = threading.Thread(target=watchdog_loop, daemon=True)
     watchdog_thread.start()
-    print("Watchdog thread started")
+
+
+def resume_inflight_jobs():
+    """Reattach monitors to running conversion containers after restart."""
+    with get_db() as conn:
+        rows = conn.execute('''
+            SELECT id, container_name
+            FROM jobs
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio')
+        ''').fetchall()
+
+    resumed = 0
+    for row in rows:
+        job_id = row['id']
+        container_name = row['container_name']
+        if check_container_running(container_name):
+            running_containers[job_id] = container_name
+            monitor_thread = threading.Thread(target=monitor_conversion, args=(job_id, container_name), daemon=True)
+            monitor_thread.start()
+            resumed += 1
+            app.logger.info(f"Resumed monitoring for job {job_id} ({container_name})")
+
+    if resumed:
+        app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
 
 
 # ============ Utility Functions ============
@@ -935,6 +1015,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # Generate unique container name
         container_name = f"audiobook-{job_id}"
         update_job(job_id, container_name=container_name)
+        remove_stale_container(container_name)
 
         # Determine effective voice (combine if voice2 specified - Kokoro only)
         effective_voice = voice
@@ -1096,9 +1177,16 @@ def health_check():
     - database: SQLite connection test
     - kokoro: Kokoro TTS service availability
 
-    Returns 200 if all checks pass, 503 if any fail.
+    Returns:
+    - 200 when core services are healthy (or degraded due to optional dependency latency)
+    - 503 when core services fail
     """
-    checks = {'webapp': 'ok'}
+    checks = {
+        'webapp': 'ok',
+        'version': APP_VERSION,
+        'git_sha': APP_GIT_SHA,
+        'stack_path': STACK_PATH
+    }
 
     # Check database
     try:
@@ -1108,15 +1196,45 @@ def health_check():
     except Exception as e:
         checks['database'] = str(e)
 
-    # Check Kokoro TTS
-    try:
-        resp = requests.get(f"{KOKORO_URL}/audio/voices", timeout=5)
-        checks['kokoro'] = 'ok' if resp.status_code == 200 else f'HTTP {resp.status_code}'
-    except Exception as e:
-        checks['kokoro'] = str(e)
+    # Check Kokoro TTS with retries (can be slow under load)
+    kokoro_error = None
+    checks['kokoro'] = 'degraded'
+    for _ in range(max(1, HEALTH_KOKORO_RETRIES)):
+        try:
+            resp = requests.get(f"{KOKORO_URL}/audio/voices", timeout=HEALTH_KOKORO_TIMEOUT)
+            if resp.status_code == 200:
+                checks['kokoro'] = 'ok'
+                kokoro_error = None
+                break
+            kokoro_error = f'HTTP {resp.status_code}'
+        except Exception as e:
+            kokoro_error = str(e)
+    if kokoro_error and checks['kokoro'] != 'ok':
+        checks['kokoro_detail'] = kokoro_error
 
-    all_ok = all(v == 'ok' for v in checks.values())
-    return jsonify(checks), 200 if all_ok else 503
+    core_ok = checks.get('webapp') == 'ok' and checks.get('database') == 'ok'
+    if core_ok and checks.get('kokoro') == 'ok':
+        checks['overall'] = 'ok'
+    elif core_ok:
+        checks['overall'] = 'degraded'
+    else:
+        checks['overall'] = 'failed'
+
+    return jsonify(checks), 200 if core_ok else 503
+
+
+@app.route('/api/version')
+def version_info():
+    """Deployment fingerprint for release/debug parity checks."""
+    return jsonify({
+        'version': APP_VERSION,
+        'git_sha': APP_GIT_SHA,
+        'build_time': APP_BUILD_TIME,
+        'stack_path': STACK_PATH,
+        'host_stack_dir': HOST_STACK_DIR,
+        'kokoro_url': KOKORO_URL,
+        'piper_url': PIPER_URL
+    })
 
 
 @app.route('/api/history')
@@ -1600,8 +1718,14 @@ init_db()
 # Clean up any orphan jobs from previous runs
 cleanup_orphan_jobs()
 
+# Reattach monitors for jobs already running in Docker
+resume_inflight_jobs()
+
 # Start watchdog thread to monitor job health
 start_watchdog()
+
+# Continue queued work after restart (if nothing is currently running)
+start_next_queued_job()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8881, debug=True)
