@@ -6,85 +6,37 @@
     <title>EPUB to Audiobook</title>
     <style>
         :root {
-            /* Midnight Theme (default) */
-            --bg-primary: #1a1a2e;
-            --bg-card: #16213e;
-            --bg-element: #0f3460;
-            --bg-hover: #1a4980;
-            --accent: #00d4ff;
-            --accent-hover: #00a8cc;
-            --accent-glow: rgba(0, 212, 255, 0.4);
-            --text-primary: #eee;
-            --text-secondary: #888;
-            --border: #0f3460;
-            --success: #4ade80;
+            /* Light Theme (default) - Clean, modern */
+            --bg-primary: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-element: #f1f5f9;
+            --bg-hover: #e2e8f0;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-subtle: rgba(59, 130, 246, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
             --error: #ef4444;
             --warning: #f59e0b;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        [data-theme="charcoal"] {
-            --bg-primary: #121212;
-            --bg-card: #1e1e1e;
-            --bg-element: #2d2d2d;
-            --bg-hover: #3d3d3d;
-            --accent: #bb86fc;
-            --accent-hover: #9a67ea;
-            --accent-glow: rgba(187, 134, 252, 0.4);
-            --text-primary: #e1e1e1;
-            --text-secondary: #a0a0a0;
-            --border: #333;
-        }
-
-        [data-theme="forest"] {
-            --bg-primary: #0d1f0d;
-            --bg-card: #132713;
-            --bg-element: #1a3a1a;
-            --bg-hover: #245024;
-            --accent: #4ade80;
-            --accent-hover: #22c55e;
-            --accent-glow: rgba(74, 222, 128, 0.4);
-            --text-primary: #e8f5e9;
-            --text-secondary: #81c784;
-            --border: #1a3a1a;
-        }
-
-        [data-theme="crimson"] {
-            --bg-primary: #1a0a0a;
-            --bg-card: #2d1515;
-            --bg-element: #3d1f1f;
-            --bg-hover: #4d2929;
-            --accent: #f87171;
-            --accent-hover: #ef4444;
-            --accent-glow: rgba(248, 113, 113, 0.4);
-            --text-primary: #fef2f2;
-            --text-secondary: #fca5a5;
-            --border: #3d1f1f;
-        }
-
-        [data-theme="purple"] {
-            --bg-primary: #13091c;
-            --bg-card: #1e1029;
-            --bg-element: #2d1a3d;
-            --bg-hover: #3d244d;
-            --accent: #c084fc;
-            --accent-hover: #a855f7;
-            --accent-glow: rgba(192, 132, 252, 0.4);
-            --text-primary: #f3e8ff;
-            --text-secondary: #c4b5fd;
-            --border: #2d1a3d;
-        }
-
-        [data-theme="ocean"] {
-            --bg-primary: #0a1628;
-            --bg-card: #0f2942;
-            --bg-element: #164063;
-            --bg-hover: #1d5a8a;
-            --accent: #38bdf8;
-            --accent-hover: #0ea5e9;
-            --accent-glow: rgba(56, 189, 248, 0.4);
-            --text-primary: #f0f9ff;
-            --text-secondary: #7dd3fc;
-            --border: #164063;
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-element: #334155;
+            --bg-hover: #475569;
+            --accent: #60a5fa;
+            --accent-hover: #3b82f6;
+            --accent-subtle: rgba(96, 165, 250, 0.15);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
         }
 
         * {
@@ -109,7 +61,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
         }
 
         .header-content {
@@ -122,9 +74,9 @@
         }
 
         .logo {
-            font-size: 1.4em;
-            font-weight: 700;
-            color: var(--accent);
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -149,20 +101,35 @@
             transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-element);
+            padding: 6px;
+            border-radius: 20px;
+        }
+
+        .theme-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.85em;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
         .theme-btn:hover {
-            transform: scale(1.15);
+            color: var(--text-primary);
         }
 
         .theme-btn.active {
-            border-color: var(--text-primary);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
         }
-
-        .theme-btn[data-theme="midnight"] { background: linear-gradient(135deg, #00d4ff, #16213e); }
-        .theme-btn[data-theme="charcoal"] { background: linear-gradient(135deg, #bb86fc, #1e1e1e); }
-        .theme-btn[data-theme="forest"] { background: linear-gradient(135deg, #4ade80, #132713); }
-        .theme-btn[data-theme="crimson"] { background: linear-gradient(135deg, #f87171, #2d1515); }
-        .theme-btn[data-theme="purple"] { background: linear-gradient(135deg, #c084fc, #1e1029); }
-        .theme-btn[data-theme="ocean"] { background: linear-gradient(135deg, #38bdf8, #0f2942); }
 
         /* ============ Navigation Tabs ============ */
         .nav-tabs {
@@ -174,11 +141,12 @@
         .tabs-container {
             display: flex;
             gap: 4px;
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 6px;
+            background: var(--bg-element);
+            border-radius: 12px;
+            padding: 4px;
             margin: 16px 0;
             width: fit-content;
+            border: 1px solid var(--border);
         }
 
         .nav-tab {
@@ -202,13 +170,14 @@
         }
 
         .nav-tab.active {
-            background: var(--accent);
-            color: var(--bg-primary);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
         }
 
         .nav-tab .badge {
             background: var(--accent);
-            color: var(--bg-primary);
+            color: white;
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 0.8em;
@@ -216,8 +185,8 @@
         }
 
         .nav-tab.active .badge {
-            background: var(--bg-primary);
-            color: var(--accent);
+            background: var(--accent);
+            color: white;
         }
 
         /* ============ Main Content ============ */
@@ -248,11 +217,12 @@
             padding: 24px;
             margin-bottom: 20px;
             border: 1px solid var(--border);
+            box-shadow: var(--shadow);
             transition: all 0.2s ease;
         }
 
         .card:hover {
-            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow-lg);
         }
 
         .card-header {
@@ -308,17 +278,17 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: rgba(0, 0, 0, 0.1);
+            background: var(--bg-element);
         }
 
         .upload-area:hover, .upload-area.dragover {
             border-color: var(--accent);
-            background: rgba(0, 212, 255, 0.05);
+            background: var(--accent-subtle);
         }
 
         .upload-area.has-file {
             border-color: var(--success);
-            background: rgba(74, 222, 128, 0.08);
+            background: rgba(34, 197, 94, 0.1);
         }
 
         .upload-icon {
@@ -587,7 +557,7 @@
 
         .voice-pill.selected {
             border-color: var(--accent);
-            background: rgba(0, 212, 255, 0.15);
+            background: var(--accent-subtle);
         }
 
         .voice-pill.hidden {
@@ -676,10 +646,10 @@
             width: 100%;
             padding: 16px 24px;
             font-size: 1.05em;
-            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            background: var(--accent);
             border: none;
             border-radius: 12px;
-            color: var(--bg-primary);
+            color: white;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -690,8 +660,8 @@
         }
 
         .convert-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px var(--accent-glow);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
         }
 
         .convert-btn:disabled {
@@ -887,11 +857,11 @@
 
         .job-btn-primary {
             background: var(--accent);
-            color: var(--bg-primary);
+            color: white;
         }
 
         .job-btn-primary:hover {
-            box-shadow: 0 4px 12px var(--accent-glow);
+            background: var(--accent-hover);
         }
 
         .job-btn-secondary {
@@ -1028,7 +998,7 @@
 
         .library-convert-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px var(--accent-glow);
+            background: var(--accent-hover);
         }
 
         .library-convert-btn:disabled {
@@ -1243,13 +1213,9 @@
                 <span class="logo-icon">🎧</span>
                 <span>Audiobook Studio</span>
             </div>
-            <div class="theme-selector">
-                <button class="theme-btn active" data-theme="midnight" title="Midnight"></button>
-                <button class="theme-btn" data-theme="charcoal" title="Charcoal"></button>
-                <button class="theme-btn" data-theme="forest" title="Forest"></button>
-                <button class="theme-btn" data-theme="crimson" title="Crimson"></button>
-                <button class="theme-btn" data-theme="purple" title="Purple Haze"></button>
-                <button class="theme-btn" data-theme="ocean" title="Ocean"></button>
+            <div class="theme-toggle">
+                <button class="theme-btn active" data-theme="light">Light</button>
+                <button class="theme-btn" data-theme="dark">Dark</button>
             </div>
         </div>
     </header>
@@ -1541,14 +1507,21 @@
         const queueBadge = document.getElementById('queue-badge');
 
         // ============ Theme Handling ============
-        const savedTheme = localStorage.getItem('audiobook-theme') || 'midnight';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        const savedTheme = localStorage.getItem('audiobook-theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
         document.querySelector(`.theme-btn[data-theme="${savedTheme}"]`)?.classList.add('active');
 
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const theme = btn.dataset.theme;
-                document.documentElement.setAttribute('data-theme', theme);
+                if (theme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
                 localStorage.setItem('audiobook-theme', theme);
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
