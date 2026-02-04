@@ -705,8 +705,9 @@ def watchdog_loop():
                         handle_job_failure(job_id, 'container_died', 'Container died unexpectedly (detected by watchdog)')
                         continue
 
-                    eta_minutes = job.get('eta_minutes')
-                    if eta_minutes and eta_minutes > 0 and job.get('started_at'):
+                    eta_minutes = job['eta_minutes']
+                    started_at = job['started_at']
+                    if eta_minutes and eta_minutes > 0 and started_at:
                         elapsed = (datetime.now() - datetime.fromisoformat(job['started_at'])).total_seconds() / 60
                         if elapsed > (eta_minutes * 2):
                             app.logger.warning(
