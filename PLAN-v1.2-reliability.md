@@ -276,8 +276,8 @@ CREATE INDEX idx_metrics_lookup ON conversion_metrics(voice, engine, file_type);
 
 ## Testing Plan
 
-### A. Library WhatsApp
-- [ ] Check WhatsApp, verify number field appears
+### A. Library WhatsApp (IMPLEMENTED 2026-02-04)
+- [x] Check WhatsApp, verify number field appears
 - [ ] Convert book with custom number, verify in job
 - [ ] Convert book without number, verify uses default
 
