@@ -2115,7 +2115,12 @@
 
         async function retryJob(jobId) {
             try {
-                await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
+                const response = await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
+                const result = await response.json();
+                if (!response.ok || result.error) {
+                    alert('Retry failed: ' + (result.error || `HTTP ${response.status}`));
+                    return;
+                }
                 switchTab('queue');
             } catch (err) {
                 alert('Failed to retry job: ' + err.message);

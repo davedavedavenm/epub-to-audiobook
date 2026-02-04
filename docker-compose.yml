@@ -21,7 +21,7 @@ services:
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
-    image: ghcr.io/matatonic/openedai-speech:latest
+    image: ${PIPER_IMAGE:-ghcr.io/matatonic/openedai-speech-min:latest}
     container_name: piper-tts
     ports:
       - "5000:8000"
@@ -35,7 +35,12 @@ services:
       - piper  # Only start with: docker compose --profile piper up
 
   webapp:
-    build: ./webapp
+    build:
+      context: ./webapp
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+        APP_GIT_SHA: ${APP_GIT_SHA:-unknown}
+        APP_BUILD_TIME: ${APP_BUILD_TIME:-unknown}
     container_name: epub-to-audiobook-ui
     extra_hosts:
       - "docker-vm:192.168.1.113"
@@ -49,25 +54,31 @@ services:
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
+      - APP_VERSION=${APP_VERSION:-dev}
+      - APP_GIT_SHA=${APP_GIT_SHA:-unknown}
+      - APP_BUILD_TIME=${APP_BUILD_TIME:-unknown}
+      - STACK_PATH=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
       # IMPORTANT: This must match the absolute path used in volumes below
-      - HOST_STACK_DIR=/home/dave/ai/lab/stacks/epub-to-audiobook
-      - AUDIOBOOKSHELF_DIR=/opt/stacks/audiobookshelf/audiobooks
-      - LIBRARY_DIR=/mnt/openbooks
-      - EVOLUTION_API_URL=http://192.168.1.172:8084
-      - EVOLUTION_API_KEY=eb0fce1a53c497206310701517ef98c9139c723104670b52496417651ab1f983
-      - DEFAULT_WHATSAPP_NUMBER=27763156632
+      - HOST_STACK_DIR=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
+      - AUDIOBOOKSHELF_DIR=${AUDIOBOOKSHELF_DIR:-/opt/stacks/audiobookshelf/audiobooks}
+      - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
+      - DEFAULT_WHATSAPP_NUMBER=${DEFAULT_WHATSAPP_NUMBER:-}
+      - HEALTH_KOKORO_TIMEOUT=${HEALTH_KOKORO_TIMEOUT:-8}
+      - HEALTH_KOKORO_RETRIES=${HEALTH_KOKORO_RETRIES:-2}
     volumes:
       # Use ABSOLUTE paths so it works regardless of where docker compose is run from
-      - /home/dave/ai/lab/stacks/epub-to-audiobook/data/uploads:/data/uploads
-      - /home/dave/ai/lab/stacks/epub-to-audiobook/data/audiobooks:/data/audiobooks
-      - /home/dave/ai/lab/stacks/epub-to-audiobook/data/previews:/data/previews
-      - /home/dave/ai/lab/stacks/epub-to-audiobook/data:/data
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/audiobooks:/data/audiobooks
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/previews:/data/previews
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data:/data
       - /var/run/docker.sock:/var/run/docker.sock
       # SSH key for rsync to docker-vm
-      - /home/dave/ai/lab/stacks/epub-to-audiobook/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
-      - /home/dave/ai/lab/stacks/epub-to-audiobook/ssh-keys/config:/root/.ssh/config:ro
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       # OpenBooks library for browsing available EPUBs
-      - /mnt/openbooks:/mnt/openbooks:ro
+      - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
     depends_on:
       kokoro-tts:
         condition: service_healthy

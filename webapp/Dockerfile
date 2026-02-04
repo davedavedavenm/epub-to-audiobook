@@ -1,6 +1,15 @@
 FROM python:3.11-slim
 
 WORKDIR /app
+ARG APP_VERSION=dev
+ARG APP_GIT_SHA=unknown
+ARG APP_BUILD_TIME=unknown
+LABEL org.opencontainers.image.version=$APP_VERSION
+LABEL org.opencontainers.image.revision=$APP_GIT_SHA
+LABEL org.opencontainers.image.created=$APP_BUILD_TIME
+ENV APP_VERSION=$APP_VERSION
+ENV APP_GIT_SHA=$APP_GIT_SHA
+ENV APP_BUILD_TIME=$APP_BUILD_TIME
 
 # Install Docker CLI for spawning conversion containers, rsync+ssh for Audiobookshelf sync,
 # and Calibre for ebook format conversion (mobi, azw3, fb2, docx, etc.)
