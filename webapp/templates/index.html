@@ -96,12 +96,14 @@
         }
 
         .header-content {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 60px;
+            min-height: 60px;
+            padding: 10px 0;
+            gap: 12px;
         }
 
         .logo {
@@ -117,28 +119,15 @@
             font-size: 1.2em;
         }
 
-        .theme-selector {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
-        .theme-btn {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-
         .theme-toggle {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(78px, auto));
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             background: var(--bg-element);
             padding: 6px;
             border-radius: 20px;
+            max-width: 100%;
         }
 
         .theme-btn {
@@ -150,6 +139,10 @@
             background: transparent;
             color: var(--text-secondary);
             transition: all 0.2s ease;
+            white-space: nowrap;
+            line-height: 1.2;
+            flex: 0 0 auto;
+            text-align: center;
         }
 
         .theme-btn:hover {
@@ -163,18 +156,25 @@
         }
 
         .top-controls {
-            display: flex;
+            display: grid;
+            grid-template-columns: auto auto;
             gap: 10px;
             align-items: center;
+            justify-content: flex-end;
+            margin-left: auto;
+            flex: 1 1 680px;
+            min-width: 0;
         }
 
         .design-toggle {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(82px, auto));
             align-items: center;
             gap: 6px;
             background: var(--bg-element);
             padding: 6px;
             border-radius: 20px;
+            max-width: 100%;
         }
 
         .design-btn {
@@ -186,6 +186,10 @@
             background: transparent;
             color: var(--text-secondary);
             transition: all 0.2s ease;
+            white-space: nowrap;
+            line-height: 1.2;
+            flex: 0 0 auto;
+            text-align: center;
         }
 
         .design-btn:hover {
@@ -196,6 +200,18 @@
             background: var(--bg-card);
             color: var(--text-primary);
             box-shadow: var(--shadow);
+        }
+
+        @media (max-width: 1100px) {
+            .header-content {
+                align-items: flex-start;
+            }
+
+            .top-controls {
+                width: 100%;
+                grid-template-columns: auto auto;
+                justify-content: flex-start;
+            }
         }
 
         /* ============ Navigation Tabs ============ */
@@ -620,6 +636,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 14px;
+            min-height: 38px;
             background: var(--bg-element);
             border: 2px solid transparent;
             border-radius: 20px;
@@ -644,6 +661,7 @@
             font-weight: 500;
             font-size: 0.9em;
             color: var(--text-primary);
+            line-height: 1.2;
         }
 
         .voice-pill-meta {
@@ -678,8 +696,11 @@
         }
 
         .engine-voices {
-            max-height: 300px;
+            max-height: 320px;
             overflow-y: auto;
+            overflow-x: hidden;
+            padding-top: 6px;
+            scroll-padding-top: 8px;
             padding-right: 8px;
         }
 
@@ -1247,14 +1268,19 @@
             .header-content {
                 flex-wrap: wrap;
                 height: auto;
-                padding: 12px 0;
                 gap: 12px;
             }
 
             .top-controls {
                 width: 100%;
-                flex-direction: column;
-                align-items: flex-end;
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .design-toggle,
+            .theme-toggle {
+                width: 100%;
+                grid-template-columns: repeat(2, minmax(100px, 1fr));
             }
 
             .tabs-container {
