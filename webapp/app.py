@@ -425,6 +425,51 @@ def cleanup_orphan_jobs():
             print(f"Cleaned up {orphan_count} orphan jobs")
 
 
+# ============ Job Queue Management ============
+
+def is_job_running():
+    """Check if any job is currently converting."""
+    with get_db() as conn:
+        result = conn.execute('''
+            SELECT COUNT(*) FROM jobs
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio')
+        ''').fetchone()
+        return result[0] > 0
+
+
+def get_next_queued_job():
+    """Get the oldest queued job."""
+    with get_db() as conn:
+        result = conn.execute('''
+            SELECT * FROM jobs
+            WHERE status = 'queued'
+            ORDER BY created_at ASC
+            LIMIT 1
+        ''').fetchone()
+        return job_to_dict(result) if result else None
+
+
+def start_next_queued_job():
+    """Start the next queued job if no job is currently running."""
+    if is_job_running():
+        return False
+
+    job = get_next_queued_job()
+    if not job:
+        return False
+
+    # Start conversion thread
+    thread = threading.Thread(
+        target=convert_book,
+        args=(job['id'], job['input_filename'], job['output_dirname'],
+              job['voice'], job.get('is_pdf', False))
+    )
+    thread.daemon = True
+    thread.start()
+    app.logger.info(f"Started next queued job: {job['id']}")
+    return True
+
+
 # ============ Utility Functions ============
 
 def convert_to_epub(input_path: Path) -> Path:
@@ -875,6 +920,9 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
     except Exception as e:
         update_job(job_id, status='failed', error=str(e), completed_at=datetime.now().isoformat())
         app.logger.error(f"Job {job_id} exception: {e}")
+    finally:
+        # Start next queued job (one at a time queue system)
+        start_next_queued_job()
 
 
 # ============ Routes ============
@@ -1038,13 +1086,17 @@ def start_conversion():
     }
     save_job(job)
 
-    # Start conversion
-    thread = threading.Thread(
-        target=convert_book,
-        args=(job_id, input_filename, output_dirname, voice, is_pdf)
-    )
-    thread.daemon = True
-    thread.start()
+    # Start conversion only if no other job is running (one at a time)
+    if not is_job_running():
+        thread = threading.Thread(
+            target=convert_book,
+            args=(job_id, input_filename, output_dirname, voice, is_pdf)
+        )
+        thread.daemon = True
+        thread.start()
+        app.logger.info(f"Started job {job_id} immediately (no queue)")
+    else:
+        app.logger.info(f"Job {job_id} added to queue (another job is running)")
 
     return jsonify({'job_id': job_id, 'status': 'queued'})
 
@@ -1151,13 +1203,17 @@ def retry_job(job_id: str):
 
     app.logger.info(f"Retrying job {job_id} (attempt {new_retry_count}/3)")
 
-    # Start conversion
-    thread = threading.Thread(
-        target=convert_book,
-        args=(job_id, job['input_filename'], job['output_dirname'], job['voice'], job['is_pdf'])
-    )
-    thread.daemon = True
-    thread.start()
+    # Start conversion only if no other job is running (one at a time)
+    if not is_job_running():
+        thread = threading.Thread(
+            target=convert_book,
+            args=(job_id, job['input_filename'], job['output_dirname'], job['voice'], job['is_pdf'])
+        )
+        thread.daemon = True
+        thread.start()
+        app.logger.info(f"Started retry job {job_id} immediately")
+    else:
+        app.logger.info(f"Retry job {job_id} added to queue")
 
     return jsonify({'status': 'queued', 'retry_count': new_retry_count})
 
@@ -1378,13 +1434,17 @@ def convert_from_library():
     }
     save_job(job)
 
-    # Start conversion
-    thread = threading.Thread(
-        target=convert_book,
-        args=(job_id, input_filename, output_dirname, voice, is_pdf)
-    )
-    thread.daemon = True
-    thread.start()
+    # Start conversion only if no other job is running (one at a time)
+    if not is_job_running():
+        thread = threading.Thread(
+            target=convert_book,
+            args=(job_id, input_filename, output_dirname, voice, is_pdf)
+        )
+        thread.daemon = True
+        thread.start()
+        app.logger.info(f"Started library job {job_id} immediately")
+    else:
+        app.logger.info(f"Library job {job_id} added to queue")
 
     return jsonify({'job_id': job_id, 'status': 'queued'})
 
