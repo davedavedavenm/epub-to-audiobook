@@ -469,6 +469,15 @@
             border-color: var(--accent);
         }
 
+        .library-whatsapp-input {
+            width: 140px;
+            display: none;
+        }
+
+        .library-whatsapp-input.visible {
+            display: inline-block;
+        }
+
         /* ============ Engine Tabs ============ */
         .engine-tabs {
             display: flex;
@@ -1478,6 +1487,7 @@
                         <input type="checkbox" id="library-notify-whatsapp">
                         <span>WhatsApp</span>
                     </label>
+                    <input type="tel" id="library-whatsapp-number" class="whatsapp-input library-whatsapp-input" placeholder="Phone (optional)">
                     <label class="checkbox-label">
                         <input type="checkbox" id="library-notify-telegram">
                         <span>Telegram</span>
@@ -1619,6 +1629,11 @@
         // ============ WhatsApp Toggle ============
         document.getElementById('notify-whatsapp').addEventListener('change', (e) => {
             document.getElementById('whatsapp-container').classList.toggle('visible', e.target.checked);
+        });
+
+        // Library WhatsApp Toggle
+        document.getElementById('library-notify-whatsapp').addEventListener('change', (e) => {
+            document.getElementById('library-whatsapp-number').classList.toggle('visible', e.target.checked);
         });
 
         // ============ File Upload ============
@@ -2061,6 +2076,7 @@
             const voice = document.getElementById('library-voice-select').value;
             const notifyWhatsapp = document.getElementById('library-notify-whatsapp').checked;
             const notifyTelegram = document.getElementById('library-notify-telegram').checked;
+            const whatsappNumber = document.getElementById('library-whatsapp-number').value;
 
             try {
                 const response = await fetch('/api/library/convert', {
@@ -2070,7 +2086,8 @@
                         path,
                         voice,
                         notify_whatsapp: notifyWhatsapp,
-                        notify_telegram: notifyTelegram
+                        notify_telegram: notifyTelegram,
+                        whatsapp_number: whatsappNumber
                     })
                 });
 
