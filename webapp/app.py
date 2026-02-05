@@ -267,6 +267,8 @@ def job_to_dict(row):
     # Ensure sync status fields have defaults
     d['sync_status'] = d.get('sync_status') or ''
     d['sync_error'] = d.get('sync_error') or ''
+    if not d.get('job_log_path') and d.get('id'):
+        d['job_log_path'] = str(get_job_log_path(d['id']))
     return d
 
 
