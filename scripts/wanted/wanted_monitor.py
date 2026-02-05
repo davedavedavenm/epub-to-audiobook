@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -142,6 +143,14 @@ class StateDB:
             SET found=1, found_path=?, next_check_ts=NULL
             WHERE key=?
         ''', (path, key))
+        self.conn.commit()
+
+    def mark_requested(self, key: str):
+        self.conn.execute('''
+            UPDATE wanted_state
+            SET last_request_ts=?
+            WHERE key=?
+        ''', (now_ts(), key))
         self.conn.commit()
 
     def pick_due(self, limit: int) -> list[sqlite3.Row]:
@@ -309,6 +318,37 @@ def backoff_seconds(attempt: int, base: int, max_s: int) -> int:
     return int(min(d, max_s))
 
 
+def openbooks_request(bridge_path: str, query: str, log_path: Path | None) -> bool:
+    """Trigger an OpenBooks request via a local bridge script.
+
+    This is intentionally a very thin hook:
+    - It assumes the OpenBooks stack and sources are configured externally.
+    - It rate limits via StateDB fields and CLI flags in main().
+    """
+    if not bridge_path:
+        return False
+    p = Path(bridge_path)
+    if not p.exists():
+        log(f"OpenBooks bridge not found: {bridge_path}", log_path)
+        return False
+    try:
+        # Keep timeout short; bridge should enqueue quickly.
+        r = subprocess.run(
+            [sys.executable, str(p), query],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if r.returncode != 0:
+            err = (r.stderr or r.stdout or '').strip().replace('\n', ' ')[:200]
+            log(f"OpenBooks request failed (rc={r.returncode}): {err}", log_path)
+            return False
+        return True
+    except Exception as e:
+        log(f"OpenBooks request exception: {e}", log_path)
+        return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--ll-db', default=DEFAULT_LL_DB)
@@ -322,9 +362,17 @@ def main():
     ap.add_argument('--notify-telegram', action='store_true')
     ap.add_argument('--notify-whatsapp', action='store_true')
     ap.add_argument('--whatsapp-number', default='')
+    ap.add_argument('--notification-mode', choices=['summary', 'per-title'], default='summary')
+    ap.add_argument('--max-notifications', type=int, default=1, help='Hard cap on messages sent per run (all channels).')
     ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
     ap.add_argument('--force', action='store_true', help='Ignore scheduling and check unfound items now (testing/manual)')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--request-openbooks', action='store_true', help='Trigger OpenBooks requests for unfound items (rate-limited).')
+    ap.add_argument('--openbooks-bridge', default='/home/dave/scripts/openbooks_bridge.py')
+    ap.add_argument('--max-requests-per-run', type=int, default=1)
+    ap.add_argument('--request-cooldown-s', type=int, default=12 * 60 * 60)  # 12h per title
+    ap.add_argument('--post-request-check-s', type=int, default=60 * 60)  # 1h
+    ap.add_argument('--request-sleep-s', type=int, default=2)
     args = ap.parse_args()
 
     ll_db = Path(args.ll_db)
@@ -357,6 +405,17 @@ def main():
         default_wa = os.environ.get('DEFAULT_WHATSAPP_NUMBER', '')
         wa_to = (args.whatsapp_number or default_wa).strip()
 
+        telegram_enabled = bool(args.notify_telegram and token and chat_id)
+        whatsapp_enabled = bool(args.notify_whatsapp and evo_url and evo_key and wa_to)
+        if args.notify_telegram and not telegram_enabled:
+            log("Telegram notify enabled but TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID missing; disabling for this run", log_path)
+        if args.notify_whatsapp and not whatsapp_enabled:
+            log("WhatsApp notify enabled but EVOLUTION_API_URL/EVOLUTION_API_KEY/DEFAULT_WHATSAPP_NUMBER missing; disabling for this run", log_path)
+
+        found_now: list[tuple[Wanted, str, float]] = []
+        notifications_sent = 0
+        requests_sent = 0
+
         for i, row in enumerate(due, start=1):
             w = Wanted(author=row['author'] or '', title=row['title'] or '')
             log(f"[{i}/{len(due)}] Check: {w.title} | {w.author}", log_path)
@@ -383,16 +442,50 @@ def main():
                 log(msg, log_path)
                 if not args.dry_run:
                     st.mark_found(w.key, str(found_path))
-                    if args.notify_telegram:
-                        telegram_notify(token, chat_id, msg, log_path)
-                    if args.notify_whatsapp:
-                        whatsapp_notify(evo_url, evo_key, wa_to, msg, log_path)
+                    found_now.append((w, str(found_path), float(score)))
+
+                    if args.notification_mode == 'per-title' and notifications_sent < max(0, int(args.max_notifications or 0)):
+                        if telegram_enabled:
+                            telegram_notify(token, chat_id, msg, log_path)
+                            notifications_sent += 1
+                        if whatsapp_enabled and notifications_sent < max(0, int(args.max_notifications or 0)):
+                            whatsapp_notify(evo_url, evo_key, wa_to, msg, log_path)
+                            notifications_sent += 1
                 continue
 
             # not found; schedule next check with backoff
+            if args.request_openbooks and requests_sent < max(0, int(args.max_requests_per_run or 0)) and not args.dry_run:
+                last_req = int(row['last_request_ts'] or 0)
+                if (now_ts() - last_req) >= int(args.request_cooldown_s or 0):
+                    query = f"{w.title} {w.author}".strip()
+                    if openbooks_request(args.openbooks_bridge, query, log_path):
+                        st.mark_requested(w.key)
+                        requests_sent += 1
+                        # After requesting, re-check sooner than the exponential backoff.
+                        st.mark_checked(w.key, now_ts() + int(args.post_request_check_s or 0), increment_attempt=True)
+                        if args.request_sleep_s:
+                            time.sleep(float(args.request_sleep_s))
+                        continue
+
             attempt = int(row['attempt_count'] or 0) + 1
             delay = backoff_seconds(attempt, args.backoff_base_s, args.backoff_max_s)
             st.mark_checked(w.key, now_ts() + delay, increment_attempt=True)
+
+        # Send a single summary message (default) to avoid Telegram spam.
+        if args.notification_mode == 'summary' and found_now and not args.dry_run:
+            if notifications_sent < max(0, int(args.max_notifications or 0)):
+                lines = ["FOUND wanted books:"]
+                for w, _found_path, s in found_now[:10]:
+                    lines.append(f"- {w.title} ({w.author}) [score {s:.2f}]")
+                if len(found_now) > 10:
+                    lines.append(f"...and {len(found_now) - 10} more")
+                text = "\n".join(lines)
+                if telegram_enabled:
+                    telegram_notify(token, chat_id, text, log_path)
+                    notifications_sent += 1
+                if whatsapp_enabled and notifications_sent < max(0, int(args.max_notifications or 0)):
+                    whatsapp_notify(evo_url, evo_key, wa_to, text, log_path)
+                    notifications_sent += 1
 
         return 0
     finally:
