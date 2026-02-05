@@ -18,6 +18,23 @@ services:
       timeout: 10s
       retries: 3
 
+  # Optional: capture exact text sent to TTS (chunk-by-chunk) without modifying the converter image
+  tts-proxy:
+    build:
+      context: ./tts_proxy
+    container_name: tts-proxy
+    restart: unless-stopped
+    environment:
+      - TTS_UPSTREAM_BASE=http://kokoro-tts:8880/v1
+      - TRANSCRIPTS_DIR=/data/transcripts
+    volumes:
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/transcripts:/data/transcripts
+    depends_on:
+      kokoro-tts:
+        condition: service_healthy
+    ports:
+      - "8882:8882"
+
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
@@ -49,6 +66,8 @@ services:
     restart: unless-stopped
     environment:
       - KOKORO_URL=http://kokoro-tts:8880/v1
+      # If set (e.g. http://tts-proxy:8882), conversion containers will send TTS requests via the proxy
+      - TTS_PROXY_URL=${TTS_PROXY_URL:-}
       - PIPER_URL=http://piper-tts:8000/v1
       - UPLOAD_DIR=/data/uploads
       - OUTPUT_DIR=/data/audiobooks
@@ -101,6 +120,7 @@ services:
     restart: unless-stopped
     environment:
       - KOKORO_URL=http://kokoro-tts:8880/v1
+      - TTS_PROXY_URL=${TTS_PROXY_URL:-}
       - PIPER_URL=http://piper-tts:8000/v1
       - UPLOAD_DIR=/data/uploads
       - OUTPUT_DIR=/data/audiobooks

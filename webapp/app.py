@@ -17,6 +17,7 @@ import signal
 from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
+from collections import Counter
 
 from flask import Flask, render_template, request, jsonify, send_file, Response
 import requests
@@ -24,6 +25,7 @@ import requests
 # Telegram notification settings
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
+TTS_PROXY_URL = os.environ.get('TTS_PROXY_URL', '').strip().rstrip('/')
 
 app = Flask(__name__)
 
@@ -77,6 +79,140 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 # Track running conversion processes and containers
 running_processes = {}  # job_id -> subprocess.Popen
 running_containers = {}  # job_id -> container_name
+
+_re_ws = re.compile(r"\s+")
+_re_punct = re.compile(r"[^\w\s]+", flags=re.UNICODE)
+
+
+def normalize_strict_text(s: str) -> str:
+    """Deterministic whitespace normalization (preserve case/punctuation)."""
+    s = (s or "").replace("\r\n", "\n").replace("\r", "\n")
+    s = "\n".join([ln.rstrip() for ln in s.split("\n")])
+    s = _re_ws.sub(" ", s).strip()
+    return s
+
+
+def normalize_loose_text(s: str) -> str:
+    """Loose normalization for comparison (casefold + strip punctuation + collapse whitespace)."""
+    s = (s or "").casefold()
+    s = s.replace("\r\n", "\n").replace("\r", "\n")
+    s = _re_punct.sub(" ", s)
+    s = _re_ws.sub(" ", s).strip()
+    return s
+
+
+def sha256_hex_text(s: str) -> str:
+    import hashlib
+    return hashlib.sha256((s or "").encode("utf-8", errors="replace")).hexdigest()
+
+
+def _read_captured_chunks(job_id: str) -> dict | None:
+    p = Path(f"/data/transcripts/{job_id}/chunks.jsonl")
+    if not p.exists():
+        return None
+    raw_all: list[str] = []
+    strict_all: list[str] = []
+    loose_all: list[str] = []
+    n = 0
+    with p.open("r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            t = obj.get("text") or ""
+            raw_all.append(t)
+            strict_all.append(obj.get("strict") or normalize_strict_text(t))
+            loose_all.append(obj.get("loose") or normalize_loose_text(t))
+            n += 1
+    raw_join = "\n".join(raw_all)
+    strict_join = "\n".join(strict_all)
+    loose_join = "\n".join(loose_all)
+    return {
+        "chunks": n,
+        "raw_text": raw_join,
+        "strict_text": strict_join,
+        "loose_text": loose_join,
+    }
+
+
+def verify_tts_against_epub(job_id: str, epub_path: Path, output_path: Path):
+    """Best-effort verification that voiced text matches extracted book text.
+
+    This is not a formal proof. It provides:
+    - hashes of captured chunk text (raw/strict/loose)
+    - hashes of extracted book text (strict/loose)
+    - token coverage metrics (loose)
+    """
+    try:
+        captured = _read_captured_chunks(job_id)
+        if not captured:
+            append_job_log(job_id, "Verification skipped: no captured transcript chunks")
+            return
+
+        vdir = output_path / "_verification"
+        vdir.mkdir(parents=True, exist_ok=True)
+
+        # Extract text from EPUB using Calibre (already present in the stack image).
+        extracted_txt = vdir / "book.txt"
+        try:
+            subprocess.run(
+                ["ebook-convert", str(epub_path), str(extracted_txt)],
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=True,
+            )
+        except Exception as e:
+            append_job_log(job_id, f"Verification: ebook-convert failed: {e}")
+            return
+
+        book_raw = extracted_txt.read_text(encoding="utf-8", errors="replace")
+        book_strict = normalize_strict_text(book_raw)
+        book_loose = normalize_loose_text(book_raw)
+
+        tts_raw = captured["raw_text"]
+        tts_strict = captured["strict_text"]
+        tts_loose = captured["loose_text"]
+
+        # Coverage metrics (word-level, loose normalized).
+        def word_counts(s: str, max_words: int = 250_000) -> Counter:
+            words = (s or "").split(" ")
+            if len(words) > max_words:
+                words = words[:max_words]
+            return Counter([w for w in words if w])
+
+        c_book = word_counts(book_loose)
+        c_tts = word_counts(tts_loose)
+        total_book = sum(c_book.values()) or 1
+        total_tts = sum(c_tts.values()) or 1
+        overlap = sum(min(c_book[w], c_tts.get(w, 0)) for w in c_book.keys())
+        book_covered = overlap / total_book
+        tts_covered = overlap / total_tts
+
+        report = {
+            "job_id": job_id,
+            "captured_chunks": captured["chunks"],
+            "tts_raw_sha256": sha256_hex_text(tts_raw),
+            "tts_strict_sha256": sha256_hex_text(tts_strict),
+            "tts_loose_sha256": sha256_hex_text(tts_loose),
+            "book_strict_sha256": sha256_hex_text(book_strict),
+            "book_loose_sha256": sha256_hex_text(book_loose),
+            "loose_word_overlap_ratio_of_book": round(book_covered, 6),
+            "loose_word_overlap_ratio_of_tts": round(tts_covered, 6),
+            "created_at": datetime.now().isoformat(),
+        }
+
+        (vdir / "verification.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+        append_job_log(
+            job_id,
+            f"Verification written: overlap(book)={report['loose_word_overlap_ratio_of_book']:.3f}, overlap(tts)={report['loose_word_overlap_ratio_of_tts']:.3f}",
+        )
+    except Exception as e:
+        append_job_log(job_id, f"Verification exception: {e}")
 
 # TTS Engines configuration
 TTS_ENGINES = {
@@ -1253,6 +1389,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             tts_base_url = 'http://kokoro-tts:8880/v1'
             tts_model = 'kokoro'
 
+        # Optional: route TTS via proxy so we can capture exact text chunks for verification.
+        if tts_engine == 'kokoro' and TTS_PROXY_URL:
+            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
+
         # Run conversion
         cmd = [
             'docker', 'run', '--rm',
@@ -1305,6 +1445,13 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         output_path = Path(f"/data/audiobooks/{output_dirname}")
         output_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
 
+        # Finalize transcript capture (best effort; does not affect job outcome)
+        if TTS_PROXY_URL:
+            try:
+                requests.post(f"{TTS_PROXY_URL}/j/{job_id}/finalize", timeout=10)
+            except Exception:
+                pass
+
         if process.returncode == 0 and output_files:
             # Rename files to human-readable format
             job = get_job(job_id)
@@ -1315,6 +1462,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
             # Sync to Audiobookshelf
             synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
+
+            # Best-effort transcript verification (only meaningful if TTS_PROXY_URL is enabled).
+            try:
+                verify_tts_against_epub(job_id, epub_path, output_path)
+            except Exception:
+                pass
 
             update_job(job_id,
                 status='completed',
