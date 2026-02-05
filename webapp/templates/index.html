@@ -2454,7 +2454,8 @@
                 } else if (book.status === 'converting') {
                     statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
                 } else {
-                    statusHtml = `<button class="library-convert-btn" onclick="convertFromLibrary('${escapeHtml(book.path)}', '${escapeHtml(book.title)}')">Convert</button>`;
+                    // Avoid inline onclick: titles/paths can contain apostrophes and break attribute JS.
+                    statusHtml = `<button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>`;
                 }
 
                 const icon = book.format === 'pdf' ? '📕' : '📗';
@@ -2477,6 +2478,15 @@
                     </div>
                 `;
             }).join('');
+
+            // Wire up convert buttons after rendering (safer than inline JS).
+            document.querySelectorAll('.library-convert-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = btn.dataset.path || '';
+                    const title = btn.dataset.title || '';
+                    convertFromLibrary(path, title);
+                });
+            });
         }
 
         document.getElementById('library-search').addEventListener('input', renderLibrary);
