@@ -15,11 +15,20 @@ What it does:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+- `EVOLUTION_API_URL` (for WhatsApp)
+- `EVOLUTION_API_KEY` (for WhatsApp)
+- `DEFAULT_WHATSAPP_NUMBER` (for WhatsApp)
 
 3. Run manually:
 
 ```bash
 python3 wanted_monitor.py --notify-telegram
+```
+
+WhatsApp:
+
+```bash
+python3 wanted_monitor.py --notify-whatsapp
 ```
 
 ## Cron suggestion
