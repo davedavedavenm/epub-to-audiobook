@@ -142,7 +142,11 @@ See [ROADMAP.md](ROADMAP.md) for planned features including:
 
 ## Deployment Notes
 
-- See [LIVE-DEPLOYMENT-STATUS.md](LIVE-DEPLOYMENT-STATUS.md) for the latest host/runtime audit and GitHub parity checks.
+- See [archive/LIVE-DEPLOYMENT-STATUS.md](archive/LIVE-DEPLOYMENT-STATUS.md) for a historical host/runtime audit snapshot.
+
+## Archive
+
+- Historical plans and audits are stored in [`archive/`](archive/).
 
 ## Credits
 
