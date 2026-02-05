@@ -55,6 +55,8 @@ docker compose --profile piper up -d
 open http://localhost:8881
 ```
 
+Note: The compose stack now includes a dedicated `worker` service for queue processing.
+
 ## Production Deployment
 
 Use a single canonical stack path and deploy from a Git tag:
@@ -100,9 +102,14 @@ cp .env.example .env
 | `KOKORO_URL` | Kokoro TTS endpoint (default: `http://kokoro-tts:8880/v1`) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `AUDIOBOOKSHELF_DIR` | Path to sync completed books (empty = disabled) |
+| `AUDIOBOOKSHELF_HOST` | Target host for Audiobookshelf sync (default: `docker-vm`) |
+| `AUDIOBOOKSHELF_USER` | SSH user for Audiobookshelf sync (default: `dave`) |
+| `AUDIOBOOKSHELF_PORT` | SSH port for Audiobookshelf sync (optional) |
 | `LIBRARY_DIR` | Path to browse for ebooks (default: `/mnt/openbooks`) |
+| `LOG_DIR` | Path for per-job log files (default: `/data/logs`) |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token for notifications |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for notifications |
+| `QUEUE_RUNNER_ENABLED` | Enable queue runner in this process (default: `1`) |
 
 ### Audiobookshelf Integration
 

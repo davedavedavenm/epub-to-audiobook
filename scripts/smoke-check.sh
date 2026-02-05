@@ -16,6 +16,14 @@ echo
 echo "== voices =="
 curl -fsS "${BASE_URL}/api/voices" >/dev/null && echo "voices ok"
 
+echo "== queue status =="
+curl -fsS "${BASE_URL}/api/queue/status"
+echo
+
+echo "== diagnostics =="
+curl -fsS "${BASE_URL}/api/diagnostics"
+echo
+
 echo "== kokoro =="
 curl -fsS "${KOKORO_URL}" >/dev/null && echo "kokoro ok"
 
