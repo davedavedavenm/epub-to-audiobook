@@ -39,6 +39,7 @@ APP_GIT_SHA = os.environ.get('APP_GIT_SHA', 'unknown')
 APP_BUILD_TIME = os.environ.get('APP_BUILD_TIME', 'unknown')
 HEALTH_KOKORO_TIMEOUT = int(os.environ.get('HEALTH_KOKORO_TIMEOUT', '8'))
 HEALTH_KOKORO_RETRIES = int(os.environ.get('HEALTH_KOKORO_RETRIES', '2'))
+QUEUE_RUNNER_ENABLED = os.environ.get('QUEUE_RUNNER_ENABLED', '1').lower() in ('1', 'true', 'yes')
 
 # Host paths for Docker volume mounts (where the stack is deployed)
 HOST_STACK_DIR = os.environ.get('HOST_STACK_DIR', '/home/dave/stacks/epub-to-audiobook')
@@ -48,9 +49,13 @@ HOST_OUTPUT_DIR = f"{HOST_STACK_DIR}/data/audiobooks"
 
 # Audiobookshelf integration - copy completed books here
 AUDIOBOOKSHELF_DIR = os.environ.get('AUDIOBOOKSHELF_DIR', '')
+AUDIOBOOKSHELF_HOST = os.environ.get('AUDIOBOOKSHELF_HOST', 'docker-vm')
+AUDIOBOOKSHELF_USER = os.environ.get('AUDIOBOOKSHELF_USER', 'dave')
+AUDIOBOOKSHELF_PORT = os.environ.get('AUDIOBOOKSHELF_PORT', '')
 
 # OpenBooks/Library directory for browsing available EPUBs
 LIBRARY_DIR = Path(os.environ.get('LIBRARY_DIR', '/data/library'))
+LOG_DIR = Path(os.environ.get('LOG_DIR', '/data/logs'))
 
 # Supported ebook formats (converted to EPUB via Calibre)
 SUPPORTED_FORMATS = {'.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'}
@@ -67,6 +72,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Track running conversion processes and containers
 running_processes = {}  # job_id -> subprocess.Popen
@@ -167,7 +173,14 @@ def init_db():
                 start_chapter INTEGER,
                 end_chapter INTEGER,
                 notify_telegram INTEGER DEFAULT 0,
-                queue_rank INTEGER DEFAULT 0
+                queue_rank INTEGER DEFAULT 0,
+                sync_target_host TEXT,
+                sync_target_path TEXT,
+                sync_timestamp TEXT,
+                sync_file_count INTEGER,
+                sync_status TEXT,
+                sync_error TEXT,
+                job_log_path TEXT
             )
         ''')
         # Add tts_engine column if it doesn't exist (migration)
@@ -185,6 +198,20 @@ def init_db():
             conn.execute('ALTER TABLE jobs ADD COLUMN queue_rank INTEGER DEFAULT 0')
         except sqlite3.OperationalError:
             pass  # Column already exists
+        # Add sync metadata columns if they don't exist
+        for col, col_type in [
+            ('sync_target_host', 'TEXT'),
+            ('sync_target_path', 'TEXT'),
+            ('sync_timestamp', 'TEXT'),
+            ('sync_file_count', 'INTEGER'),
+            ('sync_status', 'TEXT'),
+            ('sync_error', 'TEXT'),
+            ('job_log_path', 'TEXT'),
+        ]:
+            try:
+                conn.execute(f'ALTER TABLE jobs ADD COLUMN {col} {col_type}')
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
         # App settings table (pause state, feature flags)
         conn.execute('''
@@ -237,7 +264,39 @@ def job_to_dict(row):
     d['synced_to_abs'] = bool(d.get('synced_to_abs', 0))
     # Ensure retry_count has a default value
     d['retry_count'] = d.get('retry_count', 0) or 0
+    # Ensure sync status fields have defaults
+    d['sync_status'] = d.get('sync_status') or ''
+    d['sync_error'] = d.get('sync_error') or ''
     return d
+
+
+def get_job_log_path(job_id: str) -> Path:
+    return LOG_DIR / f"{job_id}.log"
+
+
+def append_job_log(job_id: str, message: str):
+    """Append a timestamped line to the job log file."""
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().isoformat(timespec='seconds')
+        path = get_job_log_path(job_id)
+        with path.open('a', encoding='utf-8') as f:
+            f.write(f"[{ts}] {message}\n")
+    except Exception as e:
+        app.logger.warning(f"Failed to write job log for {job_id}: {e}")
+
+
+def tail_text_file(path: Path, max_lines: int = 200, max_bytes: int = 15000) -> str:
+    """Return last N lines (bounded by bytes) from a text file."""
+    if not path.exists():
+        return ''
+    try:
+        with path.open('r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+        tail = ''.join(lines[-max_lines:])
+        return tail[-max_bytes:]
+    except Exception:
+        return ''
 
 
 def save_job(job: dict):
@@ -249,8 +308,9 @@ def save_job(job: dict):
              completed_at, input_filename, output_dirname, is_pdf, char_count,
              timeout_minutes, total_chapters, current_chapter, current_chapter_name,
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
-             start_chapter, end_chapter, notify_telegram, retry_count, queue_rank)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
+             sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -281,7 +341,14 @@ def save_job(job: dict):
             job.get('end_chapter'),
             1 if job.get('notify_telegram') else 0,
             job.get('retry_count', 0),
-            job.get('queue_rank', 0)
+            job.get('queue_rank', 0),
+            job.get('sync_target_host'),
+            job.get('sync_target_path'),
+            job.get('sync_timestamp'),
+            job.get('sync_file_count'),
+            job.get('sync_status'),
+            job.get('sync_error'),
+            job.get('job_log_path')
         ))
         conn.commit()
 
@@ -498,7 +565,7 @@ def finalize_completed_job_if_outputs_exist(job_id):
 
     rename_output_files(output_path, job['book_name'])
     output_files = list(output_path.glob('*.mp3'))
-    synced = copy_to_audiobookshelf(output_path, job['book_name'])
+    synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
     update_job(
         job_id,
         status='completed',
@@ -543,6 +610,7 @@ def cleanup_orphan_jobs():
                 ''', (datetime.now().isoformat(), job['id']))
                 orphan_count += 1
                 print(f"Marked orphan converting job {job['id']} as failed")
+                append_job_log(job['id'], "Orphan cleanup: container missing; marked failed")
 
         if orphan_count > 0:
             conn.commit()
@@ -597,6 +665,12 @@ def start_next_queued_job():
     return True
 
 
+def maybe_start_next_queued_job():
+    if QUEUE_RUNNER_ENABLED:
+        return start_next_queued_job()
+    return False
+
+
 # ============ Auto-Retry Logic ============
 
 def handle_job_failure(job_id, error_type, error_msg):
@@ -643,11 +717,12 @@ def handle_job_failure(job_id, error_type, error_msg):
             conn.commit()
 
         app.logger.info(f"Auto-retrying job {job_id} (attempt {retry_count + 1}/{MAX_RETRY_COUNT}) after {delay}s delay")
+        append_job_log(job_id, f"Auto-retry scheduled (attempt {retry_count + 1}/{MAX_RETRY_COUNT}) after {delay}s")
 
         # Schedule retry after delay
         def delayed_retry():
             time_module.sleep(delay)
-            start_next_queued_job()
+            maybe_start_next_queued_job()
 
         retry_thread = threading.Thread(target=delayed_retry)
         retry_thread.daemon = True
@@ -666,6 +741,7 @@ def handle_job_failure(job_id, error_type, error_msg):
             ''', (final_error, datetime.now().isoformat(), job_id))
             conn.commit()
         app.logger.error(f"Job {job_id} permanently failed: {final_error}")
+        append_job_log(job_id, f"Permanently failed: {final_error}")
         return False
 
 
@@ -915,23 +991,74 @@ def rename_output_files(output_dir: Path, book_name: str) -> int:
     return renamed
 
 
-def copy_to_audiobookshelf(output_dir: Path, book_name: str) -> bool:
+def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
     """Copy completed audiobook to Audiobookshelf library via SSH."""
-    if not AUDIOBOOKSHELF_DIR:
+    if not AUDIOBOOKSHELF_DIR or not AUDIOBOOKSHELF_HOST:
         return False
 
+    target = f"{AUDIOBOOKSHELF_USER}@{AUDIOBOOKSHELF_HOST}"
+    dest_path = f"{AUDIOBOOKSHELF_DIR}/{book_name}"
+    port_opt = f" -p {AUDIOBOOKSHELF_PORT}" if AUDIOBOOKSHELF_PORT else ""
+    ssh_opts = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -F /dev/null -i /root/.ssh/id_ed25519{port_opt}"
+
+    if job_id:
+        update_job(job_id,
+            sync_target_host=AUDIOBOOKSHELF_HOST,
+            sync_target_path=dest_path,
+            sync_status='started',
+            sync_error='',
+            sync_timestamp=datetime.now().isoformat()
+        )
+        append_job_log(job_id, f"Sync start -> {target}:{dest_path}")
+
     try:
-        dest = f"dave@docker-vm:{AUDIOBOOKSHELF_DIR}/{book_name}"
-        ssh_opts = 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -F /dev/null -i /root/.ssh/id_ed25519'
-        cmd = ['rsync', '-av', '-e', ssh_opts, f'{output_dir}/', dest]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        if result.returncode == 0:
-            app.logger.info(f"Copied {book_name} to Audiobookshelf")
-            return True
-        else:
-            app.logger.error(f"Failed to copy to Audiobookshelf: {result.stderr}")
+        # Ensure destination exists
+        mkdir_cmd = ['ssh', *ssh_opts.split()[1:], target, f"mkdir -p '{dest_path}'"]
+        mkdir_result = subprocess.run(mkdir_cmd, capture_output=True, text=True, timeout=30)
+        if mkdir_result.returncode != 0:
+            err = (mkdir_result.stderr or mkdir_result.stdout or '').strip()
+            if job_id:
+                update_job(job_id, sync_status='failed', sync_error=err)
+                append_job_log(job_id, f"Sync mkdir failed: {err}")
+            app.logger.error(f"Audiobookshelf mkdir failed: {err}")
             return False
+
+        # Rsync to target
+        cmd = ['rsync', '-av', '-e', ssh_opts, f'{output_dir}/', f"{target}:{dest_path}/"]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or '').strip()
+            if job_id:
+                update_job(job_id, sync_status='failed', sync_error=err)
+                append_job_log(job_id, f"Sync failed: {err}")
+            app.logger.error(f"Failed to copy to Audiobookshelf: {err}")
+            return False
+
+        # Count files at destination
+        count_cmd = ['ssh', *ssh_opts.split()[1:], target, f"find '{dest_path}' -type f | wc -l"]
+        count_result = subprocess.run(count_cmd, capture_output=True, text=True, timeout=30)
+        file_count = 0
+        if count_result.returncode == 0:
+            try:
+                file_count = int(count_result.stdout.strip())
+            except Exception:
+                file_count = 0
+
+        if job_id:
+            update_job(job_id,
+                sync_status='ok',
+                sync_file_count=file_count,
+                sync_error='',
+                sync_timestamp=datetime.now().isoformat()
+            )
+            append_job_log(job_id, f"Sync ok: {file_count} files")
+
+        app.logger.info(f"Copied {book_name} to Audiobookshelf")
+        return True
     except Exception as e:
+        if job_id:
+            update_job(job_id, sync_status='failed', sync_error=str(e))
+            append_job_log(job_id, f"Sync exception: {e}")
         app.logger.error(f"Audiobookshelf copy failed: {e}")
         return False
 
@@ -1032,6 +1159,7 @@ def monitor_conversion(job_id: str, container_name: str):
 def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: str, is_pdf: bool = False):
     """Run book conversion via Docker in background."""
     update_job(job_id, status='converting', started_at=datetime.now().isoformat())
+    append_job_log(job_id, f"Conversion start (input={input_filename}, output={output_dirname})")
 
     host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
     host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
@@ -1042,6 +1170,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # PDF conversion
         if is_pdf:
             update_job(job_id, status='converting PDF')
+            append_job_log(job_id, "PDF detected; converting to EPUB")
             epub_filename = input_filename.rsplit('.', 1)[0] + '.epub'
             host_epub_path = f"{HOST_UPLOAD_DIR}/{epub_filename}"
 
@@ -1062,6 +1191,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                     error=f"PDF conversion failed: {pdf_result.stderr[:500]}",
                     completed_at=datetime.now().isoformat()
                 )
+                append_job_log(job_id, f"PDF conversion failed: {pdf_result.stderr[:200]}")
                 return
 
             host_input_path = host_epub_path
@@ -1077,11 +1207,13 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         initial_eta = estimate_eta_minutes(voice, tts_engine, file_type, char_count)
         update_job(job_id, char_count=char_count, timeout_minutes=timeout_seconds // 60, eta_minutes=initial_eta)
         app.logger.info(f"Book has ~{char_count:,} chars, ETA {initial_eta} min, timeout {timeout_seconds // 60} min")
+        append_job_log(job_id, f"Estimated chars={char_count}, ETA={initial_eta}m, timeout={timeout_seconds // 60}m")
 
         # Generate unique container name
         container_name = f"audiobook-{job_id}"
         update_job(job_id, container_name=container_name)
         remove_stale_container(container_name)
+        append_job_log(job_id, f"Using container {container_name}")
 
         # Determine effective voice (combine if voice2 specified - Kokoro only)
         effective_voice = voice
@@ -1124,6 +1256,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             cmd.extend(['--chapter_end', str(job['end_chapter'])])
 
         app.logger.info(f"Running conversion: {' '.join(cmd)}")
+        append_job_log(job_id, f"Running conversion (engine={tts_engine}, voice={effective_voice})")
 
         # Start process
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -1145,6 +1278,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         finally:
             running_processes.pop(job_id, None)
             running_containers.pop(job_id, None)
+            subprocess.run(['docker', 'rm', '-f', container_name], capture_output=True)
 
         # Check results
         output_path = Path(f"/data/audiobooks/{output_dirname}")
@@ -1159,7 +1293,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             output_files = list(output_path.glob('*.mp3'))
 
             # Sync to Audiobookshelf
-            synced = copy_to_audiobookshelf(output_path, job['book_name'])
+            synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
 
             update_job(job_id,
                 status='completed',
@@ -1169,6 +1303,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 completed_at=datetime.now().isoformat()
             )
             app.logger.info(f"Job {job_id} completed with {len(output_files)} files")
+            append_job_log(job_id, f"Completed with {len(output_files)} files")
 
             # Record conversion metrics for ETA learning
             job = get_job(job_id)
@@ -1181,6 +1316,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         else:
             error_msg = stderr.decode()[:1000] if stderr else 'No output files created'
             app.logger.error(f"Job {job_id} failed: {error_msg}")
+            append_job_log(job_id, f"Failed: {error_msg[:200]}")
 
             # Check if this looks like a container death (retryable)
             if 'killed' in error_msg.lower() or 'died' in error_msg.lower() or 'oom' in error_msg.lower():
@@ -1201,6 +1337,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         timeout_mins = job.get('timeout_minutes', 'unknown') if job else 'unknown'
         error_msg = f'Conversion timed out after {timeout_mins} minutes'
         app.logger.error(f"Job {job_id} timed out")
+        append_job_log(job_id, error_msg)
         retried = handle_job_failure(job_id, 'timeout', error_msg)
 
         # Send Telegram notification if NOT being retried
@@ -1212,9 +1349,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
     except Exception as e:
         update_job(job_id, status='failed', error=str(e), completed_at=datetime.now().isoformat())
         app.logger.error(f"Job {job_id} exception: {e}")
+        append_job_log(job_id, f"Exception: {e}")
     finally:
         # Start next queued job (one at a time queue system)
-        start_next_queued_job()
+        maybe_start_next_queued_job()
 
 
 # ============ Routes ============
@@ -1412,12 +1550,15 @@ def start_conversion():
         'start_chapter': start_chapter,
         'end_chapter': end_chapter,
         'notify_telegram': notify_telegram,
-        'queue_rank': next_queue_rank()
+        'queue_rank': next_queue_rank(),
+        'sync_status': 'pending',
+        'job_log_path': str(get_job_log_path(job_id))
     }
     save_job(job)
+    append_job_log(job_id, f"Job created: {book_name} (voice={voice}, engine={tts_engine})")
 
     # Start conversion only if no other job is running (one at a time)
-    if not is_job_running():
+    if QUEUE_RUNNER_ENABLED and not is_job_running():
         thread = threading.Thread(
             target=convert_book,
             args=(job_id, input_filename, output_dirname, voice, is_pdf)
@@ -1458,7 +1599,7 @@ def queue_pause():
     paused = bool(paused)
     set_queue_paused(paused)
     if not paused:
-        start_next_queued_job()
+        maybe_start_next_queued_job()
     return jsonify({'paused': paused})
 
 
@@ -1539,7 +1680,7 @@ def queue_retry_failed():
             queued.append(job['id'])
         conn.commit()
 
-    start_next_queued_job()
+    maybe_start_next_queued_job()
     return jsonify({'status': 'ok', 'queued_ids': queued})
 
 
@@ -1583,32 +1724,42 @@ def get_job_timeline(job_id: str):
 
 @app.route('/api/jobs/<job_id>/logs')
 def get_job_logs(job_id: str):
-    """Return tail logs for the job container."""
+    """Return tail logs for the job (file + container)."""
     job = get_job(job_id)
     if not job:
         return jsonify({'error': 'Job not found'}), 404
 
-    container_name = (job.get('container_name') or '').strip()
-    if not container_name:
-        return jsonify({'logs': '', 'container': None})
-    if not re.match(r'^[a-zA-Z0-9_.-]+$', container_name):
-        return jsonify({'error': 'Invalid container name'}), 400
-
-    tail = request.args.get('tail', '120')
+    tail = request.args.get('tail', '200')
     try:
         tail = max(10, min(500, int(tail)))
     except Exception:
-        tail = 120
+        tail = 200
 
-    try:
-        result = subprocess.run(
-            ['docker', 'logs', '--tail', str(tail), container_name],
-            capture_output=True, text=True, timeout=8
-        )
-        logs = (result.stdout or '') + (result.stderr or '')
-        return jsonify({'container': container_name, 'logs': logs[-15000:]})
-    except Exception as e:
-        return jsonify({'container': container_name, 'logs': '', 'error': str(e)}), 500
+    log_path = Path(job.get('job_log_path') or get_job_log_path(job_id))
+    file_logs = tail_text_file(log_path, max_lines=tail)
+
+    container_name = (job.get('container_name') or '').strip()
+    if not container_name:
+        return jsonify({'logs': file_logs, 'container': None, 'container_logs': ''})
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', container_name):
+        return jsonify({'error': 'Invalid container name'}), 400
+    include_container = request.args.get('include_container', '1') not in ('0', 'false', 'no')
+    container_logs = ''
+    if include_container:
+        try:
+            result = subprocess.run(
+                ['docker', 'logs', '--tail', str(tail), container_name],
+                capture_output=True, text=True, timeout=8
+            )
+            container_logs = ((result.stdout or '') + (result.stderr or ''))[-15000:]
+        except Exception as e:
+            return jsonify({'container': container_name, 'logs': file_logs, 'container_logs': '', 'error': str(e)}), 500
+
+    combined_logs = file_logs
+    if container_logs:
+        combined_logs = (file_logs + "\n--- container ---\n" + container_logs).strip()
+
+    return jsonify({'container': container_name, 'logs': combined_logs, 'container_logs': container_logs})
 
 
 @app.route('/api/diagnostics')
@@ -1635,8 +1786,10 @@ def diagnostics():
 
     return jsonify({
         'queue_paused': is_queue_paused(),
+        'queue_runner_enabled': QUEUE_RUNNER_ENABLED,
         'jobs': by_status,
-        'docker': docker_summary
+        'docker': docker_summary,
+        'audiobookshelf_target': f"{AUDIOBOOKSHELF_USER}@{AUDIOBOOKSHELF_HOST}:{AUDIOBOOKSHELF_DIR}" if AUDIOBOOKSHELF_DIR else ''
     })
 
 
@@ -1786,7 +1939,7 @@ def sync_job(job_id: str):
     if not output_dir.exists():
         return jsonify({'error': 'Output files not found'}), 404
 
-    synced = copy_to_audiobookshelf(output_dir, job['book_name'])
+    synced = copy_to_audiobookshelf(output_dir, job['book_name'], job_id=job_id)
     update_job(job_id, synced_to_abs=synced)
 
     if synced:
@@ -1956,12 +2109,15 @@ def convert_from_library():
         'start_chapter': None,
         'end_chapter': None,
         'notify_telegram': notify_telegram,
-        'queue_rank': next_queue_rank()
+        'queue_rank': next_queue_rank(),
+        'sync_status': 'pending',
+        'job_log_path': str(get_job_log_path(job_id))
     }
     save_job(job)
+    append_job_log(job_id, f"Library job created: {book_name} (voice={voice}, engine={tts_engine})")
 
     # Start conversion only if no other job is running (one at a time)
-    if not is_job_running():
+    if QUEUE_RUNNER_ENABLED and not is_job_running():
         thread = threading.Thread(
             target=convert_book,
             args=(job_id, input_filename, output_dirname, voice, is_pdf)
@@ -1982,13 +2138,12 @@ init_db()
 cleanup_orphan_jobs()
 
 # Reattach monitors for jobs already running in Docker
-resume_inflight_jobs()
-
-# Start watchdog thread to monitor job health
-start_watchdog()
-
-# Continue queued work after restart (if nothing is currently running)
-start_next_queued_job()
+if QUEUE_RUNNER_ENABLED:
+    resume_inflight_jobs()
+    # Start watchdog thread to monitor job health
+    start_watchdog()
+    # Continue queued work after restart (if nothing is currently running)
+    start_next_queued_job()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8881, debug=True)

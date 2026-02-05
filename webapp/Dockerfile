@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create directories
-RUN mkdir -p /data/uploads /data/audiobooks /data/previews
+RUN mkdir -p /data/uploads /data/audiobooks /data/previews /data/logs
 
 EXPOSE 8881
 

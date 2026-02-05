@@ -61,12 +61,17 @@ services:
       # IMPORTANT: This must match the absolute path used in volumes below
       - HOST_STACK_DIR=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
       - AUDIOBOOKSHELF_DIR=${AUDIOBOOKSHELF_DIR:-/opt/stacks/audiobookshelf/audiobooks}
+      - AUDIOBOOKSHELF_HOST=${AUDIOBOOKSHELF_HOST:-docker-vm}
+      - AUDIOBOOKSHELF_USER=${AUDIOBOOKSHELF_USER:-dave}
+      - AUDIOBOOKSHELF_PORT=${AUDIOBOOKSHELF_PORT:-}
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - EVOLUTION_API_URL=${EVOLUTION_API_URL:-}
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
       - DEFAULT_WHATSAPP_NUMBER=${DEFAULT_WHATSAPP_NUMBER:-}
       - HEALTH_KOKORO_TIMEOUT=${HEALTH_KOKORO_TIMEOUT:-8}
       - HEALTH_KOKORO_RETRIES=${HEALTH_KOKORO_RETRIES:-2}
+      - LOG_DIR=${LOG_DIR:-/data/logs}
+      - QUEUE_RUNNER_ENABLED=0
     volumes:
       # Use ABSOLUTE paths so it works regardless of where docker compose is run from
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
@@ -82,6 +87,55 @@ services:
     depends_on:
       kokoro-tts:
         condition: service_healthy
+
+  worker:
+    build:
+      context: ./webapp
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
+        APP_GIT_SHA: ${APP_GIT_SHA:-unknown}
+        APP_BUILD_TIME: ${APP_BUILD_TIME:-unknown}
+    container_name: epub-to-audiobook-worker
+    extra_hosts:
+      - "docker-vm:192.168.1.113"
+    restart: unless-stopped
+    environment:
+      - KOKORO_URL=http://kokoro-tts:8880/v1
+      - PIPER_URL=http://piper-tts:8000/v1
+      - UPLOAD_DIR=/data/uploads
+      - OUTPUT_DIR=/data/audiobooks
+      - PREVIEWS_DIR=/data/previews
+      - DB_PATH=/data/jobs.db
+      - APP_VERSION=${APP_VERSION:-dev}
+      - APP_GIT_SHA=${APP_GIT_SHA:-unknown}
+      - APP_BUILD_TIME=${APP_BUILD_TIME:-unknown}
+      - STACK_PATH=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
+      - HOST_STACK_DIR=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
+      - AUDIOBOOKSHELF_DIR=${AUDIOBOOKSHELF_DIR:-/opt/stacks/audiobookshelf/audiobooks}
+      - AUDIOBOOKSHELF_HOST=${AUDIOBOOKSHELF_HOST:-docker-vm}
+      - AUDIOBOOKSHELF_USER=${AUDIOBOOKSHELF_USER:-dave}
+      - AUDIOBOOKSHELF_PORT=${AUDIOBOOKSHELF_PORT:-}
+      - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
+      - DEFAULT_WHATSAPP_NUMBER=${DEFAULT_WHATSAPP_NUMBER:-}
+      - HEALTH_KOKORO_TIMEOUT=${HEALTH_KOKORO_TIMEOUT:-8}
+      - HEALTH_KOKORO_RETRIES=${HEALTH_KOKORO_RETRIES:-2}
+      - LOG_DIR=${LOG_DIR:-/data/logs}
+      - QUEUE_RUNNER_ENABLED=1
+    volumes:
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/audiobooks:/data/audiobooks
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/previews:/data/previews
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
+      - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
+    depends_on:
+      kokoro-tts:
+        condition: service_healthy
+    command: ["python", "/app/worker.py"]
 
 volumes:
   kokoro-cache:
