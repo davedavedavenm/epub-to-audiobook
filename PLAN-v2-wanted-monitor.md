@@ -12,10 +12,9 @@ Maintain a list of wanted books, check for availability a few times per day with
 
 ## Current State (Verified)
 - Webapp library reads `LIBRARY_DIR=/mnt/openbooks` and the library endpoint is working.
-- docker-vm runs `wanted_sync.py` via cron hourly:
-  - `0 * * * * flock ... python3 /home/dave/scripts/wanted_sync.py ...`
-- `wanted_sync.py` queries LazyLibrarian DB for `Status='Wanted'` and calls `openbooks_bridge.py` for the first 5 items every run, which can starve the rest of the list.
-- Requested title `Abundance` is not present in the LazyLibrarian DB (so it is not being searched).
+- docker-vm runs `wanted_monitor.py` via cron hourly with `flock` to avoid overlaps.
+- `wanted_monitor.py` reads LazyLibrarian DB for `Status='Wanted'`, checks the webapp library via `--library-api`, and maintains per-title state in `wanted_state.db`.
+- `Abundance | Ezra Klein` exists in LazyLibrarian as `Wanted` but is not currently present in the webapp library.
 
 ## Plan
 
@@ -41,11 +40,17 @@ Maintain a list of wanted books, check for availability a few times per day with
 1. If you have a legitimate provider/API, add a plugin interface:
    - `request_book(title, author)`
 2. Keep hooks disabled by default.
+3. If enabled, enforce strict rate limits:
+   - default `--max-requests-per-run 1`
+   - per-title `--request-cooldown-s` (default 12h)
 
 ### Phase 4: Validation
 1. Add a known test wanted item that is already in `/mnt/openbooks` and confirm notification.
 2. Add a new wanted item and verify it rotates through checks over time.
 3. Confirm no auto-conversion occurs.
+4. Confirm notification anti-spam behavior:
+   - default `--notification-mode summary`
+   - default `--max-notifications 1` per run (hard cap across channels)
 
 ## Deliverables
 - Versioned script in repo (so configuration is reproducible).
