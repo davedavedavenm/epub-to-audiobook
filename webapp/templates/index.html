@@ -2526,7 +2526,16 @@
                     })
                 });
 
-                const result = await response.json();
+                const contentType = response.headers.get('content-type') || '';
+                const raw = await response.text();
+                let result = null;
+                if (contentType.includes('application/json')) {
+                    try { result = JSON.parse(raw); } catch { result = null; }
+                }
+                if (!result) {
+                    const prefix = (raw || '').slice(0, 200).replace(/\s+/g, ' ').trim();
+                    throw new Error(`HTTP ${response.status} non-JSON response: ${prefix || '(empty)'}`);
+                }
                 if (result.error) {
                     alert('Error: ' + result.error);
                 } else {
