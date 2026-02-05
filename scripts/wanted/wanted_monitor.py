@@ -208,6 +208,32 @@ def find_match(w: Wanted, library_dir: Path, min_score: float) -> tuple[float, P
     return None
 
 
+def find_match_via_api(w: Wanted, library_api: str, min_score: float) -> tuple[float, str] | None:
+    """Match against the webapp library API (preferred when mounts differ)."""
+    try:
+        data = requests.get(library_api, timeout=20).json()
+    except Exception:
+        return None
+    if not isinstance(data, list):
+        return None
+
+    wt = token_set(w.title)
+    wa = token_set(w.author)
+    best: tuple[float, str] | None = None
+    for b in data:
+        title = (b or {}).get('title') or ''
+        if not title:
+            continue
+        ft = token_set(title)
+        score = 0.7 * jaccard(wt, ft) + 0.3 * jaccard(wa, ft)
+        if best is None or score > best[0]:
+            best = (score, title)
+
+    if best and best[0] >= min_score:
+        return best
+    return None
+
+
 def telegram_notify(token: str, chat_id: str, text: str, log_path: Path | None):
     if not token or not chat_id:
         return False
@@ -267,6 +293,7 @@ def main():
     ap.add_argument('--notify-telegram', action='store_true')
     ap.add_argument('--notify-whatsapp', action='store_true')
     ap.add_argument('--whatsapp-number', default='')
+    ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
     ap.add_argument('--dry-run', action='store_true')
     args = ap.parse_args()
 
@@ -274,6 +301,7 @@ def main():
     state_db = Path(args.state_db)
     library_dir = Path(args.library_dir)
     log_path = Path(args.log) if args.log else None
+    library_api = (args.library_api or '').strip()
 
     if not ll_db.exists():
         log(f"LazyLibrarian DB not found: {ll_db}", log_path)
@@ -303,13 +331,28 @@ def main():
             w = Wanted(author=row['author'] or '', title=row['title'] or '')
             log(f"[{i}/{len(due)}] Check: {w.title} | {w.author}", log_path)
 
-            match = find_match(w, library_dir, args.min_score)
-            if match:
-                score, path = match
-                msg = f"FOUND: {w.title} ({w.author})\nFile: {path.name}\nScore: {score:.2f}"
+            found = None
+            if library_api:
+                found = find_match_via_api(w, library_api, args.min_score)
+                if found:
+                    score, title = found
+                    msg = f"FOUND: {w.title} ({w.author})\nLibrary: {title}\nScore: {score:.2f}"
+                    found_path = title
+                else:
+                    msg = ''
+            else:
+                m = find_match(w, library_dir, args.min_score)
+                if m:
+                    score, path = m
+                    msg = f"FOUND: {w.title} ({w.author})\nFile: {path.name}\nScore: {score:.2f}"
+                    found_path = str(path)
+                else:
+                    msg = ''
+
+            if msg:
                 log(msg, log_path)
                 if not args.dry_run:
-                    st.mark_found(w.key, str(path))
+                    st.mark_found(w.key, str(found_path))
                     if args.notify_telegram:
                         telegram_notify(token, chat_id, msg, log_path)
                     if args.notify_whatsapp:
