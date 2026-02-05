@@ -1093,7 +1093,7 @@ def parse_conversion_progress(container_name: str, job_id: str):
     """Parse conversion container logs to update progress."""
     try:
         result = subprocess.run(
-            ['docker', 'logs', container_name],
+            ['docker', 'logs', '--tail', '500', container_name],
             capture_output=True, text=True, timeout=5
         )
         logs = result.stderr + result.stdout
@@ -1113,20 +1113,39 @@ def parse_conversion_progress(container_name: str, job_id: str):
         # Count completed chapters
         completed = len(re.findall(r'Converted chapter \d+', logs))
 
+        # Parse fine-grained progress (chunk X of Y)
+        chunk_matches = re.findall(r'Processing chapter-(\d+)_.*?_chunk_(\d+)_of_(\d+)', logs)
+        chunk_chapter = None
+        chunk_idx = None
+        chunk_total = None
+        if chunk_matches:
+            try:
+                chunk_chapter = int(chunk_matches[-1][0])
+                chunk_idx = int(chunk_matches[-1][1])
+                chunk_total = int(chunk_matches[-1][2])
+            except Exception:
+                chunk_chapter = chunk_idx = chunk_total = None
+
         # Calculate progress and ETA
         progress_percent = None
         eta_minutes = None
         if total_chapters and current_chapter:
-            progress_percent = int((completed / total_chapters) * 100)
+            frac = completed / total_chapters
+            if chunk_chapter and chunk_idx and chunk_total and chunk_total > 0:
+                # Only count chunk progress for the currently converting chapter.
+                if (chunk_chapter == current_chapter) and (chunk_chapter == completed + 1):
+                    frac += max(0.0, (chunk_idx - 1) / chunk_total) / total_chapters
+            progress_percent = int(frac * 100)
+            if progress_percent == 0 and frac > 0:
+                progress_percent = 1
 
             # Get elapsed time and calculate ETA based on actual progress
             job = get_job(job_id)
-            if job and job.get('started_at') and completed > 0:
+            if job and job.get('started_at') and frac > 0.001:
                 started = datetime.fromisoformat(job['started_at'])
                 elapsed = (datetime.now() - started).total_seconds()
-                time_per_chapter = elapsed / completed
-                remaining_chapters = total_chapters - completed
-                eta_minutes = int((remaining_chapters * time_per_chapter) / 60)
+                remaining = elapsed * (1.0 / frac - 1.0)
+                eta_minutes = int(remaining / 60)
 
         # Update job - only include eta_minutes if we calculated it (preserve initial estimate)
         update_kwargs = {
@@ -1577,6 +1596,23 @@ def start_conversion():
 @app.route('/api/jobs')
 def list_jobs():
     """List all conversion jobs."""
+    # Refresh progress for active jobs so the UI doesn't show 0% for long-running chapters.
+    jobs = get_all_jobs()
+    now = datetime.now().timestamp()
+    if not hasattr(list_jobs, '_last_parse'):
+        list_jobs._last_parse = {}
+    last_parse = list_jobs._last_parse
+
+    for j in jobs:
+        if j.get('status') in ('converting', 'converting PDF', 'converting to audio'):
+            cname = j.get('container_name') or ''
+            if not cname:
+                continue
+            prev = float(last_parse.get(j['id'], 0))
+            if now - prev >= 5:
+                parse_conversion_progress(cname, j['id'])
+                last_parse[j['id']] = now
+
     return jsonify(get_all_jobs())
 
 
