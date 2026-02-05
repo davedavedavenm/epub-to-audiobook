@@ -142,7 +142,11 @@ class StateDB:
         rows = self.conn.execute('''
             SELECT * FROM wanted_state
             WHERE found=0 AND (next_check_ts IS NULL OR next_check_ts <= ?)
-            ORDER BY COALESCE(next_check_ts, 0) ASC, COALESCE(last_checked_ts, 0) ASC, created_ts ASC
+            ORDER BY
+                COALESCE(next_check_ts, 0) ASC,
+                CASE WHEN last_checked_ts IS NULL THEN 0 ELSE 1 END ASC,
+                COALESCE(last_checked_ts, 0) ASC,
+                created_ts DESC
             LIMIT ?
         ''', (t, limit)).fetchall()
         return rows
@@ -219,6 +223,31 @@ def telegram_notify(token: str, chat_id: str, text: str, log_path: Path | None):
         return False
 
 
+def whatsapp_notify(evo_url: str, evo_key: str, to_number: str, text: str, log_path: Path | None) -> bool:
+    """Send a WhatsApp message via Evolution API (if configured)."""
+    if not evo_url or not evo_key or not to_number:
+        return False
+    try:
+        url = evo_url.rstrip('/') + '/message/sendText'
+        # Evolution instances vary slightly; keep payload minimal.
+        payload = {
+            'number': to_number,
+            'text': text,
+        }
+        headers = {
+            'apikey': evo_key,
+            'Content-Type': 'application/json',
+        }
+        resp = requests.post(url, json=payload, headers=headers, timeout=15)
+        ok = 200 <= resp.status_code < 300
+        if not ok:
+            log(f"WhatsApp notify failed: {resp.status_code} {resp.text[:200]}", log_path)
+        return ok
+    except Exception as e:
+        log(f"WhatsApp notify exception: {e}", log_path)
+        return False
+
+
 def backoff_seconds(attempt: int, base: int, max_s: int) -> int:
     # 1 -> base, 2 -> 2*base, 3 -> 4*base ... capped
     d = base * (2 ** max(0, attempt - 1))
@@ -236,6 +265,8 @@ def main():
     ap.add_argument('--backoff-base-s', type=int, default=6 * 60 * 60)  # 6 hours
     ap.add_argument('--backoff-max-s', type=int, default=7 * 24 * 60 * 60)  # 7 days
     ap.add_argument('--notify-telegram', action='store_true')
+    ap.add_argument('--notify-whatsapp', action='store_true')
+    ap.add_argument('--whatsapp-number', default='')
     ap.add_argument('--dry-run', action='store_true')
     args = ap.parse_args()
 
@@ -257,12 +288,16 @@ def main():
             st.upsert(w)
 
         due = st.pick_due(args.limit)
-        if not due:
-            log("No due wanted items", log_path)
-            return 0
+    if not due:
+        log("No due wanted items", log_path)
+        return 0
 
-        token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-        chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+    evo_url = os.environ.get('EVOLUTION_API_URL', '')
+    evo_key = os.environ.get('EVOLUTION_API_KEY', '')
+    default_wa = os.environ.get('DEFAULT_WHATSAPP_NUMBER', '')
+    wa_to = (args.whatsapp_number or default_wa).strip()
 
         for i, row in enumerate(due, start=1):
             w = Wanted(author=row['author'] or '', title=row['title'] or '')
@@ -277,6 +312,8 @@ def main():
                     st.mark_found(w.key, str(path))
                     if args.notify_telegram:
                         telegram_notify(token, chat_id, msg, log_path)
+                    if args.notify_whatsapp:
+                        whatsapp_notify(evo_url, evo_key, wa_to, msg, log_path)
                 continue
 
             # not found; schedule next check with backoff
