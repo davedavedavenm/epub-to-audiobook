@@ -288,16 +288,16 @@ def main():
             st.upsert(w)
 
         due = st.pick_due(args.limit)
-    if not due:
-        log("No due wanted items", log_path)
-        return 0
+        if not due:
+            log("No due wanted items", log_path)
+            return 0
 
-    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-    chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
-    evo_url = os.environ.get('EVOLUTION_API_URL', '')
-    evo_key = os.environ.get('EVOLUTION_API_KEY', '')
-    default_wa = os.environ.get('DEFAULT_WHATSAPP_NUMBER', '')
-    wa_to = (args.whatsapp_number or default_wa).strip()
+        token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+        chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+        evo_url = os.environ.get('EVOLUTION_API_URL', '')
+        evo_key = os.environ.get('EVOLUTION_API_KEY', '')
+        default_wa = os.environ.get('DEFAULT_WHATSAPP_NUMBER', '')
+        wa_to = (args.whatsapp_number or default_wa).strip()
 
         for i, row in enumerate(due, start=1):
             w = Wanted(author=row['author'] or '', title=row['title'] or '')
