@@ -1,6 +1,6 @@
 # EPUB to Audiobook - Roadmap
 
-## Current Features (v1.0.0)
+## Current Features (v1.3.x)
 
 ### TTS Engines
 - **Kokoro TTS** - High-quality neural TTS with 22 voices (British, American, European, Italian)
@@ -18,14 +18,20 @@
 - Audiobookshelf integration (auto-sync completed books)
 
 ### UI Features
-- **Tab Navigation** - Convert, Queue, Library, History tabs
-- **Modern Design** - 2-column layout, glassmorphism effects
-- **6 Themes** - Midnight, Charcoal, Forest, Crimson, Purple, Ocean
+- **Tab Navigation** - Convert, Queue, Library, Ops, History tabs
+- **Design Modes** - Studio, Editorial, Technical, Minimal
+- **4 Themes** - Light, Dark, Midnight, Forest
 - Responsive design for mobile
 
 ### Notifications
 - Telegram notifications on job completion
-- WhatsApp notification toggle (UI ready)
+- WhatsApp notifications via Evolution API
+
+### Reliability & Operations
+- Queue pause/resume, reorder, and bulk retry controls
+- Restart recovery for in-flight jobs
+- Auto-retry with capped backoff
+- Watchdog monitoring for stalled/dead conversion containers
 
 ---
 

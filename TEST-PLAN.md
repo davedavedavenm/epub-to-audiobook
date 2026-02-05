@@ -63,7 +63,7 @@
 | Test | Steps | Expected | Status |
 |------|-------|----------|--------|
 | Completed jobs load | Switch to History tab | Completed audiobooks display | |
-| Download button | Click download | Downloads M4B file | |
+| Download button | Click download | Downloads ZIP of generated audio files | |
 | Sync to ABS | Click "Sync to ABS" | Files copied to Audiobookshelf | |
 | Delete job | Click delete | Job removed from history | |
 
@@ -113,15 +113,9 @@ curl -X POST http://localhost:8881/api/convert \
   -F "engine=kokoro"
 ```
 
-## Known Issues to Fix
+## Reliability Checks (Current)
 
-1. **Library WhatsApp** - No phone number input, uses default only
-2. **Orphan jobs** - Jobs can get stuck if container dies
-3. **No job timeout watchdog** - Jobs can run forever
-
-## Recommended Failsafes
-
-1. **Startup cleanup** - On webapp start, check for orphan "converting" jobs with no container
-2. **Timeout watchdog** - Background task to cancel jobs that exceed 2x ETA
-3. **Health checks** - Verify Kokoro is reachable before accepting jobs
-4. **Retry with backoff** - Auto-retry failed jobs up to 3 times
+1. Verify startup recovery marks/reconciles orphan jobs correctly.
+2. Verify watchdog logs and recovery behavior when a container dies.
+3. Verify auto-retry caps at 3 attempts and surfaces clear error messages.
+4. Verify queue survives webapp restart and resumes processing in order.

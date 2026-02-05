@@ -27,9 +27,9 @@ A self-hosted web application for converting ebooks to audiobooks using AI text-
 - **Progress Tracking** - Real-time progress with ETA
 
 ### UI Features
-- **Tab Navigation** - Convert, Queue, Library, History tabs
-- **Modern Design** - Clean 2-column layout with glassmorphism effects
-- **6 Color Themes** - Midnight, Charcoal, Forest, Crimson, Purple, Ocean
+- **Tab Navigation** - Convert, Queue, Library, Ops, History tabs
+- **Design Modes** - Studio, Editorial, Technical, Minimal
+- **4 Themes** - Light, Dark, Midnight, Forest
 - **Responsive** - Works on desktop and mobile
 
 ### Integration
@@ -100,7 +100,7 @@ cp .env.example .env
 | `KOKORO_URL` | Kokoro TTS endpoint (default: `http://kokoro-tts:8880/v1`) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `AUDIOBOOKSHELF_DIR` | Path to sync completed books (empty = disabled) |
-| `LIBRARY_DIR` | Path to browse for ebooks (default: `/data/library`) |
+| `LIBRARY_DIR` | Path to browse for ebooks (default: `/mnt/openbooks`) |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token for notifications |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for notifications |
 
@@ -119,8 +119,16 @@ Set `AUDIOBOOKSHELF_DIR` and configure SSH access from the container to your ABS
 | `/api/jobs` | GET | List all jobs |
 | `/api/jobs/<id>/cancel` | POST | Cancel running job |
 | `/api/jobs/<id>/retry` | POST | Retry failed job |
+| `/api/jobs/<id>/delete` | DELETE | Delete job from history |
 | `/api/jobs/<id>/download` | GET | Download as ZIP |
 | `/api/jobs/<id>/sync` | POST | Sync to Audiobookshelf |
+| `/api/jobs/<id>/timeline` | GET | Derived pipeline stages for active job |
+| `/api/jobs/<id>/logs` | GET | Recent job/container logs |
+| `/api/queue/status` | GET | Queue paused state + queued count |
+| `/api/queue/pause` | POST | Pause/resume queue processing |
+| `/api/queue/reorder` | POST | Reorder queued jobs |
+| `/api/queue/retry-failed` | POST | Bulk retry failed/cancelled jobs |
+| `/api/diagnostics` | GET | Runtime diagnostics summary |
 | `/api/library` | GET | List books in library |
 | `/api/library/convert` | POST | Convert a library book |
 | `/api/history` | GET | List completed conversions |
