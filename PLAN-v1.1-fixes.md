@@ -34,7 +34,7 @@
 environment:
   - LIBRARY_DIR=/mnt/openbooks
   - EVOLUTION_API_URL=http://192.168.1.172:8084
-  - EVOLUTION_API_KEY=<REDACTED>
+  - EVOLUTION_API_KEY=<set-in-env>
   - DEFAULT_WHATSAPP_NUMBER=27763156632
 volumes:
   - /mnt/openbooks:/mnt/openbooks:ro

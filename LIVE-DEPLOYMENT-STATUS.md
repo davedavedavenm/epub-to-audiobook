@@ -1,7 +1,10 @@
-# Live Deployment Status
+# Live Deployment Status (Historical Snapshot)
 
-Last audited: 2026-02-04
-Audited host: `192.168.1.88` (Zorin)
+Snapshot date: 2026-02-04  
+Snapshot host: `192.168.1.88` (Zorin)
+
+> This document is a point-in-time audit and may be outdated after later hotfixes/deploys.
+> Use live checks (`/api/version`, `/api/health`, `docker compose ps`) for current state.
 
 ## Executive Summary
 
