@@ -152,8 +152,15 @@ class StateDB:
 
 
 def read_ll_wanted(ll_db: Path) -> list[Wanted]:
-    # read-only
-    conn = sqlite3.connect(str(ll_db))
+    # LazyLibrarian DB can be busy/locked; copy to /tmp before reading.
+    tmp = Path(f"/tmp/ll_wanted_{os.getpid()}.db")
+    try:
+        tmp.write_bytes(ll_db.read_bytes())
+    except Exception:
+        # Fallback to direct read if copy fails.
+        tmp = ll_db
+
+    conn = sqlite3.connect(str(tmp))
     cur = conn.cursor()
     cur.execute('''
         SELECT authors.AuthorName, books.BookName
@@ -163,6 +170,11 @@ def read_ll_wanted(ll_db: Path) -> list[Wanted]:
     ''')
     rows = cur.fetchall()
     conn.close()
+    if tmp != ll_db:
+        try:
+            tmp.unlink(missing_ok=True)
+        except Exception:
+            pass
     return [Wanted(author=a or '', title=t or '') for (a, t) in rows]
 
 
