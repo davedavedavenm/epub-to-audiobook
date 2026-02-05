@@ -151,6 +151,19 @@ class StateDB:
         ''', (t, limit)).fetchall()
         return rows
 
+    def pick_any_unfound(self, limit: int) -> list[sqlite3.Row]:
+        """Pick unfound items ignoring schedule (for testing/manual runs)."""
+        rows = self.conn.execute('''
+            SELECT * FROM wanted_state
+            WHERE found=0
+            ORDER BY
+                CASE WHEN last_checked_ts IS NULL THEN 0 ELSE 1 END ASC,
+                COALESCE(last_checked_ts, 0) ASC,
+                created_ts DESC
+            LIMIT ?
+        ''', (limit,)).fetchall()
+        return rows
+
     def close(self):
         self.conn.close()
 
@@ -294,6 +307,7 @@ def main():
     ap.add_argument('--notify-whatsapp', action='store_true')
     ap.add_argument('--whatsapp-number', default='')
     ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
+    ap.add_argument('--force', action='store_true', help='Ignore scheduling and check unfound items now (testing/manual)')
     ap.add_argument('--dry-run', action='store_true')
     args = ap.parse_args()
 
@@ -315,7 +329,7 @@ def main():
         for w in wanted:
             st.upsert(w)
 
-        due = st.pick_due(args.limit)
+        due = st.pick_any_unfound(args.limit) if args.force else st.pick_due(args.limit)
         if not due:
             log("No due wanted items", log_path)
             return 0
