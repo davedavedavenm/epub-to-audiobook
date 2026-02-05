@@ -1637,6 +1637,16 @@
                         <span>Telegram</span>
                     </label>
                     <input type="text" class="library-search" id="library-search" placeholder="🔍 Filter books...">
+                    <select id="library-sort-key" class="option-select" style="width:auto; min-width: 120px;" title="Sort library">
+                        <option value="title">Title</option>
+                        <option value="modified_ts">Date</option>
+                        <option value="size">Size</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <select id="library-sort-dir" class="option-select" style="width:auto; min-width: 90px;" title="Sort order">
+                        <option value="asc">Asc</option>
+                        <option value="desc">Desc</option>
+                    </select>
                     <span class="library-stats" id="library-stats">Loading...</span>
                 </div>
                 <div class="library-grid" id="library-grid">
@@ -2384,9 +2394,45 @@
                 book.title.toLowerCase().includes(searchQuery)
             );
 
-            document.getElementById('library-stats').textContent = `${filtered.length} books`;
+            const sortKey = (document.getElementById('library-sort-key')?.value || 'title');
+            const sortDir = (document.getElementById('library-sort-dir')?.value || 'asc');
 
-            if (filtered.length === 0) {
+            const statusRank = (s) => {
+                if (s === 'converting') return 0;
+                if (s === 'available') return 1;
+                if (s === 'completed') return 2;
+                return 3;
+            };
+
+            const dirMul = sortDir === 'desc' ? -1 : 1;
+            const sorted = [...filtered].sort((a, b) => {
+                const at = (a?.title || '').toLowerCase();
+                const bt = (b?.title || '').toLowerCase();
+
+                let cmp = 0;
+                if (sortKey === 'modified_ts') {
+                    const av = Number(a?.modified_ts || 0);
+                    const bv = Number(b?.modified_ts || 0);
+                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
+                } else if (sortKey === 'size') {
+                    const av = Number(a?.size || 0);
+                    const bv = Number(b?.size || 0);
+                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
+                } else if (sortKey === 'status') {
+                    const av = statusRank(a?.status || '');
+                    const bv = statusRank(b?.status || '');
+                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
+                } else {
+                    cmp = at.localeCompare(bt);
+                }
+
+                if (cmp === 0) cmp = at.localeCompare(bt);
+                return cmp * dirMul;
+            });
+
+            document.getElementById('library-stats').textContent = `${sorted.length} books · ${sortKey.replace('_ts','')} ${sortDir}`;
+
+            if (sorted.length === 0) {
                 libraryGrid.innerHTML = `
                     <div class="no-jobs-message">
                         <div class="no-jobs-icon">📚</div>
@@ -2396,8 +2442,11 @@
                 return;
             }
 
-            libraryGrid.innerHTML = filtered.map(book => {
+            libraryGrid.innerHTML = sorted.map(book => {
                 const sizeStr = book.size ? `${(book.size / 1024 / 1024).toFixed(1)} MB` : '';
+                const modifiedStr = book.modified_ts
+                    ? new Date(book.modified_ts * 1000).toLocaleString('en-GB')
+                    : '';
                 let statusHtml = '';
 
                 if (book.status === 'completed') {
@@ -2411,7 +2460,7 @@
                 const icon = book.format === 'pdf' ? '📕' : '📗';
 
                 return `
-                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}">
+                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}" title="${modifiedStr ? `Modified: ${escapeHtml(modifiedStr)}` : ''}">
                         <div class="library-item-info">
                             <span class="library-item-icon">${icon}</span>
                             <div class="library-item-details">
@@ -2431,6 +2480,22 @@
         }
 
         document.getElementById('library-search').addEventListener('input', renderLibrary);
+        document.getElementById('library-sort-key').addEventListener('change', () => {
+            localStorage.setItem('librarySortKey', document.getElementById('library-sort-key').value);
+            renderLibrary();
+        });
+        document.getElementById('library-sort-dir').addEventListener('change', () => {
+            localStorage.setItem('librarySortDir', document.getElementById('library-sort-dir').value);
+            renderLibrary();
+        });
+
+        // Restore library sort prefs (defaults: Title + Asc).
+        (() => {
+            const k = localStorage.getItem('librarySortKey');
+            const d = localStorage.getItem('librarySortDir');
+            if (k) document.getElementById('library-sort-key').value = k;
+            if (d) document.getElementById('library-sort-dir').value = d;
+        })();
 
         async function convertFromLibrary(path, title) {
             const voice = document.getElementById('library-voice-select').value;

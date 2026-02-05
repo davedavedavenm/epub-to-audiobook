@@ -2013,6 +2013,7 @@ def list_library():
     for ext in SUPPORTED_FORMATS:
         for file_path in LIBRARY_DIR.glob(f'**/*{ext}'):
             if file_path.is_file():
+                st = file_path.stat()
                 title = file_path.stem
                 title_lower = title.lower()
 
@@ -2023,7 +2024,9 @@ def list_library():
                     'title': title,
                     'path': str(file_path),
                     'format': ext.lstrip('.'),
-                    'size': file_path.stat().st_size,
+                    'size': st.st_size,
+                    # Used for client-side sorting/filtering; epoch seconds.
+                    'modified_ts': int(st.st_mtime),
                     'status': job_info['status'],
                     'progress': job_info['progress']
                 })
