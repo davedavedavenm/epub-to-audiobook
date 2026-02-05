@@ -70,6 +70,13 @@ def jaccard(a: set[str], b: set[str]) -> float:
     return inter / union if union else 0.0
 
 
+def containment(needles: set[str], haystack: set[str]) -> float:
+    """How much of `needles` is contained in `haystack` (0..1)."""
+    if not needles:
+        return 0.0
+    return len(needles & haystack) / len(needles)
+
+
 @dataclass(frozen=True)
 class Wanted:
     author: str
@@ -212,7 +219,12 @@ def find_match(w: Wanted, library_dir: Path, min_score: float) -> tuple[float, P
     for f in iter_library_files(library_dir):
         name = f.stem
         ft = token_set(name)
-        score = 0.7 * jaccard(wt, ft) + 0.3 * jaccard(wa, ft)
+        title_c = containment(wt, ft)
+        author_c = containment(wa, ft)
+        # Avoid single-token false positives by requiring some author overlap when title is tiny.
+        if len(wt) < 2 and author_c == 0:
+            continue
+        score = 0.8 * title_c + 0.2 * author_c
         if best is None or score > best[0]:
             best = (score, f)
 
@@ -238,7 +250,11 @@ def find_match_via_api(w: Wanted, library_api: str, min_score: float) -> tuple[f
         if not title:
             continue
         ft = token_set(title)
-        score = 0.7 * jaccard(wt, ft) + 0.3 * jaccard(wa, ft)
+        title_c = containment(wt, ft)
+        author_c = containment(wa, ft)
+        if len(wt) < 2 and author_c == 0:
+            continue
+        score = 0.8 * title_c + 0.2 * author_c
         if best is None or score > best[0]:
             best = (score, title)
 
