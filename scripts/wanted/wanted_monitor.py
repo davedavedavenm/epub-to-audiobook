@@ -409,7 +409,9 @@ def whatsapp_notify(evo_url: str, evo_key: str, to_number: str, text: str, log_p
     if not evo_url or not evo_key or not to_number:
         return False
     try:
-        url = evo_url.rstrip('/') + '/message/sendText'
+        # Default Evolution API route used in your n8n dispatcher is:
+        #   /message/sendText/personal
+        url = evo_url.rstrip('/') + '/message/sendText/personal'
         # Evolution instances vary slightly; keep payload minimal.
         payload = {
             'number': to_number,
