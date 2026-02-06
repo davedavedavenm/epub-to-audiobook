@@ -183,20 +183,87 @@ def verify_tts_against_epub(job_id: str, epub_path: Path, output_path: Path):
         tts_strict = captured["strict_text"]
         tts_loose = captured["loose_text"]
 
-        # Coverage metrics (word-level, loose normalized).
-        def word_counts(s: str, max_words: int = 250_000) -> Counter:
-            words = (s or "").split(" ")
-            if len(words) > max_words:
-                words = words[:max_words]
-            return Counter([w for w in words if w])
+        # Coverage + structure metrics (word-level, loose normalized).
+        #
+        # Important:
+        # - Word overlap is order-insensitive. It catches gross omissions/additions but can miss re-ordering.
+        # - Trigram overlap is weakly order-sensitive and more robust for "word-for-word-ish" checks.
+        # - Sampled SequenceMatcher ratio is an order-sensitive sanity check on the start of the book.
+        def words_list(s: str, max_words: int = 250_000) -> list[str]:
+            ws = [w for w in (s or "").split(" ") if w]
+            if len(ws) > max_words:
+                ws = ws[:max_words]
+            return ws
 
-        c_book = word_counts(book_loose)
-        c_tts = word_counts(tts_loose)
+        book_words = words_list(book_loose)
+        tts_words = words_list(tts_loose)
+        c_book = Counter(book_words)
+        c_tts = Counter(tts_words)
         total_book = sum(c_book.values()) or 1
         total_tts = sum(c_tts.values()) or 1
         overlap = sum(min(c_book[w], c_tts.get(w, 0)) for w in c_book.keys())
         book_covered = overlap / total_book
         tts_covered = overlap / total_tts
+
+        # Weakly order-sensitive overlap via word trigrams (caps to avoid memory blow-ups).
+        def trigram_set(ws: list[str], max_grams: int = 250_000) -> set[str]:
+            grams: set[str] = set()
+            if len(ws) < 3:
+                return grams
+            # Use a delimiter unlikely to appear in normalized tokens.
+            delim = "\x1f"
+            # Keep a deterministic prefix to make numbers stable run-to-run.
+            end = min(len(ws) - 2, max_grams)
+            for i in range(end):
+                grams.add(delim.join((ws[i], ws[i + 1], ws[i + 2])))
+            return grams
+
+        book_tri = trigram_set(book_words)
+        tts_tri = trigram_set(tts_words)
+        tri_inter = len(book_tri & tts_tri)
+        tri_book = len(book_tri) or 1
+        tri_tts = len(tts_tri) or 1
+        tri_book_covered = tri_inter / tri_book
+        tri_tts_covered = tri_inter / tri_tts
+
+        # Order-sensitive "does the beginning match" metric (sample first N words).
+        # This is intentionally conservative: we're not trying to do full forced-alignment.
+        import difflib
+        sample_n = 5000
+        book_sample = " ".join(book_words[:sample_n])
+        tts_sample = " ".join(tts_words[:sample_n])
+        seq_ratio = None
+        if book_sample and tts_sample:
+            # SequenceMatcher can be expensive; keep samples bounded.
+            seq_ratio = round(difflib.SequenceMatcher(None, book_sample, tts_sample).ratio(), 6)
+
+        # Diagnostics: top "missing" vs "extra" content words.
+        stop = {
+            # minimal stoplist to keep reports readable
+            "the", "and", "that", "with", "from", "this", "have", "were", "your", "their", "there",
+            "they", "them", "then", "than", "what", "when", "where", "which", "will", "would", "could",
+            "should", "into", "upon", "over", "under", "again", "about", "because", "after", "before",
+            "been", "being", "such", "some", "most", "more", "very", "here", "himself", "herself",
+        }
+
+        def top_deltas(a: Counter, b: Counter, n: int = 20) -> list[dict]:
+            # a - b (positive deltas only)
+            deltas = []
+            for w, cnt in a.items():
+                if cnt <= 0:
+                    continue
+                if len(w) < 5:
+                    continue
+                if w in stop:
+                    continue
+                d = cnt - b.get(w, 0)
+                if d > 0:
+                    deltas.append((w, int(d)))
+            deltas.sort(key=lambda x: x[1], reverse=True)
+            return [{"word": w, "delta": d} for (w, d) in deltas[:n]]
+
+        missing_in_tts_top = top_deltas(c_book, c_tts, n=20)
+        extra_in_tts_top = top_deltas(c_tts, c_book, n=20)
 
         report = {
             "job_id": job_id,
@@ -206,8 +273,15 @@ def verify_tts_against_epub(job_id: str, epub_path: Path, output_path: Path):
             "tts_loose_sha256": sha256_hex_text(tts_loose),
             "book_strict_sha256": sha256_hex_text(book_strict),
             "book_loose_sha256": sha256_hex_text(book_loose),
+            "book_loose_word_count": int(len(book_words)),
+            "tts_loose_word_count": int(len(tts_words)),
             "loose_word_overlap_ratio_of_book": round(book_covered, 6),
             "loose_word_overlap_ratio_of_tts": round(tts_covered, 6),
+            "loose_trigram_overlap_ratio_of_book": round(tri_book_covered, 6),
+            "loose_trigram_overlap_ratio_of_tts": round(tri_tts_covered, 6),
+            "sampled_sequence_ratio_first_5000_words": seq_ratio,
+            "top_missing_words_in_tts": missing_in_tts_top,
+            "top_extra_words_in_tts": extra_in_tts_top,
             "created_at": datetime.now().isoformat(),
         }
 
