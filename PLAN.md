@@ -28,7 +28,9 @@ Current behavior (docker-vm cron):
 - It can optionally request OpenBooks (`--request-openbooks`) but that is not enabled by default.
 
 Planned improvements
-- Add an allowlist mechanism (title/author patterns or a file list) to ensure requests are only sent for books you explicitly allow (example: public-domain test items).
+- Add an allowlist mechanism (title/author patterns) so OpenBooks requests are only sent for books you explicitly allow (example: public-domain test items). This is now implemented:
+  - `wanted_monitor.py --request-openbooks` will only request if `--request-allowlist-file` exists and matches the title/author.
+  - Example allowlist file: `scripts/wanted/wanted_allowlist.example.txt`
 - Keep strict rate limits:
   - `--max-requests-per-run 1`
   - `--request-cooldown-s >= 43200` (12h)
@@ -57,4 +59,3 @@ Success criteria
 
 Separately tracked:
 - Visual artifacts (pill/toolbar overlap, chips layout) should be fixed after reliability and e2e tests, so UI work doesn’t mask core functional regressions.
-
