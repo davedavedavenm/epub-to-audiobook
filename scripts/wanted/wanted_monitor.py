@@ -33,6 +33,7 @@ DEFAULT_LL_DB = '/home/dave/docker-apps/lazylibrarian/config/lazylibrarian.db'
 DEFAULT_STATE_DB = '/home/dave/scripts/wanted_state.db'
 DEFAULT_LIBRARY_DIR = '/mnt/openbooks'
 DEFAULT_LOG = '/home/dave/scripts/wanted_monitor.log'
+DEFAULT_REQUEST_ALLOWLIST = '/home/dave/scripts/wanted_allowlist.txt'
 
 
 def now_ts() -> int:
@@ -349,6 +350,62 @@ def openbooks_request(bridge_path: str, query: str, log_path: Path | None) -> bo
         return False
 
 
+def load_allowlist_patterns(path: Path, log_path: Path | None) -> list[re.Pattern] | None:
+    """Load allowlist patterns for OpenBooks requests.
+
+    File format (one per line):
+    - Blank lines and lines starting with '#' are ignored
+    - 're:<regex>' for advanced patterns
+    - Otherwise treated as a token rule: all tokens must appear in "<title> <author>"
+      Example: "frankenstein|shelley"
+    """
+    if not path:
+        return None
+    if not path.exists():
+        log(f"Allowlist file not found (requests disabled): {path}", log_path)
+        return None
+
+    pats: list[re.Pattern] = []
+    for raw in path.read_text(encoding='utf-8', errors='replace').splitlines():
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            continue
+        if line.lower().startswith('re:'):
+            rx = line[3:].strip()
+            if not rx:
+                continue
+            try:
+                pats.append(re.compile(rx, flags=re.IGNORECASE))
+            except re.error:
+                log(f"Invalid allowlist regex (skipped): {line}", log_path)
+            continue
+
+        # Token rule: split by common separators and require all tokens to match.
+        tokens = [t.strip() for t in re.split(r"[|,;/]+", line) if t.strip()]
+        if not tokens:
+            continue
+        lookaheads = ''.join(f"(?=.*{re.escape(normalize(t))})" for t in tokens)
+        pats.append(re.compile(lookaheads + r".*", flags=re.IGNORECASE))
+
+    if not pats:
+        log(f"Allowlist loaded but empty (requests disabled): {path}", log_path)
+        return None
+    return pats
+
+
+def is_allowlisted(w: Wanted, pats: list[re.Pattern] | None) -> bool:
+    if not pats:
+        return False
+    hay = normalize(f"{w.title} {w.author}")
+    for p in pats:
+        try:
+            if p.search(hay):
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--ll-db', default=DEFAULT_LL_DB)
@@ -369,6 +426,7 @@ def main():
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--request-openbooks', action='store_true', help='Trigger OpenBooks requests for unfound items (rate-limited).')
     ap.add_argument('--openbooks-bridge', default='/home/dave/scripts/openbooks_bridge.py')
+    ap.add_argument('--request-allowlist-file', default=DEFAULT_REQUEST_ALLOWLIST, help='Path to allowlist for OpenBooks requests.')
     ap.add_argument('--max-requests-per-run', type=int, default=1)
     ap.add_argument('--request-cooldown-s', type=int, default=12 * 60 * 60)  # 12h per title
     ap.add_argument('--post-request-check-s', type=int, default=60 * 60)  # 1h
@@ -415,6 +473,7 @@ def main():
         found_now: list[tuple[Wanted, str, float]] = []
         notifications_sent = 0
         requests_sent = 0
+        allow_pats = load_allowlist_patterns(Path(args.request_allowlist_file), log_path) if args.request_openbooks else None
 
         for i, row in enumerate(due, start=1):
             w = Wanted(author=row['author'] or '', title=row['title'] or '')
@@ -454,7 +513,11 @@ def main():
                 continue
 
             # not found; schedule next check with backoff
-            if args.request_openbooks and requests_sent < max(0, int(args.max_requests_per_run or 0)) and not args.dry_run:
+            if (args.request_openbooks
+                and allow_pats
+                and is_allowlisted(w, allow_pats)
+                and requests_sent < max(0, int(args.max_requests_per_run or 0))
+                and not args.dry_run):
                 last_req = int(row['last_request_ts'] or 0)
                 if (now_ts() - last_req) >= int(args.request_cooldown_s or 0):
                     query = f"{w.title} {w.author}".strip()

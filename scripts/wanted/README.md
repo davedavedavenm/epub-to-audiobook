@@ -41,7 +41,7 @@ python3 wanted_monitor.py --notify-telegram --notification-mode per-title --max-
 Optional OpenBooks requests (very conservative defaults):
 
 ```bash
-python3 wanted_monitor.py --request-openbooks --max-requests-per-run 1 --request-cooldown-s 43200
+python3 wanted_monitor.py --request-openbooks --request-allowlist-file /home/dave/scripts/wanted_allowlist.txt --max-requests-per-run 1 --request-cooldown-s 43200
 ```
 
 ## Cron suggestion
@@ -58,6 +58,6 @@ Run a few times per day (example: 08:00, 14:00, 20:00):
 - `--notification-mode`: `summary` (default) or `per-title`
 - `--max-notifications`: hard cap across all channels per run (default: 1)
 - `--request-openbooks`: enable OpenBooks request hook (default: off)
+- `--request-allowlist-file`: allowlist gate for requests (required to actually request)
 - `--max-requests-per-run`: hard cap of OpenBooks requests per run (default: 1)
 - `--request-cooldown-s`: minimum time between requests per title (default: 12h)
-
