@@ -546,6 +546,9 @@ def main():
                          "want notifications for manual/other download paths.")
     ap.add_argument('--ignore-title-regex', action='append', default=[],
                     help='Regex for titles to skip (can be passed multiple times). Example: \"graphic novel\"')
+    ap.add_argument('--send-test', action='store_true',
+                    help='Send a single test notification via enabled channels and exit (no DB changes).')
+    ap.add_argument('--test-text', default='Wanted monitor test: notifications enabled (1 message).')
     ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
     ap.add_argument('--force', action='store_true', help='Ignore scheduling and check unfound items now (testing/manual)')
     ap.add_argument('--dry-run', action='store_true')
@@ -633,6 +636,20 @@ def main():
             log("Telegram notify enabled but TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID missing; disabling for this run", log_path)
         if args.notify_whatsapp and not whatsapp_enabled:
             log("WhatsApp notify enabled but EVOLUTION_API_URL/EVOLUTION_API_KEY/DEFAULT_WHATSAPP_NUMBER missing; disabling for this run", log_path)
+
+        if args.send_test:
+            notifications_sent = 0
+            text = (args.test_text or '').strip() or 'Wanted monitor test'
+            if telegram_enabled and notifications_sent < max(0, int(args.max_notifications or 0)):
+                telegram_notify(token, chat_id, text, log_path)
+                notifications_sent += 1
+            if whatsapp_enabled and notifications_sent < max(0, int(args.max_notifications or 0)):
+                whatsapp_notify(evo_url, evo_key, wa_to, text, log_path)
+                notifications_sent += 1
+            if notifications_sent == 0:
+                log("Test notification: no channels enabled (check env + flags)", log_path)
+                return 2
+            return 0
 
         found_now: list[tuple[Wanted, str, float]] = []
         notifications_sent = 0
