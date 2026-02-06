@@ -27,6 +27,7 @@ from pathlib import Path
 
 import Levenshtein  # type: ignore
 from bs4 import BeautifulSoup  # type: ignore
+import ebooklib  # type: ignore
 from ebooklib import epub  # type: ignore
 from faster_whisper import WhisperModel  # type: ignore
 
@@ -79,7 +80,7 @@ def extract_epub_text(epub_path: Path) -> str:
     book = epub.read_epub(str(epub_path))
     parts: list[str] = []
     for item in book.get_items():
-        if item.get_type() != epub.ITEM_DOCUMENT:
+        if item.get_type() != ebooklib.ITEM_DOCUMENT:
             continue
         try:
             html = item.get_content()
@@ -472,4 +473,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
