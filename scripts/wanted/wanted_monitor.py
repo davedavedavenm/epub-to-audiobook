@@ -477,6 +477,7 @@ def main():
         found_now: list[tuple[Wanted, str, float]] = []
         notifications_sent = 0
         requests_sent = 0
+        requested_now: list[Wanted] = []
         allow_pats = None
         if args.request_openbooks and args.request_policy == 'allowlist':
             allow_pats = load_allowlist_patterns(Path(args.request_allowlist_file), log_path)
@@ -535,6 +536,7 @@ def main():
                     if openbooks_request(args.openbooks_bridge, query, log_path):
                         st.mark_requested(w.key)
                         requests_sent += 1
+                        requested_now.append(w)
                         # After requesting, re-check sooner than the exponential backoff.
                         st.mark_checked(w.key, now_ts() + int(args.post_request_check_s or 0), increment_attempt=True)
                         if args.request_sleep_s:
@@ -546,9 +548,19 @@ def main():
             st.mark_checked(w.key, now_ts() + delay, increment_attempt=True)
 
         # Send a single summary message (default) to avoid Telegram spam.
-        if args.notification_mode == 'summary' and found_now and not args.dry_run:
+        if args.notification_mode == 'summary' and (found_now or requested_now) and not args.dry_run:
             if notifications_sent < max(0, int(args.max_notifications or 0)):
-                lines = ["FOUND wanted books:"]
+                lines = [f"Wanted monitor run: checked {len(due)} item(s)"]
+                if requested_now:
+                    lines.append("")
+                    lines.append(f"Queued OpenBooks request(s): {len(requested_now)}")
+                    for w in requested_now[:10]:
+                        lines.append(f"- {w.title} ({w.author})")
+                    if len(requested_now) > 10:
+                        lines.append(f"...and {len(requested_now) - 10} more")
+                if found_now:
+                    lines.append("")
+                    lines.append("Searched and found in library:")
                 for w, _found_path, s in found_now[:10]:
                     lines.append(f"- {w.title} ({w.author}) [score {s:.2f}]")
                 if len(found_now) > 10:
