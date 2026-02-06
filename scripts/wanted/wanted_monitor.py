@@ -425,6 +425,8 @@ def whatsapp_notify(evo_url: str, evo_key: str, to_number: str, text: str, log_p
         ok = 200 <= resp.status_code < 300
         if not ok:
             log(f"WhatsApp notify failed: {resp.status_code} {resp.text[:200]}", log_path)
+        else:
+            log("WhatsApp notify ok", log_path)
         return ok
     except Exception as e:
         log(f"WhatsApp notify exception: {e}", log_path)
