@@ -113,6 +113,23 @@ class StateDB:
                 created_ts INTEGER
             )
         ''')
+        # Request queue for OpenBooks (monitor enqueues; separate worker dequeues).
+        self.conn.execute('''
+            CREATE TABLE IF NOT EXISTS openbooks_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT,
+                author TEXT,
+                title TEXT,
+                query TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'queued',  -- queued, sent, failed
+                attempt_count INTEGER DEFAULT 0,
+                last_error TEXT,
+                created_ts INTEGER,
+                updated_ts INTEGER
+            )
+        ''')
+        self.conn.execute('CREATE INDEX IF NOT EXISTS idx_openbooks_queue_status ON openbooks_queue(status)')
+        self.conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS uq_openbooks_queue_key_status ON openbooks_queue(key, status)')
         self.conn.commit()
 
     def upsert(self, w: Wanted):
@@ -152,6 +169,44 @@ class StateDB:
             SET last_request_ts=?
             WHERE key=?
         ''', (now_ts(), key))
+        self.conn.commit()
+
+    def enqueue_openbooks(self, w: Wanted, query: str) -> bool:
+        """Enqueue an OpenBooks request. Returns True if enqueued or already queued."""
+        t = now_ts()
+        try:
+            self.conn.execute('''
+                INSERT INTO openbooks_queue (key, author, title, query, status, created_ts, updated_ts)
+                VALUES (?, ?, ?, ?, 'queued', ?, ?)
+            ''', (w.key, w.author, w.title, query, t, t))
+            self.conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return True
+
+    def pick_openbooks_queue(self, limit: int) -> list[sqlite3.Row]:
+        rows = self.conn.execute('''
+            SELECT * FROM openbooks_queue
+            WHERE status='queued'
+            ORDER BY created_ts ASC, id ASC
+            LIMIT ?
+        ''', (limit,)).fetchall()
+        return rows
+
+    def mark_openbooks_sent(self, row_id: int):
+        self.conn.execute('''
+            UPDATE openbooks_queue
+            SET status='sent', updated_ts=?, attempt_count=attempt_count+1, last_error=NULL
+            WHERE id=?
+        ''', (now_ts(), row_id))
+        self.conn.commit()
+
+    def mark_openbooks_failed(self, row_id: int, err: str):
+        self.conn.execute('''
+            UPDATE openbooks_queue
+            SET status='failed', updated_ts=?, attempt_count=attempt_count+1, last_error=?
+            WHERE id=?
+        ''', (now_ts(), (err or '')[:500], row_id))
         self.conn.commit()
 
     def pick_due(self, limit: int) -> list[sqlite3.Row]:
@@ -282,6 +337,8 @@ def telegram_notify(token: str, chat_id: str, text: str, log_path: Path | None):
         ok = resp.status_code == 200
         if not ok:
             log(f"Telegram notify failed: {resp.status_code} {resp.text[:200]}", log_path)
+        else:
+            log("Telegram notify ok", log_path)
         return ok
     except Exception as e:
         log(f"Telegram notify exception: {e}", log_path)
@@ -319,12 +376,11 @@ def backoff_seconds(attempt: int, base: int, max_s: int) -> int:
     return int(min(d, max_s))
 
 
-def openbooks_request(bridge_path: str, query: str, log_path: Path | None) -> bool:
-    """Trigger an OpenBooks request via a local bridge script.
+def openbooks_send_via_bridge(bridge_path: str, query: str, log_path: Path | None, timeout_s: int) -> bool:
+    """Send an OpenBooks request via a local bridge script (worker path).
 
-    This is intentionally a very thin hook:
-    - It assumes the OpenBooks stack and sources are configured externally.
-    - It rate limits via StateDB fields and CLI flags in main().
+    The wanted monitor should only enqueue requests; the worker sends them so the
+    monitor never blocks on slow or down OpenBooks infrastructure.
     """
     if not bridge_path:
         return False
@@ -333,20 +389,22 @@ def openbooks_request(bridge_path: str, query: str, log_path: Path | None) -> bo
         log(f"OpenBooks bridge not found: {bridge_path}", log_path)
         return False
     try:
-        # Keep timeout short; bridge should enqueue quickly.
         r = subprocess.run(
             [sys.executable, str(p), query],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=max(1, int(timeout_s)),
         )
         if r.returncode != 0:
             err = (r.stderr or r.stdout or '').strip().replace('\n', ' ')[:200]
-            log(f"OpenBooks request failed (rc={r.returncode}): {err}", log_path)
+            log(f"OpenBooks bridge failed (rc={r.returncode}): {err}", log_path)
             return False
         return True
+    except subprocess.TimeoutExpired:
+        log(f"OpenBooks bridge timeout after {timeout_s}s", log_path)
+        return False
     except Exception as e:
-        log(f"OpenBooks request exception: {e}", log_path)
+        log(f"OpenBooks bridge exception: {e}", log_path)
         return False
 
 
@@ -435,6 +493,10 @@ def main():
     ap.add_argument('--request-cooldown-s', type=int, default=12 * 60 * 60)  # 12h per title
     ap.add_argument('--post-request-check-s', type=int, default=60 * 60)  # 1h
     ap.add_argument('--request-sleep-s', type=int, default=2)
+    ap.add_argument('--process-openbooks-queue', action='store_true',
+                    help='Dequeue and send OpenBooks requests (does not check LL wanted).')
+    ap.add_argument('--max-queue-sends', type=int, default=2)
+    ap.add_argument('--bridge-timeout-s', type=int, default=60)
     args = ap.parse_args()
 
     ll_db = Path(args.ll_db)
@@ -452,6 +514,25 @@ def main():
 
     st = StateDB(state_db)
     try:
+        if args.process_openbooks_queue:
+            rows = st.pick_openbooks_queue(max(0, int(args.max_queue_sends or 0)))
+            if not rows:
+                log("OpenBooks queue: nothing to send", log_path)
+                return 0
+            for row in rows:
+                q = (row['query'] or '').strip()
+                if not q:
+                    st.mark_openbooks_failed(int(row['id']), "empty query")
+                    continue
+                log(f"OpenBooks queue send: {q}", log_path)
+                ok = openbooks_send_via_bridge(args.openbooks_bridge, q, log_path, int(args.bridge_timeout_s or 60))
+                if ok:
+                    st.mark_openbooks_sent(int(row['id']))
+                    log("OpenBooks queue send ok", log_path)
+                else:
+                    st.mark_openbooks_failed(int(row['id']), "bridge failed/timeout")
+            return 0
+
         for w in wanted:
             st.upsert(w)
 
@@ -533,10 +614,11 @@ def main():
                 last_req = int(row['last_request_ts'] or 0)
                 if (now_ts() - last_req) >= int(args.request_cooldown_s or 0):
                     query = f"{w.title} {w.author}".strip()
-                    if openbooks_request(args.openbooks_bridge, query, log_path):
+                    if st.enqueue_openbooks(w, query):
                         st.mark_requested(w.key)
                         requests_sent += 1
                         requested_now.append(w)
+                        log(f"OpenBooks enqueued: {query}", log_path)
                         # After requesting, re-check sooner than the exponential backoff.
                         st.mark_checked(w.key, now_ts() + int(args.post_request_check_s or 0), increment_attempt=True)
                         if args.request_sleep_s:
