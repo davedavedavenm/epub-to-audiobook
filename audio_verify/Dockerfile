@@ -11,6 +11,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY verify_audio_sample.py .
+COPY verify_audio_vs_captured.py .
 
 ENTRYPOINT ["python", "/app/verify_audio_sample.py"]
-
