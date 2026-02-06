@@ -426,7 +426,11 @@ def main():
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--request-openbooks', action='store_true', help='Trigger OpenBooks requests for unfound items (rate-limited).')
     ap.add_argument('--openbooks-bridge', default='/home/dave/scripts/openbooks_bridge.py')
-    ap.add_argument('--request-allowlist-file', default=DEFAULT_REQUEST_ALLOWLIST, help='Path to allowlist for OpenBooks requests.')
+    ap.add_argument('--request-policy', choices=['all', 'allowlist'], default='all',
+                    help="When requesting OpenBooks: 'all' requests for any unfound LL Wanted item; "
+                         "'allowlist' requires a match in --request-allowlist-file.")
+    ap.add_argument('--request-allowlist-file', default=DEFAULT_REQUEST_ALLOWLIST,
+                    help='Allowlist file used only when --request-policy allowlist is selected.')
     ap.add_argument('--max-requests-per-run', type=int, default=1)
     ap.add_argument('--request-cooldown-s', type=int, default=12 * 60 * 60)  # 12h per title
     ap.add_argument('--post-request-check-s', type=int, default=60 * 60)  # 1h
@@ -473,7 +477,9 @@ def main():
         found_now: list[tuple[Wanted, str, float]] = []
         notifications_sent = 0
         requests_sent = 0
-        allow_pats = load_allowlist_patterns(Path(args.request_allowlist_file), log_path) if args.request_openbooks else None
+        allow_pats = None
+        if args.request_openbooks and args.request_policy == 'allowlist':
+            allow_pats = load_allowlist_patterns(Path(args.request_allowlist_file), log_path)
 
         for i, row in enumerate(due, start=1):
             w = Wanted(author=row['author'] or '', title=row['title'] or '')
@@ -513,9 +519,14 @@ def main():
                 continue
 
             # not found; schedule next check with backoff
-            if (args.request_openbooks
-                and allow_pats
-                and is_allowlisted(w, allow_pats)
+            request_ok = False
+            if args.request_openbooks:
+                if args.request_policy == 'all':
+                    request_ok = True
+                elif args.request_policy == 'allowlist':
+                    request_ok = bool(allow_pats and is_allowlisted(w, allow_pats))
+
+            if (request_ok
                 and requests_sent < max(0, int(args.max_requests_per_run or 0))
                 and not args.dry_run):
                 last_req = int(row['last_request_ts'] or 0)
