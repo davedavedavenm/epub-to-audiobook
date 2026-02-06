@@ -577,6 +577,35 @@ def main():
     log_path = Path(args.log) if args.log else None
     library_api = (args.library_api or '').strip()
 
+    # Test notifications should not depend on LL schedule/due items.
+    if args.send_test:
+        token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+        chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')
+        evo_url = os.environ.get('EVOLUTION_API_URL', '')
+        evo_key = os.environ.get('EVOLUTION_API_KEY', '')
+        default_wa = os.environ.get('DEFAULT_WHATSAPP_NUMBER', '')
+        wa_to = (args.whatsapp_number or default_wa).strip()
+
+        telegram_enabled = bool(args.notify_telegram and token and chat_id)
+        whatsapp_enabled = bool(args.notify_whatsapp and evo_url and evo_key and wa_to)
+        if args.notify_telegram and not telegram_enabled:
+            log("Telegram notify enabled but TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID missing; disabling for this run", log_path)
+        if args.notify_whatsapp and not whatsapp_enabled:
+            log("WhatsApp notify enabled but EVOLUTION_API_URL/EVOLUTION_API_KEY/DEFAULT_WHATSAPP_NUMBER missing; disabling for this run", log_path)
+
+        notifications_sent = 0
+        text = (args.test_text or '').strip() or 'Wanted monitor test'
+        if telegram_enabled and notifications_sent < max(0, int(args.max_notifications or 0)):
+            telegram_notify(token, chat_id, text, log_path)
+            notifications_sent += 1
+        if whatsapp_enabled and notifications_sent < max(0, int(args.max_notifications or 0)):
+            whatsapp_notify(evo_url, evo_key, wa_to, text, log_path)
+            notifications_sent += 1
+        if notifications_sent == 0:
+            log("Test notification: no channels enabled (check env + flags)", log_path)
+            return 2
+        return 0
+
     if not ll_db.exists():
         log(f"LazyLibrarian DB not found: {ll_db}", log_path)
         return 2
