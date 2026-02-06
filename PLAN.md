@@ -1,4 +1,4 @@
-# Plan (2026-02-06): Reliability, “Wanted” Pipeline, End-to-End Tests
+# Plan (2026-02-06): Reliability, Wanted Pipeline, End-to-End Tests
 
 This plan is written to keep the stack reliable without requiring you to “discover bugs” manually.
 
@@ -20,21 +20,26 @@ This plan is written to keep the stack reliable without requiring you to “disc
 
 ## 2) Wanted List -> Library (non-spam, safe)
 
-Goal: maintain a list of wanted titles; periodically check; when a wanted book becomes available in the library, notify (Telegram/WhatsApp). Do not auto-convert.
+Goal: maintain a list of wanted titles in LazyLibrarian; periodically check; when a wanted book is actually downloaded into the Library, notify (Telegram/WhatsApp). Do not auto-convert.
 
-Current behavior (docker-vm cron):
-- Hourly run of `wanted_monitor.py` checks LazyLibrarian wanted items.
-- It detects “FOUND” when a matching file is present in the webapp Library.
-- It can optionally request OpenBooks (`--request-openbooks`) but that is not enabled by default.
+Current behavior (live; docker-vm hourly cron):
+- Each run does 2 phases:
+  - Process queued OpenBooks requests (max 2 sends per run).
+  - Check LazyLibrarian Wanted, enqueue up to 2 new OpenBooks requests, and check for downloads via the webapp Library API.
+- OpenBooks requests are queued in sqlite (so we never spam OpenBooks).
+- Notifications are per-title (not summary), and should be low-noise.
 
-Planned improvements
-- Add an allowlist mechanism (title/author patterns) so OpenBooks requests are only sent for books you explicitly allow (example: public-domain test items). This is now implemented:
-  - `wanted_monitor.py --request-openbooks` will only request if `--request-allowlist-file` exists and matches the title/author.
-  - Example allowlist file: `scripts/wanted/wanted_allowlist.example.txt`
-- Keep strict rate limits:
-  - `--max-requests-per-run 1`
-  - `--request-cooldown-s >= 43200` (12h)
-  - `--max-notifications 1` per run unless you explicitly change it.
+What “good” looks like (requirements)
+- A title marked Wanted in LazyLibrarian stays tracked automatically (no manual file editing).
+- If you delete an unwanted title in LazyLibrarian, it is purged from local state and will not be requested again.
+- Telegram/WhatsApp messages:
+  - Per-title only.
+  - Only when the title is downloaded successfully into the library (not “already have it”).
+  - De-duped so concurrent runs do not double-notify.
+- OpenBooks request behavior:
+  - Queue-based (sqlite), max 2 sends per run.
+  - Per-title cooldown (default 6h or 12h, adjustable).
+  - “Min Wanted age” guard to avoid LazyLibrarian bulk/auto-add churn.
 
 ## 3) End-to-End Test (agent-run, no manual clicking)
 
