@@ -507,9 +507,8 @@ def main():
     ap.add_argument('--notification-mode', choices=['summary', 'per-title'], default='per-title')
     ap.add_argument('--max-notifications', type=int, default=1, help='Hard cap on messages sent per run (all channels).')
     ap.add_argument('--notify-only-downloaded', action='store_true', default=True,
-                    help='Only notify when the item appears in the library after we requested it recently (default: on).')
-    ap.add_argument('--download-window-s', type=int, default=30 * 24 * 60 * 60,
-                    help='How recent a request must be to count as a "downloaded" event (default: 30 days).')
+                    help="Only notify when the item appears in the library after we actually sent an OpenBooks request "
+                         "(i.e., a queue entry for this item is marked 'sent'). (default: on)")
     ap.add_argument('--ignore-title-regex', action='append', default=[],
                     help='Regex for titles to skip (can be passed multiple times). Example: \"graphic novel\"')
     ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
@@ -651,9 +650,9 @@ def main():
                     # Per-title notification: only when it is a NEW found event and counts as "downloaded".
                     should_notify = (not was_found)
                     if should_notify and args.notify_only_downloaded:
-                        last_req = st.last_request_ts(w.key)
-                        recent_enough = (now_ts() - int(last_req or 0)) <= int(args.download_window_s or 0)
-                        should_notify = bool(last_req and recent_enough) or st.has_sent_openbooks(w.key)
+                        # Strict definition of "downloaded by pipeline":
+                        # it is found now AND we previously sent an OpenBooks request for it.
+                        should_notify = st.has_sent_openbooks(w.key)
 
                     if should_notify and args.notification_mode == 'per-title' and notifications_sent < max(0, int(args.max_notifications or 0)):
                         text = f"Downloaded: {w.title} ({w.author})\nLibrary: {found_path}"
