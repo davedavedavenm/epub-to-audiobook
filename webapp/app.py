@@ -37,6 +37,7 @@ UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
 DB_PATH = Path(os.environ.get('DB_PATH', '/data/jobs.db'))
+TRANSCRIPTS_DIR = Path(os.environ.get('TRANSCRIPTS_DIR', '/data/transcripts'))
 APP_VERSION = os.environ.get('APP_VERSION', 'dev')
 APP_GIT_SHA = os.environ.get('APP_GIT_SHA', 'unknown')
 APP_BUILD_TIME = os.environ.get('APP_BUILD_TIME', 'unknown')
@@ -80,6 +81,9 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 # Track running conversion processes and containers
 running_processes = {}  # job_id -> subprocess.Popen
 running_containers = {}  # job_id -> container_name
+# When routing TTS via tts-proxy, conversion containers may not emit useful progress logs.
+# Track transcript progress incrementally by file offset so we can show real progress.
+_proxy_progress_state: dict[str, dict[str, int]] = {}
 
 _re_ws = re.compile(r"\s+")
 _re_punct = re.compile(r"[^\w\s]+", flags=re.UNICODE)
@@ -1285,6 +1289,47 @@ def parse_conversion_progress(container_name: str, job_id: str):
         )
         logs = result.stderr + result.stdout
 
+        job = get_job(job_id)
+
+        # If conversion runs through tts-proxy, we can estimate progress from captured transcript chunks.
+        # This handles cases where the conversion container is quiet (no usable stdout/stderr).
+        def proxy_processed_chars() -> int | None:
+            if not TTS_PROXY_URL:
+                return None
+            try:
+                chunks_path = TRANSCRIPTS_DIR / job_id / "chunks.jsonl"
+                if not chunks_path.exists():
+                    _proxy_progress_state.pop(job_id, None)
+                    return None
+
+                st = _proxy_progress_state.get(job_id) or {"pos": 0, "chars": 0}
+                pos = int(st.get("pos") or 0)
+                chars = int(st.get("chars") or 0)
+
+                size = chunks_path.stat().st_size
+                if size < pos:
+                    pos = 0
+                    chars = 0
+
+                with chunks_path.open("r", encoding="utf-8", errors="replace") as f:
+                    f.seek(pos)
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            obj = json.loads(line)
+                        except Exception:
+                            continue
+                        s = obj.get("strict") or obj.get("text") or ""
+                        chars += len(s)
+                    pos = f.tell()
+
+                _proxy_progress_state[job_id] = {"pos": pos, "chars": chars}
+                return chars
+            except Exception:
+                return None
+
         # Parse total chapters
         chapters_match = re.search(r'Chapters count: (\d+)', logs)
         total_chapters = int(chapters_match.group(1)) if chapters_match else None
@@ -1327,12 +1372,28 @@ def parse_conversion_progress(container_name: str, job_id: str):
                 progress_percent = 1
 
             # Get elapsed time and calculate ETA based on actual progress
-            job = get_job(job_id)
             if job and job.get('started_at') and frac > 0.001:
                 started = datetime.fromisoformat(job['started_at'])
                 elapsed = (datetime.now() - started).total_seconds()
                 remaining = elapsed * (1.0 / frac - 1.0)
                 eta_minutes = int(remaining / 60)
+
+        # Fallback: estimate progress from transcript capture (tts-proxy).
+        # We prefer the max of (log-based progress, proxy-based progress).
+        if job and job.get("char_count"):
+            pchars = proxy_processed_chars()
+            if pchars is not None and int(job["char_count"]) > 0:
+                pfrac = max(0.0, min(1.0, pchars / float(job["char_count"])))
+                pprog = int(pfrac * 100)
+                if 0 < pprog < 100:
+                    pprog = min(99, pprog)
+                if progress_percent is None or (pprog is not None and pprog > (progress_percent or 0)):
+                    progress_percent = pprog
+                    if job.get("started_at") and pfrac > 0.001:
+                        started = datetime.fromisoformat(job["started_at"])
+                        elapsed = (datetime.now() - started).total_seconds()
+                        remaining = elapsed * (1.0 / pfrac - 1.0)
+                        eta_minutes = int(remaining / 60)
 
         # Update job - only include eta_minutes if we calculated it (preserve initial estimate)
         update_kwargs = {
