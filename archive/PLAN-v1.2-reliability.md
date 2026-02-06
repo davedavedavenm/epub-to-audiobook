@@ -9,7 +9,7 @@ Three major improvements to make Audiobook Studio more robust and intelligent.
 
 ### Current State
 - Library tab has WhatsApp checkbox but no number field
-- Uses DEFAULT_WHATSAPP_NUMBER env var (27763156632)
+- Uses DEFAULT_WHATSAPP_NUMBER env var (set in environment)
 - Convert tab has full number input
 
 ### Changes Required
