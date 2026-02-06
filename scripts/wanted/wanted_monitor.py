@@ -140,6 +140,31 @@ class StateDB:
         ''', (w.key, w.author, w.title, now_ts()))
         self.conn.commit()
 
+    def is_found(self, key: str) -> bool:
+        row = self.conn.execute('SELECT found FROM wanted_state WHERE key=?', (key,)).fetchone()
+        if not row:
+            return False
+        try:
+            return int(row['found'] or 0) == 1
+        except Exception:
+            return False
+
+    def last_request_ts(self, key: str) -> int:
+        row = self.conn.execute('SELECT last_request_ts FROM wanted_state WHERE key=?', (key,)).fetchone()
+        if not row:
+            return 0
+        try:
+            return int(row['last_request_ts'] or 0)
+        except Exception:
+            return 0
+
+    def has_sent_openbooks(self, key: str) -> bool:
+        row = self.conn.execute(
+            "SELECT 1 FROM openbooks_queue WHERE key=? AND status='sent' LIMIT 1",
+            (key,)
+        ).fetchone()
+        return bool(row)
+
     def mark_checked(self, key: str, next_check_ts: int, increment_attempt: bool):
         if increment_attempt:
             self.conn.execute('''
@@ -479,8 +504,14 @@ def main():
     ap.add_argument('--notify-telegram', action='store_true')
     ap.add_argument('--notify-whatsapp', action='store_true')
     ap.add_argument('--whatsapp-number', default='')
-    ap.add_argument('--notification-mode', choices=['summary', 'per-title'], default='summary')
+    ap.add_argument('--notification-mode', choices=['summary', 'per-title'], default='per-title')
     ap.add_argument('--max-notifications', type=int, default=1, help='Hard cap on messages sent per run (all channels).')
+    ap.add_argument('--notify-only-downloaded', action='store_true', default=True,
+                    help='Only notify when the item appears in the library after we requested it recently (default: on).')
+    ap.add_argument('--download-window-s', type=int, default=30 * 24 * 60 * 60,
+                    help='How recent a request must be to count as a "downloaded" event (default: 30 days).')
+    ap.add_argument('--ignore-title-regex', action='append', default=[],
+                    help='Regex for titles to skip (can be passed multiple times). Example: \"graphic novel\"')
     ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
     ap.add_argument('--force', action='store_true', help='Ignore scheduling and check unfound items now (testing/manual)')
     ap.add_argument('--dry-run', action='store_true')
@@ -569,10 +600,30 @@ def main():
         if args.request_openbooks and args.request_policy == 'allowlist':
             allow_pats = load_allowlist_patterns(Path(args.request_allowlist_file), log_path)
 
+        # Default ignore rules for common "author bundle" junk items LL tends to add.
+        default_ignore = [
+            r"\bgraphic\s+novel\b",
+            r"\bteacher('?s)?\s+guide\b",
+            r"\bstudy\s+guide\b",
+            r"\bworkbook\b",
+            r"\bsummary\b",
+        ]
+        ignore_pats = [re.compile(rx, flags=re.IGNORECASE) for rx in (default_ignore + list(args.ignore_title_regex or []))]
+
         for i, row in enumerate(due, start=1):
             w = Wanted(author=row['author'] or '', title=row['title'] or '')
             log(f"[{i}/{len(due)}] Check: {w.title} | {w.author}", log_path)
 
+            # Skip ignored titles (but still keep backoff schedule so we don't churn).
+            title_norm = normalize(w.title)
+            if any(p.search(title_norm) for p in ignore_pats):
+                attempt = int(row['attempt_count'] or 0) + 1
+                delay = backoff_seconds(attempt, args.backoff_base_s, args.backoff_max_s)
+                st.mark_checked(w.key, now_ts() + delay, increment_attempt=True)
+                log(f"Skip (ignore rule): {w.title}", log_path)
+                continue
+
+            was_found = st.is_found(w.key)
             found = None
             if library_api:
                 found = find_match_via_api(w, library_api, args.min_score)
@@ -597,12 +648,20 @@ def main():
                     st.mark_found(w.key, str(found_path))
                     found_now.append((w, str(found_path), float(score)))
 
-                    if args.notification_mode == 'per-title' and notifications_sent < max(0, int(args.max_notifications or 0)):
+                    # Per-title notification: only when it is a NEW found event and counts as "downloaded".
+                    should_notify = (not was_found)
+                    if should_notify and args.notify_only_downloaded:
+                        last_req = st.last_request_ts(w.key)
+                        recent_enough = (now_ts() - int(last_req or 0)) <= int(args.download_window_s or 0)
+                        should_notify = bool(last_req and recent_enough) or st.has_sent_openbooks(w.key)
+
+                    if should_notify and args.notification_mode == 'per-title' and notifications_sent < max(0, int(args.max_notifications or 0)):
+                        text = f"Downloaded: {w.title} ({w.author})\nLibrary: {found_path}"
                         if telegram_enabled:
-                            telegram_notify(token, chat_id, msg, log_path)
+                            telegram_notify(token, chat_id, text, log_path)
                             notifications_sent += 1
                         if whatsapp_enabled and notifications_sent < max(0, int(args.max_notifications or 0)):
-                            whatsapp_notify(evo_url, evo_key, wa_to, msg, log_path)
+                            whatsapp_notify(evo_url, evo_key, wa_to, text, log_path)
                             notifications_sent += 1
                 continue
 
@@ -635,20 +694,10 @@ def main():
             delay = backoff_seconds(attempt, args.backoff_base_s, args.backoff_max_s)
             st.mark_checked(w.key, now_ts() + delay, increment_attempt=True)
 
-        # Send a single summary message (default) to avoid Telegram spam.
-        if args.notification_mode == 'summary' and (found_now or requested_now) and not args.dry_run:
+        # Summary mode (not recommended): keep it "download-only" to avoid noisy messages.
+        if args.notification_mode == 'summary' and found_now and not args.dry_run:
             if notifications_sent < max(0, int(args.max_notifications or 0)):
-                lines = [f"Wanted monitor run: checked {len(due)} item(s)"]
-                if requested_now:
-                    lines.append("")
-                    lines.append(f"Queued OpenBooks request(s): {len(requested_now)}")
-                    for w in requested_now[:10]:
-                        lines.append(f"- {w.title} ({w.author})")
-                    if len(requested_now) > 10:
-                        lines.append(f"...and {len(requested_now) - 10} more")
-                if found_now:
-                    lines.append("")
-                    lines.append("Searched and found in library:")
+                lines = ["Downloaded wanted books:"]
                 for w, _found_path, s in found_now[:10]:
                     lines.append(f"- {w.title} ({w.author}) [score {s:.2f}]")
                 if len(found_now) > 10:
