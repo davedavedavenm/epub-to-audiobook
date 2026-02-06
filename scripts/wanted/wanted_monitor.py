@@ -261,6 +261,40 @@ class StateDB:
         ''', (limit,)).fetchall()
         return rows
 
+    def purge_missing(self, keep_keys: set[str]) -> int:
+        """Remove titles that are no longer Wanted in LazyLibrarian.
+
+        This prevents old/unwanted auto-added titles from lingering forever and
+        triggering future checks/requests/notifications.
+        """
+        if not keep_keys:
+            return 0
+        keys = list(keep_keys)
+        cur = self.conn.cursor()
+
+        # Purge wanted_state entries that are no longer in LL Wanted list.
+        # Chunk to avoid SQLITE_MAX_VARIABLE_NUMBER issues.
+        deleted = 0
+        chunk = 300
+        # Find keys to delete by selecting those not in keep set.
+        rows = cur.execute("SELECT key FROM wanted_state").fetchall()
+        existing = [r[0] for r in rows]
+        to_del = [k for k in existing if k not in keep_keys]
+        for i in range(0, len(to_del), chunk):
+            part = to_del[i:i+chunk]
+            if not part:
+                continue
+            q = "DELETE FROM wanted_state WHERE key IN (%s)" % (",".join(["?"] * len(part)))
+            cur.execute(q, part)
+            deleted += cur.rowcount if cur.rowcount is not None else 0
+
+            # Also purge any queued/failed OpenBooks requests for removed keys.
+            q2 = "DELETE FROM openbooks_queue WHERE key IN (%s) AND status IN ('queued','failed')" % (",".join(["?"] * len(part)))
+            cur.execute(q2, part)
+
+        self.conn.commit()
+        return deleted
+
     def close(self):
         self.conn.close()
 
@@ -525,6 +559,8 @@ def main():
     ap.add_argument('--request-cooldown-s', type=int, default=12 * 60 * 60)  # 12h per title
     ap.add_argument('--post-request-check-s', type=int, default=60 * 60)  # 1h
     ap.add_argument('--request-sleep-s', type=int, default=2)
+    ap.add_argument('--min-wanted-age-s', type=int, default=6 * 60 * 60,
+                    help='Only enqueue OpenBooks requests after a title has been Wanted for this long (default: 6h).')
     ap.add_argument('--process-openbooks-queue', action='store_true',
                     help='Dequeue and send OpenBooks requests (does not check LL wanted).')
     ap.add_argument('--max-queue-sends', type=int, default=2)
@@ -546,6 +582,7 @@ def main():
 
     st = StateDB(state_db)
     try:
+        keep_keys = set()
         if args.process_openbooks_queue:
             rows = st.pick_openbooks_queue(max(0, int(args.max_queue_sends or 0)))
             if not rows:
@@ -571,6 +608,11 @@ def main():
 
         for w in wanted:
             st.upsert(w)
+            keep_keys.add(w.key)
+
+        purged = st.purge_missing(keep_keys)
+        if purged:
+            log(f"Purged {purged} removed Wanted item(s) (no longer in LL)", log_path)
 
         due = st.pick_any_unfound(args.limit) if args.force else st.pick_due(args.limit)
         if not due:
@@ -675,6 +717,16 @@ def main():
             if (request_ok
                 and requests_sent < max(0, int(args.max_requests_per_run or 0))
                 and not args.dry_run):
+                # Guard against LL bulk/auto-add churn: only request after it has stayed Wanted
+                # for long enough (and user has had time to clean up unwanted entries).
+                created_ts = int(row['created_ts'] or now_ts())
+                age_s = now_ts() - created_ts
+                min_age = int(args.min_wanted_age_s or 0)
+                if age_s < min_age:
+                    # Check again once the title is old enough.
+                    st.mark_checked(w.key, now_ts() + (min_age - age_s), increment_attempt=False)
+                    continue
+
                 last_req = int(row['last_request_ts'] or 0)
                 if (now_ts() - last_req) >= int(args.request_cooldown_s or 0):
                     query = f"{w.title} {w.author}".strip()
