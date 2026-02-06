@@ -45,6 +45,14 @@ HEALTH_KOKORO_TIMEOUT = int(os.environ.get('HEALTH_KOKORO_TIMEOUT', '8'))
 HEALTH_KOKORO_RETRIES = int(os.environ.get('HEALTH_KOKORO_RETRIES', '2'))
 QUEUE_RUNNER_ENABLED = os.environ.get('QUEUE_RUNNER_ENABLED', '1').lower() in ('1', 'true', 'yes')
 
+# Optional: sampled ASR verification (audio waveform -> transcript -> compare vs EPUB text).
+# Off by default because it can be CPU-expensive.
+AUDIO_ASR_VERIFY_ENABLED = os.environ.get('AUDIO_ASR_VERIFY_ENABLED', '0').strip().lower() in ('1', 'true', 'yes', 'on')
+AUDIO_ASR_VERIFY_IMAGE = os.environ.get('AUDIO_ASR_VERIFY_IMAGE', 'epub-to-audiobook-audio-verify:local').strip()
+AUDIO_ASR_VERIFY_MAX_FILES = int(os.environ.get('AUDIO_ASR_VERIFY_MAX_FILES', '4'))
+AUDIO_ASR_VERIFY_MODEL = os.environ.get('AUDIO_ASR_VERIFY_MODEL', 'tiny').strip()
+AUDIO_ASR_VERIFY_TIMEOUT_S = int(os.environ.get('AUDIO_ASR_VERIFY_TIMEOUT_S', '1200'))  # 20 min default
+
 # Host paths for Docker volume mounts (where the stack is deployed)
 HOST_STACK_DIR = os.environ.get('HOST_STACK_DIR', '/home/dave/stacks/epub-to-audiobook')
 STACK_PATH = os.environ.get('STACK_PATH', HOST_STACK_DIR)
@@ -292,6 +300,42 @@ def verify_tts_against_epub(job_id: str, epub_path: Path, output_path: Path):
         )
     except Exception as e:
         append_job_log(job_id, f"Verification exception: {e}")
+
+
+def _run_audio_asr_verify_sample(job_id: str, epub_filename: str, output_dirname: str):
+    """Run sampled ASR verification in a separate container (best-effort; does not affect job outcome)."""
+    try:
+        if not AUDIO_ASR_VERIFY_ENABLED:
+            return
+        if not HOST_STACK_DIR:
+            append_job_log(job_id, "Audio verify(sample) skipped: HOST_STACK_DIR not set")
+            return
+        if not AUDIO_ASR_VERIFY_IMAGE:
+            append_job_log(job_id, "Audio verify(sample) skipped: AUDIO_ASR_VERIFY_IMAGE not set")
+            return
+
+        epub_in_container = f"/data/uploads/{epub_filename}"
+        outdir_in_container = f"/data/audiobooks/{output_dirname}"
+        log_in_container = f"/data/logs/{job_id}.log"
+
+        cmd = [
+            "docker", "run", "--rm",
+            "-v", f"{HOST_STACK_DIR}/data:/data",
+            AUDIO_ASR_VERIFY_IMAGE,
+            "--job-id", job_id,
+            "--epub", epub_in_container,
+            "--outdir", outdir_in_container,
+            "--log", log_in_container,
+            "--model", AUDIO_ASR_VERIFY_MODEL,
+            "--max-files", str(max(1, AUDIO_ASR_VERIFY_MAX_FILES)),
+        ]
+        append_job_log(job_id, f"Audio verify(sample) starting (model={AUDIO_ASR_VERIFY_MODEL}, files={AUDIO_ASR_VERIFY_MAX_FILES})")
+        subprocess.run(cmd, capture_output=True, text=True, timeout=AUDIO_ASR_VERIFY_TIMEOUT_S)
+        append_job_log(job_id, "Audio verify(sample) done (see _verification/audio_verify_sample.json)")
+    except subprocess.TimeoutExpired:
+        append_job_log(job_id, f"Audio verify(sample) timeout after {AUDIO_ASR_VERIFY_TIMEOUT_S}s")
+    except Exception as e:
+        append_job_log(job_id, f"Audio verify(sample) exception: {e}")
 
 # TTS Engines configuration
 TTS_ENGINES = {
@@ -1652,6 +1696,17 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # Best-effort transcript verification (only meaningful if TTS_PROXY_URL is enabled).
             try:
                 verify_tts_against_epub(job_id, epub_path, output_path)
+            except Exception:
+                pass
+
+            # Best-effort sampled ASR verification (audio -> transcript -> align vs EPUB).
+            # Runs in a separate container to avoid pulling heavy dependencies into the webapp image.
+            try:
+                threading.Thread(
+                    target=_run_audio_asr_verify_sample,
+                    args=(job_id, epub_path.name, output_dirname),
+                    daemon=True,
+                ).start()
             except Exception:
                 pass
 

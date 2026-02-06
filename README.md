@@ -36,6 +36,7 @@ A self-hosted web application for converting ebooks to audiobooks using AI text-
 - **Audiobookshelf Sync** - Auto-sync completed books to ABS library
 - **Telegram Notifications** - Get notified when conversions complete
 - **WhatsApp Notifications** - Optional WhatsApp alerts
+- **Audio Fidelity Check (Optional)** - Sampled transcription check to detect dropped words
 - **Download as ZIP** - Download complete audiobooks
 
 ## Quick Start
@@ -110,6 +111,9 @@ cp .env.example .env
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token for notifications |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for notifications |
 | `QUEUE_RUNNER_ENABLED` | Enable queue runner in this process (default: `1`) |
+| `AUDIO_ASR_VERIFY_ENABLED` | Enable sampled ASR verification after completion (default: `0`) |
+| `AUDIO_ASR_VERIFY_MODEL` | Whisper model for sampled ASR (`tiny`, `base`, etc.; default: `tiny`) |
+| `AUDIO_ASR_VERIFY_MAX_FILES` | Max MP3 files to sample per job (default: `4`) |
 
 ### Audiobookshelf Integration
 

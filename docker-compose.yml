@@ -157,6 +157,15 @@ services:
         condition: service_healthy
     command: ["python", "/app/worker.py"]
 
+  # Optional: sampled ASR verification ("does the audio match the book text?")
+  # Not started by default; the webapp can run this as a one-off container via docker.sock.
+  audio-verify:
+    build:
+      context: ./audio_verify
+    image: epub-to-audiobook-audio-verify:local
+    profiles:
+      - verify
+
 volumes:
   kokoro-cache:
   piper-data:
