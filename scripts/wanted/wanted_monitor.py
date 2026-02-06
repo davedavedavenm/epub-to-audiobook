@@ -376,18 +376,18 @@ def backoff_seconds(attempt: int, base: int, max_s: int) -> int:
     return int(min(d, max_s))
 
 
-def openbooks_send_via_bridge(bridge_path: str, query: str, log_path: Path | None, timeout_s: int) -> bool:
+def openbooks_send_via_bridge(bridge_path: str, query: str, log_path: Path | None, timeout_s: int) -> tuple[bool, str, str]:
     """Send an OpenBooks request via a local bridge script (worker path).
 
     The wanted monitor should only enqueue requests; the worker sends them so the
     monitor never blocks on slow or down OpenBooks infrastructure.
     """
     if not bridge_path:
-        return False
+        return False, "", "missing bridge path"
     p = Path(bridge_path)
     if not p.exists():
         log(f"OpenBooks bridge not found: {bridge_path}", log_path)
-        return False
+        return False, "", "bridge not found"
     try:
         r = subprocess.run(
             [sys.executable, str(p), query],
@@ -395,17 +395,19 @@ def openbooks_send_via_bridge(bridge_path: str, query: str, log_path: Path | Non
             text=True,
             timeout=max(1, int(timeout_s)),
         )
+        out = (r.stdout or '').strip()
+        err = (r.stderr or '').strip()
         if r.returncode != 0:
-            err = (r.stderr or r.stdout or '').strip().replace('\n', ' ')[:200]
-            log(f"OpenBooks bridge failed (rc={r.returncode}): {err}", log_path)
-            return False
-        return True
+            msg = (err or out or '').strip().replace('\n', ' ')[:200]
+            log(f"OpenBooks bridge failed (rc={r.returncode}): {msg}", log_path)
+            return False, out, err
+        return True, out, err
     except subprocess.TimeoutExpired:
         log(f"OpenBooks bridge timeout after {timeout_s}s", log_path)
-        return False
+        return False, "", f"timeout after {timeout_s}s"
     except Exception as e:
         log(f"OpenBooks bridge exception: {e}", log_path)
-        return False
+        return False, "", str(e)
 
 
 def load_allowlist_patterns(path: Path, log_path: Path | None) -> list[re.Pattern] | None:
@@ -525,12 +527,16 @@ def main():
                     st.mark_openbooks_failed(int(row['id']), "empty query")
                     continue
                 log(f"OpenBooks queue send: {q}", log_path)
-                ok = openbooks_send_via_bridge(args.openbooks_bridge, q, log_path, int(args.bridge_timeout_s or 60))
+                ok, out, err = openbooks_send_via_bridge(args.openbooks_bridge, q, log_path, int(args.bridge_timeout_s or 60))
+                # If bridge reports a cooldown skip, do not mark as failed; leave queued for a later run.
+                if (not ok) and ("Cooldown active. Skipping:" in (out or "")):
+                    log("OpenBooks queue: cooldown active, leaving request queued", log_path)
+                    break
                 if ok:
                     st.mark_openbooks_sent(int(row['id']))
                     log("OpenBooks queue send ok", log_path)
                 else:
-                    st.mark_openbooks_failed(int(row['id']), "bridge failed/timeout")
+                    st.mark_openbooks_failed(int(row['id']), (err or out or "bridge failed/timeout"))
             return 0
 
         for w in wanted:
