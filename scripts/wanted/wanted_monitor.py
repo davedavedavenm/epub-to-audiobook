@@ -540,9 +540,10 @@ def main():
     ap.add_argument('--whatsapp-number', default='')
     ap.add_argument('--notification-mode', choices=['summary', 'per-title'], default='per-title')
     ap.add_argument('--max-notifications', type=int, default=1, help='Hard cap on messages sent per run (all channels).')
-    ap.add_argument('--notify-only-downloaded', action='store_true', default=True,
+    ap.add_argument('--notify-only-downloaded', action='store_true', default=False,
                     help="Only notify when the item appears in the library after we actually sent an OpenBooks request "
-                         "(i.e., a queue entry for this item is marked 'sent'). (default: on)")
+                         "(i.e., a queue entry for this item is marked 'sent'). Default is off because many users also "
+                         "want notifications for manual/other download paths.")
     ap.add_argument('--ignore-title-regex', action='append', default=[],
                     help='Regex for titles to skip (can be passed multiple times). Example: \"graphic novel\"')
     ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
@@ -689,15 +690,18 @@ def main():
                     st.mark_found(w.key, str(found_path))
                     found_now.append((w, str(found_path), float(score)))
 
-                    # Per-title notification: only when it is a NEW found event and counts as "downloaded".
-                    should_notify = (not was_found)
+                    # Per-title notification:
+                    # - Never notify on the very first check for a title (baseline),
+                    #   otherwise you'll get spam for things you already had before marking Wanted.
+                    # - Notify only on a NEW found transition after we've previously checked it.
+                    baseline_first_check = row['last_checked_ts'] is None
+                    should_notify = (not was_found) and (not baseline_first_check)
                     if should_notify and args.notify_only_downloaded:
                         # Strict definition of "downloaded by pipeline":
-                        # it is found now AND we previously sent an OpenBooks request for it.
                         should_notify = st.has_sent_openbooks(w.key)
 
                     if should_notify and args.notification_mode == 'per-title' and notifications_sent < max(0, int(args.max_notifications or 0)):
-                        text = f"Downloaded: {w.title} ({w.author})\nLibrary: {found_path}"
+                        text = f"Downloaded: {w.title} ({w.author})"
                         if telegram_enabled:
                             telegram_notify(token, chat_id, text, log_path)
                             notifications_sent += 1
