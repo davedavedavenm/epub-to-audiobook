@@ -321,6 +321,8 @@ def _run_audio_asr_verify_sample(job_id: str, epub_filename: str, output_dirname
         cmd = [
             "docker", "run", "--rm",
             "-v", f"{HOST_STACK_DIR}/data:/data",
+            # Cache ASR model downloads across runs.
+            "-v", f"{HOST_STACK_DIR}/data/asr_cache:/root/.cache",
             AUDIO_ASR_VERIFY_IMAGE,
             "--job-id", job_id,
             "--epub", epub_in_container,
