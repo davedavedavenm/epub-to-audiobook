@@ -106,6 +106,8 @@ class StateDB:
                 title TEXT,
                 found INTEGER DEFAULT 0,
                 found_path TEXT,
+                found_ts INTEGER,
+                notified_ts INTEGER,
                 last_checked_ts INTEGER,
                 next_check_ts INTEGER,
                 attempt_count INTEGER DEFAULT 0,
@@ -130,6 +132,12 @@ class StateDB:
         ''')
         self.conn.execute('CREATE INDEX IF NOT EXISTS idx_openbooks_queue_status ON openbooks_queue(status)')
         self.conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS uq_openbooks_queue_key_status ON openbooks_queue(key, status)')
+        # Migration for older DBs (sqlite has no IF NOT EXISTS for columns).
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(wanted_state)").fetchall()}
+        if 'found_ts' not in cols:
+            self.conn.execute("ALTER TABLE wanted_state ADD COLUMN found_ts INTEGER")
+        if 'notified_ts' not in cols:
+            self.conn.execute("ALTER TABLE wanted_state ADD COLUMN notified_ts INTEGER")
         self.conn.commit()
 
     def upsert(self, w: Wanted):
@@ -165,6 +173,16 @@ class StateDB:
         ).fetchone()
         return bool(row)
 
+    def last_sent_openbooks_ts(self, key: str) -> int:
+        row = self.conn.execute(
+            "SELECT MAX(updated_ts) AS ts FROM openbooks_queue WHERE key=? AND status='sent'",
+            (key,)
+        ).fetchone()
+        try:
+            return int((row and row['ts']) or 0)
+        except Exception:
+            return 0
+
     def mark_checked(self, key: str, next_check_ts: int, increment_attempt: bool):
         if increment_attempt:
             self.conn.execute('''
@@ -181,12 +199,44 @@ class StateDB:
         self.conn.commit()
 
     def mark_found(self, key: str, path: str):
+        # Make "found" idempotent: set timestamps once, keep them stable across re-runs.
+        t = now_ts()
         self.conn.execute('''
             UPDATE wanted_state
-            SET found=1, found_path=?, next_check_ts=NULL
+            SET
+              found=1,
+              found_path=?,
+              found_ts=COALESCE(found_ts, ?),
+              last_checked_ts=?,
+              next_check_ts=NULL
             WHERE key=?
-        ''', (path, key))
+        ''', (path, t, t, key))
         self.conn.commit()
+
+    def mark_notified(self, key: str):
+        self.conn.execute('''
+            UPDATE wanted_state
+            SET notified_ts=?
+            WHERE key=?
+        ''', (now_ts(), key))
+        self.conn.commit()
+
+    def claim_notification(self, key: str) -> bool:
+        """Best-effort de-dupe across concurrent runs.
+
+        Returns True if we successfully claimed the right to notify for this key.
+        """
+        t = now_ts()
+        cur = self.conn.execute('''
+            UPDATE wanted_state
+            SET notified_ts=?
+            WHERE key=? AND notified_ts IS NULL
+        ''', (t, key))
+        self.conn.commit()
+        try:
+            return int(cur.rowcount or 0) == 1
+        except Exception:
+            return False
 
     def mark_requested(self, key: str):
         self.conn.execute('''
@@ -548,6 +598,9 @@ def main():
                     help="Only notify when the item appears in the library after we actually sent an OpenBooks request "
                          "(i.e., a queue entry for this item is marked 'sent'). Default is off because many users also "
                          "want notifications for manual/other download paths.")
+    ap.add_argument('--downloaded-window-s', default=7 * 24 * 3600, type=int,
+                    help="When --notify-only-downloaded is enabled, only consider OpenBooks 'sent' events within this "
+                         "window (seconds). Helps avoid notifying for items that appear long after an old request.")
     ap.add_argument('--ignore-title-regex', action='append', default=[],
                     help='Regex for titles to skip (can be passed multiple times). Example: \"graphic novel\"')
     ap.add_argument('--send-test', action='store_true',
@@ -715,7 +768,8 @@ def main():
                 log(f"Skip (ignore rule): {w.title}", log_path)
                 continue
 
-            was_found = st.is_found(w.key)
+            # Use the row value (single DB read) rather than a separate SELECT.
+            was_found = int(row['found'] or 0) == 1
             found = None
             if library_api:
                 found = find_match_via_api(w, library_api, args.min_score)
@@ -745,12 +799,20 @@ def main():
                     #   otherwise you'll get spam for things you already had before marking Wanted.
                     # - Notify only on a NEW found transition after we've previously checked it.
                     baseline_first_check = row['last_checked_ts'] is None
-                    should_notify = (not was_found) and (not baseline_first_check)
+                    already_notified = row['notified_ts'] is not None
+                    should_notify = (not already_notified) and (not was_found) and (not baseline_first_check)
                     if should_notify and args.notify_only_downloaded:
                         # Strict definition of "downloaded by pipeline":
-                        should_notify = st.has_sent_openbooks(w.key)
+                        last_sent_ts = st.last_sent_openbooks_ts(w.key)
+                        req_ts = int(row['last_request_ts'] or 0)
+                        window_s = int(args.downloaded_window_s or 0)
+                        # Only notify if we actually sent an OpenBooks request recently enough.
+                        should_notify = (last_sent_ts > 0) and (now_ts() - last_sent_ts <= window_s) and (last_sent_ts >= req_ts)
 
-                    if should_notify and args.notification_mode == 'per-title' and notifications_sent < max(0, int(args.max_notifications or 0)):
+                    if (should_notify
+                        and args.notification_mode == 'per-title'
+                        and notifications_sent < max(0, int(args.max_notifications or 0))
+                        and st.claim_notification(w.key)):
                         text = f"Downloaded: {w.title} ({w.author})"
                         if telegram_enabled:
                             telegram_notify(token, chat_id, text, log_path)
