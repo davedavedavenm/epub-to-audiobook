@@ -14,6 +14,7 @@ import re
 import sqlite3
 import json
 import signal
+import shlex
 from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
@@ -726,29 +727,66 @@ def cleanup_orphan_jobs():
     """Detect and handle orphan jobs on startup.
 
     Finds jobs marked as 'converting' but whose containers are no longer running,
-    and marks them as failed so users can retry.
+    and either finalizes them (if outputs exist) or re-queues them so they can
+    resume after a webapp restart.
 
     Queued jobs are preserved so they can resume after restart.
     """
     with get_db() as conn:
         # Handle converting jobs with dead containers
         converting_jobs = conn.execute(
-            "SELECT id, container_name FROM jobs WHERE status IN ('converting', 'converting PDF', 'converting to audio')"
+            """
+            SELECT id, container_name, retry_count
+            FROM jobs
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio')
+            """
         ).fetchall()
 
         orphan_count = 0
         for job in converting_jobs:
-            if not check_container_running(job['container_name']):
+            job_id = job['id']
+            container_name = job['container_name']
+            retry_count = int(job['retry_count'] or 0)
+
+            # If the container is still running, the resume logic will re-attach monitors.
+            if check_container_running(container_name):
+                continue
+
+            # If conversion actually finished during downtime, output files prove success.
+            try:
+                if finalize_completed_job_if_outputs_exist(job_id):
+                    continue
+            except Exception:
+                # Fall through to re-queue/fail logic.
+                pass
+
+            # If the container exists but isn't running anymore, remove it to avoid name conflicts on retry.
+            remove_stale_container(container_name)
+
+            # Prefer re-queue over hard fail after a restart; cap retries to avoid infinite loops.
+            if retry_count < MAX_RETRY_COUNT:
+                conn.execute('''
+                    UPDATE jobs
+                    SET status = 'queued',
+                        retry_count = ?,
+                        error = ?,
+                        completed_at = NULL
+                    WHERE id = ?
+                ''', (retry_count + 1, 'Recovered after webapp restart. Re-queued to resume.', job_id))
+                orphan_count += 1
+                print(f"Re-queued orphan converting job {job_id} (retry {retry_count + 1}/{MAX_RETRY_COUNT})")
+                append_job_log(job_id, "Orphan cleanup: container missing; re-queued for resume after restart")
+            else:
                 conn.execute('''
                     UPDATE jobs
                     SET status = 'failed',
-                        error = 'Container died unexpectedly. Click Retry to restart.',
+                        error = ?,
                         completed_at = ?
                     WHERE id = ?
-                ''', (datetime.now().isoformat(), job['id']))
+                ''', ('Container missing after restart and retry limit exceeded. Click Retry to restart.', datetime.now().isoformat(), job_id))
                 orphan_count += 1
-                print(f"Marked orphan converting job {job['id']} as failed")
-                append_job_log(job['id'], "Orphan cleanup: container missing; marked failed")
+                print(f"Marked orphan converting job {job_id} as failed (retry limit exceeded)")
+                append_job_log(job_id, "Orphan cleanup: container missing; marked failed (retry limit exceeded)")
 
         if orphan_count > 0:
             conn.commit()
@@ -1135,9 +1173,20 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         return False
 
     target = f"{AUDIOBOOKSHELF_USER}@{AUDIOBOOKSHELF_HOST}"
-    dest_path = f"{AUDIOBOOKSHELF_DIR}/{book_name}"
-    port_opt = f" -p {AUDIOBOOKSHELF_PORT}" if AUDIOBOOKSHELF_PORT else ""
-    ssh_opts = f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -F /dev/null -i /root/.ssh/id_ed25519{port_opt}"
+    # Use the output dir name for destination to avoid shell quoting issues (apostrophes, spaces, etc).
+    # output_dirname already includes job_id for uniqueness.
+    dest_folder = output_dir.name
+    dest_path = f"{AUDIOBOOKSHELF_DIR}/{dest_folder}"
+
+    ssh_args = [
+        '-o', 'StrictHostKeyChecking=no',
+        '-o', 'UserKnownHostsFile=/dev/null',
+        '-F', '/dev/null',
+        '-i', '/root/.ssh/id_ed25519',
+    ]
+    if AUDIOBOOKSHELF_PORT:
+        ssh_args += ['-p', str(AUDIOBOOKSHELF_PORT)]
+    rsync_ssh = 'ssh ' + ' '.join(shlex.quote(a) for a in ssh_args)
 
     if job_id:
         update_job(job_id,
@@ -1151,7 +1200,8 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
 
     try:
         # Ensure destination exists
-        mkdir_cmd = ['ssh', *ssh_opts.split()[1:], target, f"mkdir -p '{dest_path}'"]
+        remote_mkdir = ' '.join(shlex.quote(x) for x in ['mkdir', '-p', '--', dest_path])
+        mkdir_cmd = ['ssh', *ssh_args, target, remote_mkdir]
         mkdir_result = subprocess.run(mkdir_cmd, capture_output=True, text=True, timeout=30)
         if mkdir_result.returncode != 0:
             err = (mkdir_result.stderr or mkdir_result.stdout or '').strip()
@@ -1162,7 +1212,7 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             return False
 
         # Rsync to target
-        cmd = ['rsync', '-av', '-e', ssh_opts, f'{output_dir}/', f"{target}:{dest_path}/"]
+        cmd = ['rsync', '-av', '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()
@@ -1173,7 +1223,8 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             return False
 
         # Count files at destination
-        count_cmd = ['ssh', *ssh_opts.split()[1:], target, f"find '{dest_path}' -type f | wc -l"]
+        remote_count = f"find -- {shlex.quote(dest_path)} -type f | wc -l"
+        count_cmd = ['ssh', *ssh_args, target, remote_count]
         count_result = subprocess.run(count_cmd, capture_output=True, text=True, timeout=30)
         file_count = 0
         if count_result.returncode == 0:
