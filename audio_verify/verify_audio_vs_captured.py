@@ -124,7 +124,9 @@ def read_captured_chunks(chunks_jsonl: Path) -> list[dict]:
     return out
 
 
-_re_chunk = re.compile(r"Processing (chapter-(\\d+)_.*?_chunk_(\\d+)_of_(\\d+))")
+# Example log line:
+#   "... INFO - Processing chapter-28_Twentyone_chunk_10_of_11, length=1720"
+_re_chunk = re.compile(r"Processing (chapter-(\d+)_.*?_chunk_(\d+)_of_(\d+))")
 
 
 @dataclass(frozen=True)
@@ -174,7 +176,7 @@ def infer_chapter_texts(captured: list[dict], events: list[ChunkEvent]) -> dict[
 def pick_chapter_mp3s(outdir: Path, max_files: int, seed: str) -> list[Path]:
     mp3s = sorted(outdir.glob("*.mp3"))
     # Only chapter-like names: 4-digit prefix underscore
-    mp3s = [p for p in mp3s if re.match(r"^\\d{4}_", p.name)]
+    mp3s = [p for p in mp3s if re.match(r"^\d{4}_", p.name)]
     if not mp3s:
         return []
 
@@ -228,7 +230,7 @@ def transcribe(model: WhisperModel, mp3: Path, language: str | None) -> str:
 
 
 def chapter_num_from_filename(p: Path) -> int | None:
-    m = re.match(r"^(\\d{4})_", p.name)
+    m = re.match(r"^(\d{4})_", p.name)
     if not m:
         return None
     try:
@@ -340,4 +342,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
