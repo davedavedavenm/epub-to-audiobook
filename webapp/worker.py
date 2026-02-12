@@ -13,7 +13,9 @@ def main():
     while True:
         try:
             if not is_queue_paused():
-                maybe_start_next_queued_job()
+                # Try to fill all concurrent slots
+                while maybe_start_next_queued_job():
+                    pass
             time.sleep(10)
         except Exception as e:
             app.logger.error(f"Worker loop error: {e}")
