@@ -75,6 +75,13 @@ SUPPORTED_FORMATS = {'.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html',
 # Default voice when none specified (George Classic - British Male)
 DEFAULT_VOICE = 'bm_v0george'
 
+# TTS speed: 1.0 = normal, <1.0 = slower with more pauses, range 0.5-1.5
+# Default 1.0 (Kokoro's natural speed sounds good; adjust per-job if needed)
+DEFAULT_TTS_SPEED = float(os.environ.get('DEFAULT_TTS_SPEED', '1.0'))
+
+# Post-conversion cleanup: remove MP3 files smaller than this (catches photo captions, part dividers)
+MIN_CHAPTER_SIZE_KB = int(os.environ.get('MIN_CHAPTER_SIZE_KB', '500'))
+
 # Auto-retry configuration
 MAX_RETRY_COUNT = 3
 RETRY_BACKOFF_BASE = 30  # seconds (30, 60, 120 for attempts 1, 2, 3)
@@ -459,6 +466,12 @@ def init_db():
             conn.execute('ALTER TABLE jobs ADD COLUMN queue_rank INTEGER DEFAULT 0')
         except sqlite3.OperationalError:
             pass  # Column already exists
+        # Add tts_speed column (0.5-1.5, default 0.9 for natural pacing)
+        try:
+            conn.execute('ALTER TABLE jobs ADD COLUMN tts_speed REAL DEFAULT 0.9')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
         # Add sync metadata columns if they don't exist
         for col, col_type in [
             ('sync_target_host', 'TEXT'),
@@ -572,8 +585,9 @@ def save_job(job: dict):
              timeout_minutes, total_chapters, current_chapter, current_chapter_name,
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
-             sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
+             tts_speed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -611,7 +625,8 @@ def save_job(job: dict):
             job.get('sync_file_count'),
             job.get('sync_status'),
             job.get('sync_error'),
-            job.get('job_log_path')
+            job.get('job_log_path'),
+            job.get('tts_speed', DEFAULT_TTS_SPEED)
         ))
         conn.commit()
 
@@ -1291,6 +1306,35 @@ def rename_output_files(output_dir: Path, book_name: str) -> int:
     return renamed
 
 
+def cleanup_small_files(output_dir: Path, min_size_kb: int = 500) -> int:
+    """Remove MP3 files smaller than min_size_kb.
+
+    These are typically photo captions, part dividers, or other noise
+    that the EPUB converter produced from non-textual content.
+    Returns the count of files removed.
+    """
+    removed = 0
+    min_bytes = min_size_kb * 1024
+    for mp3_file in sorted(output_dir.glob('*.mp3')):
+        if mp3_file.stat().st_size < min_bytes:
+            app.logger.info(f"Removing small file ({mp3_file.stat().st_size} bytes): {mp3_file.name}")
+            mp3_file.unlink()
+            removed += 1
+    if removed:
+        # Renumber remaining files sequentially
+        remaining = sorted(output_dir.glob('*.mp3'))
+        for idx, mp3_file in enumerate(remaining, 1):
+            # Extract name after the track number prefix
+            match = re.match(r'^\d+\s*-\s*(.*)$', mp3_file.stem)
+            chapter_name = match.group(1) if match else mp3_file.stem
+            new_name = f"{idx:02d} - {chapter_name}.mp3"
+            new_path = output_dir / new_name
+            if new_path != mp3_file:
+                mp3_file.rename(new_path)
+        app.logger.info(f"Cleaned up {removed} small files, renumbered {len(remaining)} remaining")
+    return removed
+
+
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
     """Copy completed audiobook to Audiobookshelf library via SSH."""
     if not AUDIOBOOKSHELF_DIR or not AUDIOBOOKSHELF_HOST:
@@ -1625,6 +1669,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         if tts_engine == 'kokoro' and TTS_PROXY_URL:
             tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
 
+        # Determine TTS speed for this job
+        tts_speed = DEFAULT_TTS_SPEED
+        if job and job.get('tts_speed'):
+            tts_speed = float(job['tts_speed'])
+
         # Run conversion
         cmd = [
             'docker', 'run', '--rm',
@@ -1639,7 +1688,9 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '--tts', 'openai',
             '--voice_name', effective_voice,
             '--model_name', tts_model,
-            '--no_prompt'
+            '--no_prompt',
+            '--remove_endnotes',
+            '--speed', str(tts_speed),
         ]
 
         # Add chapter selection if specified
@@ -1689,7 +1740,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             job = get_job(job_id)
             rename_output_files(output_path, job['book_name'])
 
-            # Re-count files after renaming
+            # Remove small noise files (photo captions, part dividers, etc.)
+            removed = cleanup_small_files(output_path, MIN_CHAPTER_SIZE_KB)
+            if removed:
+                append_job_log(job_id, f"Removed {removed} small noise files (<{MIN_CHAPTER_SIZE_KB}KB)")
+
+            # Re-count files after renaming and cleanup
             output_files = list(output_path.glob('*.mp3'))
 
             # Sync to Audiobookshelf
@@ -1902,6 +1958,8 @@ def start_conversion():
     notify_telegram = request.form.get('notify_telegram') == '1'
     notify_whatsapp = request.form.get('notify_whatsapp') == '1'
     whatsapp_number = request.form.get('whatsapp_number', '').strip()
+    tts_speed_raw = request.form.get('tts_speed', '').strip()
+    tts_speed = float(tts_speed_raw) if tts_speed_raw else DEFAULT_TTS_SPEED
 
     # Parse chapter numbers
     start_chapter = int(start_chapter) if start_chapter else None
@@ -1967,12 +2025,13 @@ def start_conversion():
         'start_chapter': start_chapter,
         'end_chapter': end_chapter,
         'notify_telegram': notify_telegram,
+        'tts_speed': tts_speed,
         'queue_rank': next_queue_rank(),
         'sync_status': 'pending',
         'job_log_path': str(get_job_log_path(job_id))
     }
     save_job(job)
-    append_job_log(job_id, f"Job created: {book_name} (voice={voice}, engine={tts_engine})")
+    append_job_log(job_id, f"Job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed})")
 
     # Start conversion only if no other job is running (one at a time)
     if QUEUE_RUNNER_ENABLED and not is_job_running():
@@ -2483,6 +2542,7 @@ def convert_from_library():
     voice = data.get('voice', DEFAULT_VOICE)
     notify_telegram = data.get('notify_telegram', False)
     notify_whatsapp = data.get('notify_whatsapp', False)
+    tts_speed = float(data.get('tts_speed', DEFAULT_TTS_SPEED))
 
     # Validate file exists
     if not file_path.exists():
@@ -2546,12 +2606,13 @@ def convert_from_library():
         'start_chapter': None,
         'end_chapter': None,
         'notify_telegram': notify_telegram,
+        'tts_speed': tts_speed,
         'queue_rank': next_queue_rank(),
         'sync_status': 'pending',
         'job_log_path': str(get_job_log_path(job_id))
     }
     save_job(job)
-    append_job_log(job_id, f"Library job created: {book_name} (voice={voice}, engine={tts_engine})")
+    append_job_log(job_id, f"Library job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed})")
 
     # Start conversion only if no other job is running (one at a time)
     if QUEUE_RUNNER_ENABLED and not is_job_running():

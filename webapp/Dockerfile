@@ -31,6 +31,11 @@ COPY . .
 # Create directories
 RUN mkdir -p /data/uploads /data/audiobooks /data/previews /data/logs
 
+# Entrypoint fixes SSH permissions from bind mounts
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8881
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:8881", "--workers", "1", "--timeout", "300", "app:app"]
