@@ -10,13 +10,18 @@ services:
     ports:
       - "8880:8880"
     restart: unless-stopped
+    # Memory limit: Kokoro leaks ~1GB per chapter; cap at 10GB so Docker
+    # restarts it cleanly before OOM-killing the entire host.
+    mem_limit: 10g
+    memswap_limit: 10g
     volumes:
       - kokoro-cache:/app/cache
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8880/v1/audio/voices"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 300s
+      timeout: 60s
+      retries: 10
+      start_period: 300s
 
   # Optional: capture exact text sent to TTS (chunk-by-chunk) without modifying the converter image
   tts-proxy:
@@ -31,7 +36,7 @@ services:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/transcripts:/data/transcripts
     depends_on:
       kokoro-tts:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "8882:8882"
 
@@ -90,6 +95,10 @@ services:
       - HEALTH_KOKORO_TIMEOUT=${HEALTH_KOKORO_TIMEOUT:-8}
       - HEALTH_KOKORO_RETRIES=${HEALTH_KOKORO_RETRIES:-2}
       - LOG_DIR=${LOG_DIR:-/data/logs}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - ABS_API_TOKEN=${ABS_API_TOKEN:-}
+      - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - QUEUE_RUNNER_ENABLED=0
     volumes:
       # Use ABSOLUTE paths so it works regardless of where docker compose is run from
@@ -105,7 +114,7 @@ services:
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
     depends_on:
       kokoro-tts:
-        condition: service_healthy
+        condition: service_started
 
   worker:
     build:
@@ -142,6 +151,10 @@ services:
       - HEALTH_KOKORO_TIMEOUT=${HEALTH_KOKORO_TIMEOUT:-8}
       - HEALTH_KOKORO_RETRIES=${HEALTH_KOKORO_RETRIES:-2}
       - LOG_DIR=${LOG_DIR:-/data/logs}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - ABS_API_TOKEN=${ABS_API_TOKEN:-}
+      - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - QUEUE_RUNNER_ENABLED=1
     volumes:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
@@ -154,7 +167,7 @@ services:
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
     depends_on:
       kokoro-tts:
-        condition: service_healthy
+        condition: service_started
     command: ["python", "/app/worker.py"]
 
   # Optional: sampled ASR verification ("does the audio match the book text?")

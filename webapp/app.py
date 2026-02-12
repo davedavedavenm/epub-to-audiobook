@@ -86,6 +86,10 @@ MIN_CHAPTER_SIZE_KB = int(os.environ.get('MIN_CHAPTER_SIZE_KB', '500'))
 MAX_RETRY_COUNT = 3
 RETRY_BACKOFF_BASE = 30  # seconds (30, 60, 120 for attempts 1, 2, 3)
 
+# Audiobookshelf API for triggering rescans after sync
+ABS_API_TOKEN = os.environ.get('ABS_API_TOKEN', '')
+ABS_API_URL = os.environ.get('ABS_API_URL', 'http://docker-vm:13378')
+
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -96,6 +100,7 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 # Track running conversion processes and containers
 running_processes = {}  # job_id -> subprocess.Popen
 running_containers = {}  # job_id -> container_name
+_recovery_in_progress = {}  # job_id -> True (prevents duplicate recovery threads)
 # When routing TTS via tts-proxy, conversion containers may not emit useful progress logs.
 # Track transcript progress incrementally by file offset so we can show real progress.
 _proxy_progress_state: dict[str, dict[str, int]] = {}
@@ -902,7 +907,51 @@ def cleanup_orphan_jobs():
             # If the container exists but isn't running anymore, remove it to avoid name conflicts on retry.
             remove_stale_container(container_name)
 
-            # Prefer re-queue over hard fail after a restart; cap retries to avoid infinite loops.
+            # Check for partial output — if chapters exist, use chapter-level recovery
+            # instead of re-running the entire book from scratch.
+            job_data = get_job(job_id)
+            output_dirname = job_data.get('output_dirname', '') if job_data else ''
+            output_path = OUTPUT_DIR / output_dirname if output_dirname else None
+            partial_files = list(output_path.glob('*.mp3')) if output_path and output_path.exists() else []
+
+            if partial_files and len(partial_files) >= 3:
+                # Significant partial output exists — recover missing chapters only
+                _recovery_in_progress[job_id] = True
+                conn.execute('''
+                    UPDATE jobs
+                    SET retry_count = ?,
+                        status = 'recovering'
+                    WHERE id = ?
+                ''', (retry_count + 1, job_id))
+                conn.commit()
+                orphan_count += 1
+                print(f"Orphan job {job_id} has {len(partial_files)} chapters — starting chapter recovery")
+                append_job_log(job_id,
+                    f"Orphan cleanup: {len(partial_files)} chapters exist; "
+                    f"recovering missing chapters instead of full restart")
+
+                # Run recovery in background
+                def _orphan_recovery(jid=job_id):
+                    import time as t
+                    t.sleep(10)
+                    try:
+                        recover_partial_conversion(jid)
+                    except Exception as e:
+                        app.logger.error(f"Orphan recovery failed for {jid}: {e}")
+                        with get_db() as c:
+                            c.execute('''
+                                UPDATE jobs SET status='failed', error=?, completed_at=?
+                                WHERE id=?
+                            ''', (f"Recovery failed: {e}", datetime.now().isoformat(), jid))
+                            c.commit()
+                        maybe_start_next_queued_job()
+                    finally:
+                        _recovery_in_progress.pop(jid, None)
+
+                threading.Thread(target=_orphan_recovery, daemon=True).start()
+                continue
+
+            # No significant partial output — re-queue from scratch
             if retry_count < MAX_RETRY_COUNT:
                 conn.execute('''
                     UPDATE jobs
@@ -939,7 +988,7 @@ def is_job_running():
     with get_db() as conn:
         result = conn.execute('''
             SELECT COUNT(*) FROM jobs
-            WHERE status IN ('converting', 'converting PDF', 'converting to audio')
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
         ''').fetchone()
         return result[0] > 0
 
@@ -989,10 +1038,11 @@ def maybe_start_next_queued_job():
 # ============ Auto-Retry Logic ============
 
 def handle_job_failure(job_id, error_type, error_msg):
-    """Handle job failure with auto-retry logic.
+    """Handle job failure with smart recovery.
 
-    Auto-retries jobs that failed due to container_died or timeout errors,
-    up to MAX_RETRY_COUNT times with exponential backoff.
+    When the container dies with partial output (some chapters already converted),
+    tries chapter-level recovery instead of re-running the entire book.
+    Falls back to full job retry if no partial output exists.
 
     Args:
         job_id: The job ID
@@ -1000,7 +1050,7 @@ def handle_job_failure(job_id, error_type, error_msg):
         error_msg: Error message to store
 
     Returns:
-        True if job was queued for retry, False if marked as permanently failed
+        True if job was recovered/queued for retry, False if permanently failed
     """
     import time as time_module
 
@@ -1010,9 +1060,64 @@ def handle_job_failure(job_id, error_type, error_msg):
 
     retry_count = job.get('retry_count', 0)
 
-    # Only auto-retry recoverable errors
+    # Check for partial output — if chapters exist, try chapter-level recovery
+    output_dirname = job.get('output_dirname', '')
+    output_path = OUTPUT_DIR / output_dirname
+    existing_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
+
+    if existing_files and error_type in ('container_died', 'timeout'):
+        # Prevent duplicate recovery threads (watchdog can fire repeatedly)
+        if _recovery_in_progress.get(job_id):
+            app.logger.info(f"Job {job_id}: Recovery already in progress, skipping duplicate")
+            return True
+
+        app.logger.info(
+            f"Job {job_id} died with {len(existing_files)} chapters done — "
+            f"attempting chapter-level recovery")
+        append_job_log(
+            job_id,
+            f"Container died with {len(existing_files)} chapters. "
+            f"Starting chapter-level recovery instead of full restart.")
+
+        _recovery_in_progress[job_id] = True
+
+        # Use 'recovering' status so watchdog ignores this job
+        with get_db() as conn:
+            conn.execute('''
+                UPDATE jobs
+                SET retry_count = retry_count + 1,
+                    status = 'recovering'
+                WHERE id = ?
+            ''', (job_id,))
+            conn.commit()
+
+        # Run recovery in background thread (it may take a while)
+        def _do_recovery():
+            time_module.sleep(30)  # Brief delay to let Kokoro settle
+            try:
+                recover_partial_conversion(job_id)
+            except Exception as e:
+                app.logger.error(f"Recovery failed for {job_id}: {e}")
+                append_job_log(job_id, f"Recovery failed: {e}")
+                with get_db() as conn:
+                    conn.execute('''
+                        UPDATE jobs
+                        SET status = 'failed',
+                            error = ?,
+                            completed_at = ?
+                        WHERE id = ?
+                    ''', (f"Recovery failed: {e}", datetime.now().isoformat(), job_id))
+                    conn.commit()
+                maybe_start_next_queued_job()
+            finally:
+                _recovery_in_progress.pop(job_id, None)
+
+        recovery_thread = threading.Thread(target=_do_recovery, daemon=True)
+        recovery_thread.start()
+        return True
+
+    # No partial output — fall back to full job retry
     if retry_count < MAX_RETRY_COUNT and error_type in ('container_died', 'timeout'):
-        # Calculate backoff delay
         delay = RETRY_BACKOFF_BASE * (2 ** retry_count)  # 30s, 60s, 120s
         new_rank = next_queue_rank()
 
@@ -1034,7 +1139,6 @@ def handle_job_failure(job_id, error_type, error_msg):
         app.logger.info(f"Auto-retrying job {job_id} (attempt {retry_count + 1}/{MAX_RETRY_COUNT}) after {delay}s delay")
         append_job_log(job_id, f"Auto-retry scheduled (attempt {retry_count + 1}/{MAX_RETRY_COUNT}) after {delay}s")
 
-        # Schedule retry after delay
         def delayed_retry():
             time_module.sleep(delay)
             maybe_start_next_queued_job()
@@ -1306,6 +1410,309 @@ def rename_output_files(output_dir: Path, book_name: str) -> int:
     return renamed
 
 
+MAX_CHAPTER_RETRIES = int(os.environ.get('MAX_CHAPTER_RETRIES', '3'))
+"""Max times to retry a single chapter that failed TTS conversion (connection errors etc.)."""
+
+
+def get_expected_chapter_count(output: str) -> int | None:
+    """Parse 'Chapters count: N' from converter stdout/stderr."""
+    m = re.search(r'Chapters count:\s*(\d+)', output)
+    return int(m.group(1)) if m else None
+
+
+def find_missing_chapters(output_dir: Path, total_chapters: int) -> list[int]:
+    """Return 1-based chapter numbers that have no matching output file.
+
+    The converter names files like ``0001_Title.mp3``, ``0002_Title.mp3``, etc.
+    A chapter is 'missing' if no file with that prefix exists.
+    """
+    existing = set()
+    for f in output_dir.glob('*.mp3'):
+        m = re.match(r'^(\d{4})_', f.name)
+        if m:
+            existing.add(int(m.group(1)))
+    return [ch for ch in range(1, total_chapters + 1) if ch not in existing]
+
+
+def retry_missing_chapters(
+    job_id: str,
+    missing: list[int],
+    cmd_template: list[str],
+    host_output_dir: str,
+    output_path: Path,
+    timeout_seconds: int,
+) -> list[int]:
+    """Re-run the converter for each missing chapter individually.
+
+    Uses ``--chapter_start N --chapter_end N`` to convert one chapter at a time.
+    Returns the list of chapters that still failed after all retries.
+    """
+    still_missing = []
+    for ch in missing:
+        success = False
+        for attempt in range(1, MAX_CHAPTER_RETRIES + 1):
+            retry_container = f"audiobook-{job_id}-retry-ch{ch}"
+            # Build retry command — same as original but targeting a single chapter
+            retry_cmd = [c for c in cmd_template]  # shallow copy
+            # Replace container name
+            name_idx = retry_cmd.index('--name') + 1
+            retry_cmd[name_idx] = retry_container
+            # Add/replace chapter range
+            retry_cmd = [c for c in retry_cmd
+                         if c not in ('--chapter_start', '--chapter_end')]
+            # Also remove the values after those flags if present
+            clean = []
+            skip_next = False
+            for c in retry_cmd:
+                if skip_next:
+                    skip_next = False
+                    continue
+                if c in ('--chapter_start', '--chapter_end'):
+                    skip_next = True
+                    continue
+                clean.append(c)
+            clean.extend(['--chapter_start', str(ch), '--chapter_end', str(ch)])
+
+            app.logger.info(f"Retry chapter {ch} attempt {attempt}/{MAX_CHAPTER_RETRIES}")
+            append_job_log(job_id, f"Retrying chapter {ch} (attempt {attempt}/{MAX_CHAPTER_RETRIES})")
+
+            subprocess.run(['docker', 'rm', '-f', retry_container], capture_output=True)
+
+            try:
+                proc = subprocess.Popen(clean, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = proc.communicate(timeout=timeout_seconds)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                subprocess.run(['docker', 'stop', retry_container], capture_output=True)
+                app.logger.warning(f"Retry chapter {ch} attempt {attempt} timed out")
+                continue
+            finally:
+                subprocess.run(['docker', 'rm', '-f', retry_container], capture_output=True)
+
+            # Check if the chapter file now exists
+            ch_files = list(output_path.glob(f'{ch:04d}_*.mp3'))
+            if ch_files and all(f.stat().st_size > 1024 for f in ch_files):
+                app.logger.info(f"Chapter {ch} recovered on attempt {attempt}")
+                append_job_log(job_id, f"Chapter {ch} recovered on attempt {attempt}")
+                success = True
+                break
+            else:
+                app.logger.warning(f"Chapter {ch} still missing after attempt {attempt}")
+                # Small delay before next attempt to let Kokoro recover
+                import time
+                time.sleep(10)
+
+        if not success:
+            still_missing.append(ch)
+            append_job_log(job_id, f"Chapter {ch} FAILED after {MAX_CHAPTER_RETRIES} retries")
+
+    return still_missing
+
+
+def build_retry_cmd_from_job(job: dict) -> list[str]:
+    """Reconstruct the docker run command from job metadata.
+
+    Used by the watchdog recovery path when the original cmd variable
+    is no longer available (container died, process lost).
+    """
+    job_id = job['id']
+    input_filename = job['input_filename']
+    output_dirname = job['output_dirname']
+    voice = job['voice']
+    tts_engine = job.get('tts_engine', 'kokoro')
+    tts_speed = float(job.get('tts_speed') or DEFAULT_TTS_SPEED)
+
+    host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
+    host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
+
+    # Handle EPUB from PDF conversion
+    if job.get('is_pdf'):
+        epub_filename = input_filename.rsplit('.', 1)[0] + '.epub'
+        host_input_path = f"{HOST_UPLOAD_DIR}/{epub_filename}"
+
+    # Effective voice (combine if voice2 specified for Kokoro)
+    effective_voice = voice
+    if tts_engine == 'kokoro' and job.get('voice2'):
+        effective_voice = f"{voice}+{job['voice2']}"
+
+    # TTS configuration
+    if tts_engine == 'piper':
+        tts_base_url = 'http://piper-tts:8000/v1'
+        tts_model = 'tts-1'
+    else:
+        tts_base_url = 'http://kokoro-tts:8880/v1'
+        tts_model = 'kokoro'
+
+    # Optional TTS proxy
+    if tts_engine == 'kokoro' and TTS_PROXY_URL:
+        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
+
+    container_name = f"audiobook-{job_id}"
+
+    cmd = [
+        'docker', 'run', '--rm',
+        '--name', container_name,
+        '--network', 'epub-to-audiobook_default',
+        '-e', 'OPENAI_API_KEY=not-needed',
+        '-e', f'OPENAI_BASE_URL={tts_base_url}',
+        '-v', f'{host_input_path}:/input/book.epub:ro',
+        '-v', f'{host_output_dir}:/output',
+        'ghcr.io/p0n1/epub_to_audiobook:latest',
+        '/input/book.epub', '/output',
+        '--tts', 'openai',
+        '--voice_name', effective_voice,
+        '--model_name', tts_model,
+        '--no_prompt',
+        '--remove_endnotes',
+        '--speed', str(tts_speed),
+    ]
+
+    return cmd
+
+
+def recover_partial_conversion(job_id: str):
+    """Recover a job that died mid-conversion by retrying only missing chapters.
+
+    Called by handle_job_failure when the container died but partial output
+    (some MP3 files) already exists. Instead of re-running the entire book,
+    this detects which chapters are missing and retries each individually.
+
+    After retries, finalizes the job (rename, sync to ABS, notify).
+    """
+    job = get_job(job_id)
+    if not job:
+        return
+
+    output_dirname = job.get('output_dirname', '')
+    output_path = OUTPUT_DIR / output_dirname
+    host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
+
+    # Count existing chapters
+    existing_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
+    if not existing_files:
+        app.logger.info(f"Recovery {job_id}: No output files, skipping chapter recovery")
+        return
+
+    # We need total_chapters from the DB or from counting EPUB chapters
+    total_chapters = job.get('total_chapters')
+    if not total_chapters:
+        # Try counting chapters from the EPUB directly
+        input_filename = job.get('input_filename', '')
+        epub_path = UPLOAD_DIR / input_filename
+        if job.get('is_pdf'):
+            epub_filename = input_filename.rsplit('.', 1)[0] + '.epub'
+            epub_path = UPLOAD_DIR / epub_filename
+        if epub_path.exists():
+            try:
+                import zipfile
+                with zipfile.ZipFile(epub_path) as zf:
+                    # Count XHTML/HTML files in the EPUB (each is typically a chapter)
+                    xhtml_files = [n for n in zf.namelist()
+                                   if n.endswith(('.xhtml', '.html', '.htm'))
+                                   and 'toc' not in n.lower()
+                                   and 'nav' not in n.lower()]
+                    if xhtml_files:
+                        total_chapters = len(xhtml_files)
+                        app.logger.info(
+                            f"Recovery {job_id}: Counted {total_chapters} chapters from EPUB")
+            except Exception as e:
+                app.logger.warning(f"Recovery {job_id}: EPUB chapter count failed: {e}")
+
+    if not total_chapters:
+        # Fallback: use the highest chapter number found in output
+        max_ch = 0
+        for f in output_path.glob('*.mp3'):
+            m = re.match(r'^(\d{4})_', f.name)
+            if m:
+                max_ch = max(max_ch, int(m.group(1)))
+        if max_ch == 0:
+            app.logger.warning(f"Recovery {job_id}: Can't determine chapter count")
+            return
+        total_chapters = max_ch
+        app.logger.info(f"Recovery {job_id}: Using max chapter number {max_ch} as total")
+
+    missing = find_missing_chapters(output_path, total_chapters)
+    if not missing:
+        app.logger.info(f"Recovery {job_id}: All {total_chapters} chapters present, finalizing")
+    else:
+        app.logger.info(
+            f"Recovery {job_id}: {len(existing_files)} files exist, "
+            f"{len(missing)} chapters missing: {missing}")
+        append_job_log(
+            job_id,
+            f"Container died with {len(existing_files)} chapters done. "
+            f"Retrying {len(missing)} missing: {missing}")
+
+        # Restart Kokoro before retries to clear memory leak
+        app.logger.info(f"Recovery {job_id}: Restarting Kokoro to clear memory before retries")
+        append_job_log(job_id, "Restarting Kokoro TTS to clear memory before chapter retries")
+        subprocess.run(['docker', 'restart', 'kokoro-tts'], capture_output=True, timeout=120)
+        # Wait for Kokoro to be ready
+        import time
+        for i in range(30):
+            time.sleep(10)
+            try:
+                import requests as req
+                resp = req.get('http://kokoro-tts:8880/v1/audio/voices', timeout=5)
+                if resp.status_code == 200:
+                    app.logger.info(f"Recovery {job_id}: Kokoro ready after {(i+1)*10}s")
+                    break
+            except Exception:
+                pass
+        else:
+            app.logger.warning(f"Recovery {job_id}: Kokoro may not be ready, proceeding anyway")
+
+        # Build cmd and retry missing chapters
+        cmd = build_retry_cmd_from_job(job)
+        char_count = job.get('char_count') or 500000
+        timeout_seconds = calculate_timeout(char_count)
+
+        still_missing = retry_missing_chapters(
+            job_id, missing, cmd, host_output_dir, output_path, timeout_seconds)
+
+        if still_missing:
+            app.logger.error(
+                f"Recovery {job_id}: {len(still_missing)} chapters still missing: {still_missing}")
+            append_job_log(
+                job_id,
+                f"WARNING: {len(still_missing)} chapters could not be recovered: {still_missing}")
+        else:
+            app.logger.info(f"Recovery {job_id}: All {total_chapters} chapters recovered")
+            append_job_log(job_id, f"All {total_chapters} chapters recovered after retries")
+
+    # Finalize: rename, cleanup, sync, complete
+    book_name = job['book_name']
+    rename_output_files(output_path, book_name)
+    removed = cleanup_small_files(output_path, MIN_CHAPTER_SIZE_KB)
+    if removed:
+        append_job_log(job_id, f"Removed {removed} small noise files (<{MIN_CHAPTER_SIZE_KB}KB)")
+
+    output_files = list(output_path.glob('*.mp3'))
+    synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
+
+    update_job(
+        job_id,
+        status='completed',
+        file_count=len(output_files),
+        progress_percent=100,
+        synced_to_abs=synced,
+        completed_at=datetime.now().isoformat(),
+        total_chapters=total_chapters,
+    )
+    app.logger.info(
+        f"Recovery {job_id}: Completed with {len(output_files)} files, synced={synced}")
+    append_job_log(job_id, f"Completed with {len(output_files)} chapters (recovery path)")
+
+    job = get_job(job_id)
+    if job:
+        record_conversion_metrics(job)
+        if job.get('notify_telegram'):
+            send_telegram_notification(job, success=True)
+
+    # Start next queued job
+    maybe_start_next_queued_job()
+
+
 def cleanup_small_files(output_dir: Path, min_size_kb: int = 500) -> int:
     """Remove MP3 files smaller than min_size_kb.
 
@@ -1333,6 +1740,38 @@ def cleanup_small_files(output_dir: Path, min_size_kb: int = 500) -> int:
                 mp3_file.rename(new_path)
         app.logger.info(f"Cleaned up {removed} small files, renumbered {len(remaining)} remaining")
     return removed
+
+
+def _trigger_abs_rescan(job_id: str | None = None):
+    """Trigger an Audiobookshelf library rescan via the ABS API.
+
+    This ensures chapter metadata is regenerated after files are synced.
+    Failures are logged but do not affect job status.
+    """
+    if not ABS_API_TOKEN:
+        return
+    try:
+        # First get library ID
+        resp = requests.get(
+            f"{ABS_API_URL}/api/libraries",
+            headers={"Authorization": f"Bearer {ABS_API_TOKEN}"},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            app.logger.warning(f"ABS: Could not list libraries: {resp.status_code}")
+            return
+        libraries = resp.json().get('libraries', [])
+        for lib in libraries:
+            scan_resp = requests.post(
+                f"{ABS_API_URL}/api/libraries/{lib['id']}/scan",
+                headers={"Authorization": f"Bearer {ABS_API_TOKEN}"},
+                timeout=10,
+            )
+            app.logger.info(f"ABS: Triggered rescan for library '{lib['name']}': {scan_resp.status_code}")
+            if job_id:
+                append_job_log(job_id, f"ABS rescan triggered for library '{lib['name']}'")
+    except Exception as e:
+        app.logger.warning(f"ABS rescan failed (non-fatal): {e}")
 
 
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
@@ -1411,6 +1850,10 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             append_job_log(job_id, f"Sync ok: {file_count} files")
 
         app.logger.info(f"Copied {book_name} to Audiobookshelf")
+
+        # Trigger ABS library rescan so chapters are detected immediately
+        _trigger_abs_rescan(job_id)
+
         return True
     except Exception as e:
         if job_id:
@@ -1736,6 +2179,42 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 pass
 
         if process.returncode == 0 and output_files:
+            # --- Chapter completeness check with retry ---
+            combined_output = (stdout.decode(errors='replace') + '\n' +
+                               stderr.decode(errors='replace'))
+            total_chapters = get_expected_chapter_count(combined_output)
+            if total_chapters:
+                missing = find_missing_chapters(output_path, total_chapters)
+                if missing:
+                    app.logger.warning(
+                        f"Job {job_id}: {len(missing)} chapters missing after initial run: {missing}")
+                    append_job_log(
+                        job_id, f"{len(missing)} chapters missing: {missing}. Handing off to recovery...")
+
+                    # Hand off to recover_partial_conversion (same path the watchdog uses).
+                    # This avoids a race between inline retry and watchdog recovery.
+                    _recovery_in_progress[job_id] = True
+                    with get_db() as conn:
+                        conn.execute('''
+                            UPDATE jobs SET status = 'recovering',
+                                           retry_count = COALESCE(retry_count, 0) + 1
+                            WHERE id = ?
+                        ''', (job_id,))
+                        conn.commit()
+
+                    def _inline_recovery():
+                        try:
+                            recover_partial_conversion(job_id)
+                        finally:
+                            _recovery_in_progress.pop(job_id, None)
+
+                    threading.Thread(target=_inline_recovery, daemon=True).start()
+                    app.logger.info(f"Job {job_id}: Recovery thread started for {len(missing)} missing chapters")
+                    return  # Exit convert_book — recovery thread handles everything from here
+                else:
+                    app.logger.info(f"Job {job_id}: All {total_chapters} chapters present")
+                    append_job_log(job_id, f"All {total_chapters} chapters present (no retries needed)")
+
             # Rename files to human-readable format
             job = get_job(job_id)
             rename_output_files(output_path, job['book_name'])
