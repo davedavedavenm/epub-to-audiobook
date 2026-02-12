@@ -21,23 +21,25 @@ The intended end-to-end pipeline:
 
 ---
 
+## Status (Updated 2026-02-12)
+
+### Completed This Session
+- ✅ **Kokoro memory limit** — `mem_limit: 10g` + `memswap_limit: 10g` in docker-compose.yml. Docker OOM-kills and restarts Kokoro predictably.
+- ✅ **Watchdog chapter-level recovery** — `handle_job_failure()` now detects partial output and calls `recover_partial_conversion()` instead of full job restart.
+- ✅ **Race condition fix** — Removed inline `retry_missing_chapters()` from `convert_book()`. Missing chapters now hand off to `recover_partial_conversion()` (same single path the watchdog uses). No more duplicate recovery threads or Telegram spam.
+- ✅ **Recovery mutex** — `_recovery_in_progress` dict + `'recovering'` job status prevent duplicate recovery threads from watchdog + convert_book + orphan cleanup.
+- ✅ **Inside Apple** — All 14 chapters converted, renamed, synced to ABS, job marked completed.
+- ✅ **ABS library rescan API** — `copy_to_audiobookshelf()` now triggers `POST /api/libraries/:id/scan` after rsync.
+- ✅ **ABS API token** — Stored in `.secrets/abs_api_token`, loaded via `ABS_API_TOKEN` env var.
+- ✅ **The Everything Store** — Conversion re-queued and running (job c7dfc813).
+
+---
+
 ## Issues Found (Priority Order)
 
-### P0 — Broken: Books Appear Incomplete in Audiobookshelf
+### P0 — ~~Broken: Books Appear Incomplete in Audiobookshelf~~ ✅ FIXED
 
-**Symptom:** Inside Apple shows only chapters through Ch 4 (~1.5h) in Audiobookshelf's chapter navigation. The Everything Store shows only 7 chapters (~1.5h). The audio files ARE all there (18 and 65 files respectively), but the `metadata.json` chapter list is truncated.
-
-**Root cause:** Audiobookshelf auto-generates `metadata.json` with a `chapters` array when it first scans a folder. For books with many MP3 files, ABS maps chapters based on audio file metadata and duration probing. The chapter list in metadata.json is stopping partway through — likely because:
-1. ABS scanned while files were still being rsynced (the sync happened over ~12 hours for The Everything Store)
-2. ABS only re-scans when prompted or when files change, and the metadata.json was never refreshed after all files landed
-
-**Fix:**
-- [ ] **Step 1:** Delete the `metadata.json` files from both book folders on docker-vm
-- [ ] **Step 2:** Trigger an Audiobookshelf library rescan (via ABS UI or API: `POST /api/libraries/:id/scan`)
-- [ ] **Step 3:** Verify the regenerated metadata.json has all chapters
-- [ ] **Step 4 (code fix):** In `copy_to_audiobookshelf()` in `app.py`, after rsync completes, trigger an ABS library scan via its API so chapters are always correctly detected. This requires storing an ABS API token in env vars.
-
-**Validation:** Open both books in ABS and confirm all chapters appear and are navigable.
+**Fix applied:** `copy_to_audiobookshelf()` now triggers ABS library rescan via API after rsync. ABS API token configured. Inside Apple verified with all 14 chapters in ABS.
 
 ---
 
@@ -208,12 +210,46 @@ The intended end-to-end pipeline:
 
 ---
 
+## Kokoro Reliability (Updated 2026-02-12)
+
+**Problem:** Kokoro leaks ~1GB RAM per chapter. On a 15.5GB NUC, crashes after ~12 chapters.
+
+**Mitigations now deployed:**
+1. `mem_limit: 10g` — Docker OOM-kills at 10GB, `restart: unless-stopped` brings it back at ~1GB
+2. Single recovery path — `recover_partial_conversion()` restarts Kokoro, waits for health, retries only missing chapters
+3. Converter's built-in HTTP retry (exponential backoff) can survive brief Kokoro restarts mid-chunk
+
+**Result:** Kokoro keeps its top-tier audio quality. Crashes are handled gracefully.
+
+---
+
 ## Alternative Approaches Considered
 
-### Alternative TTS Engines
-- **Piper TTS** is already in the stack (optional profile). It's faster but lower quality. Could be used for "draft" conversions.
-- **Coqui TTS / XTTS** — supports voice cloning, could produce more natural narration. Heavier on GPU.
-- **Edge TTS** — free, supports the converter natively (`--tts edge`), decent quality, no local GPU needed. Worth testing as a comparison.
+### Alternative TTS Engines (Quality-First Analysis)
+
+**Non-negotiable: audio quality must match or exceed Kokoro.**
+
+| Engine | Quality | Speed | GPU? | Memory | Local? | Notes |
+|--------|---------|-------|------|--------|--------|-------|
+| **Kokoro** (current) | ⭐⭐⭐⭐⭐ | Slow | CPU-only avail | Leaks ~1GB/ch | ✅ | Best open-source quality, memory leak mitigated |
+| **Kokoro GPU** | ⭐⭐⭐⭐⭐ | Fast | Yes (CUDA) | Same leak? | ✅ | Same quality, 5-10x faster, needs GPU hardware |
+| **F5-TTS** | ⭐⭐⭐⭐½ | Medium | Yes | ~4GB | ✅ | Very natural, supports voice cloning, needs GPU |
+| **Chatterbox** | ⭐⭐⭐⭐ | Medium | Yes | ~6GB | ✅ | Voice cloning + emotion control, newer |
+| **Edge TTS** | ⭐⭐⭐ | Fast | No | Minimal | ❌ Cloud | Good but noticeably synthetic, free, no GPU |
+| **Piper** (in stack) | ⭐⭐½ | Very fast | No | ~200MB | ✅ | Lightweight but robotic, good for drafts |
+| **OpenAI TTS** | ⭐⭐⭐⭐⭐ | Fast | No | N/A | ❌ Cloud | Best quality but $15/million chars (~$2-5/book) |
+
+### Your options without a GPU:
+
+1. **Stay with Kokoro CPU** (recommended) — Memory leak is now mitigated. Quality is the best you'll get without a GPU or cloud API. The recovery system handles crashes automatically.
+
+2. **Add a GPU** — Even a used GTX 1060 6GB (~$80) would let you run Kokoro GPU (5-10x faster) or F5-TTS. A used RTX 3060 12GB (~$180) opens up everything including Chatterbox voice cloning.
+
+3. **Run Kokoro GPU on Hetzner** — You have `hetzner-arm` (37.27.243.187). Hetzner offers GPU servers (~€0.50/hr). Could spin up on-demand for batch conversions, then shut down.
+
+4. **Hybrid: Kokoro main + Edge TTS fallback** — Use Kokoro for the main pass, fall back to Edge TTS only for chapters that fail all Kokoro retries. Slight quality dip on ~5% of chapters vs losing them entirely. But you said no compromise, so this is last resort.
+
+5. **OpenAI TTS API** — The converter already supports `--tts openai`. $2-5 per book, best quality, zero local resources. Could be worth it for important books.
 
 ### Alternative EPUB Parsers
 - The upstream `p0n1/epub_to_audiobook` has known issues with certain EPUB structures. Consider:
