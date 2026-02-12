@@ -983,14 +983,22 @@ def cleanup_orphan_jobs():
 
 # ============ Job Queue Management ============
 
-def is_job_running():
-    """Check if any job is currently converting."""
+MAX_CONCURRENT_JOBS = int(os.environ.get('MAX_CONCURRENT_JOBS', '1'))
+
+
+def running_job_count():
+    """Return the number of currently converting jobs."""
     with get_db() as conn:
         result = conn.execute('''
             SELECT COUNT(*) FROM jobs
             WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
         ''').fetchone()
-        return result[0] > 0
+        return result[0]
+
+
+def is_job_running():
+    """Check if we've reached the concurrent job limit."""
+    return running_job_count() >= MAX_CONCURRENT_JOBS
 
 
 def get_next_queued_job():
@@ -1540,7 +1548,7 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         tts_base_url = 'http://piper-tts:8000/v1'
         tts_model = 'tts-1'
     else:
-        tts_base_url = 'http://kokoro-tts:8880/v1'
+        tts_base_url = KOKORO_URL
         tts_model = 'kokoro'
 
     # Optional TTS proxy
@@ -2105,7 +2113,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # openedai-speech expects just the voice name
         else:
             # Kokoro (default)
-            tts_base_url = 'http://kokoro-tts:8880/v1'
+            tts_base_url = KOKORO_URL
             tts_model = 'kokoro'
 
         # Optional: route TTS via proxy so we can capture exact text chunks for verification.
