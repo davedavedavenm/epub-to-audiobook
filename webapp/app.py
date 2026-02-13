@@ -2032,17 +2032,20 @@ def parse_conversion_progress(container_name: str, job_id: str):
                         remaining = elapsed * (1.0 / pfrac - 1.0)
                         eta_minutes = int(remaining / 60)
 
-        # Update job - only include fields we actually parsed (never overwrite with None)
-        update_kwargs = {
-            'current_chapter': current_chapter,
-            'current_chapter_name': current_chapter_name,
-            'progress_percent': progress_percent,
-        }
-        if total_chapters is not None:
-            update_kwargs['total_chapters'] = total_chapters
-        if eta_minutes is not None:
-            update_kwargs['eta_minutes'] = eta_minutes
-        update_job(job_id, **update_kwargs)
+        # Update job — never overwrite stored values with None (tail-500 can
+        # lose context, causing transient None values that shouldn't clobber DB).
+        update_kwargs = {}
+        for key, val in [
+            ('total_chapters', total_chapters),
+            ('current_chapter', current_chapter),
+            ('current_chapter_name', current_chapter_name),
+            ('progress_percent', progress_percent),
+            ('eta_minutes', eta_minutes),
+        ]:
+            if val is not None:
+                update_kwargs[key] = val
+        if update_kwargs:
+            update_job(job_id, **update_kwargs)
 
     except Exception as e:
         app.logger.debug(f"Could not parse progress: {e}")
