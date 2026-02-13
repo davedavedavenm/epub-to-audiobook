@@ -1945,9 +1945,27 @@ def parse_conversion_progress(container_name: str, job_id: str):
             except Exception:
                 return None
 
-        # Parse total chapters
+        # Parse total chapters — first try the tail-500 logs we already have
         chapters_match = re.search(r'Chapters count: (\d+)', logs)
         total_chapters = int(chapters_match.group(1)) if chapters_match else None
+
+        # If not in tail, check the DB (already stored from a previous poll)
+        if total_chapters is None and job:
+            total_chapters = job.get('total_chapters')
+
+        # Last resort: grep the FULL container log for the chapters count line.
+        # This handles long conversions where --tail 500 has scrolled past it.
+        if total_chapters is None:
+            try:
+                tc_result = subprocess.run(
+                    ['docker', 'logs', container_name],
+                    capture_output=True, text=True, timeout=10
+                )
+                tc_match = re.search(r'Chapters count: (\d+)', tc_result.stderr + tc_result.stdout)
+                if tc_match:
+                    total_chapters = int(tc_match.group(1))
+            except Exception:
+                pass
 
         # Parse current chapter being processed
         chapter_matches = re.findall(r'Processing chapter (\d+): (\w+)', logs)
@@ -1957,8 +1975,12 @@ def parse_conversion_progress(container_name: str, job_id: str):
             current_chapter = int(chapter_matches[-1][0])
             current_chapter_name = chapter_matches[-1][1].replace('_', ' ')
 
-        # Count completed chapters
+        # Count completed chapters from logs (tail-500 may undercount)
         completed = len(re.findall(r'Converted chapter \d+', logs))
+        # If current_chapter is known and higher, use it as a better estimate
+        # (current_chapter - 1 = chapters already done)
+        if current_chapter and current_chapter - 1 > completed:
+            completed = current_chapter - 1
 
         # Parse fine-grained progress (chunk X of Y)
         chunk_matches = re.findall(r'Processing chapter-(\d+)_.*?_chunk_(\d+)_of_(\d+)', logs)
@@ -2010,13 +2032,14 @@ def parse_conversion_progress(container_name: str, job_id: str):
                         remaining = elapsed * (1.0 / pfrac - 1.0)
                         eta_minutes = int(remaining / 60)
 
-        # Update job - only include eta_minutes if we calculated it (preserve initial estimate)
+        # Update job - only include fields we actually parsed (never overwrite with None)
         update_kwargs = {
-            'total_chapters': total_chapters,
             'current_chapter': current_chapter,
             'current_chapter_name': current_chapter_name,
             'progress_percent': progress_percent,
         }
+        if total_chapters is not None:
+            update_kwargs['total_chapters'] = total_chapters
         if eta_minutes is not None:
             update_kwargs['eta_minutes'] = eta_minutes
         update_job(job_id, **update_kwargs)
