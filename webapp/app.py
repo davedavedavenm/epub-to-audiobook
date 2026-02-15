@@ -1043,6 +1043,56 @@ def maybe_start_next_queued_job():
     return False
 
 
+# ============ Self-Healing Helpers ============
+
+# Watchdog stall tracking: {job_id: (current_chapter, timestamp)}
+_watchdog_last_progress = {}
+
+STALL_TIMEOUT_MINUTES = 15   # Kill job if no chapter progress for this long
+ETA_KILL_MULTIPLIER = 3      # Kill job if elapsed > N × ETA
+
+
+def wait_for_kokoro(timeout: int = 300, label: str = '') -> bool:
+    """Wait for Kokoro TTS to become healthy, with polling.
+
+    Returns True if Kokoro responded within timeout, False otherwise.
+    """
+    import time as _time
+    prefix = f"[{label}] " if label else ""
+    deadline = _time.time() + timeout
+    attempt = 0
+    while _time.time() < deadline:
+        attempt += 1
+        try:
+            resp = requests.get(f"{KOKORO_URL}/audio/voices", timeout=8)
+            if resp.status_code == 200:
+                app.logger.info(f"{prefix}Kokoro healthy after {attempt * 10}s")
+                return True
+        except Exception:
+            pass
+        _time.sleep(10)
+    app.logger.warning(f"{prefix}Kokoro not ready after {timeout}s")
+    return False
+
+
+def restart_kokoro(label: str = '') -> bool:
+    """Restart Kokoro TTS container and wait for it to become healthy.
+
+    Used proactively between books (clear memory leak) and reactively
+    when Kokoro is detected as unhealthy.
+    Returns True if Kokoro is healthy after restart.
+    """
+    prefix = f"[{label}] " if label else ""
+    app.logger.info(f"{prefix}Restarting Kokoro TTS to clear memory")
+    try:
+        subprocess.run(['docker', 'restart', 'kokoro-tts'],
+                       capture_output=True, timeout=120)
+    except Exception as e:
+        app.logger.error(f"{prefix}Failed to restart Kokoro: {e}")
+        return False
+    return wait_for_kokoro(timeout=300, label=label)
+
+
 # ============ Auto-Retry Logic ============
 
 def handle_job_failure(job_id, error_type, error_msg):
@@ -1051,6 +1101,8 @@ def handle_job_failure(job_id, error_type, error_msg):
     When the container dies with partial output (some chapters already converted),
     tries chapter-level recovery instead of re-running the entire book.
     Falls back to full job retry if no partial output exists.
+
+    Self-healing: always retries up to MAX_RETRY_COUNT regardless of error type.
 
     Args:
         job_id: The job ID
@@ -1061,6 +1113,9 @@ def handle_job_failure(job_id, error_type, error_msg):
         True if job was recovered/queued for retry, False if permanently failed
     """
     import time as time_module
+
+    # Clean up watchdog stall tracking for this job
+    _watchdog_last_progress.pop(job_id, None)
 
     job = get_job(job_id)
     if not job:
@@ -1178,10 +1233,13 @@ def watchdog_loop():
     """Background thread to monitor job health.
 
     Runs every 60 seconds and checks for:
-    - Jobs running longer than 2x their ETA
-    - Jobs with dead containers
+    1. Dead containers → recovery/retry
+    2. Stalled progress (no chapter advance for STALL_TIMEOUT_MINUTES) → kill + retry
+    3. Exceeded ETA_KILL_MULTIPLIER × ETA → kill + retry
 
-    Stalled jobs are marked as failed and may be auto-retried.
+    Self-healing: all detected failures feed into handle_job_failure() which
+    does chapter-level recovery if partial output exists, or full retry up to
+    MAX_RETRY_COUNT.
     """
     import time as time_module
 
@@ -1189,9 +1247,12 @@ def watchdog_loop():
         time_module.sleep(60)  # Check every minute
 
         try:
+            now = time_module.time()
+
             with get_db() as conn:
                 active_jobs = conn.execute('''
-                    SELECT id, container_name, started_at, eta_minutes, book_name
+                    SELECT id, container_name, started_at, eta_minutes, book_name,
+                           current_chapter
                     FROM jobs
                     WHERE status IN ('converting', 'converting PDF', 'converting to audio')
                 ''').fetchall()
@@ -1199,24 +1260,90 @@ def watchdog_loop():
                 for job in active_jobs:
                     job_id = job['id']
                     container_name = job['container_name']
+                    book_label = (job['book_name'] or '')[:30]
                     container_running = check_container_running(container_name)
 
+                    # --- Check 1: Container dead ---
                     if not container_running:
                         if finalize_completed_job_if_outputs_exist(job_id):
+                            _watchdog_last_progress.pop(job_id, None)
                             continue
-                        app.logger.warning(f"Watchdog: Job {job_id} ({job['book_name'][:30]}) container died, handling failure")
-                        handle_job_failure(job_id, 'container_died', 'Container died unexpectedly (detected by watchdog)')
+                        app.logger.warning(
+                            f"Watchdog: {book_label} container died, triggering recovery")
+                        append_job_log(job_id, "Watchdog: container died — triggering recovery")
+                        handle_job_failure(job_id, 'container_died',
+                                          'Container died unexpectedly (detected by watchdog)')
                         continue
 
+                    # --- Check 2: Progress stall (container running but no chapter advance) ---
+                    current_ch = job['current_chapter']
+                    prev = _watchdog_last_progress.get(job_id)
+
+                    if prev is not None:
+                        prev_ch, prev_time = prev
+                        if current_ch is not None and current_ch != prev_ch:
+                            # Progress! Update tracking
+                            _watchdog_last_progress[job_id] = (current_ch, now)
+                        elif current_ch is not None and current_ch == prev_ch:
+                            stall_minutes = (now - prev_time) / 60
+                            if stall_minutes >= STALL_TIMEOUT_MINUTES:
+                                app.logger.warning(
+                                    f"Watchdog: {book_label} STALLED at ch {current_ch} "
+                                    f"for {stall_minutes:.0f} min — killing container")
+                                append_job_log(
+                                    job_id,
+                                    f"Watchdog: stalled at ch {current_ch} for "
+                                    f"{stall_minutes:.0f} min — killing and retrying")
+                                # Kill the stuck container
+                                subprocess.run(['docker', 'stop', container_name],
+                                               capture_output=True, timeout=10)
+                                subprocess.run(['docker', 'rm', '-f', container_name],
+                                               capture_output=True, timeout=10)
+                                handle_job_failure(
+                                    job_id, 'container_died',
+                                    f'Stalled at chapter {current_ch} for '
+                                    f'{stall_minutes:.0f} min (watchdog kill)')
+                                continue
+                        # If current_ch is None, don't update — keep previous tracking
+                    else:
+                        # First time seeing this job — start tracking
+                        if current_ch is not None:
+                            _watchdog_last_progress[job_id] = (current_ch, now)
+
+                    # --- Check 3: Exceeded ETA_KILL_MULTIPLIER × ETA ---
                     eta_minutes = job['eta_minutes']
                     started_at = job['started_at']
                     if eta_minutes and eta_minutes > 0 and started_at:
-                        elapsed = (datetime.now() - datetime.fromisoformat(job['started_at'])).total_seconds() / 60
-                        if elapsed > (eta_minutes * 2):
+                        elapsed = (datetime.now() - datetime.fromisoformat(
+                            job['started_at'])).total_seconds() / 60
+                        if elapsed > (eta_minutes * ETA_KILL_MULTIPLIER):
                             app.logger.warning(
-                                f"Watchdog: Job {job_id} ({job['book_name'][:30]}) running {elapsed:.0f}min, "
-                                f"exceeds 2x ETA of {eta_minutes}min - still processing"
-                            )
+                                f"Watchdog: {book_label} running {elapsed:.0f}min, "
+                                f"exceeds {ETA_KILL_MULTIPLIER}x ETA ({eta_minutes}min) "
+                                f"— killing container")
+                            append_job_log(
+                                job_id,
+                                f"Watchdog: exceeded {ETA_KILL_MULTIPLIER}x ETA "
+                                f"({elapsed:.0f}m vs {eta_minutes}m) — killing and retrying")
+                            subprocess.run(['docker', 'stop', container_name],
+                                           capture_output=True, timeout=10)
+                            subprocess.run(['docker', 'rm', '-f', container_name],
+                                           capture_output=True, timeout=10)
+                            handle_job_failure(
+                                job_id, 'timeout',
+                                f'Exceeded {ETA_KILL_MULTIPLIER}x ETA '
+                                f'({elapsed:.0f}min vs {eta_minutes}min ETA)')
+                            continue
+                        elif elapsed > (eta_minutes * 2):
+                            app.logger.info(
+                                f"Watchdog: {book_label} running {elapsed:.0f}min "
+                                f"(2x ETA warning, will kill at {ETA_KILL_MULTIPLIER}x)")
+
+            # Clean up stale tracking for jobs no longer active
+            active_ids = {j['id'] for j in active_jobs} if active_jobs else set()
+            stale_keys = [k for k in _watchdog_last_progress if k not in active_ids]
+            for k in stale_keys:
+                _watchdog_last_progress.pop(k, None)
 
         except Exception as e:
             app.logger.error(f"Watchdog error: {e}")
@@ -1652,23 +1779,8 @@ def recover_partial_conversion(job_id: str):
             f"Retrying {len(missing)} missing: {missing}")
 
         # Restart Kokoro before retries to clear memory leak
-        app.logger.info(f"Recovery {job_id}: Restarting Kokoro to clear memory before retries")
         append_job_log(job_id, "Restarting Kokoro TTS to clear memory before chapter retries")
-        subprocess.run(['docker', 'restart', 'kokoro-tts'], capture_output=True, timeout=120)
-        # Wait for Kokoro to be ready
-        import time
-        for i in range(30):
-            time.sleep(10)
-            try:
-                import requests as req
-                resp = req.get('http://kokoro-tts:8880/v1/audio/voices', timeout=5)
-                if resp.status_code == 200:
-                    app.logger.info(f"Recovery {job_id}: Kokoro ready after {(i+1)*10}s")
-                    break
-            except Exception:
-                pass
-        else:
-            app.logger.warning(f"Recovery {job_id}: Kokoro may not be ready, proceeding anyway")
+        restart_kokoro(label=f"Recovery {job_id}")
 
         # Build cmd and retry missing chapters
         cmd = build_retry_cmd_from_job(job)
@@ -2119,6 +2231,15 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         app.logger.info(f"Book has ~{char_count:,} chars, ETA {initial_eta} min, timeout {timeout_seconds // 60} min")
         append_job_log(job_id, f"Estimated chars={char_count}, ETA={initial_eta}m, timeout={timeout_seconds // 60}m")
 
+        # Verify Kokoro is healthy before starting conversion
+        if tts_engine in ('kokoro', None):
+            append_job_log(job_id, "Checking Kokoro TTS health...")
+            if not wait_for_kokoro(timeout=30, label=f"Job {job_id}"):
+                append_job_log(job_id, "Kokoro unhealthy — restarting before conversion")
+                if not restart_kokoro(label=f"Job {job_id}"):
+                    raise RuntimeError("Kokoro TTS not available after restart")
+                append_job_log(job_id, "Kokoro restarted and healthy")
+
         # Generate unique container name
         container_name = f"audiobook-{job_id}"
         update_job(job_id, container_name=container_name)
@@ -2304,13 +2425,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             app.logger.error(f"Job {job_id} failed: {error_msg}")
             append_job_log(job_id, f"Failed: {error_msg[:200]}")
 
-            # Check if this looks like a container death (retryable)
-            if 'killed' in error_msg.lower() or 'died' in error_msg.lower() or 'oom' in error_msg.lower():
-                retried = handle_job_failure(job_id, 'container_died', error_msg)
-            else:
-                # Other errors - not auto-retried
-                update_job(job_id, status='failed', error=error_msg, completed_at=datetime.now().isoformat())
-                retried = False
+            # Always attempt recovery/retry for conversion failures.
+            # handle_job_failure respects MAX_RETRY_COUNT and will
+            # permanently fail the job after exhausting retries.
+            retried = handle_job_failure(job_id, 'container_died', error_msg)
 
             # Send Telegram notification if NOT being retried
             if not retried:
@@ -2337,6 +2455,18 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         app.logger.error(f"Job {job_id} exception: {e}")
         append_job_log(job_id, f"Exception: {e}")
     finally:
+        # Clean up watchdog stall tracking
+        _watchdog_last_progress.pop(job_id, None)
+
+        # Proactively restart Kokoro between books to clear memory leak.
+        # CPU Kokoro leaks ~1GB per chapter; restarting between books prevents
+        # mid-chapter crashes that kill active conversions.
+        job_final = get_job(job_id)
+        tts_final = job_final.get('tts_engine', 'kokoro') if job_final else 'kokoro'
+        if tts_final in ('kokoro', None):
+            app.logger.info("Proactively restarting Kokoro between books (memory leak prevention)")
+            restart_kokoro(label="between-books")
+
         # Start next queued job (one at a time queue system)
         maybe_start_next_queued_job()
 
