@@ -157,6 +157,15 @@ services:
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - QUEUE_RUNNER_ENABLED=1
       - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-1}
+      # GPU auto-scaling (disabled by default)
+      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
+      - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
+      - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
+      - GPU_IDLE_TIMEOUT=${GPU_IDLE_TIMEOUT:-10}
+      - VASTAI_TEMPLATE_HASH=${VASTAI_TEMPLATE_HASH:-e2588a22cf5eef43df3d444ef4f25705}
+      - VASTAI_CLI=/tmp/vast.py
+      - VASTAI_SSH_KEY=/root/.ssh/vastai_ed25519
+      - VASTAI_API_KEY_FILE=/root/.config/vastai/vast_api_key
     volumes:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/audiobooks:/data/audiobooks
@@ -166,6 +175,9 @@ services:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
+      # Vast.ai GPU access (for auto-scaling)
+      - ${HOME:-/home/dave}/.ssh/vastai_ed25519:/root/.ssh/vastai_ed25519:ro
+      - ${HOME:-/home/dave}/.config/vastai:/root/.config/vastai:ro
     depends_on:
       kokoro-tts:
         condition: service_started
