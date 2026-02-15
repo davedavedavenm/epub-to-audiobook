@@ -157,8 +157,8 @@ services:
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - QUEUE_RUNNER_ENABLED=1
       - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-1}
-      # GPU auto-scaling (disabled by default)
-      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
+      # GPU auto-scaling (auto-provisions Vast.ai GPU when 3+ books queued)
+      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-true}
       - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
       - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
       - GPU_IDLE_TIMEOUT=${GPU_IDLE_TIMEOUT:-10}
