@@ -47,6 +47,7 @@ COST_CAP_DOLLARS = float(os.environ.get('AUTOSCALE_COST_CAP', '1.00'))
 IDLE_TIMEOUT_MINUTES = int(os.environ.get('GPU_IDLE_TIMEOUT', '10'))
 PROVISION_TIMEOUT_S = int(os.environ.get('GPU_PROVISION_TIMEOUT', '300'))
 TUNNEL_CONTAINER = 'gpu-ssh-tunnel'
+GPU_STATUS_FILE = Path(os.environ.get('GPU_STATUS_FILE', '/data/gpu_status.json'))
 
 GPU_CONCURRENT_JOBS = int(os.environ.get('GPU_CONCURRENT_JOBS', '3'))
 CPU_CONCURRENT_JOBS = int(os.environ.get('CPU_CONCURRENT_JOBS', '1'))
@@ -258,7 +259,7 @@ class GPUManager:
 
     def get_status(self) -> dict:
         """Return current GPU state for API/UI display."""
-        return {
+        status = {
             'state': self.state,
             'instance_id': self.instance_id,
             'cost_per_hour': self.cost_per_hour,
@@ -270,6 +271,25 @@ class GPUManager:
             'autoscale_threshold': AUTOSCALE_THRESHOLD,
             'cost_cap': COST_CAP_DOLLARS,
         }
+        self._persist_status(status)
+        return status
+
+    def _persist_status(self, status: dict):
+        """Write status to a shared file so the webapp can read it."""
+        try:
+            GPU_STATUS_FILE.write_text(json.dumps(status))
+        except Exception:
+            pass
+
+    @staticmethod
+    def load_status_from_file() -> dict | None:
+        """Load GPU status from the shared file (for webapp process)."""
+        try:
+            if GPU_STATUS_FILE.exists():
+                return json.loads(GPU_STATUS_FILE.read_text())
+        except Exception:
+            pass
+        return None
 
     # ── Private Methods ───────────────────────────────────────────
 

@@ -2517,10 +2517,19 @@ def gpu_status():
     """Get current GPU state."""
     if _gpu_manager:
         return jsonify(_gpu_manager.get_status())
+    # Webapp process: read status from shared file written by worker
+    try:
+        from gpu_manager import GPUManager
+        status = GPUManager.load_status_from_file()
+        if status:
+            return jsonify(status)
+    except ImportError:
+        pass
     return jsonify({
-        'state': 'unavailable',
-        'autoscale_enabled': False,
-        'message': 'GPU manager not loaded (worker only)',
+        'state': 'idle',
+        'autoscale_enabled': os.environ.get('AUTOSCALE_ENABLED', 'false').lower() in ('1', 'true', 'yes'),
+        'autoscale_threshold': int(os.environ.get('AUTOSCALE_THRESHOLD', '3')),
+        'cost_cap': float(os.environ.get('AUTOSCALE_COST_CAP', '1.00')),
     })
 
 
