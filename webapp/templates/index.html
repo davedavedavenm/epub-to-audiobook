@@ -1253,6 +1253,168 @@
             to { transform: rotate(360deg); }
         }
 
+        /* ============ GPU Compute Panel ============ */
+        .gpu-card-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .gpu-status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .gpu-state-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .gpu-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .gpu-dot.idle { background: #6b7280; }
+        .gpu-dot.provisioning {
+            background: #f59e0b;
+            animation: gpu-pulse 1.2s ease-in-out infinite;
+        }
+        .gpu-dot.active {
+            background: #22c55e;
+            animation: gpu-pulse 2s ease-in-out infinite;
+        }
+        .gpu-dot.error { background: #ef4444; }
+
+        @keyframes gpu-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+            50% { opacity: 0.6; box-shadow: 0 0 8px 2px currentColor; }
+        }
+
+        .gpu-mode-badge {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 0.82em;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .gpu-mode-badge.cpu {
+            background: var(--bg-element);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .gpu-mode-badge.gpu {
+            background: rgba(249, 115, 22, 0.15);
+            color: #f97316;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .gpu-telemetry {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: #0f172a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #1e293b;
+        }
+
+        .gpu-telemetry-cell {
+            background: #1a1f2e;
+            padding: 12px 14px;
+            text-align: center;
+        }
+
+        .gpu-telemetry-label {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 0.65em;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .gpu-telemetry-value {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .gpu-telemetry-value.cost { color: #fbbf24; }
+
+        .gpu-cap-bar {
+            margin-top: 6px;
+            height: 3px;
+            background: #334155;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .gpu-cap-fill {
+            height: 100%;
+            background: #fbbf24;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .gpu-cap-fill.warning { background: #f97316; }
+        .gpu-cap-fill.danger { background: #ef4444; }
+
+        .gpu-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .gpu-auto-label {
+            margin-left: auto;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            font-family: 'Courier New', Consolas, monospace;
+        }
+
+        .gpu-auto-label .on { color: var(--success); font-weight: 600; }
+        .gpu-auto-label .off { color: var(--text-secondary); }
+
+        /* Header GPU pip */
+        .gpu-header-pip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7em;
+            font-family: 'Courier New', Consolas, monospace;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #f97316;
+            cursor: pointer;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid rgba(249, 115, 22, 0.25);
+            transition: opacity 0.3s ease;
+        }
+
+        .gpu-header-pip .gpu-dot {
+            width: 6px;
+            height: 6px;
+        }
+
         /* ============ Hidden ============ */
         .hidden {
             display: none !important;
@@ -1384,6 +1546,9 @@
             <div class="logo">
                 <span class="logo-icon">🎧</span>
                 <span>Audiobook Studio</span>
+                <span class="gpu-header-pip hidden" id="gpu-header-pip" title="GPU active — click for details">
+                    <span class="gpu-dot active"></span> GPU
+                </span>
             </div>
             <div class="top-controls">
                 <div class="design-toggle">
@@ -1674,6 +1839,50 @@
                     <button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
                 </div>
                 <div id="ops-queue-status" class="progress-info" style="margin-top:12px;"></div>
+            </div>
+
+            <div class="card" id="gpu-card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">GPU Compute</h2>
+                        <p class="card-subtitle">Cloud GPU auto-scaling and cost tracking</p>
+                    </div>
+                </div>
+                <div class="gpu-card-inner">
+                    <div class="gpu-status-row">
+                        <div class="gpu-state-indicator">
+                            <span class="gpu-dot idle" id="gpu-state-dot"></span>
+                            <span id="gpu-state-label">Idle</span>
+                        </div>
+                        <span class="gpu-mode-badge cpu" id="gpu-mode-badge">CPU</span>
+                    </div>
+
+                    <div class="gpu-telemetry hidden" id="gpu-telemetry">
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Session</div>
+                            <div class="gpu-telemetry-value" id="gpu-session-time">0m</div>
+                        </div>
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Cost</div>
+                            <div class="gpu-telemetry-value cost" id="gpu-session-cost">$0.00</div>
+                        </div>
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Cap</div>
+                            <div class="gpu-telemetry-value" id="gpu-cost-cap">$1.00</div>
+                            <div class="gpu-cap-bar">
+                                <div class="gpu-cap-fill" id="gpu-cap-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gpu-controls">
+                        <button class="job-btn" id="gpu-scale-up-btn">⚡ Force GPU</button>
+                        <button class="job-btn" id="gpu-scale-down-btn" disabled>🔌 Force CPU</button>
+                        <span class="gpu-auto-label" id="gpu-auto-label">
+                            Auto: <span class="off">OFF</span>
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div class="card">
@@ -2243,6 +2452,9 @@
                 }
 
                 document.getElementById('ops-diagnostics').textContent = JSON.stringify(diag, null, 2);
+
+                // Also refresh GPU status when ops tab refreshes
+                loadGpuStatus();
             } catch (err) {
                 document.getElementById('ops-diagnostics').textContent = `Failed to load ops: ${err.message}`;
             }
@@ -2278,6 +2490,107 @@
         });
 
         document.getElementById('ops-refresh-btn')?.addEventListener('click', loadOps);
+
+        // ============ GPU Status ============
+        let _gpuState = 'idle';
+        let _gpuPollTimer = null;
+
+        async function loadGpuStatus() {
+            try {
+                const resp = await fetch('/api/gpu/status');
+                const gpu = await resp.json();
+                _gpuState = gpu.state || 'idle';
+
+                // State dot
+                const dot = document.getElementById('gpu-state-dot');
+                dot.className = 'gpu-dot ' + _gpuState;
+
+                // State label
+                const labels = { idle: 'Idle', provisioning: 'Provisioning…', active: 'Active', error: 'Error' };
+                document.getElementById('gpu-state-label').textContent = labels[_gpuState] || _gpuState;
+
+                // Mode badge
+                const badge = document.getElementById('gpu-mode-badge');
+                const isGpu = _gpuState === 'active';
+                badge.textContent = isGpu ? 'GPU' : 'CPU';
+                badge.className = 'gpu-mode-badge ' + (isGpu ? 'gpu' : 'cpu');
+
+                // Telemetry strip
+                const telemetry = document.getElementById('gpu-telemetry');
+                if (_gpuState === 'active' || _gpuState === 'provisioning') {
+                    telemetry.classList.remove('hidden');
+                    const mins = gpu.session_minutes || 0;
+                    document.getElementById('gpu-session-time').textContent =
+                        mins >= 60 ? `${Math.floor(mins/60)}h ${Math.round(mins%60)}m` : `${Math.round(mins)}m`;
+                    document.getElementById('gpu-session-cost').textContent = `$${(gpu.session_cost || 0).toFixed(2)}`;
+                    document.getElementById('gpu-cost-cap').textContent = `$${(gpu.cost_cap || 1).toFixed(2)}`;
+
+                    const pct = Math.min(100, ((gpu.session_cost || 0) / (gpu.cost_cap || 1)) * 100);
+                    const fill = document.getElementById('gpu-cap-fill');
+                    fill.style.width = pct + '%';
+                    fill.className = 'gpu-cap-fill' + (pct > 80 ? ' danger' : pct > 50 ? ' warning' : '');
+                } else {
+                    telemetry.classList.add('hidden');
+                }
+
+                // Controls
+                document.getElementById('gpu-scale-up-btn').disabled = (_gpuState === 'active' || _gpuState === 'provisioning');
+                document.getElementById('gpu-scale-down-btn').disabled = (_gpuState === 'idle');
+
+                // Auto-scale label
+                const autoLabel = document.getElementById('gpu-auto-label');
+                if (gpu.autoscale_enabled) {
+                    autoLabel.innerHTML = `Auto: <span class="on">ON (≥${gpu.autoscale_threshold} books)</span>`;
+                } else {
+                    autoLabel.innerHTML = `Auto: <span class="off">OFF</span>`;
+                }
+
+                // Header pip
+                const pip = document.getElementById('gpu-header-pip');
+                if (isGpu) {
+                    pip.classList.remove('hidden');
+                } else {
+                    pip.classList.add('hidden');
+                }
+
+                // Fast polling when GPU is not idle
+                if (_gpuState !== 'idle' && !_gpuPollTimer) {
+                    _gpuPollTimer = setInterval(loadGpuStatus, 10000);
+                } else if (_gpuState === 'idle' && _gpuPollTimer) {
+                    clearInterval(_gpuPollTimer);
+                    _gpuPollTimer = null;
+                }
+            } catch (err) {
+                console.error('GPU status error:', err);
+            }
+        }
+
+        document.getElementById('gpu-scale-up-btn')?.addEventListener('click', async () => {
+            document.getElementById('gpu-scale-up-btn').disabled = true;
+            document.getElementById('gpu-state-label').textContent = 'Provisioning…';
+            document.getElementById('gpu-state-dot').className = 'gpu-dot provisioning';
+            try {
+                await fetch('/api/gpu/scale-up', { method: 'POST' });
+            } catch (e) { console.error(e); }
+            setTimeout(loadGpuStatus, 2000);
+        });
+
+        document.getElementById('gpu-scale-down-btn')?.addEventListener('click', async () => {
+            document.getElementById('gpu-scale-down-btn').disabled = true;
+            try {
+                await fetch('/api/gpu/scale-down', { method: 'POST' });
+            } catch (e) { console.error(e); }
+            setTimeout(loadGpuStatus, 1000);
+        });
+
+        document.getElementById('gpu-header-pip')?.addEventListener('click', () => {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelector('.nav-tab[data-tab="ops"]')?.classList.add('active');
+            document.getElementById('tab-ops')?.classList.add('active');
+            localStorage.setItem('audiobook-tab', 'ops');
+            loadOps();
+        });
 
         // ============ History Loading ============
         async function loadHistory() {
@@ -2629,6 +2942,7 @@
 
         // ============ Initial Load ============
         loadJobs();
+        loadGpuStatus();
         setInterval(loadJobs, 15000);
     </script>
 </body>
