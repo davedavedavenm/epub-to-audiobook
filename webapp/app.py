@@ -31,6 +31,8 @@ TTS_PROXY_URL = os.environ.get('TTS_PROXY_URL', '').strip().rstrip('/')
 app = Flask(__name__)
 
 # Configuration
+# NOTE: KOKORO_URL is a mutable global — gpu_manager.py switches it
+# between CPU and GPU endpoints at runtime. Do NOT cache this value.
 KOKORO_URL = os.environ.get('KOKORO_URL', 'http://localhost:8880/v1')
 PIPER_URL = os.environ.get('PIPER_URL', 'http://piper-tts:8000/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
@@ -993,6 +995,15 @@ def running_job_count():
             SELECT COUNT(*) FROM jobs
             WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
         ''').fetchone()
+        return result[0]
+
+
+def queued_job_count():
+    """Return the number of queued jobs waiting to start."""
+    with get_db() as conn:
+        result = conn.execute(
+            "SELECT COUNT(*) FROM jobs WHERE status = 'queued'"
+        ).fetchone()
         return result[0]
 
 
@@ -2486,6 +2497,61 @@ def list_voices():
         'voices': VOICES,
         'engines': TTS_ENGINES
     })
+
+
+# ============ GPU Auto-Scaling API ============
+
+# GPU manager singleton — set by the worker process at startup.
+# The webapp process can read status but scaling actions happen in the worker.
+_gpu_manager = None
+
+
+def set_gpu_manager(mgr):
+    """Called by worker.py to register the GPU manager instance."""
+    global _gpu_manager
+    _gpu_manager = mgr
+
+
+@app.route('/api/gpu/status')
+def gpu_status():
+    """Get current GPU state."""
+    if _gpu_manager:
+        return jsonify(_gpu_manager.get_status())
+    return jsonify({
+        'state': 'unavailable',
+        'autoscale_enabled': False,
+        'message': 'GPU manager not loaded (worker only)',
+    })
+
+
+@app.route('/api/gpu/scale-up', methods=['POST'])
+def gpu_scale_up():
+    """Manually trigger GPU scale-up."""
+    if not _gpu_manager:
+        return jsonify({'error': 'GPU manager not available'}), 503
+    if _gpu_manager.state == 'active':
+        return jsonify({'status': 'already_active', **_gpu_manager.get_status()})
+    if _gpu_manager.state == 'provisioning':
+        return jsonify({'status': 'provisioning', **_gpu_manager.get_status()})
+
+    # Run scale-up in background thread to avoid blocking the request
+    import threading
+    def _do_scale_up():
+        _gpu_manager.scale_up()
+    threading.Thread(target=_do_scale_up, daemon=True).start()
+    return jsonify({'status': 'provisioning'})
+
+
+@app.route('/api/gpu/scale-down', methods=['POST'])
+def gpu_scale_down():
+    """Manually trigger GPU scale-down."""
+    if not _gpu_manager:
+        return jsonify({'error': 'GPU manager not available'}), 503
+    if _gpu_manager.state == 'idle':
+        return jsonify({'status': 'already_idle'})
+
+    _gpu_manager.scale_down()
+    return jsonify({'status': 'idle', **_gpu_manager.get_status()})
 
 
 @app.route('/api/health')
