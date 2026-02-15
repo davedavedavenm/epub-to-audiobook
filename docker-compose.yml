@@ -100,6 +100,10 @@ services:
       - ABS_API_TOKEN=${ABS_API_TOKEN:-}
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - QUEUE_RUNNER_ENABLED=0
+      # GPU status display (webapp reads worker's status file, these are fallback)
+      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-true}
+      - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
+      - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
     volumes:
       # Use ABSOLUTE paths so it works regardless of where docker compose is run from
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
