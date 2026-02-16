@@ -879,12 +879,14 @@ def cleanup_orphan_jobs():
     Queued jobs are preserved so they can resume after restart.
     """
     with get_db() as conn:
-        # Handle converting jobs with dead containers
+        # Handle converting/recovering jobs with dead containers or threads
+        # 'recovering' jobs are included because the recovery thread may have
+        # been killed by a container restart, leaving the job stuck.
         converting_jobs = conn.execute(
             """
             SELECT id, container_name, retry_count
             FROM jobs
-            WHERE status IN ('converting', 'converting PDF', 'converting to audio')
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
             """
         ).fetchall()
 
@@ -916,15 +918,19 @@ def cleanup_orphan_jobs():
             output_path = OUTPUT_DIR / output_dirname if output_dirname else None
             partial_files = list(output_path.glob('*.mp3')) if output_path and output_path.exists() else []
 
+            job_status = job_data.get('status', '') if job_data else ''
             if partial_files and len(partial_files) >= 3:
                 # Significant partial output exists — recover missing chapters only
                 _recovery_in_progress[job_id] = True
+                # Don't double-increment retry_count if already in 'recovering' status
+                # (means a previous recovery thread was killed by restart)
+                new_retry = retry_count if job_status == 'recovering' else retry_count + 1
                 conn.execute('''
                     UPDATE jobs
                     SET retry_count = ?,
                         status = 'recovering'
                     WHERE id = ?
-                ''', (retry_count + 1, job_id))
+                ''', (new_retry, job_id))
                 conn.commit()
                 orphan_count += 1
                 print(f"Orphan job {job_id} has {len(partial_files)} chapters — starting chapter recovery")
