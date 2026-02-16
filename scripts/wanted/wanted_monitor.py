@@ -277,12 +277,46 @@ class StateDB:
         self.conn.commit()
 
     def mark_openbooks_failed(self, row_id: int, err: str):
-        self.conn.execute('''
-            UPDATE openbooks_queue
-            SET status='failed', updated_ts=?, attempt_count=attempt_count+1, last_error=?
-            WHERE id=?
-        ''', (now_ts(), (err or '')[:500], row_id))
-        self.conn.commit()
+        t = now_ts()
+        err_txt = (err or '')[:500]
+        row = self.conn.execute(
+            'SELECT key, status, attempt_count FROM openbooks_queue WHERE id=?',
+            (row_id,)
+        ).fetchone()
+        if not row:
+            return
+
+        # If it is already failed, just refresh failure metadata.
+        if (row['status'] or '') == 'failed':
+            self.conn.execute('''
+                UPDATE openbooks_queue
+                SET updated_ts=?, attempt_count=attempt_count+1, last_error=?
+                WHERE id=?
+            ''', (t, err_txt, row_id))
+            self.conn.commit()
+            return
+
+        try:
+            self.conn.execute('''
+                UPDATE openbooks_queue
+                SET status='failed', updated_ts=?, attempt_count=attempt_count+1, last_error=?
+                WHERE id=?
+            ''', (t, err_txt, row_id))
+            self.conn.commit()
+        except sqlite3.IntegrityError:
+            # A failed row already exists for this key; merge attempts/error into that row,
+            # then remove this row so the queue stays consistent and processing can continue.
+            add_attempts = int(row['attempt_count'] or 0) + 1
+            self.conn.execute('''
+                UPDATE openbooks_queue
+                SET
+                    updated_ts=?,
+                    attempt_count=attempt_count+?,
+                    last_error=?
+                WHERE key=? AND status='failed'
+            ''', (t, add_attempts, err_txt, row['key']))
+            self.conn.execute('DELETE FROM openbooks_queue WHERE id=?', (row_id,))
+            self.conn.commit()
 
     def pick_due(self, limit: int) -> list[sqlite3.Row]:
         t = now_ts()
