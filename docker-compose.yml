@@ -70,6 +70,7 @@ services:
       - "8881:8881"
     restart: unless-stopped
     environment:
+      - PYTHONUNBUFFERED=1
       - KOKORO_URL=${KOKORO_URL:-http://kokoro-tts:8880/v1}
       # If set (e.g. http://tts-proxy:8882), conversion containers will send TTS requests via the proxy
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
@@ -132,6 +133,7 @@ services:
       - "docker-vm:192.168.1.113"
     restart: unless-stopped
     environment:
+      - PYTHONUNBUFFERED=1
       - KOKORO_URL=${KOKORO_URL:-http://kokoro-tts:8880/v1}
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
       - PIPER_URL=http://piper-tts:8000/v1
