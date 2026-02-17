@@ -839,13 +839,18 @@ def finalize_completed_job_if_outputs_exist(job_id):
     total_chapters = job.get('total_chapters')
     if total_chapters:
         try:
-            if len(output_files) < int(total_chapters):
+            # Must have at least 80% of expected chapters to auto-complete
+            if len(output_files) < int(total_chapters) * 0.8:
                 return False
         except Exception:
             return False
     else:
+        # Without total_chapters, require both high progress AND a reasonable file count
         progress = job.get('progress_percent') or 0
         if progress < 95:
+            return False
+        # Extra safety: at least 5 files (prevents completing with just frontmatter)
+        if len(output_files) < 5:
             return False
 
     rename_output_files(output_path, job['book_name'])
@@ -1808,11 +1813,28 @@ def recover_partial_conversion(job_id: str):
             job_id, missing, cmd, host_output_dir, output_path, timeout_seconds)
 
         if still_missing:
-            app.logger.error(
-                f"Recovery {job_id}: {len(still_missing)} chapters still missing: {still_missing}")
-            append_job_log(
-                job_id,
-                f"WARNING: {len(still_missing)} chapters could not be recovered: {still_missing}")
+            # Too many chapters missing — fail the job instead of completing with gaps
+            missing_pct = len(still_missing) / total_chapters * 100 if total_chapters else 100
+            if missing_pct > 20:
+                error_msg = (f"Recovery failed: {len(still_missing)}/{total_chapters} chapters "
+                             f"still missing ({missing_pct:.0f}%): {still_missing}")
+                app.logger.error(f"Recovery {job_id}: {error_msg}")
+                append_job_log(job_id, error_msg)
+                update_job(
+                    job_id,
+                    status='failed',
+                    error=error_msg,
+                    completed_at=datetime.now().isoformat(),
+                )
+                maybe_start_next_queued_job()
+                return
+            else:
+                app.logger.warning(
+                    f"Recovery {job_id}: {len(still_missing)} minor chapters missing "
+                    f"({missing_pct:.0f}%), completing anyway: {still_missing}")
+                append_job_log(
+                    job_id,
+                    f"Completed with {len(still_missing)} minor chapters missing: {still_missing}")
         else:
             app.logger.info(f"Recovery {job_id}: All {total_chapters} chapters recovered")
             append_job_log(job_id, f"All {total_chapters} chapters recovered after retries")
@@ -1825,6 +1847,22 @@ def recover_partial_conversion(job_id: str):
         append_job_log(job_id, f"Removed {removed} small noise files (<{MIN_CHAPTER_SIZE_KB}KB)")
 
     output_files = list(output_path.glob('*.mp3'))
+
+    # Final safety check: don't mark complete if we have very few files
+    if total_chapters and len(output_files) < total_chapters * 0.8:
+        error_msg = (f"Only {len(output_files)}/{total_chapters} audio files after recovery — "
+                     f"refusing to mark complete")
+        app.logger.error(f"Recovery {job_id}: {error_msg}")
+        append_job_log(job_id, error_msg)
+        update_job(
+            job_id,
+            status='failed',
+            error=error_msg,
+            completed_at=datetime.now().isoformat(),
+        )
+        maybe_start_next_queued_job()
+        return
+
     synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
 
     update_job(
@@ -2236,6 +2274,19 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             host_input_path = host_epub_path
             epub_path = UPLOAD_DIR / epub_filename
             update_job(job_id, status='converting to audio')
+
+        # Preprocess EPUB for better TTS pronunciation (numbers, abbreviations, etc.)
+        try:
+            from tts_preprocess import preprocess_epub
+            preprocessed_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
+            preprocess_epub(epub_path, preprocessed_path)
+            # Use preprocessed version for conversion, keep original for reference
+            host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
+            epub_path = preprocessed_path
+            append_job_log(job_id, "Text preprocessed (numbers, abbreviations normalized for TTS)")
+        except Exception as e:
+            app.logger.warning(f"TTS preprocessing failed, using original: {e}")
+            append_job_log(job_id, f"TTS preprocessing skipped: {e}")
 
         # Calculate timeout and initial ETA using learning algorithm
         char_count = estimate_epub_size(epub_path)
