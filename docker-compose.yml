@@ -180,8 +180,9 @@ services:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
       # Vast.ai GPU access (for auto-scaling)
-      - ${HOME:-/home/dave}/.ssh/vastai_ed25519:/root/.ssh/vastai_ed25519:ro
-      - ${HOME:-/home/dave}/.config/vastai:/root/.config/vastai:ro
+      # Use explicit /home/dave paths — $HOME resolves to /root under sudo docker compose
+      - /home/dave/.ssh/vastai_ed25519:/root/.ssh/vastai_ed25519:ro
+      - /home/dave/.config/vastai:/root/.config/vastai:ro
     depends_on:
       kokoro-tts:
         condition: service_started
