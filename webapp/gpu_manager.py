@@ -312,14 +312,17 @@ class GPUManager:
     def _create_instance(self) -> str | None:
         """Search for cheapest offer and create instance. Returns instance ID."""
         # Search for offers matching our template requirements
+        # vast.py v2 uses query syntax: field=value as positional args
         result = _vast(
             'search', 'offers',
-            '--type', 'interruptible',
-            '--gpu-name', 'RTX 3060',
-            '--disk', '20',
-            '--order', 'dph_total',
+            '-i',                       # interruptible (bid) pricing
+            '-o', 'dph_total',          # sort by cost
             '--limit', '5',
-            '--raw')
+            '--storage', '20',
+            '--raw',
+            'gpu_name=RTX_3060',        # query filter
+            'num_gpus=1',
+            'rentable=true')
         if result.returncode != 0:
             logger.error(f"GPU: Search failed: {result.stderr[:200]}")
             return None
@@ -344,8 +347,9 @@ class GPUManager:
         # Create instance from template
         create_result = _vast(
             'create', 'instance', str(offer_id),
-            '--template', VASTAI_TEMPLATE_HASH,
+            '--template_hash', VASTAI_TEMPLATE_HASH,
             '--disk', '20',
+            '--ssh', '--direct',
             '--raw')
         if create_result.returncode != 0:
             logger.error(f"GPU: Create failed: {create_result.stderr[:200]}")
