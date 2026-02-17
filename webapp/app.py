@@ -47,6 +47,10 @@ HEALTH_KOKORO_TIMEOUT = int(os.environ.get('HEALTH_KOKORO_TIMEOUT', '8'))
 HEALTH_KOKORO_RETRIES = int(os.environ.get('HEALTH_KOKORO_RETRIES', '2'))
 QUEUE_RUNNER_ENABLED = os.environ.get('QUEUE_RUNNER_ENABLED', '1').lower() in ('1', 'true', 'yes')
 
+# Lock to prevent race conditions when claiming jobs from the queue.
+# Both the worker loop and API endpoints could try to start the same job simultaneously.
+_job_claim_lock = threading.Lock()
+
 # Optional: sampled ASR verification (audio waveform -> transcript -> compare vs EPUB text).
 # Off by default because it can be CPU-expensive.
 AUDIO_ASR_VERIFY_ENABLED = os.environ.get('AUDIO_ASR_VERIFY_ENABLED', '0').strip().lower() in ('1', 'true', 'yes', 'on')
@@ -1036,18 +1040,31 @@ def get_next_queued_job():
 
 
 def start_next_queued_job():
-    """Start the next queued job if no job is currently running."""
-    if is_queue_paused():
-        app.logger.info("Queue is paused; not starting queued jobs")
-        return False
-    if is_job_running():
-        return False
+    """Start the next queued job if no job is currently running.
 
-    job = get_next_queued_job()
-    if not job:
-        return False
+    Uses _job_claim_lock to prevent race conditions where multiple callers
+    (worker loop iterations, API endpoints) could start the same job twice.
+    The job status is set to 'converting' BEFORE the thread starts, so any
+    concurrent caller will see it as running and skip it.
+    """
+    with _job_claim_lock:
+        if is_queue_paused():
+            app.logger.info("Queue is paused; not starting queued jobs")
+            return False
+        if is_job_running():
+            return False
 
-    # Start conversion thread
+        job = get_next_queued_job()
+        if not job:
+            return False
+
+        # CRITICAL: Mark the job as 'converting' BEFORE starting the thread.
+        # This prevents any other caller from seeing it as 'queued' and starting
+        # a duplicate conversion.
+        update_job(job['id'], status='converting', started_at=datetime.now().isoformat())
+        app.logger.info(f"Claimed job {job['id']} for conversion (status → converting)")
+
+    # Start conversion thread OUTSIDE the lock (thread will see status already set)
     thread = threading.Thread(
         target=convert_book,
         args=(job['id'], job['input_filename'], job['output_dirname'],
@@ -2235,7 +2252,15 @@ def monitor_conversion(job_id: str, container_name: str):
 
 def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: str, is_pdf: bool = False):
     """Run book conversion via Docker in background."""
-    update_job(job_id, status='converting', started_at=datetime.now().isoformat())
+    # Guard: if this job is already being converted (e.g. another process claimed it),
+    # bail out immediately to prevent duplicate Docker containers.
+    with _job_claim_lock:
+        current = get_job(job_id)
+        if current and current.get('status') == 'converting' and current.get('container_name'):
+            app.logger.warning(
+                f"Job {job_id} already has container {current['container_name']} — aborting duplicate start")
+            return
+        update_job(job_id, status='converting', started_at=datetime.now().isoformat())
     append_job_log(job_id, f"Conversion start (input={input_filename}, output={output_dirname})")
 
     host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
@@ -2808,17 +2833,10 @@ def start_conversion():
     save_job(job)
     append_job_log(job_id, f"Job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed})")
 
-    # Start conversion only if no other job is running (one at a time)
-    if QUEUE_RUNNER_ENABLED and not is_job_running():
-        thread = threading.Thread(
-            target=convert_book,
-            args=(job_id, input_filename, output_dirname, voice, is_pdf)
-        )
-        thread.daemon = True
-        thread.start()
-        app.logger.info(f"Started job {job_id} immediately (no queue)")
-    else:
-        app.logger.info(f"Job {job_id} added to queue (another job is running)")
+    # Do NOT start convert_book() here — let the worker pick it up from the queue.
+    # The webapp should NEVER run conversions directly to prevent dual-execution bugs
+    # where both webapp and worker start the same job simultaneously.
+    app.logger.info(f"Job {job_id} queued — worker will pick it up")
 
     return jsonify({'job_id': job_id, 'status': 'queued'})
 
@@ -3149,17 +3167,10 @@ def retry_job(job_id: str):
 
     app.logger.info(f"Retrying job {job_id} (attempt {new_retry_count}/3)")
 
-    # Start conversion only if no other job is running (one at a time)
-    if not is_job_running():
-        thread = threading.Thread(
-            target=convert_book,
-            args=(job_id, job['input_filename'], job['output_dirname'], job['voice'], job['is_pdf'])
-        )
-        thread.daemon = True
-        thread.start()
-        app.logger.info(f"Started retry job {job_id} immediately")
-    else:
-        app.logger.info(f"Retry job {job_id} added to queue")
+    # Do NOT start convert_book() here — let the worker pick it up from the queue.
+    # Starting it directly caused dual-execution bugs where both webapp and worker
+    # would run convert_book() for the same job simultaneously.
+    app.logger.info(f"Retry job {job_id} queued — worker will pick it up")
 
     return jsonify({'status': 'queued', 'retry_count': new_retry_count})
 
@@ -3389,17 +3400,9 @@ def convert_from_library():
     save_job(job)
     append_job_log(job_id, f"Library job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed})")
 
-    # Start conversion only if no other job is running (one at a time)
-    if QUEUE_RUNNER_ENABLED and not is_job_running():
-        thread = threading.Thread(
-            target=convert_book,
-            args=(job_id, input_filename, output_dirname, voice, is_pdf)
-        )
-        thread.daemon = True
-        thread.start()
-        app.logger.info(f"Started library job {job_id} immediately")
-    else:
-        app.logger.info(f"Library job {job_id} added to queue")
+    # Do NOT start convert_book() here — let the worker pick it up from the queue.
+    # The webapp should NEVER run conversions directly to prevent dual-execution bugs.
+    app.logger.info(f"Library job {job_id} queued — worker will pick it up")
 
     return jsonify({'job_id': job_id, 'status': 'queued'})
 
