@@ -49,7 +49,7 @@ AUTOSCALE_ENABLED = os.environ.get(
 AUTOSCALE_THRESHOLD = int(os.environ.get('AUTOSCALE_THRESHOLD', '3'))
 COST_CAP_DOLLARS = float(os.environ.get('AUTOSCALE_COST_CAP', '1.00'))
 IDLE_TIMEOUT_MINUTES = int(os.environ.get('GPU_IDLE_TIMEOUT', '10'))
-PROVISION_TIMEOUT_S = int(os.environ.get('GPU_PROVISION_TIMEOUT', '300'))
+PROVISION_TIMEOUT_S = int(os.environ.get('GPU_PROVISION_TIMEOUT', '600'))
 TUNNEL_CONTAINER = 'gpu-ssh-tunnel'
 GPU_STATUS_FILE = Path(os.environ.get('GPU_STATUS_FILE', '/data/gpu_status.json'))
 
@@ -412,18 +412,26 @@ class GPUManager:
             f"GPU: Cannot parse instance ID from: {create_result.stdout[:200]}")
         return None
 
-    def _wait_instance_running(self, timeout: int = 300) -> bool:
+    def _wait_instance_running(self, timeout: int = 600) -> bool:
         """Poll until instance status is 'running'."""
         deadline = time.time() + timeout
+        poll_count = 0
         while time.time() < deadline:
             instances = _vast_json('show', 'instances', '--raw')
             if instances:
                 for inst in instances:
                     if str(inst.get('id')) == str(self.instance_id):
                         status = inst.get('actual_status', '')
-                        logger.debug(
-                            f"GPU: Instance {self.instance_id} status: {status}")
+                        remaining = int(deadline - time.time())
+                        # Log every 4th poll (~60s) to avoid spam
+                        poll_count += 1
+                        if poll_count % 4 == 1:
+                            logger.info(
+                                f"GPU: Instance {self.instance_id} status: "
+                                f"{status} ({remaining}s remaining)")
                         if status == 'running':
+                            logger.info(
+                                f"GPU: Instance {self.instance_id} is running")
                             return True
                         if status in ('exited', 'error'):
                             logger.error(
