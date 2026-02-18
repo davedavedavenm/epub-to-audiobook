@@ -171,6 +171,7 @@ services:
       - VASTAI_TEMPLATE_HASH=${VASTAI_TEMPLATE_HASH:-e2588a22cf5eef43df3d444ef4f25705}
       - VASTAI_CLI=/tmp/vast.py
       - VASTAI_SSH_KEY=/root/.ssh/vastai_ed25519
+      - HOST_VASTAI_SSH_KEY=/home/dave/.ssh/vastai_ed25519
       - VASTAI_API_KEY_FILE=/root/.config/vastai/vast_api_key
     volumes:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads

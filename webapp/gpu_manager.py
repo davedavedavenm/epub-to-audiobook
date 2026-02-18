@@ -30,6 +30,10 @@ VASTAI_TEMPLATE_ID = int(os.environ.get('VASTAI_TEMPLATE_ID', '343755'))
 VASTAI_CLI = os.environ.get('VASTAI_CLI', '/tmp/vast.py')
 VASTAI_SSH_KEY = os.environ.get(
     'VASTAI_SSH_KEY', '/root/.ssh/vastai_ed25519')
+# HOST path for SSH key — used in docker run -v mounts which are interpreted by
+# the HOST Docker daemon, not the container filesystem.
+HOST_VASTAI_SSH_KEY = os.environ.get(
+    'HOST_VASTAI_SSH_KEY', '/home/dave/.ssh/vastai_ed25519')
 VASTAI_API_KEY_FILE = os.environ.get(
     'VASTAI_API_KEY_FILE', '/root/.config/vastai/vast_api_key')
 
@@ -86,6 +90,8 @@ class GPUManager:
         self.session_start = None
         self.last_job_activity = None  # For idle timeout
         self._lock = threading.Lock()
+        self._last_scale_attempt = None
+        self._scale_cooldown_s = 300  # 5 minutes between attempts
 
     # ── Public API ────────────────────────────────────────────────
 
@@ -98,6 +104,16 @@ class GPUManager:
             if self.state != 'idle':
                 logger.info(f"GPU scale_up skipped (state={self.state})")
                 return self.state == 'active'
+
+            # Cooldown: don't retry scale-up too quickly after a failure
+            if self._last_scale_attempt:
+                elapsed = (datetime.now() - self._last_scale_attempt).total_seconds()
+                if elapsed < self._scale_cooldown_s:
+                    logger.info(
+                        f"GPU: Scale-up cooldown ({int(elapsed)}s/"
+                        f"{self._scale_cooldown_s}s)")
+                    return False
+            self._last_scale_attempt = datetime.now()
             self.state = 'provisioning'
 
         logger.info("GPU: Starting scale-up")
@@ -105,6 +121,10 @@ class GPUManager:
             # 1. Ensure vast.py CLI is available
             if not self._ensure_cli():
                 raise RuntimeError("Cannot download vast.py CLI")
+
+            # 1b. Ensure tunnel Docker image is available
+            if not self._ensure_tunnel_image():
+                raise RuntimeError("Cannot pull tunnel image (alpine/ssh)")
 
             # 2. Search for cheapest instance matching template
             instance_id = self._create_instance()
@@ -309,6 +329,26 @@ class GPUManager:
             logger.error(f"GPU: Failed to download vast.py: {e}")
             return False
 
+    def _ensure_tunnel_image(self) -> bool:
+        """Pre-pull alpine/ssh Docker image for the SSH tunnel container."""
+        try:
+            result = subprocess.run(
+                ['docker', 'image', 'inspect', 'alpine/ssh'],
+                capture_output=True, timeout=10)
+            if result.returncode == 0:
+                return True
+            logger.info("GPU: Pulling alpine/ssh image for tunnel")
+            result = subprocess.run(
+                ['docker', 'pull', 'alpine/ssh'],
+                capture_output=True, text=True, timeout=120)
+            if result.returncode != 0:
+                logger.error(f"GPU: Failed to pull alpine/ssh: {result.stderr[:200]}")
+                return False
+            return True
+        except Exception as e:
+            logger.error(f"GPU: Tunnel image check failed: {e}")
+            return False
+
     def _create_instance(self) -> str | None:
         """Search for cheapest offer and create instance. Returns instance ID."""
         # Search for offers matching our template requirements
@@ -445,7 +485,7 @@ class GPUManager:
             '--name', TUNNEL_CONTAINER,
             '--network', 'host',
             '--restart', 'unless-stopped',
-            '-v', f'{VASTAI_SSH_KEY}:/key:ro',
+            '-v', f'{HOST_VASTAI_SSH_KEY}:/key:ro',
             'alpine/ssh',
             'ssh', '-i', '/key',
             '-p', str(self.instance_port),

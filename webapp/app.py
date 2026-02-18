@@ -51,6 +51,11 @@ QUEUE_RUNNER_ENABLED = os.environ.get('QUEUE_RUNNER_ENABLED', '1').lower() in ('
 # Both the worker loop and API endpoints could try to start the same job simultaneously.
 _job_claim_lock = threading.Lock()
 
+# Minimum fraction of chapters required to mark a book complete (1.0 = 100%).
+# No more half-finished audiobooks.
+CHAPTER_COMPLETION_THRESHOLD = float(os.environ.get('CHAPTER_COMPLETION_THRESHOLD', '1.0'))
+MIN_CHAPTER_SIZE_KB = int(os.environ.get('MIN_CHAPTER_SIZE_KB', '500'))
+
 # Optional: sampled ASR verification (audio waveform -> transcript -> compare vs EPUB text).
 # Off by default because it can be CPU-expensive.
 AUDIO_ASR_VERIFY_ENABLED = os.environ.get('AUDIO_ASR_VERIFY_ENABLED', '0').strip().lower() in ('1', 'true', 'yes', 'on')
@@ -821,6 +826,44 @@ def remove_stale_container(container_name):
     return False
 
 
+def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | None) -> tuple[bool, str]:
+    """Verify all chapters exist and have valid audio.
+
+    Returns (is_complete, message). Used before marking any job as completed
+    to ensure no half-finished audiobooks ever get synced.
+    """
+    output_files = sorted(output_path.glob('*.mp3')) if output_path.exists() else []
+
+    if not output_files:
+        return False, "No output MP3 files found"
+
+    # Check 1: Chapter count matches expected
+    if total_chapters:
+        min_required = int(total_chapters * CHAPTER_COMPLETION_THRESHOLD)
+        if len(output_files) < min_required:
+            return False, (
+                f"Only {len(output_files)}/{total_chapters} chapters "
+                f"(need {min_required}, threshold={CHAPTER_COMPLETION_THRESHOLD:.0%})")
+
+    # Check 2: Every MP3 has reasonable file size (not corrupt/empty)
+    min_bytes = MIN_CHAPTER_SIZE_KB * 1024
+    bad_files = [f.name for f in output_files if f.stat().st_size < min_bytes]
+    # Allow up to 2 small files (frontmatter/TOC), but flag if many are tiny
+    if len(bad_files) > 2 and total_chapters and len(bad_files) > total_chapters * 0.2:
+        return False, (
+            f"{len(bad_files)} files under {MIN_CHAPTER_SIZE_KB}KB: "
+            f"{bad_files[:5]}{'...' if len(bad_files) > 5 else ''}")
+
+    # Check 3: Total audio size sanity (should be at least 1MB for a real book)
+    total_size_mb = sum(f.stat().st_size for f in output_files) / (1024 * 1024)
+    if total_size_mb < 1.0:
+        return False, f"Total audio only {total_size_mb:.1f}MB — likely corrupted"
+
+    return True, (
+        f"Verified: {len(output_files)} files, {total_size_mb:.0f}MB total"
+        + (f" ({len(output_files)}/{total_chapters} chapters)" if total_chapters else ""))
+
+
 def finalize_completed_job_if_outputs_exist(job_id):
     """Mark an in-flight job completed when output files prove success.
 
@@ -836,26 +879,13 @@ def finalize_completed_job_if_outputs_exist(job_id):
         return False
 
     output_path = OUTPUT_DIR / output_dirname
-    output_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
-    if not output_files:
-        return False
-
     total_chapters = job.get('total_chapters')
-    if total_chapters:
-        try:
-            # Must have at least 80% of expected chapters to auto-complete
-            if len(output_files) < int(total_chapters) * 0.8:
-                return False
-        except Exception:
-            return False
-    else:
-        # Without total_chapters, require both high progress AND a reasonable file count
-        progress = job.get('progress_percent') or 0
-        if progress < 95:
-            return False
-        # Extra safety: at least 5 files (prevents completing with just frontmatter)
-        if len(output_files) < 5:
-            return False
+
+    # Use verify_book_complete for consistent validation
+    is_ok, msg = verify_book_complete(job_id, output_path, total_chapters)
+    if not is_ok:
+        app.logger.info(f"Cannot finalize {job_id}: {msg}")
+        return False
 
     rename_output_files(output_path, job['book_name'])
     output_files = list(output_path.glob('*.mp3'))
@@ -1830,28 +1860,19 @@ def recover_partial_conversion(job_id: str):
             job_id, missing, cmd, host_output_dir, output_path, timeout_seconds)
 
         if still_missing:
-            # Too many chapters missing — fail the job instead of completing with gaps
-            missing_pct = len(still_missing) / total_chapters * 100 if total_chapters else 100
-            if missing_pct > 20:
-                error_msg = (f"Recovery failed: {len(still_missing)}/{total_chapters} chapters "
-                             f"still missing ({missing_pct:.0f}%): {still_missing}")
-                app.logger.error(f"Recovery {job_id}: {error_msg}")
-                append_job_log(job_id, error_msg)
-                update_job(
-                    job_id,
-                    status='failed',
-                    error=error_msg,
-                    completed_at=datetime.now().isoformat(),
-                )
-                maybe_start_next_queued_job()
-                return
-            else:
-                app.logger.warning(
-                    f"Recovery {job_id}: {len(still_missing)} minor chapters missing "
-                    f"({missing_pct:.0f}%), completing anyway: {still_missing}")
-                append_job_log(
-                    job_id,
-                    f"Completed with {len(still_missing)} minor chapters missing: {still_missing}")
+            # ANY missing chapters → fail. No more half-finished audiobooks.
+            error_msg = (f"Recovery failed: {len(still_missing)}/{total_chapters} chapters "
+                         f"still missing after retries: {still_missing}")
+            app.logger.error(f"Recovery {job_id}: {error_msg}")
+            append_job_log(job_id, error_msg)
+            update_job(
+                job_id,
+                status='failed',
+                error=error_msg,
+                completed_at=datetime.now().isoformat(),
+            )
+            maybe_start_next_queued_job()
+            return
         else:
             app.logger.info(f"Recovery {job_id}: All {total_chapters} chapters recovered")
             append_job_log(job_id, f"All {total_chapters} chapters recovered after retries")
@@ -1865,10 +1886,10 @@ def recover_partial_conversion(job_id: str):
 
     output_files = list(output_path.glob('*.mp3'))
 
-    # Final safety check: don't mark complete if we have very few files
-    if total_chapters and len(output_files) < total_chapters * 0.8:
-        error_msg = (f"Only {len(output_files)}/{total_chapters} audio files after recovery — "
-                     f"refusing to mark complete")
+    # Final verification: NO incomplete audiobooks ever get marked complete
+    is_ok, verify_msg = verify_book_complete(job_id, output_path, total_chapters)
+    if not is_ok:
+        error_msg = f"Verification failed after recovery: {verify_msg}"
         app.logger.error(f"Recovery {job_id}: {error_msg}")
         append_job_log(job_id, error_msg)
         update_job(
@@ -1879,6 +1900,7 @@ def recover_partial_conversion(job_id: str):
         )
         maybe_start_next_queued_job()
         return
+    append_job_log(job_id, f"Verification passed: {verify_msg}")
 
     synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
 
@@ -2475,6 +2497,19 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # Re-count files after renaming and cleanup
             output_files = list(output_path.glob('*.mp3'))
 
+            # Final verification: NO incomplete audiobooks ever get marked complete
+            total_ch = job.get('total_chapters')
+            is_ok, verify_msg = verify_book_complete(job_id, output_path, total_ch)
+            if not is_ok:
+                error_msg = f"Verification failed: {verify_msg}"
+                app.logger.error(f"Job {job_id}: {error_msg}")
+                append_job_log(job_id, error_msg)
+                update_job(job_id, status='failed', error=error_msg,
+                           completed_at=datetime.now().isoformat())
+                maybe_start_next_queued_job()
+                return
+            append_job_log(job_id, f"Verification passed: {verify_msg}")
+
             # Sync to Audiobookshelf
             synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
 
@@ -2554,9 +2589,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # Proactively restart Kokoro between books to clear memory leak.
         # CPU Kokoro leaks ~1GB per chapter; restarting between books prevents
         # mid-chapter crashes that kill active conversions.
+        # Skip in GPU mode — GPU Kokoro is on Vast.ai, local restart is pointless
+        # and would interfere with other parallel GPU jobs.
         job_final = get_job(job_id)
         tts_final = job_final.get('tts_engine', 'kokoro') if job_final else 'kokoro'
-        if tts_final in ('kokoro', None):
+        if tts_final in ('kokoro', None) and not _is_gpu_mode():
             app.logger.info("Proactively restarting Kokoro between books (memory leak prevention)")
             restart_kokoro(label="between-books")
 
@@ -2592,6 +2629,11 @@ def set_gpu_manager(mgr):
     """Called by worker.py to register the GPU manager instance."""
     global _gpu_manager
     _gpu_manager = mgr
+
+
+def _is_gpu_mode() -> bool:
+    """Check if TTS is currently routed to a GPU instance."""
+    return _gpu_manager is not None and _gpu_manager.state == 'active'
 
 
 @app.route('/api/gpu/status')
@@ -3329,6 +3371,8 @@ def convert_from_library():
     notify_telegram = data.get('notify_telegram', False)
     notify_whatsapp = data.get('notify_whatsapp', False)
     tts_speed = float(data.get('tts_speed', DEFAULT_TTS_SPEED))
+    start_chapter = data.get('start_chapter')
+    end_chapter = data.get('end_chapter')
 
     # Validate file exists
     if not file_path.exists():
@@ -3389,8 +3433,8 @@ def convert_from_library():
         'input_filename': input_filename,
         'output_dirname': output_dirname,
         'is_pdf': is_pdf,
-        'start_chapter': None,
-        'end_chapter': None,
+        'start_chapter': start_chapter,
+        'end_chapter': end_chapter,
         'notify_telegram': notify_telegram,
         'tts_speed': tts_speed,
         'queue_rank': next_queue_rank(),
@@ -3398,7 +3442,8 @@ def convert_from_library():
         'job_log_path': str(get_job_log_path(job_id))
     }
     save_job(job)
-    append_job_log(job_id, f"Library job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed})")
+    ch_range = f", chapters {start_chapter}-{end_chapter}" if start_chapter or end_chapter else ""
+    append_job_log(job_id, f"Library job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed}{ch_range})")
 
     # Do NOT start convert_book() here — let the worker pick it up from the queue.
     # The webapp should NEVER run conversions directly to prevent dual-execution bugs.
