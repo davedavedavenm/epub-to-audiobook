@@ -93,6 +93,123 @@ class GPUManager:
         self._last_scale_attempt = None
         self._scale_cooldown_s = 300  # 5 minutes between attempts
 
+        # On startup: try to re-adopt a running instance (survives worker restarts)
+        self._try_adopt_existing()
+
+    # ── State persistence ────────────────────────────────────────
+
+    def _save_state(self):
+        """Persist GPU state to disk so worker restarts can re-adopt."""
+        try:
+            GPU_STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            state = {
+                'state': self.state,
+                'instance_id': self.instance_id,
+                'instance_addr': self.instance_addr,
+                'instance_port': self.instance_port,
+                'cost_per_hour': self.cost_per_hour,
+                'session_start': self.session_start.isoformat() if self.session_start else None,
+            }
+            GPU_STATUS_FILE.write_text(json.dumps(state))
+        except Exception as e:
+            logger.warning(f"GPU: Failed to save state: {e}")
+
+    def _clear_state(self):
+        """Remove persisted state file."""
+        try:
+            if GPU_STATUS_FILE.exists():
+                GPU_STATUS_FILE.unlink()
+        except Exception:
+            pass
+
+    def _try_adopt_existing(self):
+        """On startup, check for a running Vast.ai instance and re-adopt it.
+
+        This prevents creating duplicate instances when the worker restarts
+        while a GPU is already active.
+        """
+        # 1. Check persisted state file
+        saved = None
+        if GPU_STATUS_FILE.exists():
+            try:
+                saved = json.loads(GPU_STATUS_FILE.read_text())
+            except Exception:
+                pass
+
+        if not saved or saved.get('state') != 'active' or not saved.get('instance_id'):
+            return
+
+        saved_id = str(saved['instance_id'])
+        logger.info(f"GPU: Found saved state for instance {saved_id}, checking if still alive...")
+
+        # 2. Verify instance is actually running on Vast.ai
+        try:
+            self._ensure_cli()
+            instances = _vast_json('show', 'instances', '--raw')
+            if not instances:
+                logger.info("GPU: No running instances found, clearing stale state")
+                self._clear_state()
+                return
+
+            for inst in instances:
+                if str(inst.get('id')) == saved_id:
+                    status = inst.get('actual_status', '')
+                    if status == 'running':
+                        # Re-adopt this instance
+                        self.instance_id = int(saved_id)
+                        self.instance_addr = saved.get('instance_addr') or inst.get('ssh_host')
+                        self.instance_port = saved.get('instance_port') or inst.get('ssh_port')
+                        self.cost_per_hour = inst.get('dph_total', 0)
+                        if saved.get('session_start'):
+                            self.session_start = datetime.fromisoformat(saved['session_start'])
+                        else:
+                            self.session_start = datetime.now()
+                        self.last_job_activity = datetime.now()
+
+                        # Verify tunnel is running, re-create if needed
+                        tunnel_ok = self._is_tunnel_alive()
+                        if not tunnel_ok:
+                            logger.info("GPU: Tunnel dead, re-creating...")
+                            if self.instance_port:
+                                self._create_tunnel()
+                                tunnel_ok = self._is_tunnel_alive()
+
+                        if tunnel_ok:
+                            self._switch_to_gpu()
+                            self.state = 'active'
+                            logger.info(
+                                f"GPU: Re-adopted instance {saved_id} "
+                                f"(${self.cost_per_hour:.3f}/hr)")
+                            return
+                        else:
+                            logger.warning("GPU: Tunnel failed, not re-adopting")
+                            self._clear_state()
+                            return
+
+                    else:
+                        logger.info(
+                            f"GPU: Saved instance {saved_id} is {status}, not running")
+                        self._clear_state()
+                        return
+
+            # Instance not found in list
+            logger.info(f"GPU: Saved instance {saved_id} no longer exists")
+            self._clear_state()
+
+        except Exception as e:
+            logger.warning(f"GPU: Re-adopt check failed: {e}")
+            self._clear_state()
+
+    def _is_tunnel_alive(self) -> bool:
+        """Check if the GPU SSH tunnel container is running."""
+        try:
+            result = subprocess.run(
+                ['docker', 'inspect', '-f', '{{.State.Running}}', TUNNEL_CONTAINER],
+                capture_output=True, text=True, timeout=5)
+            return result.stdout.strip() == 'true'
+        except Exception:
+            return False
+
     # ── Public API ────────────────────────────────────────────────
 
     def scale_up(self) -> bool:
@@ -165,6 +282,7 @@ class GPUManager:
             logger.info(
                 f"GPU: Scale-up complete. Instance {instance_id}, "
                 f"${self.cost_per_hour:.3f}/hr")
+            self._save_state()
             return True
 
         except Exception as e:
@@ -173,6 +291,7 @@ class GPUManager:
             self._cleanup_on_failure()
             with self._lock:
                 self.state = 'idle'
+            self._clear_state()
             return False
 
     def scale_down(self) -> bool:
@@ -210,6 +329,7 @@ class GPUManager:
                 self.cost_per_hour = 0.0
                 self.session_start = None
                 self.last_job_activity = None
+            self._clear_state()
 
             return True
 
@@ -572,3 +692,4 @@ class GPUManager:
                 pass
             self.instance_id = None
         self._switch_to_cpu()
+        self._clear_state()
