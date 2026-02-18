@@ -124,7 +124,7 @@ class GPUManager:
 
             # 1b. Ensure tunnel Docker image is available
             if not self._ensure_tunnel_image():
-                raise RuntimeError("Cannot pull tunnel image (alpine/ssh)")
+                raise RuntimeError("Cannot pull tunnel image (kroniak/ssh-client)")
 
             # 2. Search for cheapest instance matching template
             instance_id = self._create_instance()
@@ -330,19 +330,19 @@ class GPUManager:
             return False
 
     def _ensure_tunnel_image(self) -> bool:
-        """Pre-pull alpine/ssh Docker image for the SSH tunnel container."""
+        """Pre-pull kroniak/ssh-client Docker image for the SSH tunnel container."""
         try:
             result = subprocess.run(
-                ['docker', 'image', 'inspect', 'alpine/ssh'],
+                ['docker', 'image', 'inspect', 'kroniak/ssh-client'],
                 capture_output=True, timeout=10)
             if result.returncode == 0:
                 return True
-            logger.info("GPU: Pulling alpine/ssh image for tunnel")
+            logger.info("GPU: Pulling kroniak/ssh-client image for tunnel")
             result = subprocess.run(
-                ['docker', 'pull', 'alpine/ssh'],
+                ['docker', 'pull', 'kroniak/ssh-client'],
                 capture_output=True, text=True, timeout=120)
             if result.returncode != 0:
-                logger.error(f"GPU: Failed to pull alpine/ssh: {result.stderr[:200]}")
+                logger.error(f"GPU: Failed to pull kroniak/ssh-client: {result.stderr[:200]}")
                 return False
             return True
         except Exception as e:
@@ -486,7 +486,7 @@ class GPUManager:
             '--network', 'host',
             '--restart', 'unless-stopped',
             '-v', f'{HOST_VASTAI_SSH_KEY}:/key:ro',
-            'alpine/ssh',
+            'kroniak/ssh-client',
             'ssh', '-i', '/key',
             '-p', str(self.instance_port),
             '-o', 'StrictHostKeyChecking=no',
