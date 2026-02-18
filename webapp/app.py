@@ -1817,6 +1817,25 @@ def recover_partial_conversion(job_id: str):
 
     After retries, finalizes the job (rename, sync to ABS, notify).
     """
+    # Guard against duplicate recovery threads (e.g. orphan cleanup + watchdog racing)
+    # Use a separate lock-like dict to track which thread "owns" recovery.
+    # _recovery_in_progress is set by callers (orphan cleanup, handle_job_failure)
+    # before spawning threads, so we use a thread-local marker instead.
+    _recovery_thread_key = f"_thread_{job_id}"
+    if _recovery_in_progress.get(_recovery_thread_key):
+        app.logger.info(f"Recovery {job_id}: Another recovery thread is already running, skipping")
+        return
+    _recovery_in_progress[_recovery_thread_key] = True
+
+    try:
+        _recover_partial_inner(job_id, _recovery_thread_key)
+    finally:
+        _recovery_in_progress.pop(_recovery_thread_key, None)
+        _recovery_in_progress.pop(job_id, None)
+
+
+def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
+    """Inner implementation of recover_partial_conversion (wrapped in try/finally)."""
     job = get_job(job_id)
     if not job:
         return
