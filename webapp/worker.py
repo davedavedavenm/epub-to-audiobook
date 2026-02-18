@@ -16,8 +16,11 @@ from app import (app, is_queue_paused, maybe_start_next_queued_job,
 _handler = logging.StreamHandler(sys.stdout)
 _handler.setFormatter(logging.Formatter(
     '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
+# Remove existing handlers to prevent duplicate log lines
+app.logger.handlers.clear()
 app.logger.addHandler(_handler)
 app.logger.setLevel(logging.INFO)
+app.logger.propagate = False
 # Also capture gpu_manager logs
 logging.getLogger('gpu_manager').addHandler(_handler)
 logging.getLogger('gpu_manager').setLevel(logging.INFO)
