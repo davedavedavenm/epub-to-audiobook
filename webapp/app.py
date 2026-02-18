@@ -826,42 +826,57 @@ def remove_stale_container(container_name):
     return False
 
 
-def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | None) -> tuple[bool, str]:
+def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | None,
+                         start_chapter: int | None = None,
+                         end_chapter: int | None = None) -> tuple[bool, str]:
     """Verify all chapters exist and have valid audio.
 
     Returns (is_complete, message). Used before marking any job as completed
     to ensure no half-finished audiobooks ever get synced.
+
+    When *start_chapter* / *end_chapter* are set (chapter-range jobs), only
+    the requested range is expected — not the full book.
     """
     output_files = sorted(output_path.glob('*.mp3')) if output_path.exists() else []
 
     if not output_files:
         return False, "No output MP3 files found"
 
+    # Determine expected chapter count (range-aware)
+    if start_chapter and end_chapter:
+        expected = end_chapter - start_chapter + 1
+    elif total_chapters:
+        expected = total_chapters
+    else:
+        expected = None
+
     # Check 1: Chapter count matches expected
-    if total_chapters:
-        min_required = int(total_chapters * CHAPTER_COMPLETION_THRESHOLD)
+    if expected:
+        min_required = int(expected * CHAPTER_COMPLETION_THRESHOLD)
         if len(output_files) < min_required:
             return False, (
-                f"Only {len(output_files)}/{total_chapters} chapters "
+                f"Only {len(output_files)}/{expected} chapters "
                 f"(need {min_required}, threshold={CHAPTER_COMPLETION_THRESHOLD:.0%})")
 
     # Check 2: Every MP3 has reasonable file size (not corrupt/empty)
     min_bytes = MIN_CHAPTER_SIZE_KB * 1024
     bad_files = [f.name for f in output_files if f.stat().st_size < min_bytes]
     # Allow up to 2 small files (frontmatter/TOC), but flag if many are tiny
-    if len(bad_files) > 2 and total_chapters and len(bad_files) > total_chapters * 0.2:
+    if len(bad_files) > 2 and expected and len(bad_files) > expected * 0.2:
         return False, (
             f"{len(bad_files)} files under {MIN_CHAPTER_SIZE_KB}KB: "
             f"{bad_files[:5]}{'...' if len(bad_files) > 5 else ''}")
 
     # Check 3: Total audio size sanity (should be at least 1MB for a real book)
+    # For single-chapter samples, lower the threshold
+    min_total_mb = 0.1 if (start_chapter and end_chapter and end_chapter - start_chapter < 3) else 1.0
     total_size_mb = sum(f.stat().st_size for f in output_files) / (1024 * 1024)
-    if total_size_mb < 1.0:
+    if total_size_mb < min_total_mb:
         return False, f"Total audio only {total_size_mb:.1f}MB — likely corrupted"
 
     return True, (
         f"Verified: {len(output_files)} files, {total_size_mb:.0f}MB total"
-        + (f" ({len(output_files)}/{total_chapters} chapters)" if total_chapters else ""))
+        + (f" ({len(output_files)}/{expected} chapters)" if expected else ""))
 
 
 def finalize_completed_job_if_outputs_exist(job_id):
@@ -882,7 +897,10 @@ def finalize_completed_job_if_outputs_exist(job_id):
     total_chapters = job.get('total_chapters')
 
     # Use verify_book_complete for consistent validation
-    is_ok, msg = verify_book_complete(job_id, output_path, total_chapters)
+    is_ok, msg = verify_book_complete(
+        job_id, output_path, total_chapters,
+        start_chapter=job.get('start_chapter'),
+        end_chapter=job.get('end_chapter'))
     if not is_ok:
         app.logger.info(f"Cannot finalize {job_id}: {msg}")
         return False
@@ -1624,18 +1642,26 @@ def get_expected_chapter_count(output: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def find_missing_chapters(output_dir: Path, total_chapters: int) -> list[int]:
+def find_missing_chapters(output_dir: Path, total_chapters: int,
+                          start_chapter: int | None = None,
+                          end_chapter: int | None = None) -> list[int]:
     """Return 1-based chapter numbers that have no matching output file.
 
     The converter names files like ``0001_Title.mp3``, ``0002_Title.mp3``, etc.
     A chapter is 'missing' if no file with that prefix exists.
+
+    When *start_chapter* / *end_chapter* are given (chapter-range jobs like
+    quality samples), only chapters in that range are expected.
     """
     existing = set()
     for f in output_dir.glob('*.mp3'):
         m = re.match(r'^(\d{4})_', f.name)
         if m:
             existing.add(int(m.group(1)))
-    return [ch for ch in range(1, total_chapters + 1) if ch not in existing]
+
+    first = start_chapter or 1
+    last = end_chapter or total_chapters
+    return [ch for ch in range(first, last + 1) if ch not in existing]
 
 
 def retry_missing_chapters(
@@ -1791,6 +1817,10 @@ def recover_partial_conversion(job_id: str):
     output_path = OUTPUT_DIR / output_dirname
     host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
 
+    # Chapter range (quality-sample jobs only convert a subset)
+    start_chapter = job.get('start_chapter')
+    end_chapter = job.get('end_chapter')
+
     # Count existing chapters
     existing_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
     if not existing_files:
@@ -1835,9 +1865,13 @@ def recover_partial_conversion(job_id: str):
         total_chapters = max_ch
         app.logger.info(f"Recovery {job_id}: Using max chapter number {max_ch} as total")
 
-    missing = find_missing_chapters(output_path, total_chapters)
+    missing = find_missing_chapters(output_path, total_chapters,
+                                    start_chapter=start_chapter,
+                                    end_chapter=end_chapter)
+    expected_desc = (f"ch {start_chapter}-{end_chapter}" if start_chapter and end_chapter
+                     else f"{total_chapters} chapters")
     if not missing:
-        app.logger.info(f"Recovery {job_id}: All {total_chapters} chapters present, finalizing")
+        app.logger.info(f"Recovery {job_id}: All {expected_desc} present, finalizing")
     else:
         app.logger.info(
             f"Recovery {job_id}: {len(existing_files)} files exist, "
@@ -1887,7 +1921,9 @@ def recover_partial_conversion(job_id: str):
     output_files = list(output_path.glob('*.mp3'))
 
     # Final verification: NO incomplete audiobooks ever get marked complete
-    is_ok, verify_msg = verify_book_complete(job_id, output_path, total_chapters)
+    is_ok, verify_msg = verify_book_complete(
+        job_id, output_path, total_chapters,
+        start_chapter=start_chapter, end_chapter=end_chapter)
     if not is_ok:
         error_msg = f"Verification failed after recovery: {verify_msg}"
         app.logger.error(f"Recovery {job_id}: {error_msg}")
@@ -2340,6 +2376,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         timeout_seconds = calculate_timeout(char_count)
         job = get_job(job_id)
         tts_engine = job.get('tts_engine', 'kokoro') if job else 'kokoro'
+        start_chapter = job.get('start_chapter') if job else None
+        end_chapter = job.get('end_chapter') if job else None
         file_type = 'pdf' if is_pdf else 'epub'
         initial_eta = estimate_eta_minutes(voice, tts_engine, file_type, char_count)
         update_job(job_id, char_count=char_count, timeout_minutes=timeout_seconds // 60, eta_minutes=initial_eta)
@@ -2454,7 +2492,9 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                                stderr.decode(errors='replace'))
             total_chapters = get_expected_chapter_count(combined_output)
             if total_chapters:
-                missing = find_missing_chapters(output_path, total_chapters)
+                missing = find_missing_chapters(
+                    output_path, total_chapters,
+                    start_chapter=start_chapter, end_chapter=end_chapter)
                 if missing:
                     app.logger.warning(
                         f"Job {job_id}: {len(missing)} chapters missing after initial run: {missing}")
@@ -2499,7 +2539,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
             # Final verification: NO incomplete audiobooks ever get marked complete
             total_ch = job.get('total_chapters')
-            is_ok, verify_msg = verify_book_complete(job_id, output_path, total_ch)
+            is_ok, verify_msg = verify_book_complete(
+                job_id, output_path, total_ch,
+                start_chapter=job.get('start_chapter'),
+                end_chapter=job.get('end_chapter'))
             if not is_ok:
                 error_msg = f"Verification failed: {verify_msg}"
                 app.logger.error(f"Job {job_id}: {error_msg}")
