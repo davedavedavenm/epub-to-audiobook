@@ -828,7 +828,8 @@ def remove_stale_container(container_name):
 
 def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | None,
                          start_chapter: int | None = None,
-                         end_chapter: int | None = None) -> tuple[bool, str]:
+                         end_chapter: int | None = None,
+                         cleaned_up_count: int = 0) -> tuple[bool, str]:
     """Verify all chapters exist and have valid audio.
 
     Returns (is_complete, message). Used before marking any job as completed
@@ -836,6 +837,9 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
 
     When *start_chapter* / *end_chapter* are set (chapter-range jobs), only
     the requested range is expected — not the full book.
+
+    *cleaned_up_count* reduces the expected chapter count to account for
+    intentionally removed noise/tiny files (e.g. photo captions, part dividers).
     """
     output_files = sorted(output_path.glob('*.mp3')) if output_path.exists() else []
 
@@ -849,6 +853,10 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
         expected = total_chapters
     else:
         expected = None
+
+    # Subtract cleaned-up files from expected (they were intentionally removed)
+    if expected and cleaned_up_count > 0:
+        expected = max(1, expected - cleaned_up_count)
 
     # Check 1: Chapter count matches expected
     if expected:
@@ -1923,7 +1931,8 @@ def recover_partial_conversion(job_id: str):
     # Final verification: NO incomplete audiobooks ever get marked complete
     is_ok, verify_msg = verify_book_complete(
         job_id, output_path, total_chapters,
-        start_chapter=start_chapter, end_chapter=end_chapter)
+        start_chapter=start_chapter, end_chapter=end_chapter,
+        cleaned_up_count=removed)
     if not is_ok:
         error_msg = f"Verification failed after recovery: {verify_msg}"
         app.logger.error(f"Recovery {job_id}: {error_msg}")
@@ -2542,7 +2551,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             is_ok, verify_msg = verify_book_complete(
                 job_id, output_path, total_ch,
                 start_chapter=job.get('start_chapter'),
-                end_chapter=job.get('end_chapter'))
+                end_chapter=job.get('end_chapter'),
+                cleaned_up_count=removed)
             if not is_ok:
                 error_msg = f"Verification failed: {verify_msg}"
                 app.logger.error(f"Job {job_id}: {error_msg}")
