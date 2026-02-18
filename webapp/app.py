@@ -1140,10 +1140,10 @@ def maybe_start_next_queued_job():
 
 # ============ Self-Healing Helpers ============
 
-# Watchdog stall tracking: {job_id: (current_chapter, timestamp)}
+# Watchdog stall tracking: {job_id: (current_chapter, progress_percent, timestamp)}
 _watchdog_last_progress = {}
 
-STALL_TIMEOUT_MINUTES = 15   # Kill job if no chapter progress for this long
+STALL_TIMEOUT_MINUTES = 45   # Kill job if no progress (chapter OR chunk) for this long
 ETA_KILL_MULTIPLIER = 3      # Kill job if elapsed > N × ETA
 
 
@@ -1370,24 +1370,31 @@ def watchdog_loop():
                                           'Container died unexpectedly (detected by watchdog)')
                         continue
 
-                    # --- Check 2: Progress stall (container running but no chapter advance) ---
+                    # --- Check 2: Progress stall (no chapter OR chunk advance) ---
+                    # Track both current_chapter and progress_percent so that
+                    # large chapters (e.g. 130K+ chars) making chunk progress
+                    # aren't falsely killed as "stalled".
                     current_ch = job['current_chapter']
+                    current_pct = job.get('progress_percent') or 0
                     prev = _watchdog_last_progress.get(job_id)
 
                     if prev is not None:
-                        prev_ch, prev_time = prev
-                        if current_ch is not None and current_ch != prev_ch:
-                            # Progress! Update tracking
-                            _watchdog_last_progress[job_id] = (current_ch, now)
-                        elif current_ch is not None and current_ch == prev_ch:
+                        prev_ch, prev_pct, prev_time = prev
+                        chapter_advanced = (current_ch is not None and current_ch != prev_ch)
+                        chunk_advanced = (current_pct > prev_pct)
+
+                        if chapter_advanced or chunk_advanced:
+                            # Any progress (chapter or chunk) → reset stall timer
+                            _watchdog_last_progress[job_id] = (current_ch, current_pct, now)
+                        elif current_ch is not None:
                             stall_minutes = (now - prev_time) / 60
                             if stall_minutes >= STALL_TIMEOUT_MINUTES:
                                 app.logger.warning(
                                     f"Watchdog: {book_label} STALLED at ch {current_ch} "
-                                    f"for {stall_minutes:.0f} min — killing container")
+                                    f"({current_pct}%) for {stall_minutes:.0f} min — killing container")
                                 append_job_log(
                                     job_id,
-                                    f"Watchdog: stalled at ch {current_ch} for "
+                                    f"Watchdog: stalled at ch {current_ch} ({current_pct}%) for "
                                     f"{stall_minutes:.0f} min — killing and retrying")
                                 # Kill the stuck container
                                 subprocess.run(['docker', 'stop', container_name],
@@ -1396,14 +1403,14 @@ def watchdog_loop():
                                                capture_output=True, timeout=10)
                                 handle_job_failure(
                                     job_id, 'container_died',
-                                    f'Stalled at chapter {current_ch} for '
+                                    f'Stalled at chapter {current_ch} ({current_pct}%) for '
                                     f'{stall_minutes:.0f} min (watchdog kill)')
                                 continue
                         # If current_ch is None, don't update — keep previous tracking
                     else:
                         # First time seeing this job — start tracking
                         if current_ch is not None:
-                            _watchdog_last_progress[job_id] = (current_ch, now)
+                            _watchdog_last_progress[job_id] = (current_ch, current_pct, now)
 
                     # --- Check 3: Exceeded ETA_KILL_MULTIPLIER × ETA ---
                     eta_minutes = job['eta_minutes']
