@@ -4,11 +4,23 @@ Runs the queue loop + watchdog separate from the web UI.
 Optionally manages GPU auto-scaling via gpu_manager.
 """
 
+import logging
 import os
+import sys
 import time
 
 from app import (app, is_queue_paused, maybe_start_next_queued_job,
                  queued_job_count, running_job_count, set_gpu_manager)
+
+# Ensure Flask and all loggers output to stdout (visible in `docker logs`)
+_handler = logging.StreamHandler(sys.stdout)
+_handler.setFormatter(logging.Formatter(
+    '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
+app.logger.addHandler(_handler)
+app.logger.setLevel(logging.INFO)
+# Also capture gpu_manager logs
+logging.getLogger('gpu_manager').addHandler(_handler)
+logging.getLogger('gpu_manager').setLevel(logging.INFO)
 
 # GPU auto-scaling (import conditionally so CPU-only deployments work fine)
 try:
