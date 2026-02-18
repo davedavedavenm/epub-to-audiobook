@@ -126,9 +126,10 @@ class GPUManager:
         """On startup, check for a running Vast.ai instance and re-adopt it.
 
         This prevents creating duplicate instances when the worker restarts
-        while a GPU is already active.
+        while a GPU is already active. Checks BOTH the state file AND
+        Vast.ai API directly (belt and suspenders).
         """
-        # 1. Check persisted state file
+        # 1. Check persisted state file for a known instance ID
         saved = None
         if GPU_STATUS_FILE.exists():
             try:
@@ -136,65 +137,86 @@ class GPUManager:
             except Exception:
                 pass
 
-        if not saved or saved.get('state') != 'active' or not saved.get('instance_id'):
-            return
-
-        saved_id = str(saved['instance_id'])
-        logger.info(f"GPU: Found saved state for instance {saved_id}, checking if still alive...")
-
-        # 2. Verify instance is actually running on Vast.ai
+        # 2. Always check Vast.ai for running instances, even without state file
         try:
             self._ensure_cli()
+        except Exception:
+            return  # Can't check without CLI
+
+        saved_id = str(saved['instance_id']) if saved and saved.get('instance_id') else None
+        if saved_id:
+            logger.info(f"GPU: Found saved state for instance {saved_id}, checking if still alive...")
+        else:
+            logger.info("GPU: No saved state, checking Vast.ai for orphan instances...")
+
+        # 3. Look for a running/loading instance to adopt
+        try:
             instances = _vast_json('show', 'instances', '--raw')
             if not instances:
-                logger.info("GPU: No running instances found, clearing stale state")
+                logger.info("GPU: No running instances on Vast.ai")
                 self._clear_state()
                 return
 
+            # Find best candidate: prefer saved_id, else any matching template
+            target = None
             for inst in instances:
-                if str(inst.get('id')) == saved_id:
-                    status = inst.get('actual_status', '')
-                    if status == 'running':
-                        # Re-adopt this instance
-                        self.instance_id = int(saved_id)
-                        self.instance_addr = saved.get('instance_addr') or inst.get('ssh_host')
-                        self.instance_port = saved.get('instance_port') or inst.get('ssh_port')
-                        self.cost_per_hour = inst.get('dph_total', 0)
-                        if saved.get('session_start'):
-                            self.session_start = datetime.fromisoformat(saved['session_start'])
-                        else:
-                            self.session_start = datetime.now()
-                        self.last_job_activity = datetime.now()
+                status = inst.get('actual_status', '')
+                tmpl = inst.get('template_hash_id', '')
+                inst_id = str(inst.get('id', ''))
+                if status not in ('running', 'loading'):
+                    continue
+                if inst_id == saved_id:
+                    target = inst  # Exact match — highest priority
+                    break
+                if tmpl == VASTAI_TEMPLATE_HASH and target is None:
+                    target = inst  # Template match — fallback
 
-                        # Verify tunnel is running, re-create if needed
-                        tunnel_ok = self._is_tunnel_alive()
-                        if not tunnel_ok:
-                            logger.info("GPU: Tunnel dead, re-creating...")
-                            if self.instance_port:
-                                self._create_tunnel()
-                                tunnel_ok = self._is_tunnel_alive()
+            if not target:
+                logger.info("GPU: No matching instances to adopt")
+                self._clear_state()
+                return
 
-                        if tunnel_ok:
-                            self._switch_to_gpu()
-                            self.state = 'active'
-                            logger.info(
-                                f"GPU: Re-adopted instance {saved_id} "
-                                f"(${self.cost_per_hour:.3f}/hr)")
-                            return
-                        else:
-                            logger.warning("GPU: Tunnel failed, not re-adopting")
-                            self._clear_state()
-                            return
+            adopt_id = target['id']
+            status = target.get('actual_status', '')
 
-                    else:
-                        logger.info(
-                            f"GPU: Saved instance {saved_id} is {status}, not running")
-                        self._clear_state()
-                        return
+            if status == 'loading':
+                logger.info(f"GPU: Instance {adopt_id} still loading, will adopt via scale_up")
+                self._clear_state()
+                return  # Let scale_up() find and adopt it
 
-            # Instance not found in list
-            logger.info(f"GPU: Saved instance {saved_id} no longer exists")
-            self._clear_state()
+            # Adopt the running instance
+            self.instance_id = int(adopt_id)
+            self.instance_addr = target.get('ssh_host')
+            self.instance_port = int(target['ssh_port']) if target.get('ssh_port') else None
+            self.cost_per_hour = target.get('dph_total', 0)
+            self.session_start = datetime.now()
+            if saved and saved.get('session_start'):
+                try:
+                    self.session_start = datetime.fromisoformat(saved['session_start'])
+                except Exception:
+                    pass
+            self.last_job_activity = datetime.now()
+
+            # Verify tunnel is running, re-create if needed
+            tunnel_ok = self._is_tunnel_alive()
+            if not tunnel_ok and self.instance_port:
+                logger.info("GPU: Tunnel dead, re-creating...")
+                self._create_tunnel()
+                tunnel_ok = self._is_tunnel_alive()
+
+            if tunnel_ok:
+                self._switch_to_gpu()
+                self.state = 'active'
+                self._save_state()
+                logger.info(
+                    f"GPU: Re-adopted instance {adopt_id} "
+                    f"(${self.cost_per_hour:.3f}/hr)")
+            else:
+                logger.warning(
+                    f"GPU: Cannot establish tunnel to instance {adopt_id}, "
+                    f"leaving for scale_up to handle")
+                self.instance_id = None
+                self._clear_state()
 
         except Exception as e:
             logger.warning(f"GPU: Re-adopt check failed: {e}")
@@ -209,6 +231,29 @@ class GPUManager:
             return result.stdout.strip() == 'true'
         except Exception:
             return False
+
+    def _find_existing_instance(self) -> int | None:
+        """Check Vast.ai for any running instance matching our template.
+
+        Returns instance ID if found, None otherwise.
+        This is the CRITICAL guard against creating duplicate instances.
+        """
+        try:
+            instances = _vast_json('show', 'instances', '--raw')
+            if not instances:
+                return None
+            for inst in instances:
+                tmpl = inst.get('template_hash_id', '')
+                status = inst.get('actual_status', '')
+                if tmpl == VASTAI_TEMPLATE_HASH and status in ('running', 'loading'):
+                    inst_id = inst.get('id')
+                    logger.info(
+                        f"GPU: Existing instance {inst_id} "
+                        f"(status={status}, ${inst.get('dph_total', 0):.3f}/hr)")
+                    return int(inst_id)
+        except Exception as e:
+            logger.warning(f"GPU: Failed to check for existing instances: {e}")
+        return None
 
     # ── Public API ────────────────────────────────────────────────
 
@@ -243,12 +288,21 @@ class GPUManager:
             if not self._ensure_tunnel_image():
                 raise RuntimeError("Cannot pull tunnel image (kroniak/ssh-client)")
 
-            # 2. Search for cheapest instance matching template
-            instance_id = self._create_instance()
-            if not instance_id:
-                raise RuntimeError("No suitable GPU instance found")
-            self.instance_id = instance_id
-            logger.info(f"GPU: Created instance {instance_id}")
+            # 1c. CRITICAL: Check for already-running instances BEFORE creating
+            #     This prevents duplicates when the worker restarts mid-session.
+            existing_id = self._find_existing_instance()
+            if existing_id:
+                logger.info(
+                    f"GPU: Found existing instance {existing_id}, "
+                    f"adopting instead of creating new one")
+                self.instance_id = existing_id
+            else:
+                # 2. Search for cheapest instance matching template
+                instance_id = self._create_instance()
+                if not instance_id:
+                    raise RuntimeError("No suitable GPU instance found")
+                self.instance_id = instance_id
+                logger.info(f"GPU: Created instance {instance_id}")
 
             # 3. Wait for instance to be running
             if not self._wait_instance_running(timeout=PROVISION_TIMEOUT_S):
