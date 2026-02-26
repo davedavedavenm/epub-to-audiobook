@@ -1677,6 +1677,10 @@
                                     <span class="engine-name">Piper</span>
                                     <span class="engine-desc">Fast, lightweight</span>
                                 </button>
+                                <button type="button" class="engine-tab" data-engine="edge">
+                                    <span class="engine-name">Edge</span>
+                                    <span class="engine-desc">Free, Azure-quality</span>
+                                </button>
                             </div>
 
                             <!-- Voice Search -->
@@ -1757,8 +1761,85 @@
                                 </div>
                             </div>
 
+                            <!-- Edge Voices -->
+                            <div class="engine-voices hidden" id="edge-voices">
+                                <div class="voice-section">
+                                    <div class="voice-section-label">American</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'edge' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="edge" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">British</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'edge' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="edge" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">Other</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent not in ['American', 'British'] and voice.engine == 'edge' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="edge" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }} ({{ voice.accent }})</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
                             <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
                             <input type="hidden" id="selected-engine" name="engine" value="kokoro">
+                        </div>
+
+                        <!-- Advanced Options Card -->
+                        <div class="card" style="margin-top: 20px;">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Advanced Options</h2>
+                                    <p class="card-subtitle">Refine parsing and pronunciation</p>
+                                </div>
+                            </div>
+
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <label class="option-label">Paragraph Detection</label>
+                                    <select name="newline_mode" class="option-select">
+                                        <option value="double" selected>Double Newline (Recommended)</option>
+                                        <option value="single">Single Newline (Dense Text)</option>
+                                        <option value="none">None (Continuous)</option>
+                                    </select>
+                                </div>
+
+                                <div class="option-group">
+                                    <label class="option-label">Chapter Title Mode</label>
+                                    <select name="title_mode" class="option-select">
+                                        <option value="auto" selected>Auto (Recommended)</option>
+                                        <option value="tag_text">Tag Text Only</option>
+                                        <option value="first_few">First Few Lines</option>
+                                    </select>
+                                </div>
+
+                                <div class="option-group">
+                                    <label class="option-label">Pronunciation Fixes (Regex)</label>
+                                    <textarea name="custom_regex" class="option-select" style="height: 80px; font-family: monospace; resize: vertical;" placeholder="search==replace
+Barbadoes==Barbayduss
+[0-9]+=="></textarea>
+                                    <p class="card-subtitle" style="font-size: 0.75em;">One rule per line: <code>search==replace</code></p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2205,6 +2286,9 @@
             formData.append('notify_telegram', document.getElementById('notify-telegram').checked ? '1' : '');
             formData.append('notify_whatsapp', document.getElementById('notify-whatsapp').checked ? '1' : '');
             formData.append('whatsapp_number', document.getElementById('whatsapp-number').value);
+            formData.append('newline_mode', document.querySelector('[name="newline_mode"]').value);
+            formData.append('title_mode', document.querySelector('[name="title_mode"]').value);
+            formData.append('custom_regex', document.querySelector('[name="custom_regex"]').value);
 
             try {
                 const response = await fetch('/api/convert', {
@@ -2228,6 +2312,9 @@
                     document.getElementById('notify-telegram').checked = false;
                     document.getElementById('notify-whatsapp').checked = false;
                     document.getElementById('whatsapp-container').classList.remove('visible');
+                    document.querySelector('[name="newline_mode"]').value = 'double';
+                    document.querySelector('[name="title_mode"]').value = 'auto';
+                    document.querySelector('[name="custom_regex"]').value = '';
 
                     // Switch to queue tab
                     switchTab('queue');
