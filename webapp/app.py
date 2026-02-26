@@ -417,6 +417,16 @@ VOICES = {
     'libritts_1': {'name': 'LibriTTS 1', 'accent': 'American', 'gender': 'Neutral', 'engine': 'piper'},
     'libritts_2': {'name': 'LibriTTS 2', 'accent': 'American', 'gender': 'Neutral', 'engine': 'piper'},
     'libritts_3': {'name': 'LibriTTS 3', 'accent': 'American', 'gender': 'Neutral', 'engine': 'piper'},
+
+    # ============ EDGETTS VOICES (FREE, HIGH QUALITY) ============
+    'en-US-AvaNeural': {'name': 'Ava', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
+    'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-US-EmmaNeural': {'name': 'Emma', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
+    'en-US-BrianNeural': {'name': 'Brian', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-GB-SoniaNeural': {'name': 'Sonia', 'accent': 'British', 'gender': 'Female', 'engine': 'edge'},
+    'en-GB-RyanNeural': {'name': 'Ryan', 'accent': 'British', 'gender': 'Male', 'engine': 'edge'},
+    'en-AU-NatashaNeural': {'name': 'Natasha', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
+    'en-AU-WilliamNeural': {'name': 'William', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
 }
 
 PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."
@@ -464,9 +474,31 @@ def init_db():
                 sync_file_count INTEGER,
                 sync_status TEXT,
                 sync_error TEXT,
-                job_log_path TEXT
+                job_log_path TEXT,
+                newline_mode TEXT DEFAULT 'double',
+                title_mode TEXT DEFAULT 'auto',
+                custom_regex TEXT
             )
         ''')
+
+        # Add newline_mode column (migration)
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN newline_mode TEXT DEFAULT 'double'")
+        except sqlite3.OperationalError:
+            pass
+
+        # Add title_mode column (migration)
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN title_mode TEXT DEFAULT 'auto'")
+        except sqlite3.OperationalError:
+            pass
+
+        # Add custom_regex column (migration)
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN custom_regex TEXT")
+        except sqlite3.OperationalError:
+            pass
+
         # Add tts_engine column if it doesn't exist (migration)
         try:
             conn.execute('ALTER TABLE jobs ADD COLUMN tts_engine TEXT DEFAULT "kokoro"')
@@ -602,8 +634,8 @@ def save_job(job: dict):
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
-             tts_speed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tts_speed, newline_mode, title_mode, custom_regex)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -642,7 +674,10 @@ def save_job(job: dict):
             job.get('sync_status'),
             job.get('sync_error'),
             job.get('job_log_path'),
-            job.get('tts_speed', DEFAULT_TTS_SPEED)
+            job.get('tts_speed', DEFAULT_TTS_SPEED),
+            job.get('newline_mode', 'double'),
+            job.get('title_mode', 'auto'),
+            job.get('custom_regex')
         ))
         conn.commit()
 
@@ -1573,6 +1608,35 @@ def get_voice_preview(voice_id: str) -> Path:
                 },
                 timeout=60
             )
+            response.raise_for_status()
+            with open(preview_path, 'wb') as f:
+                f.write(response.content)
+        elif engine == 'edge':
+            # Use EdgeTTS via Docker
+            # Map PREVIEWS_DIR to /output in the container
+            cmd = [
+                'docker', 'run', '--rm',
+                '-v', f"{HOST_DATA_DIR}/previews:/output",
+                'ghcr.io/p0n1/epub_to_audiobook:latest',
+                '--voice_name', voice_id,
+                '--tts', 'edge',
+                '--preview', # This will output preview to console, but we want a file
+                '--text', PREVIEW_TEXT,
+                '--output_folder', '/output',
+            ]
+            # Wait, the p0n1 tool might not have a simple "generate preview file" command for Edge
+            # Actually, we can use edge-tts directly if the container has it
+            cmd = [
+                'docker', 'run', '--rm',
+                '-v', f"{HOST_DATA_DIR}/previews:/output",
+                '--entrypoint', 'edge-tts',
+                'ghcr.io/p0n1/epub_to_audiobook:latest',
+                '--voice', voice_id,
+                '--text', PREVIEW_TEXT,
+                '--write-media', f"/output/{voice_id}.mp3"
+            ]
+            app.logger.info(f"Generating EdgeTTS preview: {' '.join(cmd)}")
+            subprocess.run(cmd, capture_output=True, check=True, timeout=30)
         else:
             # Use Kokoro TTS
             response = requests.post(
@@ -1585,10 +1649,9 @@ def get_voice_preview(voice_id: str) -> Path:
                 },
                 timeout=60
             )
-        response.raise_for_status()
-
-        with open(preview_path, 'wb') as f:
-            f.write(response.content)
+            response.raise_for_status()
+            with open(preview_path, 'wb') as f:
+                f.write(response.content)
 
         return preview_path
     except Exception as e:
@@ -2446,6 +2509,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             tts_model = 'tts-1'  # openedai-speech model name
             # For Piper, voice names are like 'en_GB-alan-medium'
             # openedai-speech expects just the voice name
+        elif tts_engine == 'edge':
+            # EdgeTTS (direct)
+            tts_base_url = 'not-needed'
+            tts_model = 'not-needed'
         else:
             # Kokoro (default)
             tts_base_url = KOKORO_URL
@@ -2460,6 +2527,22 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         if job and job.get('tts_speed'):
             tts_speed = float(job['tts_speed'])
 
+        # Handle custom regex if provided
+        search_conf_path = None
+        host_search_conf_path = None
+        if job.get('custom_regex'):
+            try:
+                # Create temporary search.conf for this job
+                conf_filename = f"search_{job_id}.conf"
+                search_conf_path = UPLOAD_DIR / conf_filename
+                with open(search_conf_path, 'w', encoding='utf-8') as f:
+                    f.write(job['custom_regex'])
+                host_search_conf_path = f"{HOST_UPLOAD_DIR}/{conf_filename}"
+                append_job_log(job_id, "Custom pronunciation regex rules applied")
+            except Exception as e:
+                app.logger.error(f"Failed to create search.conf: {e}")
+                append_job_log(job_id, f"Warning: Failed to apply custom regex: {e}")
+
         # Run conversion
         cmd = [
             'docker', 'run', '--rm',
@@ -2469,15 +2552,30 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '-e', f'OPENAI_BASE_URL={tts_base_url}',
             '-v', f'{host_input_path}:/input/book.epub:ro',
             '-v', f'{host_output_dir}:/output',
+        ]
+
+        # Mount search.conf if exists
+        if host_search_conf_path:
+            cmd.extend(['-v', f'{host_search_conf_path}:/input/search.conf:ro'])
+
+        cmd.extend([
             'ghcr.io/p0n1/epub_to_audiobook:latest',
             '/input/book.epub', '/output',
-            '--tts', 'openai',
-            '--voice_name', effective_voice,
+            '--tts', 'edge' if tts_engine == 'edge' else 'openai',
+            '--voice_name', voice if tts_engine == 'edge' else effective_voice,
             '--model_name', tts_model,
             '--no_prompt',
             '--remove_endnotes',
             '--speed', str(tts_speed),
-        ]
+        ])
+
+        # Pass parsing flags
+        if job.get('newline_mode'):
+            cmd.extend(['--newline_mode', job['newline_mode']])
+        if job.get('title_mode'):
+            cmd.extend(['--title_mode', job['title_mode']])
+        if host_search_conf_path:
+            cmd.extend(['--search_and_replace_file', '/input/search.conf'])
 
         # Add chapter selection if specified
         if job and job.get('start_chapter'):
@@ -2882,6 +2980,11 @@ def start_conversion():
     tts_speed_raw = request.form.get('tts_speed', '').strip()
     tts_speed = float(tts_speed_raw) if tts_speed_raw else DEFAULT_TTS_SPEED
 
+    # New parsing and pronunciation options
+    newline_mode = request.form.get('newline_mode', 'double')
+    title_mode = request.form.get('title_mode', 'auto')
+    custom_regex = request.form.get('custom_regex', '').strip() or None
+
     # Parse chapter numbers
     start_chapter = int(start_chapter) if start_chapter else None
     end_chapter = int(end_chapter) if end_chapter else None
@@ -2949,7 +3052,10 @@ def start_conversion():
         'tts_speed': tts_speed,
         'queue_rank': next_queue_rank(),
         'sync_status': 'pending',
-        'job_log_path': str(get_job_log_path(job_id))
+        'job_log_path': str(get_job_log_path(job_id)),
+        'newline_mode': newline_mode,
+        'title_mode': title_mode,
+        'custom_regex': custom_regex
     }
     save_job(job)
     append_job_log(job_id, f"Job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed})")
@@ -3473,6 +3579,11 @@ def convert_from_library():
     safe_name = "".join(c for c in book_name if c.isalnum() or c in ' -_').strip()
     file_ext = file_path.suffix.lower()
 
+    # New parsing and pronunciation options (defaults for library conversion)
+    newline_mode = data.get('newline_mode', 'double')
+    title_mode = data.get('title_mode', 'auto')
+    custom_regex = data.get('custom_regex', '').strip() or None
+
     is_pdf = file_ext == '.pdf'
     needs_conversion = file_ext not in {'.epub', '.pdf'}
 
@@ -3506,11 +3617,11 @@ def convert_from_library():
         'voice_name': VOICES[voice]['name'],
         'voice2': None,
         'voice2_name': None,
-        'tts_engine': tts_engine,
+        'tts_engine': VOICES[voice].get('engine', 'kokoro'),
         'status': 'queued',
         'created_at': datetime.now().isoformat(),
         'input_filename': input_filename,
-        'output_dirname': output_dirname,
+        'output_dirname': book_name,
         'is_pdf': is_pdf,
         'start_chapter': start_chapter,
         'end_chapter': end_chapter,
@@ -3518,7 +3629,10 @@ def convert_from_library():
         'tts_speed': tts_speed,
         'queue_rank': next_queue_rank(),
         'sync_status': 'pending',
-        'job_log_path': str(get_job_log_path(job_id))
+        'job_log_path': str(get_job_log_path(job_id)),
+        'newline_mode': newline_mode,
+        'title_mode': title_mode,
+        'custom_regex': custom_regex
     }
     save_job(job)
     ch_range = f", chapters {start_chapter}-{end_chapter}" if start_chapter or end_chapter else ""
