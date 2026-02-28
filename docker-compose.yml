@@ -32,6 +32,9 @@ services:
     environment:
       - TTS_UPSTREAM_BASE=http://kokoro-tts:8880/v1
       - TRANSCRIPTS_DIR=/data/transcripts
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     volumes:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/transcripts:/data/transcripts
     depends_on:
