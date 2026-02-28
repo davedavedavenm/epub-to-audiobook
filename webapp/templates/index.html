@@ -3151,6 +3151,25 @@ Barbadoes==Barbayduss
                         costValue.textContent = `$${data.estimated_cost.toFixed(2)}`;
                         charLabel.textContent = `(~${(data.char_count / 1000).toFixed(0)}k chars)`;
                         
+                        // Handle GPU info if present
+                        const gpuLabel = drawer.querySelector('.gpu-trigger-info');
+                        if (data.gpu_info && data.gpu_info.triggered) {
+                            if (!gpuLabel) {
+                                const el = document.createElement('div');
+                                el.className = 'gpu-trigger-info';
+                                el.style.fontSize = '0.85em';
+                                el.style.color = 'var(--accent)';
+                                el.style.marginTop = '4px';
+                                el.innerHTML = `⚡ Will trigger GPU rent: <strong>${data.gpu_info.rate}</strong>`;
+                                drawer.querySelector('.cfg-cost-estimate').appendChild(el);
+                            } else {
+                                gpuLabel.innerHTML = `⚡ Will trigger GPU rent: <strong>${data.gpu_info.rate}</strong>`;
+                                gpuLabel.style.display = 'block';
+                            }
+                        } else if (gpuLabel) {
+                            gpuLabel.style.display = 'none';
+                        }
+
                         // Highlight if not free
                         if (data.estimated_cost > 0) {
                             costValue.style.color = 'var(--warning)';

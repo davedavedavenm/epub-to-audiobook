@@ -20,6 +20,7 @@ from pathlib import Path
 from contextlib import contextmanager
 from collections import Counter
 from typing import Any, Optional, Dict, List
+from gpu_manager import GPUManager
 
 from flask import Flask, render_template, request, jsonify, send_file, Response
 import requests
@@ -3679,13 +3680,35 @@ def estimate_cost_api():
         # Estimate character count
         char_count = estimate_epub_size(file_path)
         
-        # Calculate cost
+        # Calculate engine cost (Polly, OpenAI, etc.)
         cost = calculate_price_estimate(engine, char_count)
+        
+        gpu_info = None
+        # If using Kokoro, check if a GPU scale-up would be triggered
+        if engine == 'kokoro' and QUEUE_RUNNER_ENABLED:
+            current_active = running_job_count() + queued_job_count()
+            # If we cross the threshold, suggest GPU cost
+            is_already_active = is_gpu_active()
+            if is_already_active:
+                gpu_status = _gpu_manager.get_status() if _gpu_manager else GPUManager.load_status_from_file()
+                if gpu_status:
+                    gpu_info = {
+                        'triggered': True,
+                        'reason': 'GPU is currently active',
+                        'rate': f"${gpu_status.get('cost_per_hour', 0):.2f}/hr"
+                    }
+            elif (current_active + 1) >= 3:
+                gpu_info = {
+                    'triggered': True,
+                    'reason': f'Queue threshold reached ({current_active + 1}/3)',
+                    'rate': '~ $0.05 - $0.10 / hr (Vast.ai)'
+                }
 
         return jsonify({
             'char_count': char_count,
             'estimated_cost': round(cost, 2),
-            'engine': engine
+            'engine': engine,
+            'gpu_info': gpu_info
         })
     except Exception as e:
         app.logger.error(f"Cost estimation error: {e}")
