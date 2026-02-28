@@ -1586,6 +1586,9 @@
             <button class="nav-tab" data-tab="history">
                 <span>📋</span> <span>History</span>
             </button>
+            <button class="nav-tab" data-tab="settings">
+                <span>⚙️</span> <span>Settings</span>
+            </button>
         </div>
     </nav>
 
@@ -2026,6 +2029,42 @@ Barbadoes==Barbayduss
                 </div>
             </div>
         </div>
+
+        <div class="tab-panel" id="tab-settings">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">System Settings</h2>
+                        <p class="card-subtitle">Configure API keys and external service credentials.</p>
+                    </div>
+                </div>
+                <div class="options-grid">
+                    <div class="option-group">
+                        <h3 style="margin-bottom: 12px; color: var(--accent);">Amazon Polly (US Long-form)</h3>
+                        <label class="option-label">AWS Access Key ID</label>
+                        <input type="text" id="setting-AWS_ACCESS_KEY_ID" class="option-select" placeholder="AKIA...">
+                        <label class="option-label" style="margin-top: 12px;">AWS Secret Access Key</label>
+                        <input type="password" id="setting-AWS_SECRET_ACCESS_KEY" class="option-select" placeholder="Paste your secret key here">
+                        <label class="option-label" style="margin-top: 12px;">AWS Region</label>
+                        <input type="text" id="setting-AWS_REGION" class="option-select" placeholder="us-east-1">
+                    </div>
+                    
+                    <div class="option-group">
+                        <h3 style="margin-bottom: 12px; color: var(--accent);">Other Integrations</h3>
+                        <label class="option-label">OpenAI API Key</label>
+                        <input type="password" id="setting-OPENAI_API_KEY" class="option-select" placeholder="sk-...">
+                        <label class="option-label" style="margin-top: 12px;">Telegram Bot Token</label>
+                        <input type="password" id="setting-TELEGRAM_BOT_TOKEN" class="option-select">
+                    </div>
+                </div>
+                <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
+                    <button id="save-settings-btn" class="convert-btn" style="width: auto; padding: 12px 32px;">
+                        Save All Settings
+                    </button>
+                    <span id="settings-status" style="margin-left: 16px; font-weight: 500;"></span>
+                </div>
+            </div>
+        </div>
     </main>
 
     <audio id="preview-audio"></audio>
@@ -2111,6 +2150,7 @@ Barbadoes==Barbayduss
             if (tabId === 'library') loadLibrary();
             if (tabId === 'ops') loadOps();
             if (tabId === 'history') loadHistory();
+            if (tabId === 'settings') loadSettings();
         }
 
         document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -2697,6 +2737,80 @@ Barbadoes==Barbayduss
         });
 
         // ============ History Loading ============
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                
+                for (const [key, value] of Object.entries(settings)) {
+                    const input = document.getElementById(`setting-${key}`);
+                    if (input) {
+                        if (value && value.includes('...')) {
+                            input.placeholder = value; // Show masked key as placeholder
+                        } else {
+                            input.value = value;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load settings:', err);
+            }
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('save-settings-btn');
+            const status = document.getElementById('settings-status');
+            
+            const keys = [
+                'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION',
+                'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN'
+            ];
+            
+            const data = {};
+            keys.forEach(key => {
+                const val = document.getElementById(`setting-${key}`)?.value;
+                if (val && val.trim() && !val.includes('...')) {
+                    data[key] = val.trim();
+                }
+            });
+
+            if (Object.keys(data).length === 0) {
+                status.textContent = 'No changes to save.';
+                status.style.color = 'var(--warning)';
+                return;
+            }
+
+            btn.disabled = true;
+            status.textContent = 'Saving...';
+            status.style.color = 'var(--text-secondary)';
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    status.textContent = '✅ Settings saved successfully!';
+                    status.style.color = 'var(--success)';
+                    // Clear password fields
+                    keys.forEach(key => {
+                        const input = document.getElementById(`setting-${key}`);
+                        if (input && input.type === 'password') input.value = '';
+                    });
+                    loadSettings();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (err) {
+                status.textContent = '❌ Error: ' + err.message;
+                status.style.color = 'var(--error)';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         async function loadHistory() {
             try {
                 const response = await fetch('/api/history');
@@ -3043,6 +3157,8 @@ Barbadoes==Barbayduss
             div.textContent = str;
             return div.innerHTML;
         }
+
+        document.getElementById('save-settings-btn')?.addEventListener('click', saveSettings);
 
         // ============ Initial Load ============
         loadJobs();

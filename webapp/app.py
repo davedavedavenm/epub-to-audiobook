@@ -600,6 +600,25 @@ def get_db():
         conn.close()
 
 
+def get_setting(key: str, default: Any = None) -> Any:
+    """Retrieve a setting from DB, falling back to environment variables."""
+    try:
+        with get_db() as conn:
+            res = conn.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
+            if res:
+                return res['value']
+    except Exception:
+        pass
+    return os.environ.get(key, default)
+
+
+def set_setting(key: str, value: str):
+    """Save a setting to the DB."""
+    with get_db() as conn:
+        conn.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', (key, value))
+        conn.commit()
+
+
 def job_to_dict(row):
     """Convert database row to dictionary."""
     if row is None:
@@ -2851,6 +2870,42 @@ def list_voices():
         'voices': VOICES,
         'engines': TTS_ENGINES
     })
+
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+def api_settings():
+    """Get or update system settings/API keys."""
+    # List of keys that should be masked in the UI
+    secret_keys = [
+        'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID',
+        'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN',
+        'EVOLUTION_API_KEY', 'ABS_API_TOKEN'
+    ]
+
+    if request.method == 'POST':
+        try:
+            data = request.json
+            for key, value in data.items():
+                if value and value.strip():
+                    set_setting(key, value.strip())
+            return jsonify({"status": "success"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+    # GET: return current settings (masked)
+    settings = {}
+    for key in secret_keys:
+        val = get_setting(key)
+        if val:
+            # Mask key: show first 4 and last 4 chars
+            if len(val) > 10:
+                settings[key] = f"{val[:4]}...{val[-4:]}"
+            else:
+                settings[key] = "********"
+        else:
+            settings[key] = ""
+    
+    return jsonify(settings)
 
 
 # ============ GPU Auto-Scaling API ============

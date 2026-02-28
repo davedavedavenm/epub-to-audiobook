@@ -16,6 +16,7 @@ import os
 import re
 import time
 import boto3
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -25,11 +26,40 @@ from fastapi.responses import JSONResponse, Response
 
 app = FastAPI()
 
-try:
-    polly_client = boto3.client('polly', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
-except Exception as e:
-    polly_client = None
-    print(f"Warning: Could not initialize AWS Polly client: {e}")
+DB_PATH = Path(os.environ.get('DB_PATH', '/data/jobs.db'))
+
+def get_db_setting(key: str, default: Any = None) -> Any:
+    """Retrieve a setting from shared SQLite DB."""
+    try:
+        if not DB_PATH.exists():
+            return os.environ.get(key, default)
+        
+        with sqlite3.connect(str(DB_PATH), timeout=10) as conn:
+            conn.row_factory = sqlite3.Row
+            res = conn.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
+            if res:
+                return res['value']
+    except Exception as e:
+        print(f"Setting error for {key}: {e}")
+    return os.environ.get(key, default)
+
+def get_polly_client():
+    """Initialize AWS Polly client using keys from DB or Env."""
+    access_key = get_db_setting('AWS_ACCESS_KEY_ID')
+    secret_key = get_db_setting('AWS_SECRET_ACCESS_KEY')
+    region = get_db_setting('AWS_REGION', 'us-east-1')
+    
+    if access_key and secret_key:
+        try:
+            return boto3.client(
+                'polly', 
+                aws_access_key_id=access_key, 
+                aws_secret_access_key=secret_key, 
+                region_name=region
+            )
+        except Exception as e:
+            print(f"Warning: Could not initialize AWS Polly client: {e}")
+    return None
 
 UPSTREAM_BASE = os.environ.get("TTS_UPSTREAM_BASE", "http://kokoro-tts:8880/v1").rstrip("/")
 STORE_ROOT = Path(os.environ.get("TRANSCRIPTS_DIR", "/data/transcripts"))
@@ -95,7 +125,8 @@ async def upstream_get(path: str) -> Response:
 
 @app.get("/healthz")
 async def healthz():
-    return {"ok": True, "upstream": UPSTREAM_BASE, "polly_ready": polly_client is not None}
+    client = get_polly_client()
+    return {"ok": True, "upstream": UPSTREAM_BASE, "polly_ready": client is not None}
 
 
 @app.get("/j/{job_id}/v1/models")
@@ -143,8 +174,9 @@ async def audio_speech(job_id: str, request: Request):
 
     # AWS Polly Intercept
     if voice.startswith("polly_"):
-        if not polly_client:
-            raise HTTPException(status_code=500, detail="AWS Polly is not configured on this server.")
+        client = get_polly_client()
+        if not client:
+            raise HTTPException(status_code=500, detail="AWS Polly is not configured. Please set API keys in Settings tab.")
         
         actual_voice_id = voice.replace("polly_", "").capitalize()
         ssml = text_to_ssml(text)
@@ -156,7 +188,7 @@ async def audio_speech(job_id: str, request: Request):
             loop = asyncio.get_running_loop()
             
             polly_call = functools.partial(
-                polly_client.synthesize_speech,
+                client.synthesize_speech,
                 Engine='long-form',
                 LanguageCode='en-US',
                 OutputFormat='mp3',
