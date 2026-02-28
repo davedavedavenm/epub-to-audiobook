@@ -1580,8 +1580,8 @@
             <button class="nav-tab" data-tab="library">
                 <span>📚</span> <span>Library</span>
             </button>
-            <button class="nav-tab" data-tab="ops">
-                <span>🛠️</span> <span>Ops</span>
+            <button class="nav-tab" data-tab="voices">
+                <span>???</span> <span>Voices</span>
             </button>
             <button class="nav-tab" data-tab="history">
                 <span>📋</span> <span>History</span>
@@ -1656,9 +1656,208 @@
                         </div>
                     </div>
 
+                    
                     <!-- Right Column -->
                     <div class="convert-right">
-                        <!-- Voice Selection Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Selected Voice</h2>
+                                    <p class="card-subtitle">Explore voices in the <a href="#" onclick="switchTab('voices'); return false;" style="color:var(--accent);">Voices Tab</a></p>
+                                </div>
+                            </div>
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <label class="option-label">Primary Voice</label>
+                                    <select id="voice-select-simple" class="option-select">
+                                        <optgroup label="Kokoro (High Quality)">
+                                            {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
+                                            <option value="{{ voice_id }}" {% if voice_id == 'bm_v0george' %}selected{% endif %}>{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
+                                            {% endfor %}
+                                        </optgroup>
+                                        <optgroup label="Edge (Fast, Accurate)">
+                                            {% for voice_id, voice in voices.items() if voice.engine == 'edge' %}
+                                            <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
+                                            {% endfor %}
+                                        </optgroup>
+                                        <optgroup label="Piper (Offline)">
+                                            {% for voice_id, voice in voices.items() if voice.engine == 'piper' %}
+                                            <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
+                                            {% endfor %}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Convert Button -->
+
+                <div class="convert-btn-container">
+                    <button type="submit" class="convert-btn" id="convert-btn" disabled>
+                        <span>🎧</span> Select a file and voice to start
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Queue Tab -->
+        <div class="tab-panel" id="tab-queue">
+            <div id="queue-content">
+                <div class="no-jobs-message">
+                    <div class="no-jobs-icon">⏳</div>
+                    <div>No active conversions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library Tab -->
+        <div class="tab-panel" id="tab-library">
+            <div class="card">
+                <div class="library-header">
+                    <select id="library-voice-select" class="option-select" style="width: auto; min-width: 150px;">
+                        <option value="bf_emma">Emma (British)</option>
+                        {% for voice_id, voice in voices.items() %}
+                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
+                        {% endfor %}
+                    </select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="library-notify-whatsapp">
+                        <span>WhatsApp</span>
+                    </label>
+                    <input type="tel" id="library-whatsapp-number" class="whatsapp-input library-whatsapp-input" placeholder="Phone (optional)">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="library-notify-telegram">
+                        <span>Telegram</span>
+                    </label>
+                    <input type="text" class="library-search" id="library-search" placeholder="🔍 Filter books...">
+                    <select id="library-sort-key" class="option-select" style="width:auto; min-width: 120px;" title="Sort library">
+                        <option value="title">Title</option>
+                        <option value="modified_ts">Date</option>
+                        <option value="size">Size</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <select id="library-sort-dir" class="option-select" style="width:auto; min-width: 90px;" title="Sort order">
+                        <option value="asc">Asc</option>
+                        <option value="desc">Desc</option>
+                    </select>
+                    <span class="library-stats" id="library-stats">Loading...</span>
+                </div>
+                <div class="library-grid" id="library-grid">
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">📚</div>
+                        <div>Loading library...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ops Tab -->
+        <div class="tab-panel" id="tab-ops">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Queue Operations</h2>
+                        <p class="card-subtitle">Control queue, retries, and recovery</p>
+                    </div>
+                </div>
+                <div id="ops-controls" class="options-grid">
+                    <button class="job-btn" id="queue-pause-btn">Pause Queue</button>
+                    <button class="job-btn" id="queue-resume-btn">Resume Queue</button>
+                    <button class="job-btn" id="queue-retry-failed-btn">Bulk Retry Failed</button>
+                    <button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
+                </div>
+                <div id="ops-queue-status" class="progress-info" style="margin-top:12px;"></div>
+            </div>
+
+            <div class="card" id="gpu-card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">GPU Compute</h2>
+                        <p class="card-subtitle">Cloud GPU auto-scaling and cost tracking</p>
+                    </div>
+                </div>
+                <div class="gpu-card-inner">
+                    <div class="gpu-status-row">
+                        <div class="gpu-state-indicator">
+                            <span class="gpu-dot idle" id="gpu-state-dot"></span>
+                            <span id="gpu-state-label">Idle</span>
+                        </div>
+                        <span class="gpu-mode-badge cpu" id="gpu-mode-badge">CPU</span>
+                    </div>
+
+                    <div class="gpu-telemetry hidden" id="gpu-telemetry">
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Session</div>
+                            <div class="gpu-telemetry-value" id="gpu-session-time">0m</div>
+                        </div>
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Cost</div>
+                            <div class="gpu-telemetry-value cost" id="gpu-session-cost">$0.00</div>
+                        </div>
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Cap</div>
+                            <div class="gpu-telemetry-value" id="gpu-cost-cap">$1.00</div>
+                            <div class="gpu-cap-bar">
+                                <div class="gpu-cap-fill" id="gpu-cap-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gpu-controls">
+                        <button class="job-btn" id="gpu-scale-up-btn">⚡ Force GPU</button>
+                        <button class="job-btn" id="gpu-scale-down-btn" disabled>🔌 Force CPU</button>
+                        <span class="gpu-auto-label" id="gpu-auto-label">
+                            Auto: <span class="off">OFF</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Conversion Timeline</h2>
+                        <p class="card-subtitle">Live stage + container logs</p>
+                    </div>
+                </div>
+                <div id="ops-timeline-content" class="no-jobs-message">
+                    <div class="no-jobs-icon">🧭</div>
+                    <div>No active conversion</div>
+                </div>
+                <pre id="ops-log-preview" style="margin-top:12px; max-height:280px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Recovery Center</h2>
+                        <p class="card-subtitle">Failed/cancelled jobs and fast actions</p>
+                    </div>
+                </div>
+                <div id="ops-recovery-content"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Diagnostics</h2>
+                        <p class="card-subtitle">Queue health and runtime resources</p>
+                    </div>
+                </div>
+                <pre id="ops-diagnostics" style="max-height:260px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        
+        <div class="tab-panel" id="tab-voices">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Voice Explorer</h2>
+                        <p class="card-subtitle">Preview and compare all available TTS voices.</p>
+                    </div>
+                </div>
+                
                         <div class="card">
                             <div class="card-header">
                                 <div>
@@ -1844,164 +2043,10 @@ Barbadoes==Barbayduss
                     </div>
                 </div>
 
-                <!-- Convert Button -->
-                <div class="convert-btn-container">
-                    <button type="submit" class="convert-btn" id="convert-btn" disabled>
-                        <span>🎧</span> Select a file and voice to start
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Queue Tab -->
-        <div class="tab-panel" id="tab-queue">
-            <div id="queue-content">
-                <div class="no-jobs-message">
-                    <div class="no-jobs-icon">⏳</div>
-                    <div>No active conversions</div>
-                </div>
+                
             </div>
         </div>
 
-        <!-- Library Tab -->
-        <div class="tab-panel" id="tab-library">
-            <div class="card">
-                <div class="library-header">
-                    <select id="library-voice-select" class="option-select" style="width: auto; min-width: 150px;">
-                        <option value="bf_emma">Emma (British)</option>
-                        {% for voice_id, voice in voices.items() %}
-                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
-                        {% endfor %}
-                    </select>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="library-notify-whatsapp">
-                        <span>WhatsApp</span>
-                    </label>
-                    <input type="tel" id="library-whatsapp-number" class="whatsapp-input library-whatsapp-input" placeholder="Phone (optional)">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="library-notify-telegram">
-                        <span>Telegram</span>
-                    </label>
-                    <input type="text" class="library-search" id="library-search" placeholder="🔍 Filter books...">
-                    <select id="library-sort-key" class="option-select" style="width:auto; min-width: 120px;" title="Sort library">
-                        <option value="title">Title</option>
-                        <option value="modified_ts">Date</option>
-                        <option value="size">Size</option>
-                        <option value="status">Status</option>
-                    </select>
-                    <select id="library-sort-dir" class="option-select" style="width:auto; min-width: 90px;" title="Sort order">
-                        <option value="asc">Asc</option>
-                        <option value="desc">Desc</option>
-                    </select>
-                    <span class="library-stats" id="library-stats">Loading...</span>
-                </div>
-                <div class="library-grid" id="library-grid">
-                    <div class="no-jobs-message">
-                        <div class="no-jobs-icon">📚</div>
-                        <div>Loading library...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ops Tab -->
-        <div class="tab-panel" id="tab-ops">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Queue Operations</h2>
-                        <p class="card-subtitle">Control queue, retries, and recovery</p>
-                    </div>
-                </div>
-                <div id="ops-controls" class="options-grid">
-                    <button class="job-btn" id="queue-pause-btn">Pause Queue</button>
-                    <button class="job-btn" id="queue-resume-btn">Resume Queue</button>
-                    <button class="job-btn" id="queue-retry-failed-btn">Bulk Retry Failed</button>
-                    <button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
-                </div>
-                <div id="ops-queue-status" class="progress-info" style="margin-top:12px;"></div>
-            </div>
-
-            <div class="card" id="gpu-card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">GPU Compute</h2>
-                        <p class="card-subtitle">Cloud GPU auto-scaling and cost tracking</p>
-                    </div>
-                </div>
-                <div class="gpu-card-inner">
-                    <div class="gpu-status-row">
-                        <div class="gpu-state-indicator">
-                            <span class="gpu-dot idle" id="gpu-state-dot"></span>
-                            <span id="gpu-state-label">Idle</span>
-                        </div>
-                        <span class="gpu-mode-badge cpu" id="gpu-mode-badge">CPU</span>
-                    </div>
-
-                    <div class="gpu-telemetry hidden" id="gpu-telemetry">
-                        <div class="gpu-telemetry-cell">
-                            <div class="gpu-telemetry-label">Session</div>
-                            <div class="gpu-telemetry-value" id="gpu-session-time">0m</div>
-                        </div>
-                        <div class="gpu-telemetry-cell">
-                            <div class="gpu-telemetry-label">Cost</div>
-                            <div class="gpu-telemetry-value cost" id="gpu-session-cost">$0.00</div>
-                        </div>
-                        <div class="gpu-telemetry-cell">
-                            <div class="gpu-telemetry-label">Cap</div>
-                            <div class="gpu-telemetry-value" id="gpu-cost-cap">$1.00</div>
-                            <div class="gpu-cap-bar">
-                                <div class="gpu-cap-fill" id="gpu-cap-fill" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="gpu-controls">
-                        <button class="job-btn" id="gpu-scale-up-btn">⚡ Force GPU</button>
-                        <button class="job-btn" id="gpu-scale-down-btn" disabled>🔌 Force CPU</button>
-                        <span class="gpu-auto-label" id="gpu-auto-label">
-                            Auto: <span class="off">OFF</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Conversion Timeline</h2>
-                        <p class="card-subtitle">Live stage + container logs</p>
-                    </div>
-                </div>
-                <div id="ops-timeline-content" class="no-jobs-message">
-                    <div class="no-jobs-icon">🧭</div>
-                    <div>No active conversion</div>
-                </div>
-                <pre id="ops-log-preview" style="margin-top:12px; max-height:280px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Recovery Center</h2>
-                        <p class="card-subtitle">Failed/cancelled jobs and fast actions</p>
-                    </div>
-                </div>
-                <div id="ops-recovery-content"></div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Diagnostics</h2>
-                        <p class="card-subtitle">Queue health and runtime resources</p>
-                    </div>
-                </div>
-                <pre id="ops-diagnostics" style="max-height:260px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
-            </div>
-        </div>
-
-        <!-- History Tab -->
         <div class="tab-panel" id="tab-history">
             <div class="card">
                 <div class="history-header">
@@ -2673,9 +2718,9 @@ Barbadoes==Barbayduss
         document.getElementById('gpu-header-pip')?.addEventListener('click', () => {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelector('.nav-tab[data-tab="ops"]')?.classList.add('active');
-            document.getElementById('tab-ops')?.classList.add('active');
-            localStorage.setItem('audiobook-tab', 'ops');
+            document.querySelector('.nav-tab[data-tab="queue"]')?.classList.add('active'); switchTab('queue');
+            
+            localStorage.setItem('audiobook-tab', 'queue');
             loadOps();
         });
 
