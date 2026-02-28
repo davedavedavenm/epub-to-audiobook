@@ -3682,7 +3682,7 @@ def convert_from_library():
     # New parsing and pronunciation options (defaults for library conversion)
     newline_mode = data.get('newline_mode', 'double')
     title_mode = data.get('title_mode', 'auto')
-    custom_regex = data.get('custom_regex', '').strip() or None
+    custom_regex = (data.get('custom_regex') or '').strip() or None
 
     is_pdf = file_ext == '.pdf'
     needs_conversion = file_ext not in {'.epub', '.pdf'}
