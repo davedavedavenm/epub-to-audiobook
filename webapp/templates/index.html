@@ -1026,6 +1026,57 @@
             background: var(--bg-hover);
         }
 
+        .library-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .library-item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .library-item-config {
+            width: 100%;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .library-item-config.active {
+            display: block;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .config-btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .library-config-btn {
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.2s;
+        }
+
+        .library-config-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
         .library-item-info {
             display: flex;
             align-items: center;
@@ -2071,6 +2122,7 @@ Barbadoes==Barbayduss
 
     <script>
         // ============ State ============
+        const voices = {{ voices | tojson }};
         let selectedFile = null;
         let selectedVoice = 'bf_emma';
         let selectedEngine = 'kokoro';
@@ -2974,43 +3026,117 @@ Barbadoes==Barbayduss
             }
 
             libraryGrid.innerHTML = sorted.map(book => {
-                const sizeStr = book.size ? `${(book.size / 1024 / 1024).toFixed(1)} MB` : '';
-                const modifiedStr = book.modified_ts
-                    ? new Date(book.modified_ts * 1000).toLocaleString('en-GB')
-                    : '';
-                let statusHtml = '';
-
-                if (book.status === 'completed') {
-                    statusHtml = '<span class="status-badge done">✅ Done</span>';
+                                if (book.status === 'completed') {
+                    statusHtml = '<span class="status-badge done">? Done</span>';
                 } else if (book.status === 'converting') {
-                    statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
+                    statusHtml = `<span class="status-badge converting">? ${book.progress || 0}%</span>`;
                 } else {
-                    // Avoid inline onclick: titles/paths can contain apostrophes and break attribute JS.
-                    statusHtml = `<button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>`;
+                    statusHtml = `
+                        <div class="config-btn-group">
+                            <button class="library-config-btn" title="Configure settings" data-path="${escapeHtml(book.path)}">??</button>
+                            <button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>
+                        </div>
+                    `;
                 }
 
-                const icon = book.format === 'pdf' ? '📕' : '📗';
+                const icon = book.format === 'pdf' ? '??' : '??';
+                const bookId = btoa(book.path).replace(/[^a-z0-9]/gi, '');
 
                 return `
-                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}" title="${modifiedStr ? `Modified: ${escapeHtml(modifiedStr)}` : ''}">
-                        <div class="library-item-info">
-                            <span class="library-item-icon">${icon}</span>
-                            <div class="library-item-details">
-                                <div class="library-item-title">${escapeHtml(book.title)}</div>
-                                <div class="library-item-meta">
-                                    <span>${book.format?.toUpperCase() || 'EPUB'}</span>
-                                    <span>${sizeStr}</span>
+                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}">
+                        <div class="library-item-row">
+                            <div class="library-item-info">
+                                <span class="library-item-icon">${icon}</span>
+                                <div class="library-item-details">
+                                    <div class="library-item-title">${escapeHtml(book.title)}</div>
+                                    <div class="library-item-meta">
+                                        <span>${book.format?.toUpperCase() || 'EPUB'}</span>
+                                        <span>${sizeStr}</span>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="library-item-status">
+                                ${statusHtml}
+                            </div>
                         </div>
-                        <div class="library-item-status">
-                            ${statusHtml}
+                        
+                        <div class="library-item-config" id="config-${bookId}">
+                            <div class="options-grid" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 16px;">
+                                <div class="option-group">
+                                    <label class="option-label">Voice Override</label>
+                                    <select class="option-select cfg-voice">
+                                        <option value="">Use Library Default</option>
+                                        <optgroup label="Kokoro">
+                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'kokoro').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                                        </optgroup>
+                                        <optgroup label="Edge">
+                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'edge').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                                        </optgroup>
+                                        <optgroup label="Polly">
+                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'polly').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Speed</label>
+                                    <input type="number" step="0.1" min="0.5" max="2.0" class="option-select cfg-speed" value="1.0">
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Chapters (Start - End)</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="number" placeholder="Start" class="option-select cfg-start" style="flex:1">
+                                        <input type="number" placeholder="End" class="option-select cfg-end" style="flex:1">
+                                    </div>
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Pronunciation Fixes (Regex)</label>
+                                    <textarea class="option-select cfg-regex" style="height: 60px; font-family: monospace; font-size: 0.8em;" placeholder="word==replacement"></textarea>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                                <button class="convert-btn library-start-btn" style="width: auto; padding: 8px 24px;" 
+                                        data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}" data-id="${bookId}">
+                                    Add to Queue with Custom Settings
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
 
-            // Wire up convert buttons after rendering (safer than inline JS).
+                        // Wire up config buttons
+            document.querySelectorAll('.library-config-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const path = btn.dataset.path;
+                    const bookId = btoa(path).replace(/[^a-z0-9]/gi, '');
+                    const drawer = document.getElementById(`config-${bookId}`);
+                    drawer?.classList.toggle('active');
+                    btn.classList.toggle('active');
+                });
+            });
+
+            // Wire up start buttons inside drawers
+            document.querySelectorAll('.library-start-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = btn.dataset.path;
+                    const title = btn.dataset.title;
+                    const bookId = btn.dataset.id;
+                    const drawer = document.getElementById(`config-${bookId}`);
+                    
+                    const options = {
+                        voice: drawer.querySelector('.cfg-voice').value || document.getElementById('library-voice-select').value,
+                        tts_speed: parseFloat(drawer.querySelector('.cfg-speed').value) || 1.0,
+                        start_chapter: drawer.querySelector('.cfg-start').value || null,
+                        end_chapter: drawer.querySelector('.cfg-end').value || null,
+                        custom_regex: drawer.querySelector('.cfg-regex').value || null
+                    };
+                    
+                    convertFromLibrary(path, title, options);
+                });
+            });
+
+            // Wire up quick convert buttons
             document.querySelectorAll('.library-convert-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const path = btn.dataset.path || '';
@@ -3038,8 +3164,8 @@ Barbadoes==Barbayduss
             if (d) document.getElementById('library-sort-dir').value = d;
         })();
 
-        async function convertFromLibrary(path, title) {
-            const voice = document.getElementById('library-voice-select').value;
+        async function convertFromLibrary(path, title, options = {}) {
+            const voice = options.voice || document.getElementById('library-voice-select').value;
             const notifyWhatsapp = document.getElementById('library-notify-whatsapp').checked;
             const notifyTelegram = document.getElementById('library-notify-telegram').checked;
             const whatsappNumber = document.getElementById('library-whatsapp-number').value;
@@ -3053,7 +3179,11 @@ Barbadoes==Barbayduss
                         voice,
                         notify_whatsapp: notifyWhatsapp,
                         notify_telegram: notifyTelegram,
-                        whatsapp_number: whatsappNumber
+                        whatsapp_number: whatsappNumber,
+                        tts_speed: options.tts_speed || 1.0,
+                        start_chapter: options.start_chapter,
+                        end_chapter: options.end_chapter,
+                        custom_regex: options.custom_regex
                     })
                 });
 
