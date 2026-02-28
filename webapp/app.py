@@ -443,6 +443,14 @@ VOICES = {
     # Australian Edge Voices
     'en-AU-NatashaNeural': {'name': 'Natasha', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
     'en-AU-WilliamNeural': {'name': 'William', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
+
+    # ============ AWS POLLY LONG-FORM VOICES ============
+    'polly_ruth': {'name': 'Ruth', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
+    'polly_matthew': {'name': 'Matthew', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
+    'polly_stephen': {'name': 'Stephen', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
+    'polly_danielle': {'name': 'Danielle', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
+    'polly_gregory': {'name': 'Gregory', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
+    'polly_kevin': {'name': 'Kevin', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
 }
 
 PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."
@@ -1627,6 +1635,22 @@ def get_voice_preview(voice_id: str) -> Path:
             response.raise_for_status()
             with open(preview_path, 'wb') as f:
                 f.write(response.content)
+        elif engine == 'polly':
+            # Use AWS Polly via tts-proxy
+            # Map internal network alias if available, otherwise assume localhost for dev
+            proxy_base = os.environ.get('TTS_PROXY_URL', 'http://tts-proxy:8882')
+            response = requests.post(
+                f"{proxy_base}/j/preview/v1/audio/speech",
+                json={
+                    "model": "polly",
+                    "input": PREVIEW_TEXT,
+                    "voice": voice_id
+                },
+                timeout=60
+            )
+            response.raise_for_status()
+            with open(preview_path, 'wb') as f:
+                f.write(response.content)
         elif engine == 'edge':
             # Use EdgeTTS via Docker
             # Map PREVIEWS_DIR to /output in the container
@@ -2529,6 +2553,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # EdgeTTS (direct)
             tts_base_url = 'not-needed'
             tts_model = 'not-needed'
+        elif tts_engine == 'polly':
+            # AWS Polly via tts-proxy
+            # We force it through proxy because the upstream tool doesn't support Polly natively
+            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+            tts_model = 'polly'
         else:
             # Kokoro (default)
             tts_base_url = KOKORO_URL
