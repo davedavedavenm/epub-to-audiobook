@@ -78,8 +78,8 @@ def text_to_ssml(text: str) -> str:
     # Replace double newlines with breaks
     text = text.replace('\n\n', '<break time="800ms"/>')
     
-    # Wrap in auto-breaths and speak tags
-    return f"<speak><amazon:auto-breaths>{text}</amazon:auto-breaths></speak>"
+    # Wrap in speak tags (Long-form is very restrictive with SSML)
+    return f"<speak>{text}</speak>"
 
 def _now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -180,6 +180,7 @@ async def audio_speech(job_id: str, request: Request):
         
         actual_voice_id = voice.replace("polly_", "").capitalize()
         ssml = text_to_ssml(text)
+        print(f"Processing Polly request for voice: {actual_voice_id} (Long-form)")
         
         try:
             # Run boto3 synchronously using asyncio executor since it's blocking
