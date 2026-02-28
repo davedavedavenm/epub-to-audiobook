@@ -119,3 +119,7 @@ curl -X POST http://localhost:8881/api/convert \
 2. Verify watchdog logs and recovery behavior when a container dies.
 3. Verify auto-retry caps at 3 attempts and surfaces clear error messages.
 4. Verify queue survives webapp restart and resumes processing in order.
+\
+## End-to-End Validation Directive
+- Any changes to DOM structure (HTML files) must be validated with an HTML parser (like Python's HTMLParser) to ensure tags are perfectly matched.
+- Playwright or similar E2E tools should be utilized to test critical user flows like tab switching and form submission before pushing changes.\
