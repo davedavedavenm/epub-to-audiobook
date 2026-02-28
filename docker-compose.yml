@@ -37,6 +37,7 @@ services:
       - AWS_REGION=${AWS_REGION:-us-east-1}
     volumes:
       - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/transcripts:/data/transcripts
+      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data:/data
     depends_on:
       kokoro-tts:
         condition: service_started
