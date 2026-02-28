@@ -855,6 +855,23 @@ def estimate_eta_minutes(voice, engine, file_type, char_count):
     return max(1, int(eta_seconds / 60))
 
 
+def calculate_price_estimate(engine: str, char_count: int) -> float:
+    """Calculate estimated USD cost for a given engine and character count."""
+    # Prices per 1,000,000 characters
+    PRICING = {
+        'kokoro': 0.0,
+        'edge': 0.0,
+        'piper': 0.0,
+        'polly': 100.0,   # AWS Polly Long-form
+        'openai': 15.0,   # Standard
+        'openai-hd': 30.0,
+        'azure': 16.0     # Neural
+    }
+    
+    rate_per_million = PRICING.get(engine, 0.0)
+    return (char_count / 1_000_000) * rate_per_million
+
+
 
 # ============ Orphan Job Detection & Recovery ============
 
@@ -3638,6 +3655,41 @@ def list_library():
     # Sort by title
     books.sort(key=lambda x: x['title'].lower())
     return jsonify(books)
+
+
+@app.route('/api/library/estimate_cost', methods=['POST'])
+def estimate_cost_api():
+    """Estimate cost for a library book conversion."""
+    try:
+        data = request.get_json() or {}
+        path_str = data.get('path')
+        voice_id = data.get('voice')
+
+        if not path_str or not voice_id:
+            return jsonify({'error': 'Missing path or voice'}), 400
+
+        file_path = Path(path_str)
+        if not file_path.exists():
+            return jsonify({'error': 'File not found'}), 404
+
+        # Get engine from voice_id
+        voice_info = VOICES.get(voice_id, {})
+        engine = voice_info.get('engine', 'kokoro')
+
+        # Estimate character count
+        char_count = estimate_epub_size(file_path)
+        
+        # Calculate cost
+        cost = calculate_price_estimate(engine, char_count)
+
+        return jsonify({
+            'char_count': char_count,
+            'estimated_cost': round(cost, 2),
+            'engine': engine
+        })
+    except Exception as e:
+        app.logger.error(f"Cost estimation error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/library/convert', methods=['POST'])

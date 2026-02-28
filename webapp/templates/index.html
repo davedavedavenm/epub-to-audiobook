@@ -1803,6 +1803,10 @@ Barbadoes==Barbayduss
 
                 <!-- Convert Button -->
                 <div class="convert-btn-container">
+                    <div id="main-cost-estimate" class="cfg-cost-estimate hidden" style="margin-bottom: 12px; font-size: 1.1em; text-align: center;">
+                        <span class="cost-label">Estimated cost:</span>
+                        <strong class="cost-value">$0.00</strong>
+                    </div>
                     <button type="submit" class="convert-btn" id="convert-btn" disabled>
                         <span>🎧</span> Select a file and voice to start
                     </button>
@@ -3112,7 +3116,12 @@ Barbadoes==Barbayduss
                                     <textarea class="option-select cfg-regex" style="height: 60px; font-family: monospace; font-size: 0.8em;" placeholder="word==replacement"></textarea>
                                 </div>
                             </div>
-                            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <div class="cfg-cost-estimate" style="font-size: 0.9em; color: var(--text-secondary);">
+                                    <span class="cost-label">Estimated cost:</span>
+                                    <strong class="cost-value">$0.00</strong>
+                                    <span class="char-count" style="margin-left: 8px; font-size: 0.85em; opacity: 0.8;"></span>
+                                </div>
                                 <button class="convert-btn library-start-btn" style="width: auto; padding: 8px 24px;" 
                                         data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}" data-id="${bookId}">
                                     Add to Queue with Custom Settings
@@ -3123,15 +3132,61 @@ Barbadoes==Barbayduss
                 `;
             }).join('');
 
-                        // Wire up config buttons
+            // Function to update cost estimate in drawer
+            const updateDrawerEstimate = async (drawer, path) => {
+                const voiceId = drawer.querySelector('.cfg-voice').value || document.getElementById('library-voice-select').value;
+                const costValue = drawer.querySelector('.cost-value');
+                const charLabel = drawer.querySelector('.char-count');
+
+                if (!voiceId) return;
+
+                try {
+                    const resp = await fetch('/api/library/estimate_cost', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path, voice: voiceId })
+                    });
+                    const data = await resp.json();
+                    if (data.estimated_cost !== undefined) {
+                        costValue.textContent = `$${data.estimated_cost.toFixed(2)}`;
+                        charLabel.textContent = `(~${(data.char_count / 1000).toFixed(0)}k chars)`;
+                        
+                        // Highlight if not free
+                        if (data.estimated_cost > 0) {
+                            costValue.style.color = 'var(--warning)';
+                        } else {
+                            costValue.style.color = 'inherit';
+                        }
+                    }
+                } catch (err) {
+                    console.error('Cost estimation failed:', err);
+                }
+            };
+
+            // Wire up config buttons
             document.querySelectorAll('.library-config-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const path = btn.dataset.path;
                     const bookId = btoa(path).replace(/[^a-z0-9]/gi, '');
                     const drawer = document.getElementById(`config-${bookId}`);
-                    drawer?.classList.toggle('active');
+                    const isActive = drawer?.classList.toggle('active');
                     btn.classList.toggle('active');
+
+                    if (isActive) {
+                        updateDrawerEstimate(drawer, path);
+                    }
+                });
+            });
+
+            // Wire up voice change in drawers
+            document.querySelectorAll('.cfg-voice').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const drawer = e.target.closest('.library-item-config');
+                    const path = drawer.id.replace('config-', '');
+                    // We need the original path which is stored on the start button
+                    const originalPath = drawer.querySelector('.library-start-btn').dataset.path;
+                    updateDrawerEstimate(drawer, originalPath);
                 });
             });
 
