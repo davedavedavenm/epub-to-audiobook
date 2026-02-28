@@ -74,7 +74,7 @@ HOST_DATA_DIR = f"{HOST_STACK_DIR}/data"
 
 # Audiobookshelf integration - copy completed books here
 AUDIOBOOKSHELF_DIR = os.environ.get('AUDIOBOOKSHELF_DIR', '')
-AUDIOBOOKSHELF_HOST = os.environ.get('AUDIOBOOKSHELF_HOST', 'docker-vm')
+AUDIOBOOKSHELF_HOST = os.environ.get('AUDIOBOOKSHELF_HOST', '192.168.1.113')
 AUDIOBOOKSHELF_USER = os.environ.get('AUDIOBOOKSHELF_USER', 'dave')
 AUDIOBOOKSHELF_PORT = os.environ.get('AUDIOBOOKSHELF_PORT', '')
 
@@ -101,7 +101,7 @@ RETRY_BACKOFF_BASE = 30  # seconds (30, 60, 120 for attempts 1, 2, 3)
 
 # Audiobookshelf API for triggering rescans after sync
 ABS_API_TOKEN = os.environ.get('ABS_API_TOKEN', '')
-ABS_API_URL = os.environ.get('ABS_API_URL', 'http://docker-vm:13378')
+ABS_API_URL = os.environ.get('ABS_API_URL', 'http://192.168.1.113:13378')
 
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -2212,7 +2212,8 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             return False
 
         # Rsync to target
-        cmd = ['rsync', '-av', '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
+        # Use -s (protect-args) to handle special characters like brackets in paths
+        cmd = ['rsync', '-av', '-s', '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()
