@@ -1065,15 +1065,26 @@
         .library-config-btn {
             background: var(--bg-element);
             border: 1px solid var(--border);
-            padding: 6px 10px;
+            padding: 6px 12px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 1.1em;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 4px;
             transition: all 0.2s;
+            color: var(--text-secondary);
         }
 
         .library-config-btn:hover {
             background: var(--bg-hover);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .library-config-btn.active {
+            background: var(--accent);
+            color: white;
             border-color: var(--accent);
         }
 
@@ -3027,19 +3038,21 @@ Barbadoes==Barbayduss
 
             libraryGrid.innerHTML = sorted.map(book => {
                                 if (book.status === 'completed') {
-                    statusHtml = '<span class="status-badge done">? Done</span>';
+                    statusHtml = '<span class="status-badge done">✅ Done</span>';
                 } else if (book.status === 'converting') {
-                    statusHtml = `<span class="status-badge converting">? ${book.progress || 0}%</span>`;
+                    statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
                 } else {
                     statusHtml = `
                         <div class="config-btn-group">
-                            <button class="library-config-btn" title="Configure settings" data-path="${escapeHtml(book.path)}">??</button>
+                            <button class="library-config-btn" title="Configure settings" data-path="${escapeHtml(book.path)}">
+                                <span>⚙️</span><span>Options</span>
+                            </button>
                             <button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>
                         </div>
                     `;
                 }
 
-                const icon = book.format === 'pdf' ? '??' : '??';
+                const icon = book.format === 'pdf' ? '📕' : '📗';
                 const bookId = btoa(book.path).replace(/[^a-z0-9]/gi, '');
 
                 return `
