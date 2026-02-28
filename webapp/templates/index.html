@@ -1,16 +1,13 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>EPUB to Audiobook</title>
-
-
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&amp;family=Outfit:wght@100..900&amp;display=swap" rel="stylesheet"/>
-<style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiobook Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <style>
         :root {
             --bg-primary: #fdfcf9;
             --bg-card: #ffffff;
@@ -23,561 +20,109 @@
             --text-on-dark: #fdfcf9;
             --border: #e8e4de;
             --radius-lg: 24px;
+            --radius-md: 12px;
             --sidebar-width: 280px;
         }
-        body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); margin: 0; display: flex; overflow: hidden; }
-        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-on-dark); height: 100vh; padding: 40px 24px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; }
-        .app-main { margin-left: var(--sidebar-width); flex: 1; height: 100vh; overflow-y: auto; padding: 40px; }
-        .nav-tab { background: transparent; border: none; color: rgba(255,255,255,0.5); padding: 12px; cursor: pointer; text-align: left; width: 100%; display: flex; align-items: center; gap: 12px; font-size: 1rem; }
-        .nav-tab.active { background: var(--accent); color: white; border-radius: 8px; }
-        .card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); margin-bottom: 32px; }
+        [data-theme="dark"] {
+            --bg-primary: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --bg-sidebar: #080808;
+            --bg-element: #262626;
+            --bg-hover: #333333;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a3a3a3;
+            --border: #262626;
+        }
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: var(--text-primary); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-on-dark); padding: 40px 24px; display: flex; flex-direction: column; flex-shrink: 0; }
+        .nav-links { display: flex; flex-direction: column; gap: 8px; flex: 1; margin-top: 40px; }
+        .nav-tab { background: transparent; border: none; color: rgba(255,255,255,0.5); padding: 14px 18px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 16px; font-size: 1rem; transition: all 0.2s; text-align: left; }
+        .nav-tab:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .nav-tab.active { background: var(--accent); color: #fff; }
+        .app-main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
+        .top-bar { padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: rgba(253, 252, 249, 0.8); backdrop-filter: blur(10px); z-index: 100; }
+        .content-body { padding: 0 40px 60px; max-width: 1200px; width: 100%; margin: 0 auto; }
+        .card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; margin-bottom: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
         .hidden { display: none !important; }
-        .engine-voices { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-        .voice-pill { background: var(--bg-element); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+        .status-badge.done { background: var(--success); color: white; }
+        .library-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+        .config-btn-group { display: flex; gap: 8px; }
+        .option-select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-element); }
+        .convert-btn { background: var(--text-primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; }
+        .convert-btn:hover { background: var(--accent); }
     </style>
 </head>
 <body>
-<aside class="sidebar">
-<h2 style="font-family: 'Lora', serif; margin-bottom: 40px;">Studio</h2>
-<nav class="nav-links">
-<button class="nav-tab active" data-tab="convert"><span>📝</span> Convert</button>
-<button class="nav-tab" data-tab="queue"><span>⏳</span> Queue</button>
-<button class="nav-tab" data-tab="library"><span>📚</span> Library</button>
-<button class="nav-tab" data-tab="voices"><span>🗣️</span> Voices</button>
-<button class="nav-tab" data-tab="history"><span>📋</span> History</button>
-<button class="nav-tab" data-tab="settings"><span>⚙️</span> Settings</button>
-</nav>
-</aside>
-<main class="app-main"><div class="content-body">
-<!-- Header -->
-<header class="app-header">
-<div class="header-content">
-<div class="logo">
-<span class="logo-icon">🎧</span>
-<span>Audiobook Studio</span>
-<span class="gpu-header-pip hidden" id="gpu-header-pip" title="GPU active — click for details">
-<span class="gpu-dot active"></span> GPU
-                </span>
-</div>
-<div class="top-controls">
-<div class="design-toggle">
-<button class="design-btn active" data-design="studio">Studio</button>
-<button class="design-btn" data-design="editorial">Editorial</button>
-<button class="design-btn" data-design="technical">Technical</button>
-<button class="design-btn" data-design="minimal">Minimal</button>
-</div>
-<div class="theme-toggle">
-<button class="theme-btn active" data-theme="light">Light</button>
-<button class="theme-btn" data-theme="dark">Dark</button>
-<button class="theme-btn" data-theme="midnight">Midnight</button>
-<button class="theme-btn" data-theme="forest">Forest</button>
-</div>
-</div>
-</div>
-</header>
-<!-- Navigation Tabs -->
-<nav class="nav-tabs">
-<div class="tabs-container">
-<button class="nav-tab active" data-tab="convert">
-<span>📝</span> <span>Convert</span>
-</button>
-<button class="nav-tab" data-tab="queue">
-<span>⏳</span> <span>Queue</span>
-<span class="badge hidden" id="queue-badge">0</span>
-</button>
-<button class="nav-tab" data-tab="library">
-<span>📚</span> <span>Library</span>
-</button>
-<button class="nav-tab" data-tab="ops">
-<span>🛠️</span> <span>Ops</span>
-</button>
-<button class="nav-tab" data-tab="history">
-<span>📋</span> <span>History</span>
-</button>
-</div>
-</nav>
-<!-- Main Content -->
-<main class="main-content">
-<!-- Convert Tab -->
-<div class="tab-panel active" id="tab-convert">
-<form id="convert-form">
-<div class="convert-grid">
-<!-- Left Column -->
-<div class="convert-left">
-<!-- Upload Card -->
-<div class="card">
-<div class="card-header">
-<div>
-<h2 class="card-title">Upload File</h2>
-<p class="card-subtitle">Drag &amp; drop or click to browse</p>
-</div>
-</div>
-<div class="upload-area" id="upload-area">
-<div class="upload-icon">📖</div>
-<div class="upload-text">Drop your ebook here</div>
-<div class="upload-formats">EPUB, PDF, MOBI, AZW3, FB2, TXT, HTML, DOCX</div>
-<div class="file-name hidden" id="file-name"></div>
-</div>
-<input accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.html,.htm,.docx" id="file-input" type="file"/>
-</div>
-<!-- Options Card -->
-<div class="card">
-<div class="card-header">
-<h2 class="card-title">Options</h2>
-</div>
-<div class="options-grid">
-<div class="option-group">
-<label class="option-label">Voice Mix (Kokoro only)</label>
-<select class="option-select" id="voice2-select">
-<option value="">None (single voice)</option>
-                                        {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
-                                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
-                                        {% endfor %}
-                                    </select>
-</div>
-<div class="option-group">
-<label class="option-label">Chapter Range</label>
-<div class="chapter-range">
-<input class="chapter-input" id="start-chapter" min="1" placeholder="Start" type="number"/>
-<span class="range-separator">to</span>
-<input class="chapter-input" id="end-chapter" min="1" placeholder="End" type="number"/>
-</div>
-</div>
-<div class="option-group">
-<div class="checkbox-row">
-<label class="checkbox-label">
-<input id="notify-whatsapp" type="checkbox"/>
-<span>WhatsApp alert</span>
-</label>
-<label class="checkbox-label">
-<input id="notify-telegram" type="checkbox"/>
-<span>Telegram alert</span>
-</label>
-</div>
-<div class="whatsapp-input-container" id="whatsapp-container">
-<input class="whatsapp-input" id="whatsapp-number" placeholder="+44 7xxx xxx xxx" type="tel"/>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Right Column -->
-<div class="convert-right">
-<!-- Voice Selection Card -->
-<div class="card">
-<div class="card-header">
-<div>
-<h2 class="card-title">Select Voice</h2>
-<p class="card-subtitle">Click to select, play to preview</p>
-</div>
-</div>
-<!-- Engine Tabs -->
-<div class="engine-tabs">
-<button class="engine-tab active" data-engine="kokoro" type="button">
-<span class="engine-name">Kokoro</span>
-<span class="engine-desc">High quality, voice mixing</span>
-</button>
-<button class="engine-tab" data-engine="piper" type="button">
-<span class="engine-name">Piper</span>
-<span class="engine-desc">Fast, lightweight</span>
-</button>
-<button class="engine-tab" data-engine="edge" type="button">
-<span class="engine-name">Edge</span>
-<span class="engine-desc">Free, Azure-quality</span>
-</button>
-</div>
-<!-- Voice Search -->
-<div class="voice-search-container">
-<div class="voice-search-wrapper">
-<span class="voice-search-icon">🔍</span>
-<input class="voice-search" id="voice-search" placeholder="Search voices..." type="text"/>
-</div>
-</div>
-<!-- Kokoro Voices -->
-<div class="engine-voices" id="kokoro-voices">
-<div class="voice-section">
-<div class="voice-section-label">British</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'kokoro' %}
-                                        <div class="voice-pill" data-engine="kokoro" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }}</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-<div class="voice-section">
-<div class="voice-section-label">American</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'kokoro' %}
-                                        <div class="voice-pill" data-engine="kokoro" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }}</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-<div class="voice-section">
-<div class="voice-section-label">European</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent == 'European' and voice.engine == 'kokoro' %}
-                                        <div class="voice-pill" data-engine="kokoro" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }}</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-</div>
-<!-- Piper Voices -->
-<div class="engine-voices hidden" id="piper-voices">
-<div class="voice-section">
-<div class="voice-section-label">British</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'piper' %}
-                                        <div class="voice-pill" data-engine="piper" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }}</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-<div class="voice-section">
-<div class="voice-section-label">American</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'piper' %}
-                                        <div class="voice-pill" data-engine="piper" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }}</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-<div class="piper-note">
-<strong>Note:</strong> Piper requires <code>docker compose --profile piper up</code>
-</div>
-</div>
-<!-- Edge Voices -->
-<div class="engine-voices hidden" id="edge-voices">
-<div class="voice-section">
-<div class="voice-section-label">American</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'edge' %}
-                                        <div class="voice-pill" data-engine="edge" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }}</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-<div class="voice-section">
-<div class="voice-section-label">British</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'edge' %}
-                                        <div class="voice-pill" data-engine="edge" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }}</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-<div class="voice-section">
-<div class="voice-section-label">Other</div>
-<div class="voice-pills">
-                                        {% for voice_id, voice in voices.items() if voice.accent not in ['American', 'British'] and voice.engine == 'edge' %}
-                                        <div class="voice-pill" data-engine="edge" data-name="{{ voice.name }}" data-voice="{{ voice_id }}">
-<span class="voice-pill-name">{{ voice.name }} ({{ voice.accent }})</span>
-<button class="preview-btn" data-voice="{{ voice_id }}" title="Preview" type="button">▶</button>
-</div>
-                                        {% endfor %}
-                                    </div>
-</div>
-</div>
-<input id="selected-voice" name="voice" type="hidden" value="bf_emma"/>
-<input id="selected-engine" name="engine" type="hidden" value="kokoro"/>
-</div>
-<!-- Advanced Options Card -->
-<div class="card" style="margin-top: 20px;">
-<div class="card-header">
-<div>
-<h2 class="card-title">Advanced Options</h2>
-<p class="card-subtitle">Refine parsing and pronunciation</p>
-</div>
-</div>
-<div class="options-grid">
-<div class="option-group">
-<label class="option-label">Paragraph Detection</label>
-<select class="option-select" name="newline_mode">
-<option selected="" value="double">Double Newline (Recommended)</option>
-<option value="single">Single Newline (Dense Text)</option>
-<option value="none">None (Continuous)</option>
-</select>
-</div>
-<div class="option-group">
-<label class="option-label">Chapter Title Mode</label>
-<select class="option-select" name="title_mode">
-<option selected="" value="auto">Auto (Recommended)</option>
-<option value="tag_text">Tag Text Only</option>
-<option value="first_few">First Few Lines</option>
-</select>
-</div>
-<div class="option-group">
-<label class="option-label">Pronunciation Fixes (Regex)</label>
-<textarea class="option-select" name="custom_regex" placeholder="search==replace
-Barbadoes==Barbayduss
-[0-9]+==" style="height: 80px; font-family: monospace; resize: vertical;"></textarea>
-<p class="card-subtitle" style="font-size: 0.75em;">One rule per line: <code>search==replace</code></p>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Convert Button -->
-<div class="convert-btn-container">
-<button class="convert-btn" disabled="" id="convert-btn" type="submit">
-<span>🎧</span> Select a file and voice to start
-                    </button>
-</div>
-</form>
-</div>
-<!-- Queue Tab -->
-<div class="tab-panel" id="tab-queue">
-<div id="queue-content">
-<div class="no-jobs-message">
-<div class="no-jobs-icon">⏳</div>
-<div>No active conversions</div>
-</div>
-</div>
-</div>
-<!-- Library Tab -->
-<div class="tab-panel" id="tab-library">
-<div class="card">
-<div class="library-header">
-<select class="option-select" id="library-voice-select" style="width: auto; min-width: 150px;">
-<option value="bf_emma">Emma (British)</option>
-                        {% for voice_id, voice in voices.items() %}
-                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
-                        {% endfor %}
-                    </select>
-<label class="checkbox-label">
-<input id="library-notify-whatsapp" type="checkbox"/>
-<span>WhatsApp</span>
-</label>
-<input class="whatsapp-input library-whatsapp-input" id="library-whatsapp-number" placeholder="Phone (optional)" type="tel"/>
-<label class="checkbox-label">
-<input id="library-notify-telegram" type="checkbox"/>
-<span>Telegram</span>
-</label>
-<input class="library-search" id="library-search" placeholder="🔍 Filter books..." type="text"/>
-<select class="option-select" id="library-sort-key" style="width:auto; min-width: 120px;" title="Sort library">
-<option value="title">Title</option>
-<option value="modified_ts">Date</option>
-<option value="size">Size</option>
-<option value="status">Status</option>
-</select>
-<select class="option-select" id="library-sort-dir" style="width:auto; min-width: 90px;" title="Sort order">
-<option value="asc">Asc</option>
-<option value="desc">Desc</option>
-</select>
-<span class="library-stats" id="library-stats">Loading...</span>
-</div>
-<div class="library-grid" id="library-grid">
-<div class="no-jobs-message">
-<div class="no-jobs-icon">📚</div>
-<div>Loading library...</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Ops Tab -->
-<div class="tab-panel" id="tab-ops">
-<div class="card">
-<div class="card-header">
-<div>
-<h2 class="card-title">Queue Operations</h2>
-<p class="card-subtitle">Control queue, retries, and recovery</p>
-</div>
-</div>
-<div class="options-grid" id="ops-controls">
-<button class="job-btn" id="queue-pause-btn">Pause Queue</button>
-<button class="job-btn" id="queue-resume-btn">Resume Queue</button>
-<button class="job-btn" id="queue-retry-failed-btn">Bulk Retry Failed</button>
-<button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
-</div>
-<div class="progress-info" id="ops-queue-status" style="margin-top:12px;"></div>
-</div>
-<div class="card" id="gpu-card">
-<div class="card-header">
-<div>
-<h2 class="card-title">GPU Compute</h2>
-<p class="card-subtitle">Cloud GPU auto-scaling and cost tracking</p>
-</div>
-</div>
-<div class="gpu-card-inner">
-<div class="gpu-status-row">
-<div class="gpu-state-indicator">
-<span class="gpu-dot idle" id="gpu-state-dot"></span>
-<span id="gpu-state-label">Idle</span>
-</div>
-<span class="gpu-mode-badge cpu" id="gpu-mode-badge">CPU</span>
-</div>
-<div class="gpu-telemetry hidden" id="gpu-telemetry">
-<div class="gpu-telemetry-cell">
-<div class="gpu-telemetry-label">Session</div>
-<div class="gpu-telemetry-value" id="gpu-session-time">0m</div>
-</div>
-<div class="gpu-telemetry-cell">
-<div class="gpu-telemetry-label">Cost</div>
-<div class="gpu-telemetry-value cost" id="gpu-session-cost">$0.00</div>
-</div>
-<div class="gpu-telemetry-cell">
-<div class="gpu-telemetry-label">Cap</div>
-<div class="gpu-telemetry-value" id="gpu-cost-cap">$1.00</div>
-<div class="gpu-cap-bar">
-<div class="gpu-cap-fill" id="gpu-cap-fill" style="width: 0%"></div>
-</div>
-</div>
-</div>
-<div class="gpu-controls">
-<button class="job-btn" id="gpu-scale-up-btn">⚡ Force GPU</button>
-<button class="job-btn" disabled="" id="gpu-scale-down-btn">🔌 Force CPU</button>
-<span class="gpu-auto-label" id="gpu-auto-label">
-                            Auto: <span class="off">OFF</span>
-</span>
-</div>
-</div>
-</div>
-<div class="card">
-<div class="card-header">
-<div>
-<h2 class="card-title">Conversion Timeline</h2>
-<p class="card-subtitle">Live stage + container logs</p>
-</div>
-</div>
-<div class="no-jobs-message" id="ops-timeline-content">
-<div class="no-jobs-icon">🧭</div>
-<div>No active conversion</div>
-</div>
-<pre id="ops-log-preview" style="margin-top:12px; max-height:280px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
-</div>
-<div class="card">
-<div class="card-header">
-<div>
-<h2 class="card-title">Recovery Center</h2>
-<p class="card-subtitle">Failed/cancelled jobs and fast actions</p>
-</div>
-</div>
-<div id="ops-recovery-content"></div>
-</div>
-<div class="card">
-<div class="card-header">
-<div>
-<h2 class="card-title">Diagnostics</h2>
-<p class="card-subtitle">Queue health and runtime resources</p>
-</div>
-</div>
-<pre id="ops-diagnostics" style="max-height:260px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
-</div>
-</div>
-<!-- History Tab -->
-<div class="tab-panel" id="tab-history">
-<div class="card">
-<div class="history-header">
-<input class="history-search" id="history-search" placeholder="🔍 Search history..." type="text"/>
-<button class="history-clear-btn" id="clear-history-btn">Clear All</button>
-</div>
-<div id="history-content">
-<div class="no-jobs-message">
-<div class="no-jobs-icon">📋</div>
-<div>Loading history...</div>
-</div>
-</div>
-</div>
-</div>
-</main>
-<audio id="preview-audio"></audio>
-<script>
-        // ============ State ============
+    <aside class="sidebar">
+        <h1 style="font-family: 'Lora', serif; font-size: 1.8rem; margin: 0;">Studio</h1>
+        <nav class="nav-links">
+            <button class="nav-tab active" data-tab="convert"><i>📝</i> <span>Convert</span></button>
+            <button class="nav-tab" data-tab="queue"><i>⏳</i> <span>Queue</span></button>
+            <button class="nav-tab" data-tab="library"><i>📚</i> <span>Library</span></button>
+            <button class="nav-tab" data-tab="voices"><i>🗣️</i> <span>Voices</span></button>
+            <button class="nav-tab" data-tab="history"><i>📋</i> <span>History</span></button>
+            <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Settings</span></button>
+        </nav>
+    </aside>
+    <main class="app-main">
+        <header class="top-bar">
+            <h2 id="view-title" style="font-family: 'Lora', serif; margin: 0;">Convert</h2>
+        </header>
+        <div class="content-body">
+            <div class="tab-panel active" id="tab-convert">
+                <div class="card">
+                    <form id="convert-form">
+                        <div id="upload-area" style="border: 2px dashed var(--border); padding: 40px; text-align: center; border-radius: 12px; cursor: pointer;">
+                            <div style="font-size: 2rem;">📖</div>
+                            <p id="file-name-display">Click or drag file to start</p>
+                        </div>
+                        <input type="file" id="file-input" class="hidden">
+                        <div style="margin-top: 24px;">
+                            <label class="option-label">Voice</label>
+                            <select id="voice-select-simple" class="option-select">
+                                <optgroup label="Kokoro">
+                                    {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
+                                    <option value="{{ voice_id }}">{{ voice.name }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                <optgroup label="Edge">
+                                    {% for voice_id, voice in voices.items() if voice.engine == 'edge' %}
+                                    <option value="{{ voice_id }}">{{ voice.name }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+                        <button type="submit" id="convert-btn" class="convert-btn" style="margin-top: 24px;" disabled>Start Production</button>
+                        <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
+                    </form>
+                </div>
+            </div>
+            <div class="tab-panel" id="tab-queue"><div id="queue-content"></div></div>
+            <div class="tab-panel" id="tab-library"><div id="library-grid"></div></div>
+            <div class="tab-panel" id="tab-voices"><div id="kokoro-voices"></div></div>
+            <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
+            <div class="tab-panel" id="tab-settings"><div id="settings-content"></div></div>
+        </div>
+    </main>
+    <audio id="preview-audio"></audio>
+    <script>
+        const voices = {{ voices | tojson }};
         let selectedFile = null;
         let selectedVoice = 'bf_emma';
-        let selectedEngine = 'kokoro';
-        let currentPreviewBtn = null;
-        let libraryBooks = [];
-        let allJobs = [];
-
-        // ============ DOM Elements ============
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
-        const fileName = document.getElementById('file-name');
-        const selectedVoiceInput = document.getElementById('selected-voice');
-        const selectedEngineInput = document.getElementById('selected-engine');
-        const convertBtn = document.getElementById('convert-btn');
-        const convertForm = document.getElementById('convert-form');
-        const previewAudio = document.getElementById('preview-audio');
-        const queueBadge = document.getElementById('queue-badge');
-
-        // ============ Theme Handling ============
-        const savedTheme = localStorage.getItem('audiobook-theme') || 'light';
-        if (savedTheme !== 'light') {
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        }
-        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector(`.theme-btn[data-theme="${savedTheme}"]`)?.classList.add('active');
-
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const theme = btn.dataset.theme;
-                if (theme === 'light') {
-                    document.documentElement.removeAttribute('data-theme');
-                } else {
-                    document.documentElement.setAttribute('data-theme', theme);
-                }
-                localStorage.setItem('audiobook-theme', theme);
-                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
-        // ============ Design Mode Handling ============
-        const savedDesign = localStorage.getItem('audiobook-design') || 'studio';
-        if (savedDesign !== 'studio') {
-            document.documentElement.setAttribute('data-design', savedDesign);
-        }
-        document.querySelectorAll('.design-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector(`.design-btn[data-design="${savedDesign}"]`)?.classList.add('active');
-
-        document.querySelectorAll('.design-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const design = btn.dataset.design;
-                if (design === 'studio') {
-                    document.documentElement.removeAttribute('data-design');
-                } else {
-                    document.documentElement.setAttribute('data-design', design);
-                }
-                localStorage.setItem('audiobook-design', design);
-                document.querySelectorAll('.design-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
-        // ============ Tab Navigation ============
-        const savedTab = localStorage.getItem('audiobook-tab') || 'convert';
 
         function switchTab(tabId) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-
             document.querySelector(`.nav-tab[data-tab="${tabId}"]`)?.classList.add('active');
             document.getElementById(`tab-${tabId}`)?.classList.add('active');
-
+            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
             localStorage.setItem('audiobook-tab', tabId);
-
-            // Load data for specific tabs
             if (tabId === 'queue') loadJobs();
             if (tabId === 'library') loadLibrary();
-            if (tabId === 'ops') loadOps();
             if (tabId === 'history') loadHistory();
         }
 
@@ -585,930 +130,79 @@ Barbadoes==Barbayduss
             tab.addEventListener('click', () => switchTab(tab.dataset.tab));
         });
 
-        // Initialize saved tab
+        const savedTab = localStorage.getItem('audiobook-tab') || 'convert';
         switchTab(savedTab);
 
-        // ============ Engine Tab Handling ============
-        document.querySelectorAll('.engine-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const engine = tab.dataset.engine;
-                selectedEngine = engine;
-                selectedEngineInput.value = engine;
-
-                document.querySelectorAll('.engine-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                document.querySelectorAll('.engine-voices').forEach(v => v.classList.add('hidden'));
-                document.getElementById(`${engine}-voices`).classList.remove('hidden');
-
-                // Select first voice of new engine
-                document.querySelectorAll('.voice-pill').forEach(c => c.classList.remove('selected'));
-                const firstVoice = document.querySelector(`#${engine}-voices .voice-pill`);
-                if (firstVoice) {
-                    firstVoice.classList.add('selected');
-                    selectedVoice = firstVoice.dataset.voice;
-                    selectedVoiceInput.value = selectedVoice;
-                }
-                updateConvertButton();
-            });
-        });
-
-        // ============ Voice Search ============
-        document.getElementById('voice-search').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const currentEngine = selectedEngine;
-
-            document.querySelectorAll(`#${currentEngine}-voices .voice-pill`).forEach(pill => {
-                const name = pill.dataset.name.toLowerCase();
-                pill.classList.toggle('hidden', !name.includes(query));
-            });
-        });
-
-        // ============ WhatsApp Toggle ============
-        document.getElementById('notify-whatsapp').addEventListener('change', (e) => {
-            document.getElementById('whatsapp-container').classList.toggle('visible', e.target.checked);
-        });
-
-        // Library WhatsApp Toggle
-        document.getElementById('library-notify-whatsapp').addEventListener('change', (e) => {
-            document.getElementById('library-whatsapp-number').classList.toggle('visible', e.target.checked);
-        });
-
-        // ============ File Upload ============
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
         uploadArea.addEventListener('click', () => fileInput.click());
-
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length) {
-                handleFile(files[0]);
-            }
-        });
-
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length) {
-                handleFile(e.target.files[0]);
+                selectedFile = e.target.files[0];
+                document.getElementById('file-name-display').textContent = selectedFile.name;
+                document.getElementById('convert-btn').disabled = false;
             }
         });
 
-        function handleFile(file) {
-            const validExtensions = ['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'];
-            const ext = '.' + file.name.split('.').pop().toLowerCase();
-
-            if (!validExtensions.includes(ext)) {
-                alert('Unsupported file format. Please use: ' + validExtensions.join(', '));
-                return;
-            }
-
-            selectedFile = file;
-            const format = ext.toUpperCase().replace('.', '');
-            fileName.innerHTML = `<span class="file-badge">${format}</span> ${escapeHtml(file.name)}`;
-            fileName.classList.remove('hidden');
-            uploadArea.classList.add('has-file');
-            updateConvertButton();
-        }
-
-        // ============ Voice Selection ============
-        document.querySelectorAll('.voice-pill').forEach(pill => {
-            pill.addEventListener('click', (e) => {
-                if (e.target.classList.contains('preview-btn')) return;
-                document.querySelectorAll('.voice-pill').forEach(c => c.classList.remove('selected'));
-                pill.classList.add('selected');
-                selectedVoice = pill.dataset.voice;
-                selectedVoiceInput.value = selectedVoice;
-                updateConvertButton();
-            });
+        document.getElementById('voice-select-simple').addEventListener('change', (e) => {
+            selectedVoice = e.target.value;
+            document.getElementById('selected-voice').value = selectedVoice;
         });
 
-        // Select default voice
-        document.querySelector('[data-voice="bf_emma"]')?.classList.add('selected');
-
-        // ============ Voice Preview ============
-        document.querySelectorAll('.preview-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const voiceId = btn.dataset.voice;
-
-                if (currentPreviewBtn) {
-                    currentPreviewBtn.textContent = '▶';
-                    currentPreviewBtn.classList.remove('loading');
-                }
-
-                if (previewAudio.src && !previewAudio.paused && currentPreviewBtn === btn) {
-                    previewAudio.pause();
-                    btn.textContent = '▶';
-                    currentPreviewBtn = null;
-                    return;
-                }
-
-                btn.textContent = '⏳';
-                btn.classList.add('loading');
-                currentPreviewBtn = btn;
-
-                try {
-                    previewAudio.src = `/api/preview/${voiceId}`;
-                    await previewAudio.play();
-                    btn.textContent = '⏹';
-                    btn.classList.remove('loading');
-                } catch (err) {
-                    btn.textContent = '❌';
-                    btn.classList.remove('loading');
-                    setTimeout(() => btn.textContent = '▶', 2000);
-                }
-            });
-        });
-
-        previewAudio.addEventListener('ended', () => {
-            if (currentPreviewBtn) {
-                currentPreviewBtn.textContent = '▶';
-                currentPreviewBtn = null;
-            }
-        });
-
-        // ============ Convert Button ============
-        function updateConvertButton() {
-            if (selectedFile && selectedVoice) {
-                convertBtn.disabled = false;
-                const voiceName = document.querySelector(`[data-voice="${selectedVoice}"] .voice-pill-name`)?.textContent || selectedVoice;
-                convertBtn.innerHTML = `<span>🎧</span> Convert "${escapeHtml(selectedFile.name.substring(0, 30))}" with ${voiceName}`;
-            } else {
-                convertBtn.disabled = true;
-                convertBtn.innerHTML = '<span>🎧</span> Select a file and voice to start';
-            }
-        }
-
-        // ============ Form Submission ============
-        convertForm.addEventListener('submit', async (e) => {
+        document.getElementById('convert-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!selectedFile) return;
-
-            convertBtn.disabled = true;
-            convertBtn.innerHTML = '<span class="spinner"></span> Starting conversion...';
-
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('voice', selectedVoice);
-            formData.append('voice2', document.getElementById('voice2-select').value);
-            formData.append('start_chapter', document.getElementById('start-chapter').value);
-            formData.append('end_chapter', document.getElementById('end-chapter').value);
-            formData.append('notify_telegram', document.getElementById('notify-telegram').checked ? '1' : '');
-            formData.append('notify_whatsapp', document.getElementById('notify-whatsapp').checked ? '1' : '');
-            formData.append('whatsapp_number', document.getElementById('whatsapp-number').value);
-            formData.append('newline_mode', document.querySelector('[name="newline_mode"]').value);
-            formData.append('title_mode', document.querySelector('[name="title_mode"]').value);
-            formData.append('custom_regex', document.querySelector('[name="custom_regex"]').value);
-
             try {
-                const response = await fetch('/api/convert', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.error) {
-                    alert('Error: ' + result.error);
-                } else {
-                    // Reset form
-                    selectedFile = null;
-                    fileInput.value = '';
-                    fileName.classList.add('hidden');
-                    uploadArea.classList.remove('has-file');
-                    document.getElementById('voice2-select').value = '';
-                    document.getElementById('start-chapter').value = '';
-                    document.getElementById('end-chapter').value = '';
-                    document.getElementById('notify-telegram').checked = false;
-                    document.getElementById('notify-whatsapp').checked = false;
-                    document.getElementById('whatsapp-container').classList.remove('visible');
-                    document.querySelector('[name="newline_mode"]').value = 'double';
-                    document.querySelector('[name="title_mode"]').value = 'auto';
-                    document.querySelector('[name="custom_regex"]').value = '';
-
-                    // Switch to queue tab
-                    switchTab('queue');
-                }
-            } catch (err) {
-                alert('Failed to start conversion: ' + err.message);
-            }
-
-            convertBtn.disabled = true;
-            convertBtn.innerHTML = '<span>🎧</span> Select a file and voice to start';
+                const resp = await fetch('/api/convert', { method: 'POST', body: formData });
+                if (resp.ok) switchTab('queue');
+            } catch (err) { alert(err.message); }
         });
 
-        // ============ Queue/Jobs Loading ============
         async function loadJobs() {
-            try {
-                const response = await fetch('/api/jobs');
-                allJobs = await response.json();
-
-                const activeJobs = allJobs.filter(j =>
-                    j.status === 'queued' || j.status.includes('converting')
-                );
-                const waitingJobs = allJobs.filter(j => j.status === 'queued');
-                const convertingJob = allJobs.find(j => j.status.includes('converting'));
-
-                // Update badge
-                if (activeJobs.length > 0) {
-                    queueBadge.textContent = activeJobs.length;
-                    queueBadge.classList.remove('hidden');
-                } else {
-                    queueBadge.classList.add('hidden');
-                }
-
-                const queueContent = document.getElementById('queue-content');
-
-                if (activeJobs.length === 0) {
-                    queueContent.innerHTML = `
-                        <div class="no-jobs-message">
-                            <div class="no-jobs-icon">⏳</div>
-                            <div>No active conversions</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                let html = '';
-
-                // Currently converting
-                if (convertingJob) {
-                    const progress = convertingJob.progress_percent || 0;
-                    const voiceInfo = convertingJob.voice2_name
-                        ? `${convertingJob.voice_name} + ${convertingJob.voice2_name}`
-                        : convertingJob.voice_name;
-
-                    html += `
-                        <div class="queue-section">
-                            <div class="queue-section-header">
-                                <span class="queue-section-title">Converting Now</span>
-                            </div>
-                            <div class="active-job-card">
-                                <div class="active-job-header">
-                                    <span class="active-job-title">${escapeHtml(convertingJob.book_name)}</span>
-                                    <span class="active-job-chapter">
-                                        ${convertingJob.current_chapter ? `Ch ${convertingJob.current_chapter}/${convertingJob.total_chapters || '?'}` : 'Starting...'}
-                                        (${progress}%)
-                                    </span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: ${progress}%"></div>
-                                </div>
-                                <div class="progress-info">
-                                    <span>${convertingJob.current_chapter_name || 'Processing...'}</span>
-                                    <span>${convertingJob.eta_minutes ? `ETA: ${convertingJob.eta_minutes} min` : ''}</span>
-                                </div>
-                                <div class="active-job-meta">
-                                    <span class="active-job-voice">Voice: ${voiceInfo}</span>
-                                    <div class="job-actions">
-                                        <button class="job-btn job-btn-danger" onclick="cancelJob('${convertingJob.id}')">Cancel</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Waiting queue
-                if (waitingJobs.length > 0) {
-                    html += `
-                        <div class="queue-section">
-                            <div class="queue-section-header">
-                                <span class="queue-section-title">Waiting</span>
-                                <span class="queue-count">${waitingJobs.length}</span>
-                            </div>
-                            <div class="waiting-list">
-                                ${waitingJobs.map((job, i) => `
-                                    <div class="waiting-item">
-                                        <div class="waiting-item-info">
-                                            <span class="waiting-item-number">${i + 1}</span>
-                                            <span class="waiting-item-title">${escapeHtml(job.book_name)}</span>
-                                        </div>
-                                        <div class="job-actions">
-                                            <button class="job-btn" onclick="moveQueue('${job.id}', -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
-                                            <button class="job-btn" onclick="moveQueue('${job.id}', 1)" ${i === waitingJobs.length - 1 ? 'disabled' : ''}>↓</button>
-                                            <button class="job-btn job-btn-danger" onclick="cancelJob('${job.id}')">Cancel</button>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                queueContent.innerHTML = html;
-
-                // Continue polling if jobs are active
-                if (activeJobs.length > 0) {
-                    setTimeout(loadJobs, 3000);
-                }
-            } catch (err) {
-                console.error('Failed to load jobs:', err);
-            }
+            const resp = await fetch('/api/jobs');
+            const jobs = await resp.json();
+            const active = jobs.filter(j => j.status === 'queued' || j.status.includes('converting'));
+            document.getElementById('queue-content').innerHTML = active.map(j => `
+                <div class="library-item"><div>${j.book_name}</div><div>${j.status} - ${j.progress_percent || 0}%</div></div>
+            `).join('') || 'No active jobs';
         }
 
-        async function moveQueue(jobId, delta) {
-            const waitingJobs = allJobs.filter(j => j.status === 'queued');
-            const idx = waitingJobs.findIndex(j => j.id === jobId);
-            if (idx < 0) return;
-            const target = idx + delta;
-            if (target < 0 || target >= waitingJobs.length) return;
-            const ordered = waitingJobs.map(j => j.id);
-            [ordered[idx], ordered[target]] = [ordered[target], ordered[idx]];
-            await fetch('/api/queue/reorder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ordered_ids: ordered })
-            });
-            loadJobs();
-            if (document.getElementById('tab-ops').classList.contains('active')) {
-                loadOps();
-            }
-        }
-
-        // ============ Ops Loading ============
-        async function loadOps() {
-            try {
-                const [jobsResp, queueResp, diagResp] = await Promise.all([
-                    fetch('/api/jobs'),
-                    fetch('/api/queue/status'),
-                    fetch('/api/diagnostics')
-                ]);
-                const jobs = await jobsResp.json();
-                const queue = await queueResp.json();
-                const diag = await diagResp.json();
-
-                const converting = jobs.find(j => j.status && j.status.includes('converting'));
-                const failed = jobs.filter(j => j.status === 'failed' || j.status === 'cancelled');
-
-                document.getElementById('ops-queue-status').innerHTML =
-                    `Queue: <strong>${queue.queued_count}</strong> waiting · State: <strong>${queue.paused ? 'Paused' : 'Running'}</strong>`;
-
-                document.getElementById('queue-pause-btn').disabled = queue.paused;
-                document.getElementById('queue-resume-btn').disabled = !queue.paused;
-
-                if (converting) {
-                    const timelineResp = await fetch(`/api/jobs/${converting.id}/timeline`);
-                    const timeline = await timelineResp.json();
-                    const logsResp = await fetch(`/api/jobs/${converting.id}/logs?tail=120`);
-                    const logs = await logsResp.json();
-
-                    document.getElementById('ops-timeline-content').innerHTML = `
-                        <div class="active-job-card">
-                            <div class="active-job-header">
-                                <span class="active-job-title">${escapeHtml(converting.book_name)}</span>
-                                <span class="active-job-chapter">Ch ${converting.current_chapter || '?'} · ${converting.progress_percent || 0}%</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width:${converting.progress_percent || 0}%"></div></div>
-                            <div class="progress-info">
-                                <span>Retry count: ${converting.retry_count || 0}</span>
-                                <span>${converting.eta_minutes ? `ETA ${converting.eta_minutes}m` : ''}</span>
-                            </div>
-                            <div class="waiting-list" style="margin-top:10px;">
-                                ${timeline.stages.map(s => `
-                                    <div class="waiting-item">
-                                        <div class="waiting-item-info">
-                                            <span class="waiting-item-number">${s.state === 'done' ? '✓' : s.state === 'active' ? '▶' : '•'}</span>
-                                            <span class="waiting-item-title">${escapeHtml(s.label)}</span>
-                                        </div>
-                                        <span class="status-tag status-${s.state === 'done' ? 'completed' : s.state === 'active' ? 'converting' : 'queued'}">${s.state}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('ops-log-preview').textContent = logs.logs || '(no logs)';
-                } else {
-                    document.getElementById('ops-timeline-content').innerHTML = `
-                        <div class="no-jobs-message"><div class="no-jobs-icon">🧭</div><div>No active conversion</div></div>
-                    `;
-                    document.getElementById('ops-log-preview').textContent = '';
-                }
-
-                if (failed.length === 0) {
-                    document.getElementById('ops-recovery-content').innerHTML = `
-                        <div class="no-jobs-message"><div class="no-jobs-icon">✅</div><div>No failed/cancelled jobs</div></div>
-                    `;
-                } else {
-                    document.getElementById('ops-recovery-content').innerHTML = `
-                        <div class="waiting-list">
-                            ${failed.slice(0, 20).map(j => `
-                                <div class="waiting-item">
-                                    <div class="waiting-item-info">
-                                        <span class="waiting-item-number">!</span>
-                                        <span class="waiting-item-title">${escapeHtml(j.book_name)}</span>
-                                    </div>
-                                    <div class="job-actions">
-                                        <button class="job-btn" onclick="retryJob('${j.id}')">Retry</button>
-                                        <button class="job-btn job-btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                }
-
-                document.getElementById('ops-diagnostics').textContent = JSON.stringify(diag, null, 2);
-
-                // Also refresh GPU status when ops tab refreshes
-                loadGpuStatus();
-            } catch (err) {
-                document.getElementById('ops-diagnostics').textContent = `Failed to load ops: ${err.message}`;
-            }
-        }
-
-        document.getElementById('queue-pause-btn')?.addEventListener('click', async () => {
-            await fetch('/api/queue/pause', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paused: true })
-            });
-            loadOps();
-        });
-
-        document.getElementById('queue-resume-btn')?.addEventListener('click', async () => {
-            await fetch('/api/queue/pause', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paused: false })
-            });
-            loadOps();
-            loadJobs();
-        });
-
-        document.getElementById('queue-retry-failed-btn')?.addEventListener('click', async () => {
-            await fetch('/api/queue/retry-failed', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ limit: 20 })
-            });
-            loadOps();
-            loadJobs();
-        });
-
-        document.getElementById('ops-refresh-btn')?.addEventListener('click', loadOps);
-
-        // ============ GPU Status ============
-        let _gpuState = 'idle';
-        let _gpuPollTimer = null;
-
-        async function loadGpuStatus() {
-            try {
-                const resp = await fetch('/api/gpu/status');
-                const gpu = await resp.json();
-                _gpuState = gpu.state || 'idle';
-
-                // State dot
-                const dot = document.getElementById('gpu-state-dot');
-                dot.className = 'gpu-dot ' + _gpuState;
-
-                // State label
-                const labels = { idle: 'Idle', provisioning: 'Provisioning…', active: 'Active', error: 'Error' };
-                document.getElementById('gpu-state-label').textContent = labels[_gpuState] || _gpuState;
-
-                // Mode badge
-                const badge = document.getElementById('gpu-mode-badge');
-                const isGpu = _gpuState === 'active';
-                badge.textContent = isGpu ? 'GPU' : 'CPU';
-                badge.className = 'gpu-mode-badge ' + (isGpu ? 'gpu' : 'cpu');
-
-                // Telemetry strip
-                const telemetry = document.getElementById('gpu-telemetry');
-                if (_gpuState === 'active' || _gpuState === 'provisioning') {
-                    telemetry.classList.remove('hidden');
-                    const mins = gpu.session_minutes || 0;
-                    document.getElementById('gpu-session-time').textContent =
-                        mins >= 60 ? `${Math.floor(mins/60)}h ${Math.round(mins%60)}m` : `${Math.round(mins)}m`;
-                    document.getElementById('gpu-session-cost').textContent = `$${(gpu.session_cost || 0).toFixed(2)}`;
-                    document.getElementById('gpu-cost-cap').textContent = `$${(gpu.cost_cap || 1).toFixed(2)}`;
-
-                    const pct = Math.min(100, ((gpu.session_cost || 0) / (gpu.cost_cap || 1)) * 100);
-                    const fill = document.getElementById('gpu-cap-fill');
-                    fill.style.width = pct + '%';
-                    fill.className = 'gpu-cap-fill' + (pct > 80 ? ' danger' : pct > 50 ? ' warning' : '');
-                } else {
-                    telemetry.classList.add('hidden');
-                }
-
-                // Controls
-                document.getElementById('gpu-scale-up-btn').disabled = (_gpuState === 'active' || _gpuState === 'provisioning');
-                document.getElementById('gpu-scale-down-btn').disabled = (_gpuState === 'idle');
-
-                // Auto-scale label
-                const autoLabel = document.getElementById('gpu-auto-label');
-                if (gpu.autoscale_enabled) {
-                    autoLabel.innerHTML = `Auto: <span class="on">ON (≥${gpu.autoscale_threshold} books)</span>`;
-                } else {
-                    autoLabel.innerHTML = `Auto: <span class="off">OFF</span>`;
-                }
-
-                // Header pip
-                const pip = document.getElementById('gpu-header-pip');
-                if (isGpu) {
-                    pip.classList.remove('hidden');
-                } else {
-                    pip.classList.add('hidden');
-                }
-
-                // Fast polling when GPU is not idle
-                if (_gpuState !== 'idle' && !_gpuPollTimer) {
-                    _gpuPollTimer = setInterval(loadGpuStatus, 10000);
-                } else if (_gpuState === 'idle' && _gpuPollTimer) {
-                    clearInterval(_gpuPollTimer);
-                    _gpuPollTimer = null;
-                }
-            } catch (err) {
-                console.error('GPU status error:', err);
-            }
-        }
-
-        document.getElementById('gpu-scale-up-btn')?.addEventListener('click', async () => {
-            document.getElementById('gpu-scale-up-btn').disabled = true;
-            document.getElementById('gpu-state-label').textContent = 'Provisioning…';
-            document.getElementById('gpu-state-dot').className = 'gpu-dot provisioning';
-            try {
-                await fetch('/api/gpu/scale-up', { method: 'POST' });
-            } catch (e) { console.error(e); }
-            setTimeout(loadGpuStatus, 2000);
-        });
-
-        document.getElementById('gpu-scale-down-btn')?.addEventListener('click', async () => {
-            document.getElementById('gpu-scale-down-btn').disabled = true;
-            try {
-                await fetch('/api/gpu/scale-down', { method: 'POST' });
-            } catch (e) { console.error(e); }
-            setTimeout(loadGpuStatus, 1000);
-        });
-
-        document.getElementById('gpu-header-pip')?.addEventListener('click', () => {
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelector('.nav-tab[data-tab="ops"]')?.classList.add('active');
-            document.getElementById('tab-ops')?.classList.add('active');
-            localStorage.setItem('audiobook-tab', 'ops');
-            loadOps();
-        });
-
-        // ============ History Loading ============
-        async function loadHistory() {
-            try {
-                const response = await fetch('/api/history');
-                const history = await response.json();
-
-                const historyContent = document.getElementById('history-content');
-
-                if (history.length === 0) {
-                    historyContent.innerHTML = `
-                        <div class="no-jobs-message">
-                            <div class="no-jobs-icon">📋</div>
-                            <div>No completed conversions yet</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                // Group by date
-                const grouped = {};
-                history.forEach(job => {
-                    const date = job.completed_at
-                        ? new Date(job.completed_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
-                        : 'Unknown';
-                    if (!grouped[date]) grouped[date] = [];
-                    grouped[date].push(job);
-                });
-
-                let html = '';
-                for (const [date, jobs] of Object.entries(grouped)) {
-                    html += `
-                        <div class="history-group">
-                            <div class="history-group-title">${date}</div>
-                            <div class="history-list">
-                                ${jobs.map(job => {
-                                    const voiceInfo = job.voice2_name
-                                        ? `${job.voice_name} + ${job.voice2_name}`
-                                        : job.voice_name;
-                                    const engineBadge = job.tts_engine === 'piper'
-                                        ? '<span style="background:var(--success);color:#000;padding:2px 6px;border-radius:4px;font-size:0.7em;margin-left:6px;">Piper</span>'
-                                        : '';
-
-                                    return `
-                                        <div class="history-item" data-title="${escapeHtml(job.book_name.toLowerCase())}">
-                                            <div class="history-item-info">
-                                                <div class="history-item-title">
-                                                    ✅ ${escapeHtml(job.book_name)}${engineBadge}
-                                                </div>
-                                                <div class="history-item-meta">
-                                                    ${voiceInfo} · ${job.file_count || '?'} chapters
-                                                    ${job.synced_to_abs ? ' · Synced' : ''}
-                                                </div>
-                                            </div>
-                                            <div class="history-item-actions">
-                                                <button class="history-action-btn" onclick="downloadJob('${job.id}')" title="Download">⬇️</button>
-                                                ${!job.synced_to_abs ? `<button class="history-action-btn success" onclick="syncJob('${job.id}')" title="Sync to ABS">☁️</button>` : ''}
-                                                <button class="history-action-btn" onclick="retryJob('${job.id}')" title="Re-convert">🔄</button>
-                                                <button class="history-action-btn danger" onclick="deleteJob('${job.id}')" title="Delete">🗑️</button>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                historyContent.innerHTML = html;
-            } catch (err) {
-                console.error('Failed to load history:', err);
-                document.getElementById('history-content').innerHTML = `
-                    <div class="no-jobs-message">
-                        <div class="no-jobs-icon">❌</div>
-                        <div>Failed to load history</div>
-                    </div>
-                `;
-            }
-        }
-
-        // History search
-        document.getElementById('history-search').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            document.querySelectorAll('.history-item').forEach(item => {
-                const title = item.dataset.title || '';
-                item.style.display = title.includes(query) ? '' : 'none';
-            });
-        });
-
-        // ============ Library Loading ============
         async function loadLibrary() {
-            try {
-                const response = await fetch('/api/library');
-                libraryBooks = await response.json();
-
-                renderLibrary();
-            } catch (err) {
-                console.error('Failed to load library:', err);
-                document.getElementById('library-grid').innerHTML = `
-                    <div class="no-jobs-message">
-                        <div class="no-jobs-icon">📚</div>
-                        <div>Library not available</div>
+            const resp = await fetch('/api/library');
+            const books = await resp.json();
+            document.getElementById('library-grid').innerHTML = books.map(b => `
+                <div class="library-item">
+                    <div style="display:flex; justify-content:space-between;">
+                        <div>${b.title}</div>
+                        <button class="convert-btn" style="width:auto; padding:4px 12px;" onclick="convertFromLibrary('${b.path}')">Convert</button>
                     </div>
-                `;
-                document.getElementById('library-stats').textContent = '';
-            }
+                </div>
+            `).join('');
         }
 
-        function renderLibrary() {
-            const libraryGrid = document.getElementById('library-grid');
-            const searchQuery = document.getElementById('library-search').value.toLowerCase();
-
-            const filtered = libraryBooks.filter(book =>
-                book.title.toLowerCase().includes(searchQuery)
-            );
-
-            const sortKey = (document.getElementById('library-sort-key')?.value || 'title');
-            const sortDir = (document.getElementById('library-sort-dir')?.value || 'asc');
-
-            const statusRank = (s) => {
-                if (s === 'converting') return 0;
-                if (s === 'available') return 1;
-                if (s === 'completed') return 2;
-                return 3;
-            };
-
-            const dirMul = sortDir === 'desc' ? -1 : 1;
-            const sorted = [...filtered].sort((a, b) => {
-                const at = (a?.title || '').toLowerCase();
-                const bt = (b?.title || '').toLowerCase();
-
-                let cmp = 0;
-                if (sortKey === 'modified_ts') {
-                    const av = Number(a?.modified_ts || 0);
-                    const bv = Number(b?.modified_ts || 0);
-                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
-                } else if (sortKey === 'size') {
-                    const av = Number(a?.size || 0);
-                    const bv = Number(b?.size || 0);
-                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
-                } else if (sortKey === 'status') {
-                    const av = statusRank(a?.status || '');
-                    const bv = statusRank(b?.status || '');
-                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
-                } else {
-                    cmp = at.localeCompare(bt);
-                }
-
-                if (cmp === 0) cmp = at.localeCompare(bt);
-                return cmp * dirMul;
-            });
-
-            document.getElementById('library-stats').textContent = `${sorted.length} books · ${sortKey.replace('_ts','')} ${sortDir}`;
-
-            if (sorted.length === 0) {
-                libraryGrid.innerHTML = `
-                    <div class="no-jobs-message">
-                        <div class="no-jobs-icon">📚</div>
-                        <div>${searchQuery ? 'No matching books' : 'No books in library'}</div>
-                    </div>
-                `;
-                return;
-            }
-
-            libraryGrid.innerHTML = sorted.map(book => {
-                const sizeStr = book.size ? `${(book.size / 1024 / 1024).toFixed(1)} MB` : '';
-                const modifiedStr = book.modified_ts
-                    ? new Date(book.modified_ts * 1000).toLocaleString('en-GB')
-                    : '';
-                let statusHtml = '';
-
-                if (book.status === 'completed') {
-                    statusHtml = '<span class="status-badge done">✅ Done</span>';
-                } else if (book.status === 'converting') {
-                    statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
-                } else {
-                    // Avoid inline onclick: titles/paths can contain apostrophes and break attribute JS.
-                    statusHtml = `<button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>`;
-                }
-
-                const icon = book.format === 'pdf' ? '📕' : '📗';
-
-                return `
-                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}" title="${modifiedStr ? `Modified: ${escapeHtml(modifiedStr)}` : ''}">
-                        <div class="library-item-info">
-                            <span class="library-item-icon">${icon}</span>
-                            <div class="library-item-details">
-                                <div class="library-item-title">${escapeHtml(book.title)}</div>
-                                <div class="library-item-meta">
-                                    <span>${book.format?.toUpperCase() || 'EPUB'}</span>
-                                    <span>${sizeStr}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="library-item-status">
-                            ${statusHtml}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            // Wire up convert buttons after rendering (safer than inline JS).
-            document.querySelectorAll('.library-convert-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const path = btn.dataset.path || '';
-                    const title = btn.dataset.title || '';
-                    convertFromLibrary(path, title);
-                });
-            });
-        }
-
-        document.getElementById('library-search').addEventListener('input', renderLibrary);
-        document.getElementById('library-sort-key').addEventListener('change', () => {
-            localStorage.setItem('librarySortKey', document.getElementById('library-sort-key').value);
-            renderLibrary();
-        });
-        document.getElementById('library-sort-dir').addEventListener('change', () => {
-            localStorage.setItem('librarySortDir', document.getElementById('library-sort-dir').value);
-            renderLibrary();
-        });
-
-        // Restore library sort prefs (defaults: Title + Asc).
-        (() => {
-            const k = localStorage.getItem('librarySortKey');
-            const d = localStorage.getItem('librarySortDir');
-            if (k) document.getElementById('library-sort-key').value = k;
-            if (d) document.getElementById('library-sort-dir').value = d;
-        })();
-
-        async function convertFromLibrary(path, title) {
-            const voice = document.getElementById('library-voice-select').value;
-            const notifyWhatsapp = document.getElementById('library-notify-whatsapp').checked;
-            const notifyTelegram = document.getElementById('library-notify-telegram').checked;
-            const whatsappNumber = document.getElementById('library-whatsapp-number').value;
-
+        async function convertFromLibrary(path) {
             try {
-                const response = await fetch('/api/library/convert', {
+                const resp = await fetch('/api/library/convert', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        path,
-                        voice,
-                        notify_whatsapp: notifyWhatsapp,
-                        notify_telegram: notifyTelegram,
-                        whatsapp_number: whatsappNumber
-                    })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ path, voice: selectedVoice })
                 });
-
-                const contentType = response.headers.get('content-type') || '';
-                const raw = await response.text();
-                let result = null;
-                if (contentType.includes('application/json')) {
-                    try { result = JSON.parse(raw); } catch { result = null; }
-                }
-                if (!result) {
-                    const prefix = (raw || '').slice(0, 200).replace(/\s+/g, ' ').trim();
-                    throw new Error(`HTTP ${response.status} non-JSON response: ${prefix || '(empty)'}`);
-                }
-                if (result.error) {
-                    alert('Error: ' + result.error);
-                } else {
-                    switchTab('queue');
-                }
-            } catch (err) {
-                alert('Failed to start conversion: ' + err.message);
-            }
+                if (resp.ok) switchTab('queue');
+            } catch (err) { alert(err.message); }
         }
 
-        // ============ Job Actions ============
-        async function cancelJob(jobId) {
-            if (!confirm('Cancel this conversion?')) return;
-            try {
-                await fetch(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
-                loadJobs();
-            } catch (err) {
-                alert('Failed to cancel job: ' + err.message);
-            }
+        async function loadHistory() {
+            const resp = await fetch('/api/history');
+            const jobs = await resp.json();
+            document.getElementById('history-content').innerHTML = jobs.map(j => `
+                <div class="library-item"><div>✅ ${j.book_name}</div><div>${j.completed_at}</div></div>
+            `).join('') || 'No history';
         }
 
-        async function retryJob(jobId) {
-            try {
-                const response = await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
-                const result = await response.json();
-                if (!response.ok || result.error) {
-                    alert('Retry failed: ' + (result.error || `HTTP ${response.status}`));
-                    return;
-                }
-                switchTab('queue');
-            } catch (err) {
-                alert('Failed to retry job: ' + err.message);
-            }
-        }
-
-        function downloadJob(jobId) {
-            window.location.href = `/api/jobs/${jobId}/download`;
-        }
-
-        async function syncJob(jobId) {
-            try {
-                const response = await fetch(`/api/jobs/${jobId}/sync`, { method: 'POST' });
-                const result = await response.json();
-                if (result.error) {
-                    alert('Sync failed: ' + result.error);
-                } else {
-                    alert('Synced to Audiobookshelf!');
-                    loadHistory();
-                }
-            } catch (err) {
-                alert('Failed to sync: ' + err.message);
-            }
-        }
-
-        async function deleteJob(jobId) {
-            if (!confirm('Delete this job and its files?')) return;
-            try {
-                await fetch(`/api/jobs/${jobId}/delete`, { method: 'DELETE' });
-                loadHistory();
-                loadJobs();
-            } catch (err) {
-                alert('Failed to delete job: ' + err.message);
-            }
-        }
-
-        // Clear all history
-        document.getElementById('clear-history-btn').addEventListener('click', async () => {
-            if (!confirm('Delete ALL completed conversions and their files?')) return;
-
-            try {
-                const response = await fetch('/api/history');
-                const history = await response.json();
-
-                for (const job of history) {
-                    await fetch(`/api/jobs/${job.id}/delete`, { method: 'DELETE' });
-                }
-
-                loadHistory();
-            } catch (err) {
-                alert('Failed to clear history: ' + err.message);
-            }
-        });
-
-        // ============ Utility Functions ============
-        function escapeHtml(str) {
-            if (!str) return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
-
-        // ============ Initial Load ============
-        loadJobs();
-        loadGpuStatus();
-        setInterval(loadJobs, 15000);
+        setInterval(loadJobs, 10000);
+        function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
     </script>
-</div></main></body>
+</body>
 </html>
