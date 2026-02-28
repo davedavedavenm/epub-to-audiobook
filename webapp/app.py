@@ -3472,8 +3472,8 @@ def retry_job(job_id: str):
     if not job:
         return jsonify({'error': 'Job not found'}), 404
 
-    if job['status'] not in ('failed', 'cancelled'):
-        return jsonify({'error': 'Can only retry failed or cancelled jobs'}), 400
+    if job['status'] not in ('failed', 'cancelled', 'completed'):
+        return jsonify({'error': 'Can only retry failed, cancelled, or completed jobs'}), 400
 
     # Check retry limit (max 3 retries)
     retry_count = job.get('retry_count', 0) or 0

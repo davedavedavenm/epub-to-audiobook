@@ -3047,17 +3047,18 @@ Barbadoes==Barbayduss
                     : '';
                 let statusHtml = '';
 
-                if (book.status === 'completed') {
-                    statusHtml = '<span class="status-badge done">✅ Done</span>';
-                } else if (book.status === 'converting') {
+                if (book.status === 'converting') {
                     statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
                 } else {
+                    const doneBadge = book.status === 'completed' ? '<span class="status-badge done" style="margin-right:8px;">✅ Done</span>' : '';
+                    const btnLabel = book.status === 'completed' ? 'New Version' : 'Options';
                     statusHtml = `
                         <div class="config-btn-group">
+                            ${doneBadge}
                             <button class="library-config-btn" title="Configure settings" data-path="${escapeHtml(book.path)}">
-                                <span>⚙️</span><span>Options</span>
+                                <span>⚙️</span><span>${btnLabel}</span>
                             </button>
-                            <button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>
+                            ${book.status !== 'completed' ? `<button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>` : ''}
                         </div>
                     `;
                 }
