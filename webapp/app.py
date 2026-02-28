@@ -506,13 +506,6 @@ def init_db():
             )
         ''')
 
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT
-            )
-        ''')
-
         # Add newline_mode column (migration)
         try:
             conn.execute("ALTER TABLE jobs ADD COLUMN newline_mode TEXT DEFAULT 'double'")
@@ -606,25 +599,6 @@ def get_db():
         yield conn
     finally:
         conn.close()
-
-
-def get_setting(key: str, default: Any = None) -> Any:
-    """Retrieve a setting from DB, falling back to environment variables."""
-    try:
-        with get_db() as conn:
-            res = conn.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
-            if res:
-                return res['value']
-    except Exception:
-        pass
-    return os.environ.get(key, default)
-
-
-def set_setting(key: str, value: str):
-    """Save a setting to the DB."""
-    with get_db() as conn:
-        conn.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', (key, value))
-        conn.commit()
 
 
 def job_to_dict(row):
@@ -766,10 +740,15 @@ def update_job(job_id: str, **kwargs):
 
 
 def get_setting(key: str, default=None):
-    """Fetch app setting value from database."""
-    with get_db() as conn:
-        row = conn.execute('SELECT value FROM app_settings WHERE key = ?', (key,)).fetchone()
-        return row['value'] if row else default
+    """Fetch app setting value from database, falling back to ENV."""
+    try:
+        with get_db() as conn:
+            row = conn.execute('SELECT value FROM app_settings WHERE key = ?', (key,)).fetchone()
+            if row:
+                return row['value']
+    except Exception:
+        pass
+    return os.environ.get(key, default)
 
 
 def set_setting(key: str, value):
