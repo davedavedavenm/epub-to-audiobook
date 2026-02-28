@@ -506,6 +506,13 @@ def init_db():
             )
         ''')
 
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        ''')
+
         # Add newline_mode column (migration)
         try:
             conn.execute("ALTER TABLE jobs ADD COLUMN newline_mode TEXT DEFAULT 'double'")
