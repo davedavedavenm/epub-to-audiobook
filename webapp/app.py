@@ -447,11 +447,9 @@ VOICES = {
 
     # ============ AWS POLLY LONG-FORM VOICES ============
     'polly_ruth': {'name': 'Ruth', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
-    'polly_matthew': {'name': 'Matthew', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
-    'polly_stephen': {'name': 'Stephen', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
     'polly_danielle': {'name': 'Danielle', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
     'polly_gregory': {'name': 'Gregory', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
-    'polly_kevin': {'name': 'Kevin', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
+    'polly_patrick': {'name': 'Patrick', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
 }
 
 PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."
