@@ -69,17 +69,8 @@ _re_ws = re.compile(r"\s+")
 _re_punct = re.compile(r"[^\w\s]+", flags=re.UNICODE)
 
 def text_to_ssml(text: str) -> str:
-    # Escape XML entities
-    text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    
-    # Replace ellipses with explicit breaks
-    text = re.sub(r'\.{2,}', '<break time="600ms"/>', text)
-    
-    # Replace double newlines with breaks
-    text = text.replace('\n\n', '<break time="800ms"/>')
-    
-    # Wrap in speak tags (Long-form is very restrictive with SSML)
-    return f"<speak>{text}</speak>"
+    # Temporarily disable SSML features to find what Long-form dislikes
+    return text
 
 def _now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -194,7 +185,7 @@ async def audio_speech(job_id: str, request: Request):
                 LanguageCode='en-US',
                 OutputFormat='mp3',
                 Text=ssml,
-                TextType='ssml',
+                TextType='text',
                 VoiceId=actual_voice_id
             )
             response = await loop.run_in_executor(None, polly_call)
