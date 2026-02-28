@@ -1686,6 +1686,11 @@
                                             <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
                                             {% endfor %}
                                         </optgroup>
+                                        <optgroup label="AWS Polly (Long-form)">
+                                            {% for voice_id, voice in voices.items() if voice.engine == 'polly' %}
+                                            <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
+                                            {% endfor %}
+                                        </optgroup>
                                     </select>
                                 </div>
                             </div>
@@ -1774,10 +1779,26 @@ Barbadoes==Barbayduss
             <div class="card">
                 <div class="library-header">
                     <select id="library-voice-select" class="option-select" style="width: auto; min-width: 150px;">
-                        <option value="bf_emma">Emma (British)</option>
-                        {% for voice_id, voice in voices.items() %}
-                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
-                        {% endfor %}
+                        <optgroup label="Kokoro (High Quality)">
+                            {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
+                            <option value="{{ voice_id }}" {% if voice_id == 'bm_v0george' %}selected{% endif %}>{{ voice.name }} ({{ voice.accent }})</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Edge (Fast, Accurate)">
+                            {% for voice_id, voice in voices.items() if voice.engine == 'edge' %}
+                            <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Piper (Offline)">
+                            {% for voice_id, voice in voices.items() if voice.engine == 'piper' %}
+                            <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="AWS Polly (Long-form)">
+                            {% for voice_id, voice in voices.items() if voice.engine == 'polly' %}
+                            <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
+                            {% endfor %}
+                        </optgroup>
                     </select>
                     <label class="checkbox-label">
                         <input type="checkbox" id="library-notify-whatsapp">
@@ -1844,6 +1865,10 @@ Barbadoes==Barbayduss
                                 <button type="button" class="engine-tab" data-engine="edge">
                                     <span class="engine-name">Edge</span>
                                     <span class="engine-desc">Free, Azure-quality</span>
+                                </button>
+                                <button type="button" class="engine-tab" data-engine="polly">
+                                    <span class="engine-name">Polly</span>
+                                    <span class="engine-desc">AWS Long-form (Paid)</span>
                                 </button>
                             </div>
 
@@ -1961,6 +1986,24 @@ Barbadoes==Barbayduss
                                         </div>
                                         {% endfor %}
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Polly Voices -->
+                            <div class="engine-voices hidden" id="polly-voices">
+                                <div class="voice-section">
+                                    <div class="voice-section-label">US Long-form (American)</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.engine == 'polly' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="polly" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="polly-note" style="margin-top: 16px; font-size: 0.8em; color: var(--text-secondary);">
+                                    <strong>AWS Polly SSML:</strong> This engine automatically uses SSML for human-like breathing and pacing.
                                 </div>
                             </div>
 
@@ -2100,6 +2143,13 @@ Barbadoes==Barbayduss
                 }
                 updateConvertButton();
             });
+        });
+
+        document.getElementById('voice-select-simple')?.addEventListener('change', (e) => {
+            const voiceId = e.target.value;
+            selectedVoice = voiceId;
+            selectedVoiceInput.value = voiceId;
+            updateConvertButton();
         });
 
         // ============ Voice Search ============
