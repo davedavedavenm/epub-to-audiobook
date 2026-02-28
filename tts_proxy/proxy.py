@@ -36,7 +36,7 @@ def get_db_setting(key: str, default: Any = None) -> Any:
         
         with sqlite3.connect(str(DB_PATH), timeout=10) as conn:
             conn.row_factory = sqlite3.Row
-            res = conn.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
+            res = conn.execute('SELECT value FROM app_settings WHERE key = ?', (key,)).fetchone()
             if res:
                 return res['value']
     except Exception as e:
