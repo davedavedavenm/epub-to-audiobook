@@ -1847,6 +1847,7 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
     tts_speed = float(job.get('tts_speed') or DEFAULT_TTS_SPEED)
 
     host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
+    host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
 
     # Handle EPUB from PDF conversion
     if job.get('is_pdf'):
@@ -1927,6 +1928,7 @@ def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
 
     output_dirname = job.get('output_dirname', '')
     output_path = OUTPUT_DIR / output_dirname
+    host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
 
     # Chapter range (quality-sample jobs only convert a subset)
     start_chapter = job.get('start_chapter')
@@ -2434,6 +2436,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
     append_job_log(job_id, f"Conversion start (input={input_filename}, output={output_dirname})")
 
     host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
+    host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
     local_input_path = UPLOAD_DIR / input_filename
     epub_path = local_input_path
 
