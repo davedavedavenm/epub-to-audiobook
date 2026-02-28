@@ -1410,12 +1410,13 @@ def watchdog_loop():
             with get_db() as conn:
                 active_jobs = conn.execute('''
                     SELECT id, container_name, started_at, eta_minutes, book_name,
-                           current_chapter
+                           current_chapter, progress_percent
                     FROM jobs
                     WHERE status IN ('converting', 'converting PDF', 'converting to audio')
                 ''').fetchall()
 
-                for job in active_jobs:
+                for job_row in active_jobs:
+                    job = dict(job_row)
                     job_id = job['id']
                     container_name = job['container_name']
                     book_label = (job['book_name'] or '')[:30]
