@@ -131,7 +131,15 @@ def normalize_text_for_tts(text: str) -> str:
 
     # === Decades: 1990s, 1800s ===
     def replace_decade(m):
-        year = int(m.group(1))
+        year_str = m.group(1)
+        year = int(year_str)
+        if 1000 <= year <= 2099:
+            # Handle 1860s as "eighteen sixties"
+            prefix = int(year_str[:2])
+            suffix = int(year_str[2:])
+            if suffix == 0:
+                return f"{_number_to_words(prefix)} hundreds"
+            return f"{_number_to_words(prefix)} {_number_to_words(suffix)}s"
         if HAS_NUM2WORDS:
             return _number_to_words(year) + 's'
         return m.group(0)
