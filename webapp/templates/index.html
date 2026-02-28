@@ -3037,7 +3037,13 @@ Barbadoes==Barbayduss
             }
 
             libraryGrid.innerHTML = sorted.map(book => {
-                                if (book.status === 'completed') {
+                const sizeStr = book.size ? `${(book.size / 1024 / 1024).toFixed(1)} MB` : '';
+                const modifiedStr = book.modified_ts
+                    ? new Date(book.modified_ts * 1000).toLocaleString('en-GB')
+                    : '';
+                let statusHtml = '';
+
+                if (book.status === 'completed') {
                     statusHtml = '<span class="status-badge done">✅ Done</span>';
                 } else if (book.status === 'converting') {
                     statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
