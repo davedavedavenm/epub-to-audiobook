@@ -893,7 +893,8 @@
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
 
             document.querySelector(`.nav-tab[data-tab="${tabId}"]`)?.classList.add('active');
-            document.getElementById(`tab-${tabId}`)?.classList.add('active');\n            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+            document.getElementById(`tab-${tabId}`)?.classList.add('active');
+            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
 
             localStorage.setItem('audiobook-tab', tabId);
 
