@@ -420,7 +420,30 @@ VOICES = {
     'libritts_3': {'name': 'LibriTTS 3', 'accent': 'American', 'gender': 'Neutral', 'engine': 'piper'},
 
     # ============ EDGETTS VOICES (FREE, HIGH QUALITY) ============
+    # British Edge Voices
+    'en-GB-SoniaNeural': {'name': 'Sonia', 'accent': 'British', 'gender': 'Female', 'engine': 'edge'},
+    'en-GB-RyanNeural': {'name': 'Ryan', 'accent': 'British', 'gender': 'Male', 'engine': 'edge'},
+    'en-GB-LibbyNeural': {'name': 'Libby', 'accent': 'British', 'gender': 'Female', 'engine': 'edge'},
+    'en-GB-MaisieNeural': {'name': 'Maisie', 'accent': 'British', 'gender': 'Female', 'engine': 'edge'},
+    'en-GB-ThomasNeural': {'name': 'Thomas', 'accent': 'British', 'gender': 'Male', 'engine': 'edge'},
+    
+    # American Edge Voices
     'en-US-AvaNeural': {'name': 'Ava', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
+    'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-US-EmmaNeural': {'name': 'Emma', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
+    'en-US-BrianNeural': {'name': 'Brian', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-US-AriaNeural': {'name': 'Aria', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
+    'en-US-ChristopherNeural': {'name': 'Christopher', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-US-GuyNeural': {'name': 'Guy', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-US-JennyNeural': {'name': 'Jenny', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
+    'en-US-MichelleNeural': {'name': 'Michelle', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
+    'en-US-RogerNeural': {'name': 'Roger', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-US-SteffanNeural': {'name': 'Steffan', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    
+    # Australian Edge Voices
+    'en-AU-NatashaNeural': {'name': 'Natasha', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
+    'en-AU-WilliamNeural': {'name': 'William', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
+},
     'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
     'en-US-EmmaNeural': {'name': 'Emma', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
     'en-US-BrianNeural': {'name': 'Brian', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
@@ -2525,21 +2548,35 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         if job and job.get('tts_speed'):
             tts_speed = float(job['tts_speed'])
 
-        # Handle custom regex if provided
+                # Handle custom regex and global pronunciations
         search_conf_path = None
         host_search_conf_path = None
-        if job.get('custom_regex'):
+        
+        global_conf = UPLOAD_DIR / 'global_pronunciations.conf'
+        global_regex = ''
+        if global_conf.exists():
+            try:
+                with open(global_conf, 'r', encoding='utf-8') as gf:
+                    global_regex = gf.read() + '
+'
+            except Exception as e:
+                app.logger.warning(f"Could not read global_pronunciations.conf: {e}")
+                
+        custom_regex = job.get('custom_regex') or ''
+        combined_regex = (global_regex + custom_regex).strip()
+        
+        if combined_regex:
             try:
                 # Create temporary search.conf for this job
                 conf_filename = f"search_{job_id}.conf"
                 search_conf_path = UPLOAD_DIR / conf_filename
                 with open(search_conf_path, 'w', encoding='utf-8') as f:
-                    f.write(job['custom_regex'])
+                    f.write(combined_regex)
                 host_search_conf_path = f"{HOST_UPLOAD_DIR}/{conf_filename}"
-                append_job_log(job_id, "Custom pronunciation regex rules applied")
+                append_job_log(job_id, "Pronunciation regex rules (global + custom) applied")
             except Exception as e:
                 app.logger.error(f"Failed to create search.conf: {e}")
-                append_job_log(job_id, f"Warning: Failed to apply custom regex: {e}")
+                append_job_log(job_id, f"Warning: Failed to apply regex rules: {e}")
 
         # Run conversion
         cmd = [

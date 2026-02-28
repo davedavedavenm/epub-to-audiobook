@@ -184,7 +184,26 @@ def normalize_text_for_tts(text: str) -> str:
     # Multiple dots that aren't proper ellipsis
     text = re.sub(r'\.{4,}', '...', text)
 
+
+    # === Pacing and Punctuation (Enhance Flow) ===
+    # Convert em-dashes and en-dashes to commas for better breath pauses
+    text = re.sub(r'\\s*[—–]\\s*', ', ', text)
+    text = re.sub(r'\\s*--\\s*', ', ', text)
+    
+    # Standardize ellipses and add space for a breath
+    text = re.sub(r'\\.{2,}', '... ', text)
+    
+    # Inject breath pauses into overly long sentences (heuristic: >150 chars without punctuation)
+    def inject_breaths(m):
+        sentence = m.group(0)
+        if len(sentence) > 150 and ',' not in sentence:
+            return re.sub(r'(.{80,}?) (and|but|or|because) ', r'\\1, \\2 ', sentence, count=1)
+        return sentence
+        
+    text = re.sub(r'[^.!?]+[.!?]', inject_breaths, text)
+
     return text
+
 
 
 def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None) -> Path:
