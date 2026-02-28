@@ -1581,7 +1581,7 @@
                 <span>📚</span> <span>Library</span>
             </button>
             <button class="nav-tab" data-tab="voices">
-                <span>???</span> <span>Voices</span>
+                <span>🗣️</span> <span>Voices</span>
             </button>
             <button class="nav-tab" data-tab="history">
                 <span>📋</span> <span>History</span>
@@ -1656,9 +1656,10 @@
                         </div>
                     </div>
 
-                    
                     <!-- Right Column -->
                     <div class="convert-right">
+                        <!-- Voice Selection Card -->
+                        <!-- Simplified Voice Selection Card -->
                         <div class="card">
                             <div class="card-header">
                                 <div>
@@ -1689,8 +1690,48 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Convert Button -->
 
+                        <!-- Advanced Options Card -->
+                        <div class="card" style="margin-top: 20px;">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Advanced Options</h2>
+                                    <p class="card-subtitle">Refine parsing and pronunciation</p>
+                                </div>
+                            </div>
+
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <label class="option-label">Paragraph Detection</label>
+                                    <select name="newline_mode" class="option-select">
+                                        <option value="double" selected>Double Newline (Recommended)</option>
+                                        <option value="single">Single Newline (Dense Text)</option>
+                                        <option value="none">None (Continuous)</option>
+                                    </select>
+                                </div>
+
+                                <div class="option-group">
+                                    <label class="option-label">Chapter Title Mode</label>
+                                    <select name="title_mode" class="option-select">
+                                        <option value="auto" selected>Auto (Recommended)</option>
+                                        <option value="tag_text">Tag Text Only</option>
+                                        <option value="first_few">First Few Lines</option>
+                                    </select>
+                                </div>
+
+                                <div class="option-group">
+                                    <label class="option-label">Pronunciation Fixes (Regex)</label>
+                                    <textarea name="custom_regex" class="option-select" style="height: 80px; font-family: monospace; resize: vertical;" placeholder="search==replace
+Barbadoes==Barbayduss
+[0-9]+=="></textarea>
+                                    <p class="card-subtitle" style="font-size: 0.75em;">One rule per line: <code>search==replace</code></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Convert Button -->
                 <div class="convert-btn-container">
                     <button type="submit" class="convert-btn" id="convert-btn" disabled>
                         <span>🎧</span> Select a file and voice to start
@@ -1707,7 +1748,26 @@
                     <div>No active conversions</div>
                 </div>
             </div>
-        </div>
+        
+            <!-- System Operations -->
+            <div style="margin-top: 24px;">
+<div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Queue Operations</h2>
+                        <p class="card-subtitle">Control queue, retries, and recovery</p>
+                    </div>
+                </div>
+                <div id="ops-controls" class="options-grid">
+                    <button class="job-btn" id="queue-pause-btn">Pause Queue</button>
+                    <button class="job-btn" id="queue-resume-btn">Resume Queue</button>
+                    <button class="job-btn" id="queue-retry-failed-btn">Bulk Retry Failed</button>
+                    <button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
+                </div>
+                <div id="ops-queue-status" class="progress-info" style="margin-top:12px;"></div>
+            </div>
+            </div>
+</div>
 
         <!-- Library Tab -->
         <div class="tab-panel" id="tab-library">
@@ -1751,101 +1811,7 @@
         </div>
 
         <!-- Ops Tab -->
-        <div class="tab-panel" id="tab-ops">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Queue Operations</h2>
-                        <p class="card-subtitle">Control queue, retries, and recovery</p>
-                    </div>
-                </div>
-                <div id="ops-controls" class="options-grid">
-                    <button class="job-btn" id="queue-pause-btn">Pause Queue</button>
-                    <button class="job-btn" id="queue-resume-btn">Resume Queue</button>
-                    <button class="job-btn" id="queue-retry-failed-btn">Bulk Retry Failed</button>
-                    <button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
-                </div>
-                <div id="ops-queue-status" class="progress-info" style="margin-top:12px;"></div>
-            </div>
-
-            <div class="card" id="gpu-card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">GPU Compute</h2>
-                        <p class="card-subtitle">Cloud GPU auto-scaling and cost tracking</p>
-                    </div>
-                </div>
-                <div class="gpu-card-inner">
-                    <div class="gpu-status-row">
-                        <div class="gpu-state-indicator">
-                            <span class="gpu-dot idle" id="gpu-state-dot"></span>
-                            <span id="gpu-state-label">Idle</span>
-                        </div>
-                        <span class="gpu-mode-badge cpu" id="gpu-mode-badge">CPU</span>
-                    </div>
-
-                    <div class="gpu-telemetry hidden" id="gpu-telemetry">
-                        <div class="gpu-telemetry-cell">
-                            <div class="gpu-telemetry-label">Session</div>
-                            <div class="gpu-telemetry-value" id="gpu-session-time">0m</div>
-                        </div>
-                        <div class="gpu-telemetry-cell">
-                            <div class="gpu-telemetry-label">Cost</div>
-                            <div class="gpu-telemetry-value cost" id="gpu-session-cost">$0.00</div>
-                        </div>
-                        <div class="gpu-telemetry-cell">
-                            <div class="gpu-telemetry-label">Cap</div>
-                            <div class="gpu-telemetry-value" id="gpu-cost-cap">$1.00</div>
-                            <div class="gpu-cap-bar">
-                                <div class="gpu-cap-fill" id="gpu-cap-fill" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="gpu-controls">
-                        <button class="job-btn" id="gpu-scale-up-btn">⚡ Force GPU</button>
-                        <button class="job-btn" id="gpu-scale-down-btn" disabled>🔌 Force CPU</button>
-                        <span class="gpu-auto-label" id="gpu-auto-label">
-                            Auto: <span class="off">OFF</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Conversion Timeline</h2>
-                        <p class="card-subtitle">Live stage + container logs</p>
-                    </div>
-                </div>
-                <div id="ops-timeline-content" class="no-jobs-message">
-                    <div class="no-jobs-icon">🧭</div>
-                    <div>No active conversion</div>
-                </div>
-                <pre id="ops-log-preview" style="margin-top:12px; max-height:280px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Recovery Center</h2>
-                        <p class="card-subtitle">Failed/cancelled jobs and fast actions</p>
-                    </div>
-                </div>
-                <div id="ops-recovery-content"></div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h2 class="card-title">Diagnostics</h2>
-                        <p class="card-subtitle">Queue health and runtime resources</p>
-                    </div>
-                </div>
-                <pre id="ops-diagnostics" style="max-height:260px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
-            </div>
-        </div>
+        
 
         <!-- History Tab -->
         
@@ -1857,8 +1823,7 @@
                         <p class="card-subtitle">Preview and compare all available TTS voices.</p>
                     </div>
                 </div>
-                
-                        <div class="card">
+<div class="voices-grid-inner">
                             <div class="card-header">
                                 <div>
                                     <h2 class="card-title">Select Voice</h2>
@@ -2002,52 +1967,9 @@
                             <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
                             <input type="hidden" id="selected-engine" name="engine" value="kokoro">
                         </div>
-
-                        <!-- Advanced Options Card -->
-                        <div class="card" style="margin-top: 20px;">
-                            <div class="card-header">
-                                <div>
-                                    <h2 class="card-title">Advanced Options</h2>
-                                    <p class="card-subtitle">Refine parsing and pronunciation</p>
-                                </div>
-                            </div>
-
-                            <div class="options-grid">
-                                <div class="option-group">
-                                    <label class="option-label">Paragraph Detection</label>
-                                    <select name="newline_mode" class="option-select">
-                                        <option value="double" selected>Double Newline (Recommended)</option>
-                                        <option value="single">Single Newline (Dense Text)</option>
-                                        <option value="none">None (Continuous)</option>
-                                    </select>
-                                </div>
-
-                                <div class="option-group">
-                                    <label class="option-label">Chapter Title Mode</label>
-                                    <select name="title_mode" class="option-select">
-                                        <option value="auto" selected>Auto (Recommended)</option>
-                                        <option value="tag_text">Tag Text Only</option>
-                                        <option value="first_few">First Few Lines</option>
-                                    </select>
-                                </div>
-
-                                <div class="option-group">
-                                    <label class="option-label">Pronunciation Fixes (Regex)</label>
-                                    <textarea name="custom_regex" class="option-select" style="height: 80px; font-family: monospace; resize: vertical;" placeholder="search==replace
-Barbadoes==Barbayduss
-[0-9]+=="></textarea>
-                                    <p class="card-subtitle" style="font-size: 0.75em;">One rule per line: <code>search==replace</code></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                
             </div>
         </div>
-
-        <div class="tab-panel" id="tab-history">
+<div class="tab-panel" id="tab-history">
             <div class="card">
                 <div class="history-header">
                     <input type="text" class="history-search" id="history-search" placeholder="🔍 Search history...">
