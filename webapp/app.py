@@ -443,14 +443,6 @@ VOICES = {
     # Australian Edge Voices
     'en-AU-NatashaNeural': {'name': 'Natasha', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
     'en-AU-WilliamNeural': {'name': 'William', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
-},
-    'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
-    'en-US-EmmaNeural': {'name': 'Emma', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
-    'en-US-BrianNeural': {'name': 'Brian', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
-    'en-GB-SoniaNeural': {'name': 'Sonia', 'accent': 'British', 'gender': 'Female', 'engine': 'edge'},
-    'en-GB-RyanNeural': {'name': 'Ryan', 'accent': 'British', 'gender': 'Male', 'engine': 'edge'},
-    'en-AU-NatashaNeural': {'name': 'Natasha', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
-    'en-AU-WilliamNeural': {'name': 'William', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
 }
 
 PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."
