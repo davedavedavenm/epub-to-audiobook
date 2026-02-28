@@ -2549,8 +2549,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         if global_conf.exists():
             try:
                 with open(global_conf, 'r', encoding='utf-8') as gf:
-                    global_regex = gf.read() + '
-'
+                    global_regex = gf.read() + '\n'
             except Exception as e:
                 app.logger.warning(f"Could not read global_pronunciations.conf: {e}")
                 
