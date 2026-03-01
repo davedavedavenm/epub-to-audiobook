@@ -2880,39 +2880,87 @@ def list_voices():
 @app.route('/api/settings', methods=['GET', 'POST'])
 def api_settings():
     """Get or update system settings/API keys."""
-    # List of keys that should be masked in the UI
     secret_keys = [
         'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID',
         'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN',
-        'EVOLUTION_API_KEY', 'ABS_API_TOKEN'
+        'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY'
+    ]
+    config_keys = [
+        'ABS_API_URL', 'TELEGRAM_CHAT_ID', 
+        'AUTOSCALE_ENABLED', 'AUTOSCALE_THRESHOLD', 'AUTOSCALE_COST_CAP'
     ]
 
     if request.method == 'POST':
         try:
             data = request.json
             for key, value in data.items():
-                if value and value.strip():
-                    set_setting(key, value.strip())
+                if value is not None:
+                    v = str(value).strip()
+                    if v:
+                        set_setting(key, v)
+                        if key == 'VASTAI_API_KEY':
+                            key_file = Path('/root/.config/vastai/vast_api_key')
+                            key_file.parent.mkdir(parents=True, exist_ok=True)
+                            key_file.write_text(v)
             return jsonify({"status": "success"})
         except Exception as e:
             return jsonify({"error": str(e)}), 400
 
-    # GET: return current settings (masked)
     settings = {}
-    for key in secret_keys:
+    for key in (secret_keys + config_keys):
         val = get_setting(key)
+        if not val and key in os.environ:
+            val = os.environ[key]
+            
         if val:
-            # Mask key: show first 4 and last 4 chars
-            if len(val) > 10:
-                settings[key] = f"{val[:4]}...{val[-4:]}"
+            if key in secret_keys:
+                if len(val) > 10:
+                    settings[key] = f"{val[:4]}...{val[-4:]}"
+                else:
+                    settings[key] = "********"
             else:
-                settings[key] = "********"
+                settings[key] = val
         else:
             settings[key] = ""
-    
+            
     return jsonify(settings)
 
+@app.route('/api/settings/test_abs', methods=['POST'])
+def test_abs_connection():
+    """Test connection to Audiobookshelf."""
+    try:
+        data = request.json or {}
+        url = data.get('url') or get_setting('ABS_API_URL') or os.environ.get('ABS_API_URL')
+        token = data.get('token') or get_setting('ABS_API_TOKEN') or os.environ.get('ABS_API_TOKEN')
+        
+        if not url or not token:
+            return jsonify({'error': 'Missing URL or Token'}), 400
+            
+        resp = requests.get(f"{url.rstrip('/')}/api/libraries", 
+                            headers={'Authorization': f'Bearer {token}'}, 
+                            timeout=10)
+        if resp.status_code == 200:
+            return jsonify({'status': 'success', 'message': 'Connected to ABS!'})
+        return jsonify({'error': f'ABS returned status {resp.status_code}'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+@app.route('/api/settings/test_openai', methods=['POST'])
+def test_openai_connection():
+    """Test OpenAI API Key."""
+    try:
+        data = request.json or {}
+        key = data.get('token') or get_setting('OPENAI_API_KEY') or os.environ.get('OPENAI_API_KEY')
+        if not key: return jsonify({'error': 'Missing Key'}), 400
+        
+        resp = requests.get("https://api.openai.com/v1/models", 
+                            headers={'Authorization': f'Bearer {key}'}, 
+                            timeout=10)
+        if resp.status_code == 200:
+            return jsonify({'status': 'success', 'message': 'OpenAI Key is valid!'})
+        return jsonify({'error': 'Invalid API Key'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 # ============ GPU Auto-Scaling API ============
 
 # GPU manager singleton — set by the worker process at startup.
