@@ -56,23 +56,22 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
 .workspace-trigger { margin-top: auto; display: flex; gap: 16px; align-items: center; }
 .production-workspace { display: none; margin-top: 40px; border-top: 2px solid var(--bg-element); padding-top: 40px; animation: slideUp 0.4s ease; }
 .production-workspace.active { display: block; }
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
 .setup-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 24px; margin-bottom: 32px; align-items: flex-end; }
 .setup-field { display: flex; flex-direction: column; gap: 10px; }
 .setup-label { font-weight: 800; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
-
-.engine-section { margin-bottom: 64px; }
-.engine-header { font-family: 'Lora'; font-size: 1.8rem; font-weight: 700; margin-bottom: 32px; border-left: 6px solid var(--accent); padding-left: 20px; }
-.voices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
-.voice-card { background: var(--bg-element); border: 1px solid var(--border); border-radius: 16px; padding: 24px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-.voice-name { font-weight: 800; font-size: 1.2rem; }
 
 .config-group { margin-bottom: 48px; padding-bottom: 48px; border-bottom: 1px solid var(--border); }
 .config-group:last-child { border-bottom: none; }
 .config-header { font-family: 'Lora'; font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
 .status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+.engine-section { margin-bottom: 64px; }
+.engine-header { font-family: 'Lora'; font-size: 1.8rem; font-weight: 700; margin-bottom: 32px; border-left: 6px solid var(--accent); padding-left: 20px; }
+.voices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+.voice-card { background: var(--bg-element); border: 1px solid var(--border); border-radius: 16px; padding: 24px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+.voice-name { font-weight: 800; font-size: 1.2rem; }
 
 .progress-bar { width: 100%; height: 10px; background: var(--bg-element); border-radius: 10px; margin: 16px 0; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--accent); transition: width 0.5s ease; }
@@ -128,7 +127,6 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                 <div id="library-grid" class="library-grid"></div>
             </div>
         </div>
-        
         <div class="tab-panel" id="tab-convert">
             <div class="card">
                 <h2 style="font-family: 'Lora', serif; font-size: 2.2rem; margin-top: 0;">New Production</h2>
@@ -141,13 +139,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                 <button id="convert-btn" class="btn btn-primary" style="width: 100%; height: 88px; font-size: 1.4rem;" disabled onclick="startProduction()">Initialize Production</button>
             </div>
         </div>
-
         <div class="tab-panel" id="tab-queue"><div id="queue-content"></div></div>
-        
         <div class="tab-panel" id="tab-voices"><div id="voices-content"></div></div>
-        
         <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
-
         <div class="tab-panel" id="tab-settings">
             <div class="card">
                 <h2 style="margin-top:0; font-family: 'Lora'; margin-bottom:48px;">Infrastructure Configuration</h2>
@@ -163,7 +157,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
 
                 <div class="config-group">
                     <div class="config-header">☁️ OpenAI <span id="status-openai" class="status-dot"></span></div>
-                    <div style="display:grid; grid-template-columns: 1fr; gap:24px; margin-top:20px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-top:20px;">
                         <div><label style="font-weight:800; font-size:0.75rem;">API KEY</label><input type="password" id="set-OPENAI_API_KEY" class="input-control"></div>
                     </div>
                     <button class="btn" style="margin-top:20px;" onclick="testConnection('openai')">Test API Key</button>
@@ -177,7 +171,6 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     </div>
 </main>
 
-<!-- Robust Preview Modal -->
 <div id="preview-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="preview-sidebar">
@@ -232,7 +225,13 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         const data = await resp.json();
         Object.entries(data).forEach(([key, val]) => {
             const el = document.getElementById('set-' + key);
-            if(el) el.value = val;
+            if(el) {
+                el.value = val;
+                if(val && (val.includes('...') || val === '********')) {
+                    const statusDot = document.getElementById('status-' + key.split('_')[0].toLowerCase());
+                    if(statusDot) statusDot.classList.add('active');
+                }
+            }
         });
     }
 
@@ -253,6 +252,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
             btn.textContent = 'Saved!';
             btn.style.backgroundColor = 'var(--success)';
             setTimeout(() => { btn.textContent = 'Save Configuration'; btn.style.backgroundColor = ''; btn.disabled = false; }, 2000);
+            loadSettings();
         } catch(e) { btn.textContent = 'Error'; btn.disabled = false; }
     }
 
@@ -276,11 +276,30 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         renderLibrary();
     }
 
+    async function openWorkspace(bookId, path) {
+        const ws = document.getElementById('workspace-' + bookId);
+        const active = ws.classList.toggle('active');
+        if(active) {
+            const startSel = document.getElementById('start-' + bookId);
+            const endSel = document.getElementById('end-' + bookId);
+            startSel.innerHTML = '<option>Loading...</option>';
+            endSel.innerHTML = '<option>Loading...</option>';
+            try {
+                const resp = await fetch('/api/library/toc', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path }) });
+                const data = await resp.json();
+                const opts = data.chapters.map(c => `<option value="${c.index}">${c.index}. ${escapeHtml(c.title)}</option>`).join('');
+                startSel.innerHTML = opts;
+                endSel.innerHTML = opts;
+                if(data.chapters.length > 0) endSel.value = data.chapters[data.chapters.length-1].index;
+            } catch(e) { console.error(e); }
+        }
+    }
+
     function renderLibrary() {
         const grid = document.getElementById('library-grid');
         const query = (document.getElementById('library-search')?.value || '').toLowerCase();
         const filtered = libraryBooks.filter(b => b.title.toLowerCase().includes(query));
-        
+
         const engines = [...new Set(Object.values(voices).map(v => v.engine))];
         const voiceOptions = engines.map(engine => {
             const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
@@ -295,79 +314,42 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                         <div class="library-item-title">${escapeHtml(b.title)}</div>
                         <div class="library-item-format">${b.format}</div>
                     </div>
-                    
                     <div class="workspace-trigger">
                         <button class="btn" onclick="previewBook('${escapeHtml(b.path).replace(/'/g, "\\'")}')">👁 Preview</button>
-                        <button class="btn btn-primary" style="flex:1;" onclick="document.getElementById('workspace-${bookId}').classList.toggle('active')">Setup Production</button>
+                        <button class="btn btn-primary" style="flex:1;" onclick="openWorkspace('${bookId}', '${escapeHtml(b.path).replace(/'/g, "\\'")}')">Setup Production</button>
                     </div>
-
                     <div id="workspace-${bookId}" class="production-workspace">
                         <div class="setup-grid">
-                            <div class="setup-field"><label class="setup-label">Narrator</label><select id="voice-${bookId}" class="input-control">${voiceOptions}</select></div>
-                            <div class="setup-field"><label class="setup-label">Start</label><input id="start-${bookId}" type="number" class="input-control"></div>
-                            <div class="setup-field"><label class="setup-label">End</label><input id="end-${bookId}" type="number" class="input-control"></div>
+                            <div class="setup-field"><label class="setup-label">Narrator</label><select id="voice-${bookId}" class="input-control">${voiceOptions}</select></div> 
+                            <div class="setup-field"><label class="setup-label">Start</label><select id="start-${bookId}" class="input-control"></select></div>
+                            <div class="setup-field"><label class="setup-label">End</label><select id="end-${bookId}" class="input-control"></select></div>
                             <div class="setup-field"><label class="setup-label">Speed</label><input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control"></div>
                         </div>
-                        <button class="btn btn-primary" style="width: 100%; height: 64px;" onclick="convertWithSettings('${bookId}', '${escapeHtml(b.path).replace(/'/g, "\\'")}')">Initialize Pipeline</button>
+                        <button class="btn btn-primary" style="width:100%; height: 64px;" onclick="convertWithSettings('${bookId}', '${escapeHtml(b.path).replace(/'/g, "\\'")}')">Initialize Pipeline</button>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    function renderVoices() {
-        const container = document.getElementById('voices-content');
-        if(!container) return;
-        const engines = [...new Set(Object.values(voices).map(v => v.engine))];
-        container.innerHTML = engines.map(engine => {
-            const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
-            return `<div class="engine-section"><div class="engine-header">${engine.toUpperCase()} ENGINE</div><div class="voices-grid">${engineVoices.map(([id, v]) => `<div class="voice-card"><div><div class="voice-name">${escapeHtml(v.name)}</div><div style="font-size:0.85rem; color:var(--text-secondary);">${v.accent} · ${v.gender}</div></div><button class="btn" onclick="playPreview('${id}')">▶</button></div>`).join('')}</div></div>`;
-        }).join('');
-    }
-
-    function playPreview(voiceId) {
-        const audio = document.getElementById('preview-audio');
-        audio.src = '/api/preview/' + voiceId; 
-        audio.load(); audio.play().catch(e => console.error(e));
-    }
-
     async function previewBook(path, chapterIndex = null) {
         const modal = document.getElementById('preview-modal');
         const textEl = document.getElementById('preview-text');
         const tocList = document.getElementById('toc-list');
-        
         if (!chapterIndex) {
-            currentPreviewPath = path;
-            textEl.textContent = 'Scanning manuscript...';
-            tocList.innerHTML = '';
-            modal.classList.remove('hidden');
-        } else {
-            textEl.textContent = 'Loading chapter...';
+            currentPreviewPath = path; textEl.textContent = 'Scanning manuscript...'; tocList.innerHTML = ''; modal.classList.remove('hidden');
+        } else { textEl.textContent = 'Loading chapter...'; }
+        const resp = await fetch('/api/library/preview', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, chapter_index: chapterIndex }) });
+        const data = await resp.json();
+        textEl.textContent = data.preview || data.error;
+        if (data.chapters && !chapterIndex) {
+            tocList.innerHTML = data.chapters.map(c => `<div class="toc-item ${c.index === 1 ? 'active' : ''}" onclick="loadPreviewChapter(${c.index}, this)">${c.index}. ${escapeHtml(c.title)}</div>`).join('');
         }
-
-        try {
-            const resp = await fetch('/api/library/preview', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ path, chapter_index: chapterIndex }) 
-            });
-            const data = await resp.json();
-            textEl.textContent = data.preview || data.error;
-
-            if (data.chapters && !chapterIndex) {
-                tocList.innerHTML = data.chapters.map(c => `
-                    <div class="toc-item ${c.index === 1 ? 'active' : ''}" onclick="loadPreviewChapter(${c.index}, this)">
-                        ${c.index}. ${escapeHtml(c.title)}
-                    </div>
-                `).join('');
-            }
-        } catch(e) { textEl.textContent = 'Error loading preview.'; }
     }
 
     async function loadPreviewChapter(index, el) {
         document.querySelectorAll('.toc-item').forEach(i => i.classList.remove('active'));
-        el.classList.add('active');
-        await previewBook(currentPreviewPath, index);
+        el.classList.add('active'); await previewBook(currentPreviewPath, index);
     }
 
     function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); }
@@ -383,8 +365,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     async function startProduction() {
         const formData = new FormData();
         formData.append('file', selectedFile); formData.append('voice', 'en-GB-RyanNeural');
-        await fetch('/api/convert', { method: 'POST', body: formData });
-        switchTab('queue');
+        await fetch('/api/convert', { method: 'POST', body: formData }); switchTab('queue');
     }
 
     async function convertWithSettings(bookId, path) {
@@ -394,6 +375,22 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         const speed = document.getElementById('speed-' + bookId).value;
         await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed }) });
         switchTab('queue');
+    }
+
+    function renderVoices() {
+        const container = document.getElementById('voices-content');
+        if(!container) return;
+        const engines = [...new Set(Object.values(voices).map(v => v.engine))];
+        container.innerHTML = engines.map(engine => {
+            const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
+            return `<div class="engine-section"><div class="engine-header">${engine.toUpperCase()} ENGINE</div><div class="voices-grid">${engineVoices.map(([id, v]) => `<div class="voice-card"><div><div class="voice-name">${escapeHtml(v.name)}</div><div style="font-size:0.85rem; color:var(--text-secondary);">${v.accent} · ${v.gender}</div></div><button class="btn" onclick="playPreview('${id}')">▶</button></div>`).join('')}</div></div>`;
+        }).join('');
+    }
+
+    function playPreview(voiceId) {
+        const audio = document.getElementById('preview-audio');
+        audio.src = '/api/preview/' + voiceId; audio.load();
+        audio.play().catch(e => console.error(e));
     }
 
     async function loadJobs() {
