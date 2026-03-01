@@ -3662,6 +3662,8 @@ def list_library():
 def library_preview():
     data = request.json or {}
     file_path_str = data.get('path')
+    if not file_path_str:
+        return jsonify({'error': 'No path provided'}), 400
     
     # Security: Prevent directory traversal
     try:
@@ -3671,8 +3673,6 @@ def library_preview():
             return jsonify({'error': 'Unauthorized path access'}), 403
     except Exception:
         return jsonify({'error': 'Invalid path'}), 400
-    if not file_path_str:
-        return jsonify({'error': 'No path provided'}), 400
     file_path = Path(file_path_str)
     if not file_path.exists():
         return jsonify({'error': 'File not found'}), 404
