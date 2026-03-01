@@ -136,7 +136,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     <div id="file-name-display" style="margin-top: 24px; font-weight: 700; color: var(--accent);"></div>
                 </div>
                 <input type="file" id="file-input" class="hidden" onchange="handleFile(event)">
-                <button id="convert-btn" class="btn btn-primary" style="width: 100%; height: 88px; font-size: 1.4rem;" disabled onclick="startProduction()">Initialize Production</button>
+                <button id="convert-btn" class="btn btn-primary" style="width: 100%; height: 88px; font-size: 1.4rem;" disabled onclick="startProduction()">Create Audiobook</button>
             </div>
         </div>
         <div class="tab-panel" id="tab-queue"><div id="queue-content"></div></div>
@@ -144,7 +144,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
         <div class="tab-panel" id="tab-settings">
             <div class="card">
-                <h2 style="margin-top:0; font-family: 'Lora'; margin-bottom:48px;">Infrastructure Configuration</h2>
+                <h2 style="margin-top:0; font-family: 'Lora'; margin-bottom:48px;">System Settings</h2>
                 
                 <div class="config-group">
                     <div class="config-header">📂 Audiobookshelf <span id="status-abs" class="status-dot"></span></div>
@@ -316,7 +316,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     </div>
                     <div class="workspace-trigger">
                         <button class="btn" onclick="previewBook('${escapeHtml(b.path).replace(/'/g, "\\'")}')">👁 Preview</button>
-                        <button class="btn btn-primary" style="flex:1;" onclick="openWorkspace('${bookId}', '${escapeHtml(b.path).replace(/'/g, "\\'")}')">Setup Production</button>
+                        <button class="btn btn-primary" style="flex:1;" onclick="openWorkspace('${bookId}', '${escapeHtml(b.path).replace(/'/g, "\\'")}')">Narrate this Book</button>
                     </div>
                     <div id="workspace-${bookId}" class="production-workspace">
                         <div class="setup-grid">
@@ -325,7 +325,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                             <div class="setup-field"><label class="setup-label">End</label><select id="end-${bookId}" class="input-control"></select></div>
                             <div class="setup-field"><label class="setup-label">Speed</label><input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control"></div>
                         </div>
-                        <button class="btn btn-primary" style="width:100%; height: 64px;" onclick="convertWithSettings('${bookId}', '${escapeHtml(b.path).replace(/'/g, "\\'")}')">Initialize Pipeline</button>
+                        <button class="btn btn-primary" style="width:100%; height: 64px;" onclick="convertWithSettings('${bookId}', '${escapeHtml(b.path).replace(/'/g, "\\'")}')">Create Audiobook</button>
                     </div>
                 </div>
             `;
@@ -415,7 +415,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                 </div>
             `).join('');
         } else if(queueContent) {
-            queueContent.innerHTML = '<div class="card" style="text-align:center; padding:100px;">Production queue is clear.</div>';
+            queueContent.innerHTML = '<div class="card" style="text-align:center; padding:100px;">Current Tasks is clear.</div>';
         }
     }
 
