@@ -87,7 +87,7 @@ LOG_DIR = Path(os.environ.get('LOG_DIR', '/data/logs'))
 SUPPORTED_FORMATS = {'.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'}
 
 # Default voice when none specified (George Classic - British Male)
-DEFAULT_VOICE = 'bm_v0george'
+DEFAULT_VOICE = 'en-GB-RyanNeural'
 
 # TTS speed: 1.0 = normal, <1.0 = slower with more pauses, range 0.5-1.5
 # Default 1.0 (Kokoro's natural speed sounds good; adjust per-job if needed)
@@ -3657,6 +3657,45 @@ def list_library():
     books.sort(key=lambda x: x['title'].lower())
     return jsonify(books)
 
+
+@app.route('/api/library/preview', methods=['POST'])
+def library_preview():
+    data = request.json or {}
+    file_path_str = data.get('path')
+    
+    # Security: Prevent directory traversal
+    try:
+        requested_path = Path(file_path_str).resolve()
+        library_base = LIBRARY_DIR.resolve()
+        if not str(requested_path).startswith(str(library_base)):
+            return jsonify({'error': 'Unauthorized path access'}), 403
+    except Exception:
+        return jsonify({'error': 'Invalid path'}), 400
+    if not file_path_str:
+        return jsonify({'error': 'No path provided'}), 400
+    file_path = Path(file_path_str)
+    if not file_path.exists():
+        return jsonify({'error': 'File not found'}), 404
+    try:
+        preview_text = ''
+        if file_path.suffix.lower() == '.epub':
+            with zipfile.ZipFile(file_path, 'r') as zf:
+                content_files = [n for n in zf.namelist() if n.endswith(('.html', '.xhtml', '.htm')) and 'toc' not in n.lower() and 'nav' not in n.lower()]
+                if content_files:
+                    for cf in content_files[:3]:
+                        content = zf.read(cf).decode('utf-8', errors='ignore')
+                        text = re.sub(r'<[^>]+>', ' ', content)
+                        text = re.sub(r'\s+', ' ', text).strip()
+                        preview_text += text + '\n\n'
+                        if len(preview_text) > 5000: break
+        elif file_path.suffix.lower() == '.txt':
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                preview_text = f.read(5000)
+        else:
+            return jsonify({'error': f'Preview not supported for {file_path.suffix}'}), 400
+        return jsonify({'preview': preview_text[:5000]})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/library/estimate_cost', methods=['POST'])
 def estimate_cost_api():
