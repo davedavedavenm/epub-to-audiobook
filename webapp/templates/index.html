@@ -7,202 +7,1473 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-primary: #fdfcf9;
-            --bg-card: #ffffff;
-            --bg-sidebar: #1a1a1a;
-            --bg-element: #f5f3ef;
-            --bg-hover: #ece9e2;
-            --accent: #c28e5e;
-            --text-primary: #1a1a1a;
-            --text-secondary: #6b665f;
-            --text-on-dark: #fdfcf9;
-            --border: #e8e4de;
-            --radius-lg: 24px;
-            --radius-md: 12px;
-            --sidebar-width: 280px;
-        }
-        [data-theme="dark"] {
-            --bg-primary: #0f0f0f;
-            --bg-card: #1a1a1a;
-            --bg-sidebar: #080808;
-            --bg-element: #262626;
-            --bg-hover: #333333;
-            --text-primary: #f5f5f5;
-            --text-secondary: #a3a3a3;
-            --border: #262626;
-        }
-        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-        body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: var(--text-primary); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-on-dark); padding: 40px 24px; display: flex; flex-direction: column; flex-shrink: 0; }
-        .nav-links { display: flex; flex-direction: column; gap: 8px; flex: 1; margin-top: 40px; }
-        .nav-tab { background: transparent; border: none; color: rgba(255,255,255,0.5); padding: 14px 18px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 16px; font-size: 1rem; transition: all 0.2s; text-align: left; }
-        .nav-tab:hover { background: rgba(255,255,255,0.05); color: #fff; }
-        .nav-tab.active { background: var(--accent); color: #fff; }
-        .app-main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
-        .top-bar { padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: rgba(253, 252, 249, 0.8); backdrop-filter: blur(10px); z-index: 100; }
-        .content-body { padding: 0 40px 60px; max-width: 1200px; width: 100%; margin: 0 auto; }
-        .card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; margin-bottom: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-        .hidden { display: none !important; }
-        .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
-        .status-badge.done { background: var(--success); color: white; }
-        .library-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; }
-        .config-btn-group { display: flex; gap: 8px; }
-        .option-select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-element); }
-        .convert-btn { background: var(--text-primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; }
-        .convert-btn:hover { background: var(--accent); }
-    </style>
+    <style>/* Luxury/Editorial Theme */
+:root {
+    --bg-primary: #fdfcf9;
+    --bg-card: #ffffff;
+    --bg-sidebar: #1a1a1a;
+    --bg-element: #f5f3ef;
+    --bg-hover: #ece9e2;
+    --accent: #c28e5e;
+    --accent-hover: #a67246;
+    --accent-subtle: rgba(194, 142, 94, 0.1);
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b665f;
+    --text-on-dark: #fdfcf9;
+    --border: #e8e4de;
+    --success: #4a7c59;
+    --error: #af4d4d;
+    --warning: #d4a373;
+    --font-display: 'Lora', serif;
+    --font-ui: 'Outfit', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --sidebar-width: 280px;
+    --radius-lg: 24px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+}
+
+[data-theme="dark"] {
+    --bg-primary: #0f0f0f;
+    --bg-card: #1a1a1a;
+    --bg-sidebar: #080808;
+    --bg-element: #262626;
+    --bg-hover: #333333;
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --border: #262626;
+    --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.3);
+}
+
+* { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+body {
+    font-family: var(--font-ui);
+    margin: 0;
+    padding: 0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    overflow: hidden;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-sidebar);
+    color: var(--text-on-dark);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 40px 24px;
+    position: fixed;
+    left: 0; top: 0; z-index: 1000;
+}
+
+.sidebar-brand { margin-bottom: 60px; padding-left: 12px; }
+.sidebar-brand .logo-text { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; }
+.sidebar-brand .logo-sub { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--accent); margin-top: 4px; font-weight: 600; }
+
+.nav-links { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.nav-tab {
+    background: transparent; border: none; color: rgba(255,255,255,0.5);
+    padding: 14px 18px; border-radius: var(--radius-md); cursor: pointer;
+    display: flex; align-items: center; gap: 16px; font-size: 1rem; width: 100%;
+}
+.nav-tab:hover { color: var(--text-on-dark); background: rgba(255,255,255,0.05); }
+.nav-tab.active { background: var(--accent); color: #fff; }
+
+.app-main {
+    margin-left: var(--sidebar-width); flex: 1; height: 100vh; overflow-y: auto;
+    display: flex; flex-direction: column; position: relative;
+}
+
+.top-bar { padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: rgba(253, 252, 249, 0.8); backdrop-filter: blur(10px); z-index: 900; }
+.page-title { font-family: var(--font-display); font-size: 2rem; font-weight: 700; }
+
+.content-body { padding: 0 40px 60px; max-width: 1200px; width: 100%; margin: 0 auto; }
+.card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; margin-bottom: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+.hidden { display: none !important; }
+</style>
 </head>
 <body>
     <aside class="sidebar">
-        <h1 style="font-family: 'Lora', serif; font-size: 1.8rem; margin: 0;">Studio</h1>
+        <div class="sidebar-brand">
+            <span class="logo-text">Studio</span>
+            <span class="logo-sub">Audiobook Studio</span>
+        </div>
         <nav class="nav-links">
             <button class="nav-tab active" data-tab="convert"><i>📝</i> <span>Convert</span></button>
-            <button class="nav-tab" data-tab="queue"><i>⏳</i> <span>Queue</span></button>
+            <button class="nav-tab" data-tab="queue"><i>⏳</i> <span>Queue</span> <span class="badge hidden" id="queue-badge">0</span></button>
             <button class="nav-tab" data-tab="library"><i>📚</i> <span>Library</span></button>
             <button class="nav-tab" data-tab="voices"><i>🗣️</i> <span>Voices</span></button>
             <button class="nav-tab" data-tab="history"><i>📋</i> <span>History</span></button>
             <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Settings</span></button>
         </nav>
+        <div class="sidebar-footer">
+            <div class="gpu-status-card" id="gpu-sidebar-status">
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <span class="gpu-dot" id="gpu-state-dot"></span>
+                    <span id="gpu-state-label">GPU Offline</span>
+                </div>
+                <div id="gpu-detail-row" class="hidden" style="font-size: 0.75rem; opacity: 0.7;">
+                    <span id="gpu-instance-id"></span>
+                </div>
+            </div>
+        </div>
     </aside>
     <main class="app-main">
         <header class="top-bar">
-            <h2 id="view-title" style="font-family: 'Lora', serif; margin: 0;">Convert</h2>
+            <h1 class="page-title" id="view-title">Convert</h1>
+            <div class="view-controls">
+                <div class="theme-selector">
+                    <button class="theme-btn active" data-theme="light">☀️</button>
+                    <button class="theme-btn" data-theme="dark">🌙</button>
+                </div>
+            </div>
         </header>
         <div class="content-body">
             <div class="tab-panel active" id="tab-convert">
                 <div class="card">
                     <form id="convert-form">
-                        <div id="upload-area" style="border: 2px dashed var(--border); padding: 40px; text-align: center; border-radius: 12px; cursor: pointer;">
-                            <div style="font-size: 2rem;">📖</div>
-                            <p id="file-name-display">Click or drag file to start</p>
+                        <div id="upload-area" style="border: 2px dashed var(--border); padding: 60px; text-align: center; border-radius: 20px; cursor: pointer;">
+                            <div style="font-size: 4rem;">📖</div>
+                            <h3 id="file-name-display">Drop your manuscript here</h3>
+                            <p style="color: var(--text-secondary);">EPUB, PDF, or TXT</p>
+                            <div class="file-name hidden" id="file-name"></div>
                         </div>
-                        <input type="file" id="file-input" class="hidden">
-                        <div style="margin-top: 24px;">
-                            <label class="option-label">Voice</label>
-                            <select id="voice-select-simple" class="option-select">
-                                <optgroup label="Kokoro">
-                                    {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
-                                    <option value="{{ voice_id }}">{{ voice.name }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                <optgroup label="Edge">
-                                    {% for voice_id, voice in voices.items() if voice.engine == 'edge' %}
-                                    <option value="{{ voice_id }}">{{ voice.name }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                            </select>
+                        <input type="file" id="file-input" class="hidden" accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.html,.htm,.docx">
+                        
+                        <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+                            <div class="option-group">
+                                <label class="option-label">Performance Voice</label>
+                                <select id="voice-select-simple" class="option-select">
+                                    <optgroup label="Kokoro (Local)">
+                                        {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
+                                        <option value="{{ voice_id }}">{{ voice.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    <optgroup label="Edge (Microsoft)">
+                                        {% for voice_id, voice in voices.items() if voice.engine == 'edge' %}
+                                        <option value="{{ voice_id }}">{{ voice.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    <optgroup label="Polly (Amazon)">
+                                        {% for voice_id, voice in voices.items() if voice.engine == 'polly' %}
+                                        <option value="{{ voice_id }}">{{ voice.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label class="option-label">Chapters</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="number" id="start-chapter" class="option-select" placeholder="Start">
+                                    <input type="number" id="end-chapter" class="option-select" placeholder="End">
+                                </div>
+                            </div>
                         </div>
-                        <button type="submit" id="convert-btn" class="convert-btn" style="margin-top: 24px;" disabled>Start Production</button>
+
+                        <div id="main-cost-estimate" class="hidden" style="margin-top: 32px; padding: 20px; background: var(--bg-element); border-radius: 12px; text-align: center;">
+                            Estimated production cost: <strong class="cost-value" style="color: var(--accent); font-size: 1.2rem;">$0.00</strong>
+                        </div>
+
+                        <button type="submit" id="convert-btn" class="convert-btn" style="margin-top: 32px;" disabled>Start Production</button>
                         <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
+                        <input type="hidden" id="selected-engine" name="engine" value="kokoro">
                     </form>
                 </div>
             </div>
-            <div class="tab-panel" id="tab-queue"><div id="queue-content"></div></div>
-            <div class="tab-panel" id="tab-library"><div id="library-grid"></div></div>
-            <div class="tab-panel" id="tab-voices"><div id="kokoro-voices"></div></div>
-            <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
-            <div class="tab-panel" id="tab-settings"><div id="settings-content"></div></div>
+            
+            <div class="tab-panel" id="tab-queue">
+                <div class="card"><div id="queue-content"></div></div>
+            </div>
+            <div class="tab-panel" id="tab-library">
+                <div class="card">
+                    <div style="display:flex; gap: 20px; align-items:center; margin-bottom: 32px;">
+                        <h2 class="card-title" style="margin:0;">Library</h2>
+                        <input type="text" id="library-search" class="option-select" placeholder="Search..." style="max-width: 300px;">
+                    </div>
+                    <div id="library-grid"></div>
+                </div>
+            </div>
+            <div class="tab-panel" id="tab-voices">
+                <div class="card">Voices Explorer</div>
+            </div>
+            <div class="tab-panel" id="tab-history">
+                <div class="card"><div id="history-content"></div></div>
+            </div>
+            <div class="tab-panel" id="tab-settings">
+                <div class="card">Settings Panel</div>
+            </div>
         </div>
     </main>
     <audio id="preview-audio"></audio>
-    <script>
+﻿<script>
+        // ============ State ============
         const voices = {{ voices | tojson }};
         let selectedFile = null;
         let selectedVoice = 'bf_emma';
+        let selectedEngine = 'kokoro';
+        let currentPreviewBtn = null;
+        let libraryBooks = [];
+        let allJobs = [];
+
+        // ============ DOM Elements ============
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileName = document.getElementById('file-name');
+        const selectedVoiceInput = document.getElementById('selected-voice');
+        const selectedEngineInput = document.getElementById('selected-engine');
+        const convertBtn = document.getElementById('convert-btn');
+        const convertForm = document.getElementById('convert-form');
+        const previewAudio = document.getElementById('preview-audio');
+        const queueBadge = document.getElementById('queue-badge');
+
+        // ============ Theme Handling ============
+        const savedTheme = localStorage.getItem('audiobook-theme') || 'light';
+        if (savedTheme !== 'light') {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.theme-btn[data-theme="${savedTheme}"]`)?.classList.add('active');
+
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.dataset.theme;
+                if (theme === 'light') {
+                    document.documentElement.removeAttribute('data-theme');
+                } else {
+                    document.documentElement.setAttribute('data-theme', theme);
+                }
+                localStorage.setItem('audiobook-theme', theme);
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // ============ Design Mode Handling ============
+        const savedDesign = localStorage.getItem('audiobook-design') || 'studio';
+        if (savedDesign !== 'studio') {
+            document.documentElement.setAttribute('data-design', savedDesign);
+        }
+        document.querySelectorAll('.design-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.design-btn[data-design="${savedDesign}"]`)?.classList.add('active');
+
+        document.querySelectorAll('.design-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const design = btn.dataset.design;
+                if (design === 'studio') {
+                    document.documentElement.removeAttribute('data-design');
+                } else {
+                    document.documentElement.setAttribute('data-design', design);
+                }
+                localStorage.setItem('audiobook-design', design);
+                document.querySelectorAll('.design-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // ============ Tab Navigation ============
+        const savedTab = localStorage.getItem('audiobook-tab') || 'convert';
 
         function switchTab(tabId) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
             document.querySelector(`.nav-tab[data-tab="${tabId}"]`)?.classList.add('active');
             document.getElementById(`tab-${tabId}`)?.classList.add('active');
             document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+
             localStorage.setItem('audiobook-tab', tabId);
+
+            // Load data for specific tabs
             if (tabId === 'queue') loadJobs();
             if (tabId === 'library') loadLibrary();
+            if (tabId === 'ops') loadOps();
             if (tabId === 'history') loadHistory();
+            if (tabId === 'settings') loadSettings();
         }
 
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.addEventListener('click', () => switchTab(tab.dataset.tab));
         });
 
-        const savedTab = localStorage.getItem('audiobook-tab') || 'convert';
+        // Initialize saved tab
         switchTab(savedTab);
 
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
+        // ============ Engine Tab Handling ============
+        document.querySelectorAll('.engine-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const engine = tab.dataset.engine;
+                selectedEngine = engine;
+                selectedEngineInput.value = engine;
+
+                document.querySelectorAll('.engine-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                document.querySelectorAll('.engine-voices').forEach(v => v.classList.add('hidden'));
+                document.getElementById(`${engine}-voices`).classList.remove('hidden');
+
+                // Select first voice of new engine
+                document.querySelectorAll('.voice-pill').forEach(c => c.classList.remove('selected'));
+                const firstVoice = document.querySelector(`#${engine}-voices .voice-pill`);
+                if (firstVoice) {
+                    firstVoice.classList.add('selected');
+                    selectedVoice = firstVoice.dataset.voice;
+                    selectedVoiceInput.value = selectedVoice;
+                }
+                updateConvertButton();
+            });
+        });
+
+        document.getElementById('voice-select-simple')?.addEventListener('change', (e) => {
+            const voiceId = e.target.value;
+            selectedVoice = voiceId;
+            selectedVoiceInput.value = voiceId;
+            updateConvertButton();
+        });
+
+        // ============ Voice Search ============
+        document.getElementById('voice-search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const currentEngine = selectedEngine;
+
+            document.querySelectorAll(`#${currentEngine}-voices .voice-pill`).forEach(pill => {
+                const name = pill.dataset.name.toLowerCase();
+                pill.classList.toggle('hidden', !name.includes(query));
+            });
+        });
+
+        // ============ WhatsApp Toggle ============
+        document.getElementById('notify-whatsapp').addEventListener('change', (e) => {
+            document.getElementById('whatsapp-container').classList.toggle('visible', e.target.checked);
+        });
+
+        // Library WhatsApp Toggle
+        document.getElementById('library-notify-whatsapp').addEventListener('change', (e) => {
+            document.getElementById('library-whatsapp-number').classList.toggle('visible', e.target.checked);
+        });
+
+        // ============ File Upload ============
         uploadArea.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                selectedFile = e.target.files[0];
-                document.getElementById('file-name-display').textContent = selectedFile.name;
-                document.getElementById('convert-btn').disabled = false;
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                handleFile(files[0]);
             }
         });
 
-        document.getElementById('voice-select-simple').addEventListener('change', (e) => {
-            selectedVoice = e.target.value;
-            document.getElementById('selected-voice').value = selectedVoice;
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
         });
 
-        document.getElementById('convert-form').addEventListener('submit', async (e) => {
+        function handleFile(file) {
+            const validExtensions = ['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+
+            if (!validExtensions.includes(ext)) {
+                alert('Unsupported file format. Please use: ' + validExtensions.join(', '));
+                return;
+            }
+
+            selectedFile = file;
+            const format = ext.toUpperCase().replace('.', '');
+            fileName.innerHTML = `<span class="file-badge">${format}</span> ${escapeHtml(file.name)}`;
+            fileName.classList.remove('hidden');
+            uploadArea.classList.add('has-file');
+            updateConvertButton();
+        }
+
+        // ============ Voice Selection ============
+        document.querySelectorAll('.voice-pill').forEach(pill => {
+            pill.addEventListener('click', (e) => {
+                if (e.target.classList.contains('preview-btn')) return;
+                document.querySelectorAll('.voice-pill').forEach(c => c.classList.remove('selected'));
+                pill.classList.add('selected');
+                selectedVoice = pill.dataset.voice;
+                selectedVoiceInput.value = selectedVoice;
+                updateConvertButton();
+            });
+        });
+
+        // Select default voice
+        document.querySelector('[data-voice="bf_emma"]')?.classList.add('selected');
+
+        // ============ Voice Preview ============
+        document.querySelectorAll('.preview-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const voiceId = btn.dataset.voice;
+
+                if (currentPreviewBtn) {
+                    currentPreviewBtn.textContent = 'â–¶';
+                    currentPreviewBtn.classList.remove('loading');
+                }
+
+                if (previewAudio.src && !previewAudio.paused && currentPreviewBtn === btn) {
+                    previewAudio.pause();
+                    btn.textContent = 'â–¶';
+                    currentPreviewBtn = null;
+                    return;
+                }
+
+                btn.textContent = 'â³';
+                btn.classList.add('loading');
+                currentPreviewBtn = btn;
+
+                try {
+                    previewAudio.src = `/api/preview/${voiceId}`;
+                    await previewAudio.play();
+                    btn.textContent = 'â¹';
+                    btn.classList.remove('loading');
+                } catch (err) {
+                    btn.textContent = 'âŒ';
+                    btn.classList.remove('loading');
+                    setTimeout(() => btn.textContent = 'â–¶', 2000);
+                }
+            });
+        });
+
+        previewAudio.addEventListener('ended', () => {
+            if (currentPreviewBtn) {
+                currentPreviewBtn.textContent = 'â–¶';
+                currentPreviewBtn = null;
+            }
+        });
+
+        // ============ Convert Button ============
+        function updateConvertButton() {
+            if (selectedFile && selectedVoice) {
+                convertBtn.disabled = false;
+                const voiceName = document.querySelector(`[data-voice="${selectedVoice}"] .voice-pill-name`)?.textContent || selectedVoice;
+                convertBtn.innerHTML = `<span>ðŸŽ§</span> Convert "${escapeHtml(selectedFile.name.substring(0, 30))}" with ${voiceName}`;
+            } else {
+                convertBtn.disabled = true;
+                convertBtn.innerHTML = '<span>ðŸŽ§</span> Select a file and voice to start';
+            }
+        }
+
+        // ============ Form Submission ============
+        convertForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!selectedFile) return;
+
+            convertBtn.disabled = true;
+            convertBtn.innerHTML = '<span class="spinner"></span> Starting conversion...';
+
             const formData = new FormData();
             formData.append('file', selectedFile);
             formData.append('voice', selectedVoice);
+            formData.append('voice2', document.getElementById('voice2-select').value);
+            formData.append('start_chapter', document.getElementById('start-chapter').value);
+            formData.append('end_chapter', document.getElementById('end-chapter').value);
+            formData.append('notify_telegram', document.getElementById('notify-telegram').checked ? '1' : '');
+            formData.append('notify_whatsapp', document.getElementById('notify-whatsapp').checked ? '1' : '');
+            formData.append('whatsapp_number', document.getElementById('whatsapp-number').value);
+            formData.append('newline_mode', document.querySelector('[name="newline_mode"]').value);
+            formData.append('title_mode', document.querySelector('[name="title_mode"]').value);
+            formData.append('custom_regex', document.querySelector('[name="custom_regex"]').value);
+
             try {
-                const resp = await fetch('/api/convert', { method: 'POST', body: formData });
-                if (resp.ok) switchTab('queue');
-            } catch (err) { alert(err.message); }
+                const response = await fetch('/api/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    alert('Error: ' + result.error);
+                } else {
+                    // Reset form
+                    selectedFile = null;
+                    fileInput.value = '';
+                    fileName.classList.add('hidden');
+                    uploadArea.classList.remove('has-file');
+                    document.getElementById('voice2-select').value = '';
+                    document.getElementById('start-chapter').value = '';
+                    document.getElementById('end-chapter').value = '';
+                    document.getElementById('notify-telegram').checked = false;
+                    document.getElementById('notify-whatsapp').checked = false;
+                    document.getElementById('whatsapp-container').classList.remove('visible');
+                    document.querySelector('[name="newline_mode"]').value = 'double';
+                    document.querySelector('[name="title_mode"]').value = 'auto';
+                    document.querySelector('[name="custom_regex"]').value = '';
+
+                    // Switch to queue tab
+                    switchTab('queue');
+                }
+            } catch (err) {
+                alert('Failed to start conversion: ' + err.message);
+            }
+
+            convertBtn.disabled = true;
+            convertBtn.innerHTML = '<span>ðŸŽ§</span> Select a file and voice to start';
         });
 
+        // ============ Queue/Jobs Loading ============
         async function loadJobs() {
-            const resp = await fetch('/api/jobs');
-            const jobs = await resp.json();
-            const active = jobs.filter(j => j.status === 'queued' || j.status.includes('converting'));
-            document.getElementById('queue-content').innerHTML = active.map(j => `
-                <div class="library-item"><div>${j.book_name}</div><div>${j.status} - ${j.progress_percent || 0}%</div></div>
-            `).join('') || 'No active jobs';
-        }
-
-        async function loadLibrary() {
-            const resp = await fetch('/api/library');
-            const books = await resp.json();
-            document.getElementById('library-grid').innerHTML = books.map(b => `
-                <div class="library-item">
-                    <div style="display:flex; justify-content:space-between;">
-                        <div>${b.title}</div>
-                        <button class="convert-btn" style="width:auto; padding:4px 12px;" onclick="convertFromLibrary('${b.path}')">Convert</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function convertFromLibrary(path) {
             try {
-                const resp = await fetch('/api/library/convert', {
+                const response = await fetch('/api/jobs');
+                allJobs = await response.json();
+
+                const activeJobs = allJobs.filter(j =>
+                    j.status === 'queued' || j.status.includes('converting')
+                );
+                const waitingJobs = allJobs.filter(j => j.status === 'queued');
+                const convertingJob = allJobs.find(j => j.status.includes('converting'));
+
+                // Update badge
+                if (activeJobs.length > 0) {
+                    queueBadge.textContent = activeJobs.length;
+                    queueBadge.classList.remove('hidden');
+                } else {
+                    queueBadge.classList.add('hidden');
+                }
+
+                const queueContent = document.getElementById('queue-content');
+
+                if (activeJobs.length === 0) {
+                    queueContent.innerHTML = `
+                        <div class="no-jobs-message">
+                            <div class="no-jobs-icon">â³</div>
+                            <div>No active conversions</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+
+                // Currently converting
+                if (convertingJob) {
+                    const progress = convertingJob.progress_percent || 0;
+                    const voiceInfo = convertingJob.voice2_name
+                        ? `${convertingJob.voice_name} + ${convertingJob.voice2_name}`
+                        : convertingJob.voice_name;
+
+                    html += `
+                        <div class="queue-section">
+                            <div class="queue-section-header">
+                                <span class="queue-section-title">Converting Now</span>
+                            </div>
+                            <div class="active-job-card">
+                                <div class="active-job-header">
+                                    <span class="active-job-title">${escapeHtml(convertingJob.book_name)}</span>
+                                    <span class="active-job-chapter">
+                                        ${convertingJob.current_chapter ? `Ch ${convertingJob.current_chapter}/${convertingJob.total_chapters || '?'}` : 'Starting...'}
+                                        (${progress}%)
+                                    </span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${progress}%"></div>
+                                </div>
+                                <div class="progress-info">
+                                    <span>${convertingJob.current_chapter_name || 'Processing...'}</span>
+                                    <span>${convertingJob.eta_minutes ? `ETA: ${convertingJob.eta_minutes} min` : ''}</span>
+                                </div>
+                                <div class="active-job-meta">
+                                    <span class="active-job-voice">Voice: ${voiceInfo}</span>
+                                    <div class="job-actions">
+                                        <button class="job-btn job-btn-danger" onclick="cancelJob('${convertingJob.id}')">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Waiting queue
+                if (waitingJobs.length > 0) {
+                    html += `
+                        <div class="queue-section">
+                            <div class="queue-section-header">
+                                <span class="queue-section-title">Waiting</span>
+                                <span class="queue-count">${waitingJobs.length}</span>
+                            </div>
+                            <div class="waiting-list">
+                                ${waitingJobs.map((job, i) => `
+                                    <div class="waiting-item">
+                                        <div class="waiting-item-info">
+                                            <span class="waiting-item-number">${i + 1}</span>
+                                            <span class="waiting-item-title">${escapeHtml(job.book_name)}</span>
+                                        </div>
+                                        <div class="job-actions">
+                                            <button class="job-btn" onclick="moveQueue('${job.id}', -1)" ${i === 0 ? 'disabled' : ''}>â†‘</button>
+                                            <button class="job-btn" onclick="moveQueue('${job.id}', 1)" ${i === waitingJobs.length - 1 ? 'disabled' : ''}>â†“</button>
+                                            <button class="job-btn job-btn-danger" onclick="cancelJob('${job.id}')">Cancel</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                queueContent.innerHTML = html;
+
+                // Continue polling if jobs are active
+                if (activeJobs.length > 0) {
+                    setTimeout(loadJobs, 3000);
+                }
+            } catch (err) {
+                console.error('Failed to load jobs:', err);
+            }
+        }
+
+        async function moveQueue(jobId, delta) {
+            const waitingJobs = allJobs.filter(j => j.status === 'queued');
+            const idx = waitingJobs.findIndex(j => j.id === jobId);
+            if (idx < 0) return;
+            const target = idx + delta;
+            if (target < 0 || target >= waitingJobs.length) return;
+            const ordered = waitingJobs.map(j => j.id);
+            [ordered[idx], ordered[target]] = [ordered[target], ordered[idx]];
+            await fetch('/api/queue/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ordered_ids: ordered })
+            });
+            loadJobs();
+            if (document.getElementById('tab-ops').classList.contains('active')) {
+                loadOps();
+            }
+        }
+
+        // ============ Ops Loading ============
+        async function loadOps() {
+            try {
+                const [jobsResp, queueResp, diagResp] = await Promise.all([
+                    fetch('/api/jobs'),
+                    fetch('/api/queue/status'),
+                    fetch('/api/diagnostics')
+                ]);
+                const jobs = await jobsResp.json();
+                const queue = await queueResp.json();
+                const diag = await diagResp.json();
+
+                const converting = jobs.find(j => j.status && j.status.includes('converting'));
+                const failed = jobs.filter(j => j.status === 'failed' || j.status === 'cancelled');
+
+                document.getElementById('ops-queue-status').innerHTML =
+                    `Queue: <strong>${queue.queued_count}</strong> waiting Â· State: <strong>${queue.paused ? 'Paused' : 'Running'}</strong>`;
+
+                document.getElementById('queue-pause-btn').disabled = queue.paused;
+                document.getElementById('queue-resume-btn').disabled = !queue.paused;
+
+                if (converting) {
+                    const timelineResp = await fetch(`/api/jobs/${converting.id}/timeline`);
+                    const timeline = await timelineResp.json();
+                    const logsResp = await fetch(`/api/jobs/${converting.id}/logs?tail=120`);
+                    const logs = await logsResp.json();
+
+                    document.getElementById('ops-timeline-content').innerHTML = `
+                        <div class="active-job-card">
+                            <div class="active-job-header">
+                                <span class="active-job-title">${escapeHtml(converting.book_name)}</span>
+                                <span class="active-job-chapter">Ch ${converting.current_chapter || '?'} Â· ${converting.progress_percent || 0}%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width:${converting.progress_percent || 0}%"></div></div>
+                            <div class="progress-info">
+                                <span>Retry count: ${converting.retry_count || 0}</span>
+                                <span>${converting.eta_minutes ? `ETA ${converting.eta_minutes}m` : ''}</span>
+                            </div>
+                            <div class="waiting-list" style="margin-top:10px;">
+                                ${timeline.stages.map(s => `
+                                    <div class="waiting-item">
+                                        <div class="waiting-item-info">
+                                            <span class="waiting-item-number">${s.state === 'done' ? 'âœ“' : s.state === 'active' ? 'â–¶' : 'â€¢'}</span>
+                                            <span class="waiting-item-title">${escapeHtml(s.label)}</span>
+                                        </div>
+                                        <span class="status-tag status-${s.state === 'done' ? 'completed' : s.state === 'active' ? 'converting' : 'queued'}">${s.state}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('ops-log-preview').textContent = logs.logs || '(no logs)';
+                } else {
+                    document.getElementById('ops-timeline-content').innerHTML = `
+                        <div class="no-jobs-message"><div class="no-jobs-icon">ðŸ§­</div><div>No active conversion</div></div>
+                    `;
+                    document.getElementById('ops-log-preview').textContent = '';
+                }
+
+                if (failed.length === 0) {
+                    document.getElementById('ops-recovery-content').innerHTML = `
+                        <div class="no-jobs-message"><div class="no-jobs-icon">âœ…</div><div>No failed/cancelled jobs</div></div>
+                    `;
+                } else {
+                    document.getElementById('ops-recovery-content').innerHTML = `
+                        <div class="waiting-list">
+                            ${failed.slice(0, 20).map(j => `
+                                <div class="waiting-item">
+                                    <div class="waiting-item-info">
+                                        <span class="waiting-item-number">!</span>
+                                        <span class="waiting-item-title">${escapeHtml(j.book_name)}</span>
+                                    </div>
+                                    <div class="job-actions">
+                                        <button class="job-btn" onclick="retryJob('${j.id}')">Retry</button>
+                                        <button class="job-btn job-btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                document.getElementById('ops-diagnostics').textContent = JSON.stringify(diag, null, 2);
+
+                // Also refresh GPU status when ops tab refreshes
+                loadGpuStatus();
+            } catch (err) {
+                document.getElementById('ops-diagnostics').textContent = `Failed to load ops: ${err.message}`;
+            }
+        }
+
+        document.getElementById('queue-pause-btn')?.addEventListener('click', async () => {
+            await fetch('/api/queue/pause', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paused: true })
+            });
+            loadOps();
+        });
+
+        document.getElementById('queue-resume-btn')?.addEventListener('click', async () => {
+            await fetch('/api/queue/pause', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paused: false })
+            });
+            loadOps();
+            loadJobs();
+        });
+
+        document.getElementById('queue-retry-failed-btn')?.addEventListener('click', async () => {
+            await fetch('/api/queue/retry-failed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit: 20 })
+            });
+            loadOps();
+            loadJobs();
+        });
+
+        document.getElementById('ops-refresh-btn')?.addEventListener('click', loadOps);
+
+        // ============ GPU Status ============
+        let _gpuState = 'idle';
+        let _gpuPollTimer = null;
+
+        async function loadGpuStatus() {
+            try {
+                const resp = await fetch('/api/gpu/status');
+                const gpu = await resp.json();
+                _gpuState = gpu.state || 'idle';
+
+                // State dot
+                                // State dot
+                const dot = document.getElementById('gpu-state-dot');
+                if (dot) dot.className = 'gpu-dot ' + _gpuState;
+
+                // State label
+                const labels = { idle: 'GPU Offline', provisioning: 'Provisioning...', active: 'GPU Active', error: 'GPU Error' };
+                const label = document.getElementById('gpu-state-label');
+                if (label) label.textContent = labels[_gpuState] || _gpuState;
+
+                const detailRow = document.getElementById('gpu-detail-row');
+                if (_gpuState === 'active') {
+                    detailRow?.classList.remove('hidden');
+                    const inst = document.getElementById('gpu-instance-id');
+                    if (inst) inst.textContent = `Instance: ${gpu.instance_id || 'Unknown'}`;
+                } else {
+                    detailRow?.classList.add('hidden');
+                }
+
+                // Mode badge
+                const badge = document.getElementById('gpu-mode-badge');
+                const isGpu = _gpuState === 'active';
+                badge.textContent = isGpu ? 'GPU' : 'CPU';
+                badge.className = 'gpu-mode-badge ' + (isGpu ? 'gpu' : 'cpu');
+
+                // Telemetry strip
+                const telemetry = document.getElementById('gpu-telemetry');
+                if (_gpuState === 'active' || _gpuState === 'provisioning') {
+                    telemetry.classList.remove('hidden');
+                    const mins = gpu.session_minutes || 0;
+                    document.getElementById('gpu-session-time').textContent =
+                        mins >= 60 ? `${Math.floor(mins/60)}h ${Math.round(mins%60)}m` : `${Math.round(mins)}m`;
+                    document.getElementById('gpu-session-cost').textContent = `$${(gpu.session_cost || 0).toFixed(2)}`;
+                    document.getElementById('gpu-cost-cap').textContent = `$${(gpu.cost_cap || 1).toFixed(2)}`;
+
+                    const pct = Math.min(100, ((gpu.session_cost || 0) / (gpu.cost_cap || 1)) * 100);
+                    const fill = document.getElementById('gpu-cap-fill');
+                    fill.style.width = pct + '%';
+                    fill.className = 'gpu-cap-fill' + (pct > 80 ? ' danger' : pct > 50 ? ' warning' : '');
+                } else {
+                    telemetry.classList.add('hidden');
+                }
+
+                // Controls
+                document.getElementById('gpu-scale-up-btn').disabled = (_gpuState === 'active' || _gpuState === 'provisioning');
+                document.getElementById('gpu-scale-down-btn').disabled = (_gpuState === 'idle');
+
+                // Auto-scale label
+                const autoLabel = document.getElementById('gpu-auto-label');
+                if (gpu.autoscale_enabled) {
+                    autoLabel.innerHTML = `Auto: <span class="on">ON (â‰¥${gpu.autoscale_threshold} books)</span>`;
+                } else {
+                    autoLabel.innerHTML = `Auto: <span class="off">OFF</span>`;
+                }
+
+                // Header pip
+                const pip = document.getElementById('gpu-header-pip');
+                if (isGpu) {
+                    pip.classList.remove('hidden');
+                } else {
+                    pip.classList.add('hidden');
+                }
+
+                // Fast polling when GPU is not idle
+                if (_gpuState !== 'idle' && !_gpuPollTimer) {
+                    _gpuPollTimer = setInterval(loadGpuStatus, 10000);
+                } else if (_gpuState === 'idle' && _gpuPollTimer) {
+                    clearInterval(_gpuPollTimer);
+                    _gpuPollTimer = null;
+                }
+            } catch (err) {
+                console.error('GPU status error:', err);
+            }
+        }
+
+        document.getElementById('gpu-scale-up-btn')?.addEventListener('click', async () => {
+            document.getElementById('gpu-scale-up-btn').disabled = true;
+            document.getElementById('gpu-state-label').textContent = 'Provisioningâ€¦';
+            document.getElementById('gpu-state-dot').className = 'gpu-dot provisioning';
+            try {
+                await fetch('/api/gpu/scale-up', { method: 'POST' });
+            } catch (e) { console.error(e); }
+            setTimeout(loadGpuStatus, 2000);
+        });
+
+        document.getElementById('gpu-scale-down-btn')?.addEventListener('click', async () => {
+            document.getElementById('gpu-scale-down-btn').disabled = true;
+            try {
+                await fetch('/api/gpu/scale-down', { method: 'POST' });
+            } catch (e) { console.error(e); }
+            setTimeout(loadGpuStatus, 1000);
+        });
+
+        document.getElementById('gpu-header-pip')?.addEventListener('click', () => {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelector('.nav-tab[data-tab="queue"]')?.classList.add('active'); switchTab('queue');
+            
+            localStorage.setItem('audiobook-tab', 'queue');
+            loadOps();
+        });
+
+        // ============ History Loading ============
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                
+                for (const [key, value] of Object.entries(settings)) {
+                    const input = document.getElementById(`setting-${key}`);
+                    if (input) {
+                        if (value && value.includes('...')) {
+                            input.placeholder = value; // Show masked key as placeholder
+                        } else {
+                            input.value = value;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load settings:', err);
+            }
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('save-settings-btn');
+            const status = document.getElementById('settings-status');
+            
+            const keys = [
+                'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION',
+                'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN'
+            ];
+            
+            const data = {};
+            keys.forEach(key => {
+                const val = document.getElementById(`setting-${key}`)?.value;
+                if (val && val.trim() && !val.includes('...')) {
+                    data[key] = val.trim();
+                }
+            });
+
+            if (Object.keys(data).length === 0) {
+                status.textContent = 'No changes to save.';
+                status.style.color = 'var(--warning)';
+                return;
+            }
+
+            btn.disabled = true;
+            status.textContent = 'Saving...';
+            status.style.color = 'var(--text-secondary)';
+
+            try {
+                const response = await fetch('/api/settings', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ path, voice: selectedVoice })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
                 });
-                if (resp.ok) switchTab('queue');
-            } catch (err) { alert(err.message); }
+
+                if (response.ok) {
+                    status.textContent = 'âœ… Settings saved successfully!';
+                    status.style.color = 'var(--success)';
+                    // Clear password fields
+                    keys.forEach(key => {
+                        const input = document.getElementById(`setting-${key}`);
+                        if (input && input.type === 'password') input.value = '';
+                    });
+                    loadSettings();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (err) {
+                status.textContent = 'âŒ Error: ' + err.message;
+                status.style.color = 'var(--error)';
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         async function loadHistory() {
-            const resp = await fetch('/api/history');
-            const jobs = await resp.json();
-            document.getElementById('history-content').innerHTML = jobs.map(j => `
-                <div class="library-item"><div>✅ ${j.book_name}</div><div>${j.completed_at}</div></div>
-            `).join('') || 'No history';
+            try {
+                const response = await fetch('/api/history');
+                const history = await response.json();
+
+                const historyContent = document.getElementById('history-content');
+
+                if (history.length === 0) {
+                    historyContent.innerHTML = `
+                        <div class="no-jobs-message">
+                            <div class="no-jobs-icon">ðŸ“‹</div>
+                            <div>No completed conversions yet</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Group by date
+                const grouped = {};
+                history.forEach(job => {
+                    const date = job.completed_at
+                        ? new Date(job.completed_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+                        : 'Unknown';
+                    if (!grouped[date]) grouped[date] = [];
+                    grouped[date].push(job);
+                });
+
+                let html = '';
+                for (const [date, jobs] of Object.entries(grouped)) {
+                    html += `
+                        <div class="history-group">
+                            <div class="history-group-title">${date}</div>
+                            <div class="history-list">
+                                ${jobs.map(job => {
+                                    const voiceInfo = job.voice2_name
+                                        ? `${job.voice_name} + ${job.voice2_name}`
+                                        : job.voice_name;
+                                    const engineBadge = job.tts_engine === 'piper'
+                                        ? '<span style="background:var(--success);color:#000;padding:2px 6px;border-radius:4px;font-size:0.7em;margin-left:6px;">Piper</span>'
+                                        : '';
+
+                                    return `
+                                        <div class="history-item" data-title="${escapeHtml(job.book_name.toLowerCase())}">
+                                            <div class="history-item-info">
+                                                <div class="history-item-title">
+                                                    âœ… ${escapeHtml(job.book_name)}${engineBadge}
+                                                </div>
+                                                <div class="history-item-meta">
+                                                    ${voiceInfo} Â· ${job.file_count || '?'} chapters
+                                                    ${job.synced_to_abs ? ' Â· Synced' : ''}
+                                                </div>
+                                            </div>
+                                            <div class="history-item-actions">
+                                                <button class="history-action-btn" onclick="downloadJob('${job.id}')" title="Download">â¬‡ï¸</button>
+                                                ${!job.synced_to_abs ? `<button class="history-action-btn success" onclick="syncJob('${job.id}')" title="Sync to ABS">â˜ï¸</button>` : ''}
+                                                <button class="history-action-btn" onclick="retryJob('${job.id}')" title="Re-convert">ðŸ”„</button>
+                                                <button class="history-action-btn danger" onclick="deleteJob('${job.id}')" title="Delete">ðŸ—‘ï¸</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                historyContent.innerHTML = html;
+            } catch (err) {
+                console.error('Failed to load history:', err);
+                document.getElementById('history-content').innerHTML = `
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">âŒ</div>
+                        <div>Failed to load history</div>
+                    </div>
+                `;
+            }
         }
 
-        setInterval(loadJobs, 10000);
-        function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+        // History search
+        document.getElementById('history-search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.history-item').forEach(item => {
+                const title = item.dataset.title || '';
+                item.style.display = title.includes(query) ? '' : 'none';
+            });
+        });
+
+        // ============ Library Loading ============
+        async function loadLibrary() {
+            try {
+                const response = await fetch('/api/library');
+                libraryBooks = await response.json();
+
+                renderLibrary();
+            } catch (err) {
+                console.error('Failed to load library:', err);
+                document.getElementById('library-grid').innerHTML = `
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">ðŸ“š</div>
+                        <div>Library not available</div>
+                    </div>
+                `;
+                document.getElementById('library-stats').textContent = '';
+            }
+        }
+
+        function renderLibrary() {
+            const libraryGrid = document.getElementById('library-grid');
+            const searchQuery = document.getElementById('library-search').value.toLowerCase();
+
+            const filtered = libraryBooks.filter(book =>
+                book.title.toLowerCase().includes(searchQuery)
+            );
+
+            const sortKey = (document.getElementById('library-sort-key')?.value || 'title');
+            const sortDir = (document.getElementById('library-sort-dir')?.value || 'asc');
+
+            const statusRank = (s) => {
+                if (s === 'converting') return 0;
+                if (s === 'available') return 1;
+                if (s === 'completed') return 2;
+                return 3;
+            };
+
+            const dirMul = sortDir === 'desc' ? -1 : 1;
+            const sorted = [...filtered].sort((a, b) => {
+                const at = (a?.title || '').toLowerCase();
+                const bt = (b?.title || '').toLowerCase();
+
+                let cmp = 0;
+                if (sortKey === 'modified_ts') {
+                    const av = Number(a?.modified_ts || 0);
+                    const bv = Number(b?.modified_ts || 0);
+                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
+                } else if (sortKey === 'size') {
+                    const av = Number(a?.size || 0);
+                    const bv = Number(b?.size || 0);
+                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
+                } else if (sortKey === 'status') {
+                    const av = statusRank(a?.status || '');
+                    const bv = statusRank(b?.status || '');
+                    cmp = av === bv ? 0 : (av < bv ? -1 : 1);
+                } else {
+                    cmp = at.localeCompare(bt);
+                }
+
+                if (cmp === 0) cmp = at.localeCompare(bt);
+                return cmp * dirMul;
+            });
+
+            document.getElementById('library-stats').textContent = `${sorted.length} books Â· ${sortKey.replace('_ts','')} ${sortDir}`;
+
+            if (sorted.length === 0) {
+                libraryGrid.innerHTML = `
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">ðŸ“š</div>
+                        <div>${searchQuery ? 'No matching books' : 'No books in library'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            libraryGrid.innerHTML = sorted.map(book => {
+                const sizeStr = book.size ? `${(book.size / 1024 / 1024).toFixed(1)} MB` : '';
+                const modifiedStr = book.modified_ts
+                    ? new Date(book.modified_ts * 1000).toLocaleString('en-GB')
+                    : '';
+                let statusHtml = '';
+
+                if (book.status === 'converting') {
+                    statusHtml = `<span class="status-badge converting">â³ ${book.progress || 0}%</span>`;
+                } else {
+                    const doneBadge = book.status === 'completed' ? '<span class="status-badge done" style="margin-right:8px;">âœ… Done</span>' : '';
+                    const btnLabel = book.status === 'completed' ? 'New Version' : 'Options';
+                    statusHtml = `
+                        <div class="config-btn-group">
+                            ${doneBadge}
+                            <button class="library-config-btn" title="Configure settings" data-path="${escapeHtml(book.path)}">
+                                <span>âš™ï¸</span><span>${btnLabel}</span>
+                            </button>
+                            ${book.status !== 'completed' ? `<button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>` : ''}
+                        </div>
+                    `;
+                }
+
+                const icon = book.format === 'pdf' ? 'ðŸ“•' : 'ðŸ“—';
+                const bookId = btoa(book.path).replace(/[^a-z0-9]/gi, '');
+
+                return `
+                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}">
+                        <div class="library-item-row">
+                            <div class="library-item-info">
+                                <span class="library-item-icon">${icon}</span>
+                                <div class="library-item-details">
+                                    <div class="library-item-title">${escapeHtml(book.title)}</div>
+                                    <div class="library-item-meta">
+                                        <span>${book.format?.toUpperCase() || 'EPUB'}</span>
+                                        <span>${sizeStr}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="library-item-status">
+                                ${statusHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="library-item-config" id="config-${bookId}">
+                            <div class="options-grid" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 16px;">
+                                <div class="option-group">
+                                    <label class="option-label">Voice Override</label>
+                                    <select class="option-select cfg-voice">
+                                        <option value="">Use Library Default</option>
+                                        <optgroup label="Kokoro">
+                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'kokoro').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                                        </optgroup>
+                                        <optgroup label="Edge">
+                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'edge').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                                        </optgroup>
+                                        <optgroup label="Polly">
+                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'polly').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Speed</label>
+                                    <input type="number" step="0.1" min="0.5" max="2.0" class="option-select cfg-speed" value="1.0">
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Chapters (Start - End)</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="number" placeholder="Start" class="option-select cfg-start" style="flex:1">
+                                        <input type="number" placeholder="End" class="option-select cfg-end" style="flex:1">
+                                    </div>
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Pronunciation Fixes (Regex)</label>
+                                    <textarea class="option-select cfg-regex" style="height: 60px; font-family: monospace; font-size: 0.8em;" placeholder="word==replacement"></textarea>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <div class="cfg-cost-estimate" style="font-size: 0.9em; color: var(--text-secondary);">
+                                    <span class="cost-label">Estimated cost:</span>
+                                    <strong class="cost-value">$0.00</strong>
+                                    <span class="char-count" style="margin-left: 8px; font-size: 0.85em; opacity: 0.8;"></span>
+                                </div>
+                                <button class="convert-btn library-start-btn" style="width: auto; padding: 8px 24px;" 
+                                        data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}" data-id="${bookId}">
+                                    Add to Queue with Custom Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Function to update cost estimate in drawer
+            const updateDrawerEstimate = async (drawer, path) => {
+                const voiceId = drawer.querySelector('.cfg-voice').value || document.getElementById('library-voice-select').value;
+                const costValue = drawer.querySelector('.cost-value');
+                const charLabel = drawer.querySelector('.char-count');
+
+                if (!voiceId) return;
+
+                try {
+                    const resp = await fetch('/api/library/estimate_cost', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path, voice: voiceId })
+                    });
+                    const data = await resp.json();
+                    if (data.estimated_cost !== undefined) {
+                        costValue.textContent = `$${data.estimated_cost.toFixed(2)}`;
+                        charLabel.textContent = `(~${(data.char_count / 1000).toFixed(0)}k chars)`;
+                        
+                        // Handle GPU info if present
+                        const gpuLabel = drawer.querySelector('.gpu-trigger-info');
+                        if (data.gpu_info && data.gpu_info.triggered) {
+                            if (!gpuLabel) {
+                                const el = document.createElement('div');
+                                el.className = 'gpu-trigger-info';
+                                el.style.fontSize = '0.85em';
+                                el.style.color = 'var(--accent)';
+                                el.style.marginTop = '4px';
+                                el.innerHTML = `âš¡ Will trigger GPU rent: <strong>${data.gpu_info.rate}</strong>`;
+                                drawer.querySelector('.cfg-cost-estimate').appendChild(el);
+                            } else {
+                                gpuLabel.innerHTML = `âš¡ Will trigger GPU rent: <strong>${data.gpu_info.rate}</strong>`;
+                                gpuLabel.style.display = 'block';
+                            }
+                        } else if (gpuLabel) {
+                            gpuLabel.style.display = 'none';
+                        }
+
+                        // Highlight if not free
+                        if (data.estimated_cost > 0) {
+                            costValue.style.color = 'var(--warning)';
+                        } else {
+                            costValue.style.color = 'inherit';
+                        }
+                    }
+                } catch (err) {
+                    console.error('Cost estimation failed:', err);
+                }
+            };
+
+            // Wire up config buttons
+            document.querySelectorAll('.library-config-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const path = btn.dataset.path;
+                    const bookId = btoa(path).replace(/[^a-z0-9]/gi, '');
+                    const drawer = document.getElementById(`config-${bookId}`);
+                    const isActive = drawer?.classList.toggle('active');
+                    btn.classList.toggle('active');
+
+                    if (isActive) {
+                        updateDrawerEstimate(drawer, path);
+                    }
+                });
+            });
+
+            // Wire up voice change in drawers
+            document.querySelectorAll('.cfg-voice').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const drawer = e.target.closest('.library-item-config');
+                    const path = drawer.id.replace('config-', '');
+                    // We need the original path which is stored on the start button
+                    const originalPath = drawer.querySelector('.library-start-btn').dataset.path;
+                    updateDrawerEstimate(drawer, originalPath);
+                });
+            });
+
+            // Wire up start buttons inside drawers
+            document.querySelectorAll('.library-start-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = btn.dataset.path;
+                    const title = btn.dataset.title;
+                    const bookId = btn.dataset.id;
+                    const drawer = document.getElementById(`config-${bookId}`);
+                    
+                    const options = {
+                        voice: drawer.querySelector('.cfg-voice').value || document.getElementById('library-voice-select').value,
+                        tts_speed: parseFloat(drawer.querySelector('.cfg-speed').value) || 1.0,
+                        start_chapter: drawer.querySelector('.cfg-start').value || null,
+                        end_chapter: drawer.querySelector('.cfg-end').value || null,
+                        custom_regex: drawer.querySelector('.cfg-regex').value || null
+                    };
+                    
+                    convertFromLibrary(path, title, options);
+                });
+            });
+
+            // Wire up quick convert buttons
+            document.querySelectorAll('.library-convert-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = btn.dataset.path || '';
+                    const title = btn.dataset.title || '';
+                    convertFromLibrary(path, title);
+                });
+            });
+        }
+
+        document.getElementById('library-search').addEventListener('input', renderLibrary);
+        document.getElementById('library-sort-key').addEventListener('change', () => {
+            localStorage.setItem('librarySortKey', document.getElementById('library-sort-key').value);
+            renderLibrary();
+        });
+        document.getElementById('library-sort-dir').addEventListener('change', () => {
+            localStorage.setItem('librarySortDir', document.getElementById('library-sort-dir').value);
+            renderLibrary();
+        });
+
+        // Restore library sort prefs (defaults: Title + Asc).
+        (() => {
+            const k = localStorage.getItem('librarySortKey');
+            const d = localStorage.getItem('librarySortDir');
+            if (k) document.getElementById('library-sort-key').value = k;
+            if (d) document.getElementById('library-sort-dir').value = d;
+        })();
+
+        async function convertFromLibrary(path, title, options = {}) {
+            const voice = options.voice || document.getElementById('library-voice-select').value;
+            const notifyWhatsapp = document.getElementById('library-notify-whatsapp').checked;
+            const notifyTelegram = document.getElementById('library-notify-telegram').checked;
+            const whatsappNumber = document.getElementById('library-whatsapp-number').value;
+
+            try {
+                const response = await fetch('/api/library/convert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path,
+                        voice,
+                        notify_whatsapp: notifyWhatsapp,
+                        notify_telegram: notifyTelegram,
+                        whatsapp_number: whatsappNumber,
+                        tts_speed: options.tts_speed || 1.0,
+                        start_chapter: options.start_chapter,
+                        end_chapter: options.end_chapter,
+                        custom_regex: options.custom_regex
+                    })
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+                const raw = await response.text();
+                let result = null;
+                if (contentType.includes('application/json')) {
+                    try { result = JSON.parse(raw); } catch { result = null; }
+                }
+                if (!result) {
+                    const prefix = (raw || '').slice(0, 200).replace(/\s+/g, ' ').trim();
+                    throw new Error(`HTTP ${response.status} non-JSON response: ${prefix || '(empty)'}`);
+                }
+                if (result.error) {
+                    alert('Error: ' + result.error);
+                } else {
+                    switchTab('queue');
+                }
+            } catch (err) {
+                alert('Failed to start conversion: ' + err.message);
+            }
+        }
+
+        // ============ Job Actions ============
+        async function cancelJob(jobId) {
+            if (!confirm('Cancel this conversion?')) return;
+            try {
+                await fetch(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
+                loadJobs();
+            } catch (err) {
+                alert('Failed to cancel job: ' + err.message);
+            }
+        }
+
+        async function retryJob(jobId) {
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
+                const result = await response.json();
+                if (!response.ok || result.error) {
+                    alert('Retry failed: ' + (result.error || `HTTP ${response.status}`));
+                    return;
+                }
+                switchTab('queue');
+            } catch (err) {
+                alert('Failed to retry job: ' + err.message);
+            }
+        }
+
+        function downloadJob(jobId) {
+            window.location.href = `/api/jobs/${jobId}/download`;
+        }
+
+        async function syncJob(jobId) {
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/sync`, { method: 'POST' });
+                const result = await response.json();
+                if (result.error) {
+                    alert('Sync failed: ' + result.error);
+                } else {
+                    alert('Synced to Audiobookshelf!');
+                    loadHistory();
+                }
+            } catch (err) {
+                alert('Failed to sync: ' + err.message);
+            }
+        }
+
+        async function deleteJob(jobId) {
+            if (!confirm('Delete this job and its files?')) return;
+            try {
+                await fetch(`/api/jobs/${jobId}/delete`, { method: 'DELETE' });
+                loadHistory();
+                loadJobs();
+            } catch (err) {
+                alert('Failed to delete job: ' + err.message);
+            }
+        }
+
+        // Clear all history
+        document.getElementById('clear-history-btn').addEventListener('click', async () => {
+            if (!confirm('Delete ALL completed conversions and their files?')) return;
+
+            try {
+                const response = await fetch('/api/history');
+                const history = await response.json();
+
+                for (const job of history) {
+                    await fetch(`/api/jobs/${job.id}/delete`, { method: 'DELETE' });
+                }
+
+                loadHistory();
+            } catch (err) {
+                alert('Failed to clear history: ' + err.message);
+            }
+        });
+
+        // ============ Utility Functions ============
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        document.getElementById('save-settings-btn')?.addEventListener('click', saveSettings);
+
+        // ============ Initial Load ============
+        loadJobs();
+        loadGpuStatus();
+        setInterval(loadJobs, 15000);
     </script>
 </body>
 </html>
