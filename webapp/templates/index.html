@@ -8,50 +8,68 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
 <style>
 :root {
-    --bg-primary: #f8f7f4; --bg-card: #ffffff; --bg-sidebar: #121212; --bg-element: #f1efeb; --bg-hover: #e8e5e0;
-    --accent: #c28e5e; --text-primary: #1a1a1a; --text-secondary: #6b665f; --text-on-dark: #fdfcf9;
-    --border: #e8e4de; --radius-lg: 24px; --sidebar-width: 280px;
+    --bg-primary: #f0f0ed; --bg-card: #ffffff; --bg-sidebar: #121212; --bg-element: #e8e8e5; --bg-hover: #dadada;
+    --accent: #c28e5e; --text-primary: #1a1a1a; --text-secondary: #5a5a57; --text-on-dark: #f8f8f5;
+    --border: #dcdcd9; --success: #4a7c59; --error: #af4d4d; --warning: #d4a373;
+    --font-display: 'Lora', serif; --font-ui: 'Outfit', sans-serif;
+    --sidebar-width: 280px; --radius-lg: 24px; --radius-md: 12px; --radius-sm: 8px;
 }
 [data-theme="dark"] {
     --bg-primary: #0a0a0a; --bg-card: #141414; --bg-sidebar: #050505; --bg-element: #1f1f1f; --bg-hover: #2a2a2a;
     --text-primary: #f0f0f0; --text-secondary: #a0a0a0; --border: #262626;
 }
 * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: var(--text-primary); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
+body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--text-primary); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
 
 .tab-panel { display: none !important; width: 100%; }
 .tab-panel.active { display: block !important; }
 
 .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-on-dark); padding: 48px 24px; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000; }
-.sidebar-brand { margin-bottom: 64px; font-family: 'Lora', serif; font-size: 2.2rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 24px; }
+.sidebar-brand { margin-bottom: 64px; font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 24px; }
 .nav-links { display: flex; flex-direction: column; gap: 12px; flex: 1; }
-.nav-tab { background: transparent; border: none; color: rgba(255,255,255,0.4); padding: 16px 24px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 16px; font-size: 1.1rem; text-align: left; transition: 0.2s; width: 100%; font-family: 'Outfit'; }
+.nav-tab { background: transparent; border: none; color: rgba(255,255,255,0.4); padding: 16px 24px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 16px; font-size: 1.1rem; text-align: left; transition: 0.2s; width: 100%; font-family: var(--font-ui); }
 .nav-tab:hover { background: rgba(255,255,255,0.05); color: #fff; }
-.nav-tab.active { background: var(--accent); color: #fff; }
+.nav-tab.active { background: var(--accent); color: #fff; box-shadow: 0 8px 20px rgba(194, 142, 94, 0.25); }
+.nav-tab i { font-style: normal; }
 
 .app-main { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
-.top-bar { padding: 32px 64px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg-primary); border-bottom: 1px solid var(--border); z-index: 100; backdrop-filter: blur(12px); opacity: 0.98; }
-.page-title { font-family: 'Lora', serif; font-size: 2.5rem; font-weight: 700; margin: 0; }
+.top-bar { padding: 24px 48px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg-primary); border-bottom: 1px solid var(--border); z-index: 100; backdrop-filter: blur(12px); }
+.page-title { font-family: var(--font-display); font-size: 2.5rem; font-weight: 700; margin: 0; }
+
+.theme-selector { display: flex; background: var(--bg-element); padding: 6px; border-radius: 50px; border: 1px solid var(--border); }
+.theme-btn { width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: transparent; font-size: 1.4rem; transition: 0.2s; }
+.theme-btn.active { background: var(--bg-card); color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
 .content-body { padding: 64px; max-width: 1400px; width: 100%; margin: 0 auto; }
 .card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 48px; margin-bottom: 48px; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); }
 .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 32px; }
-.library-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 32px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; height: 100%; }
+.library-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 32px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
 .library-item:hover { border-color: var(--accent); transform: translateY(-6px); box-shadow: 0 30px 60px -20px rgba(0,0,0,0.12); }
-.library-item-title { font-family: 'Lora', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+.library-item-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
 
-.btn { padding: 14px 28px; border-radius: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--bg-element); color: var(--text-primary); transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Outfit'; font-size: 1rem; }
+.input-control, .btn { padding: 14px 18px; background: var(--bg-element); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-family: var(--font-ui); font-size: 1rem; }
+.btn { font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
 .btn:hover { border-color: var(--accent); background: var(--bg-hover); }
 .btn-primary { background: var(--text-primary); color: #fff; border: none; }
 .btn-primary:hover { background: var(--accent); box-shadow: 0 8px 20px rgba(194, 142, 94, 0.2); }
 
-.theme-selector { display: flex; background: var(--bg-element); padding: 6px; border-radius: 50px; border: 1px solid var(--border); }
-.theme-btn { width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: transparent; transition: 0.2s; font-size: 1.4rem; }
-.theme-btn.active { background: var(--bg-card); color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.gpu-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 10px; background: #444; }
+.gpu-dot.active { background: var(--success); box-shadow: 0 0 10px var(--success); }
+
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.modal-content { background: var(--bg-card); width: 90%; max-width: 900px; max-height: 85vh; border-radius: var(--radius-lg); padding: 48px; position: relative; display: flex; flex-direction: column; box-shadow: 0 40px 80px -20px rgba(0,0,0,0.3); }
+.modal-close { position: absolute; top: 24px; right: 24px; background: transparent; border: none; font-size: 1.8rem; cursor: pointer; color: var(--text-secondary); }
+#preview-text { overflow-y: auto; flex: 1; margin-top: 32px; font-family: var(--font-display); font-size: 1.3rem; line-height: 1.8; white-space: pre-wrap; padding-right: 24px; }
 
 .hidden { display: none !important; }
 .spinner { width: 50px; height: 50px; border: 5px solid var(--bg-element); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 64px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.voices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+.voice-card { background: var(--bg-element); border: 1px solid var(--border); border-radius: 16px; padding: 24px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+.voice-card:hover { border-color: var(--accent); background: var(--bg-hover); }
+.voice-name { font-weight: 700; font-size: 1.1rem; }
+.voice-meta { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
 </style></head><body>
 <aside class="sidebar">
     <div class="sidebar-brand">Studio</div>
@@ -76,7 +94,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         </div>
     </header>
     <div class="content-body">
-        <div class="tab-panel" id="tab-library">
+        <div class="tab-panel active" id="tab-library">
             <div class="card">
                 <input type="text" id="library-search" class="input-control" style="width: 100%; padding: 24px; margin-bottom: 48px; font-size: 1.2rem; border-radius: 16px;"
                        placeholder="Search your collection..." oninput="renderLibrary()">
@@ -85,12 +103,12 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         </div>
         <div class="tab-panel" id="tab-convert">
             <div class="card">
-                <h2 style="font-family: 'Lora', serif; font-size: 2rem; margin-top: 0;">Manuscript Submission</h2>
-                <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 48px;">Upload your EPUB or TXT file to begin the automated high-fidelity conversion process.</p>
+                <h2 style="font-family: 'Lora', serif; font-size: 2.2rem; margin-top: 0;">Manuscript Submission</h2>
+                <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 48px;">Upload your EPUB or TXT file to begin the automated conversion process.</p>
                 <div id="upload-area" style="border: 2px dashed var(--border); padding: 140px 40px; text-align: center; border-radius: 32px; cursor: pointer; background: var(--bg-element); transition: 0.3s;"
                      onclick="document.getElementById('file-input').click()">
                     <div style="font-size: 6rem; margin-bottom: 32px;">📖</div>
-                    <h3 style="font-family: 'Lora', serif; font-size: 1.8rem;">Drop manuscript here</h3>
+                    <h3 style="font-family: 'Lora', serif; font-size: 2rem;">Drop manuscript here</h3>
                     <div id="file-name-display" style="margin-top: 24px; font-weight: 700; color: var(--accent); font-size: 1.2rem;"></div>
                 </div>
                 <input type="file" id="file-input" class="hidden" onchange="handleFile(event)">
@@ -98,20 +116,27 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                         disabled onclick="startProduction()">Initialize Production Pipeline</button>
             </div>
         </div>
-        <div class="tab-panel" id="tab-queue"><div class="card" style="font-size: 1.2rem; text-align: center; padding: 80px;">Production queue is currently clear.</div></div>
-        <div class="tab-panel" id="tab-voices"><div class="card">Narrator profiles loading...</div></div>
+        <div class="tab-panel" id="tab-queue"><div class="card" id="queue-content" style="text-align: center; padding: 100px;">Production queue is currently clear.</div></div>
+        <div class="tab-panel" id="tab-voices">
+            <div class="card">
+                <h2 style="font-family: 'Lora', serif; font-size: 2.2rem; margin-top: 0;">Narrator Profiles</h2>
+                <div id="voices-grid" class="voices-grid"></div>
+            </div>
+        </div>
         <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
-        <div class="tab-panel" id="tab-settings"><div class="card">Infrastructure Environment Settings</div></div>
+        <div class="tab-panel" id="tab-settings"><div class="card">Infrastructure Configuration Settings</div></div>
     </div>
 </main>
 <div id="preview-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <button class="modal-close" onclick="closePreview()">✕</button>
-        <h2 style="font-family: 'Lora', serif; font-size: 2rem; margin: 0 0 32px 0;">Manuscript Preview</h2>
-        <div id="preview-text" style="overflow-y: auto; flex: 1; font-family: 'Lora', serif; font-size: 1.25rem; line-height: 1.8; white-space: pre-wrap; padding-right: 20px;"></div>
+        <h2 id="preview-title-text" style="font-family: 'Lora', serif; font-size: 2.2rem; margin: 0;">Manuscript Preview</h2>
+        <div id="preview-text"></div>
     </div>
 </div>
-<script>const voices = {{ voices | tojson }};
+<audio id="preview-audio"></audio>
+<script>
+    const voices = {{ voices | tojson }};
     let libraryBooks = [];
     let selectedFile = null;
 
@@ -133,6 +158,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         
         if(tabId === 'library') loadLibrary();
         if(tabId === 'history') loadHistory();
+        if(tabId === 'voices') renderVoices();
+        if(tabId === 'queue') loadJobs();
     }
 
     function setTheme(theme) {
@@ -145,11 +172,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     }
 
     async function loadLibrary() {
-        try {
-            const resp = await fetch('/api/library');
-            libraryBooks = await resp.json();
-            renderLibrary();
-        } catch(e) { console.error(e); }
+        const resp = await fetch('/api/library');
+        libraryBooks = await resp.json();
+        renderLibrary();
     }
 
     function renderLibrary() {
@@ -160,15 +185,33 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         grid.innerHTML = filtered.map(b => `
             <div class="library-item">
                 <div class="library-item-title">${escapeHtml(b.title)}</div>
-                <div style="color: var(--text-secondary); margin-bottom: 24px; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.1em;">
-                    ${b.format.toUpperCase()} Manuscript
-                </div>
+                <div style="color: var(--text-secondary); margin-bottom: 24px; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.1em;">${b.format.toUpperCase()} Manuscript</div>
                 <div style="margin-top: auto; display: flex; gap: 16px;">
-                    <button class="btn" style="flex: 1;" onclick="previewBook('${escapeHtml(b.path)}')">👁 Preview</button>
-                    <button class="btn btn-primary" style="flex: 1;" onclick="convertFromLibrary('${escapeHtml(b.path)}')">Produce</button>
+                    <button class="btn" onclick="previewBook('${escapeHtml(b.path)}')">👁 Preview</button>
+                    <button class="btn btn-primary" onclick="convertFromLibrary('${escapeHtml(b.path)}')">Produce</button>
                 </div>
             </div>
         `).join('');
+    }
+
+    function renderVoices() {
+        const grid = document.getElementById('voices-grid');
+        if(!grid) return;
+        grid.innerHTML = Object.entries(voices).map(([id, v]) => `
+            <div class="voice-card">
+                <div>
+                    <div class="voice-name">${v.name}</div>
+                    <div class="voice-meta">${v.accent} · ${v.gender}</div>
+                </div>
+                <button class="btn" onclick="playPreview('${id}')">▶</button>
+            </div>
+        `).join('');
+    }
+
+    function playPreview(voiceId) {
+        const audio = document.getElementById('preview-audio');
+        audio.src = `/api/preview/${voiceId}`;
+        audio.play();
     }
 
     async function previewBook(path) {
@@ -184,7 +227,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
             });
             const data = await resp.json();
             textEl.textContent = data.preview || data.error;
-        } catch(e) { textEl.textContent = 'Communication error with production engine.'; }
+        } catch(e) { textEl.textContent = 'Error loading preview.'; }
     }
 
     function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); }
@@ -208,23 +251,49 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     async function convertFromLibrary(path) {
         await fetch('/api/library/convert', { 
             method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ path, voice: 'en-GB-RyanNeural' }) 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ path, voice: 'en-GB-RyanNeural' })
         });
         switchTab('queue');
     }
 
     async function loadHistory() {
+        const resp = await fetch('/api/history');
+        const jobs = await resp.json();
+        document.getElementById('history-content').innerHTML = jobs.map(j => `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-family: 'Lora', serif; font-size: 1.3rem; font-weight: 700;">✅ ${escapeHtml(j.book_name)}</div>
+                <button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">Download Master</button>
+            </div>
+        `).join('') || '<div class="card" style="text-align:center; padding: 64px;">Archive is empty.</div>';
+    }
+
+    async function loadJobs() {
+        const resp = await fetch('/api/jobs');
+        const jobs = await resp.json();
+        const active = jobs.filter(j => j.status === 'queued' || j.status.includes('converting'));
+        const queueContent = document.getElementById('queue-content');
+        if(queueContent && active.length > 0) {
+            queueContent.innerHTML = active.map(j => `
+                <div class="card"><strong>${escapeHtml(j.book_name)}</strong><br>Status: ${j.status}</div>
+            `).join('');
+        } else if(queueContent) {
+            queueContent.innerHTML = '<div style="text-align:center; padding: 80px;">Production queue is currently clear.</div>';
+        }
+        const badge = document.getElementById('queue-badge');
+        if(badge) {
+            badge.textContent = active.length;
+            badge.classList.toggle('hidden', active.length === 0);
+        }
+    }
+
+    async function loadGpuStatus() {
         try {
-            const resp = await fetch('/api/history');
-            const jobs = await resp.json();
-            document.getElementById('history-content').innerHTML = jobs.map(j => `
-                <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding: 24px 40px;">
-                    <div style="font-family: 'Lora', serif; font-size: 1.2rem; font-weight: 700;">✅ ${escapeHtml(j.book_name)}</div>
-                    <button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">Download Master</button>
-                </div>
-            `).join('') || '<div class="card" style="text-align:center; padding: 64px;">Archive is empty.</div>';
-        } catch(e) { console.error(e); }
+            const resp = await fetch('/api/gpu/status');
+            const gpu = await resp.json();
+            document.getElementById('gpu-state-label').textContent = gpu.state || 'Offline';
+            document.getElementById('gpu-state-dot').className = 'gpu-dot ' + (gpu.state || 'idle');
+        } catch(e) {}
     }
 
     function escapeHtml(str) { if(!str) return ''; const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
@@ -234,5 +303,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         setTheme(theme);
         const tab = localStorage.getItem('audiobook-tab') || 'library';
         switchTab(tab);
+        setInterval(loadJobs, 15000);
+        setInterval(loadGpuStatus, 10000);
     };
 </script></body></html>
