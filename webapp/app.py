@@ -3865,13 +3865,19 @@ init_db()
 # Clean up any orphan jobs from previous runs
 cleanup_orphan_jobs()
 
-# Reattach monitors for jobs already running in Docker
-if QUEUE_RUNNER_ENABLED:
-    resume_inflight_jobs()
-    # Start watchdog thread to monitor job health
-    start_watchdog()
-    # Continue queued work after restart (if nothing is currently running)
-    start_next_queued_job()
+# Reattach monitors for jobs already running in Docker (Backgrounded to prevent Gunicorn timeout)
+def background_startup():
+    app.logger.info("Starting background maintenance and queue tasks...")
+    if QUEUE_RUNNER_ENABLED:
+        try:
+            resume_inflight_jobs()
+            start_watchdog()
+            start_next_queued_job()
+        except Exception as e:
+            app.logger.error(f"Background startup error: {e}")
+
+import threading
+threading.Thread(target=background_startup, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8881, debug=True)
