@@ -100,7 +100,7 @@ body {
     <aside class="sidebar">
         <div class="sidebar-brand">
             <span class="logo-text">Studio</span>
-            <span class="logo-sub">Audiobook Studio</span>
+            <span class="logo-sub">Audiobook Engine</span>
         </div>
         <nav class="nav-links">
             <button class="nav-tab active" data-tab="convert"><i>📝</i> <span>Convert</span></button>
@@ -110,27 +110,10 @@ body {
             <button class="nav-tab" data-tab="history"><i>📋</i> <span>History</span></button>
             <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Settings</span></button>
         </nav>
-        <div class="sidebar-footer">
-            <div class="gpu-status-card" id="gpu-sidebar-status">
-                <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                    <span class="gpu-dot" id="gpu-state-dot"></span>
-                    <span id="gpu-state-label">GPU Offline</span>
-                </div>
-                <div id="gpu-detail-row" class="hidden" style="font-size: 0.75rem; opacity: 0.7;">
-                    <span id="gpu-instance-id"></span>
-                </div>
-            </div>
-        </div>
     </aside>
     <main class="app-main">
         <header class="top-bar">
             <h1 class="page-title" id="view-title">Convert</h1>
-            <div class="view-controls">
-                <div class="theme-selector">
-                    <button class="theme-btn active" data-theme="light">☀️</button>
-                    <button class="theme-btn" data-theme="dark">🌙</button>
-                </div>
-            </div>
         </header>
         <div class="content-body">
             <div class="tab-panel active" id="tab-convert">
@@ -138,74 +121,40 @@ body {
                     <form id="convert-form">
                         <div id="upload-area" style="border: 2px dashed var(--border); padding: 60px; text-align: center; border-radius: 20px; cursor: pointer;">
                             <div style="font-size: 4rem;">📖</div>
-                            <h3 id="file-name-display">Drop your manuscript here</h3>
-                            <p style="color: var(--text-secondary);">EPUB, PDF, or TXT</p>
+                            <h3 id="file-name-display">Drop manuscript here</h3>
                             <div class="file-name hidden" id="file-name"></div>
                         </div>
                         <input type="file" id="file-input" class="hidden" accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.html,.htm,.docx">
                         
                         <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
                             <div class="option-group">
-                                <label class="option-label">Performance Voice</label>
+                                <label class="option-label">Voice</label>
                                 <select id="voice-select-simple" class="option-select">
-                                    <optgroup label="Kokoro (Local)">
+                                    <optgroup label="Kokoro">
                                         {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
                                         <option value="{{ voice_id }}">{{ voice.name }}</option>
                                         {% endfor %}
                                     </optgroup>
-                                    <optgroup label="Edge (Microsoft)">
+                                    <optgroup label="Edge">
                                         {% for voice_id, voice in voices.items() if voice.engine == 'edge' %}
-                                        <option value="{{ voice_id }}">{{ voice.name }}</option>
-                                        {% endfor %}
-                                    </optgroup>
-                                    <optgroup label="Polly (Amazon)">
-                                        {% for voice_id, voice in voices.items() if voice.engine == 'polly' %}
                                         <option value="{{ voice_id }}">{{ voice.name }}</option>
                                         {% endfor %}
                                     </optgroup>
                                 </select>
                             </div>
-                            <div class="option-group">
-                                <label class="option-label">Chapters</label>
-                                <div style="display: flex; gap: 8px;">
-                                    <input type="number" id="start-chapter" class="option-select" placeholder="Start">
-                                    <input type="number" id="end-chapter" class="option-select" placeholder="End">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="main-cost-estimate" class="hidden" style="margin-top: 32px; padding: 20px; background: var(--bg-element); border-radius: 12px; text-align: center;">
-                            Estimated production cost: <strong class="cost-value" style="color: var(--accent); font-size: 1.2rem;">$0.00</strong>
                         </div>
 
                         <button type="submit" id="convert-btn" class="convert-btn" style="margin-top: 32px;" disabled>Start Production</button>
                         <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
-                        <input type="hidden" id="selected-engine" name="engine" value="kokoro">
                     </form>
                 </div>
             </div>
             
-            <div class="tab-panel" id="tab-queue">
-                <div class="card"><div id="queue-content"></div></div>
-            </div>
-            <div class="tab-panel" id="tab-library">
-                <div class="card">
-                    <div style="display:flex; gap: 20px; align-items:center; margin-bottom: 32px;">
-                        <h2 class="card-title" style="margin:0;">Library</h2>
-                        <input type="text" id="library-search" class="option-select" placeholder="Search..." style="max-width: 300px;">
-                    </div>
-                    <div id="library-grid"></div>
-                </div>
-            </div>
-            <div class="tab-panel" id="tab-voices">
-                <div class="card">Voices Explorer</div>
-            </div>
-            <div class="tab-panel" id="tab-history">
-                <div class="card"><div id="history-content"></div></div>
-            </div>
-            <div class="tab-panel" id="tab-settings">
-                <div class="card">Settings Panel</div>
-            </div>
+            <div class="tab-panel" id="tab-queue"><div class="card"><div id="queue-content"></div></div></div>
+            <div class="tab-panel" id="tab-library"><div class="card"><div id="library-grid"></div></div></div>
+            <div class="tab-panel" id="tab-voices"><div class="card">Voices Explorer</div></div>
+            <div class="tab-panel" id="tab-history"><div class="card"><div id="history-content"></div></div></div>
+            <div class="tab-panel" id="tab-settings"><div class="card">Settings</div></div>
         </div>
     </main>
     <audio id="preview-audio"></audio>
@@ -282,8 +231,7 @@ body {
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
 
             document.querySelector(`.nav-tab[data-tab="${tabId}"]`)?.classList.add('active');
-            document.getElementById(`tab-${tabId}`)?.classList.add('active');
-            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+            document.getElementById(`tab-${tabId}`)?.classList.add('active');\n            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
 
             localStorage.setItem('audiobook-tab', tabId);
 
