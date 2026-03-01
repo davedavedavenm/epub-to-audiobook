@@ -42,6 +42,9 @@ OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
 DB_PATH = Path(os.environ.get('DB_PATH', '/data/jobs.db'))
 TRANSCRIPTS_DIR = Path(os.environ.get('TRANSCRIPTS_DIR', '/data/transcripts'))
+
+TOC_CACHE_DIR = Path(os.environ.get('TOC_CACHE_DIR', '/data/toc_cache'))
+TOC_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 APP_VERSION = os.environ.get('APP_VERSION', 'dev')
 APP_GIT_SHA = os.environ.get('APP_GIT_SHA', 'unknown')
 APP_BUILD_TIME = os.environ.get('APP_BUILD_TIME', 'unknown')
@@ -1608,30 +1611,32 @@ def convert_to_epub(input_path: Path) -> Path:
         raise RuntimeError("Calibre ebook-convert not installed")
 
 
-def estimate_epub_size(epub_path: Path) -> int:
-    """Extract approximate character count from EPUB for timeout estimation."""
-    try:
-        total_chars = 0
-        with zipfile.ZipFile(epub_path, 'r') as zf:
-            for name in zf.namelist():
-                if name.endswith(('.html', '.xhtml', '.htm')):
-                    content = zf.read(name).decode('utf-8', errors='ignore')
-                    text = re.sub(r'<[^>]+>', ' ', content)
-                    total_chars += len(text)
-        return total_chars
-    except Exception as e:
-        app.logger.warning(f"Could not estimate EPUB size: {e}")
-        return 100000
 
-
-
-
+def sanitize_filename(name: str) -> str:
+    """Sensibly rename book titles to remove special characters and junk tags."""
+    # 1. Remove common junk tags (case-insensitive)
+    name = re.sub(r'(?i)[\\(\\[](retail|epub|v\\d+\\.\\d+|v\\d+|HQ|mq|fixed|re-read)[\\)\\]]', '', name)
+    # 2. Remove characters that cause issues in filenames/rsync/ABS
+    name = re.sub(r'[^a-zA-Z0-9\\s\\.\\-_]', ' ', name)
+    # 3. Clean up whitespace and underscores
+    name = re.sub(r'\\s+', '_', name).strip('_')
+    # 4. Final collapse of multiple underscores
+    name = re.sub(r'_+', '_', name)
+    return name or "unknown_book"
 
 def get_epub_toc(epub_path: Path) -> List[Dict[str, Any]]:
-    """Extract Table of Contents from EPUB."""
+    """Extract Table of Contents from EPUB with disk caching."""
     import xml.etree.ElementTree as ET
-    import zipfile
-    import re
+    
+    # Check Cache
+    cache_file = TOC_CACHE_DIR / f"{epub_path.stem}.json"
+    if cache_file.exists():
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+
     try:
         with zipfile.ZipFile(epub_path, 'r') as zf:
             container_xml = zf.read('META-INF/container.xml').decode('utf-8')
@@ -1665,7 +1670,7 @@ def get_epub_toc(epub_path: Path) -> List[Dict[str, Any]]:
                 if not href: continue
                 
                 opf_dir = Path(opf_path).parent
-                full_href = str(opf_dir / href).replace('\\', '/').replace('./', '')
+                full_href = str(opf_dir / href).replace('\\\\', '/').replace('./', '')
                 
                 try:
                     content = zf.read(full_href).decode('utf-8', errors='ignore')
@@ -1680,9 +1685,53 @@ def get_epub_toc(epub_path: Path) -> List[Dict[str, Any]]:
                     chapters.append({'index': i, 'title': title[:100], 'href': full_href})
                 except:
                     chapters.append({'index': i, 'title': f"Chapter {i}", 'href': full_href})
+            
+            # Save to Cache
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(chapters, f)
+                
             return chapters
-    except Exception as e:
+    except Exception:
         return []
+
+def index_library_background():
+    """Pre-index all EPUBs in library and upload folders periodically."""
+    import time
+    while True:
+        try:
+            app.logger.info("Starting library indexing cycle...")
+            folders = [LIBRARY_DIR, UPLOAD_DIR]
+            count = 0
+            for folder in folders:
+                if not folder.exists(): continue
+                for epub in folder.glob("*.epub"):
+                    try:
+                        get_epub_toc(epub)
+                        count += 1
+                    except: pass
+            app.logger.info(f"Indexing cycle complete. Processed {count} books.")
+        except Exception as e:
+            app.logger.error(f"Indexing error: {e}")
+        time.sleep(1800) # Every 30 minutes
+def estimate_epub_size(epub_path: Path) -> int:
+    """Extract approximate character count from EPUB for timeout estimation."""
+    try:
+        total_chars = 0
+        with zipfile.ZipFile(epub_path, 'r') as zf:
+            for name in zf.namelist():
+                if name.endswith(('.html', '.xhtml', '.htm')):
+                    content = zf.read(name).decode('utf-8', errors='ignore')
+                    text = re.sub(r'<[^>]+>', ' ', content)
+                    total_chars += len(text)
+        return total_chars
+    except Exception as e:
+        app.logger.warning(f"Could not estimate EPUB size: {e}")
+        return 100000
+
+
+
+
+
 def calculate_timeout(char_count: int) -> int:
     """Calculate timeout in seconds based on character count."""
     base_timeout = 1800  # 30 minutes minimum
@@ -3233,7 +3282,7 @@ def start_conversion():
     # Create job
     job_id = str(uuid.uuid4())[:8]
     book_name = Path(uploaded_file.filename).stem
-    safe_name = "".join(c for c in book_name if c.isalnum() or c in ' -_').strip()
+    safe_name = sanitize_filename(book_name)
 
     # Save file with original extension
     input_filename = f"{job_id}_{safe_name}{file_ext}"
@@ -3912,7 +3961,7 @@ def convert_from_library():
     # Create job
     job_id = str(uuid.uuid4())[:8]
     book_name = file_path.stem
-    safe_name = "".join(c for c in book_name if c.isalnum() or c in ' -_').strip()
+    safe_name = sanitize_filename(book_name)
     file_ext = file_path.suffix.lower()
 
     # New parsing and pronunciation options (defaults for library conversion)
@@ -3989,11 +4038,13 @@ cleanup_orphan_jobs()
 
 # Reattach monitors for jobs already running in Docker (Backgrounded to prevent Gunicorn timeout)
 def background_startup():
+    threading.Thread(target=index_library_background, daemon=True).start()
     app.logger.info("Starting background maintenance and queue tasks...")
     if QUEUE_RUNNER_ENABLED:
         try:
             resume_inflight_jobs()
             start_watchdog()
+            threading.Thread(target=index_library_background, daemon=True).start()
             start_next_queued_job()
         except Exception as e:
             app.logger.error(f"Background startup error: {e}")
