@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
-<style>/* Luxury/Editorial Theme */
+    <meta charset="UTF-8">
+    <title>Audiobook Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+    <style>/* Luxury/Editorial Theme */
 :root {
     --bg-primary: #fdfcf9;
     --bg-card: #ffffff;
@@ -93,106 +93,113 @@ body {
 .content-body { padding: 0 40px 60px; max-width: 1200px; width: 100%; margin: 0 auto; }
 .card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; margin-bottom: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
 .hidden { display: none !important; }
+
 [data-theme="dark"] .card { background: #1a1a1a; border-color: #262626; color: #f5f5f5; }
 [data-theme="dark"] .input-control { background: #262626; border-color: #333; color: #fff; }
 [data-theme="dark"] .btn { background: #262626; border-color: #333; color: #fff; }
-</style></head><body>
-<aside class=\"sidebar\">
-    <div class=\"sidebar-brand\">
-        <span class=\"logo-text\">Studio</span>
-        <span class=\"logo-sub\">Audiobook Engine</span>
-    </div>
-    <nav class=\"nav-links\">
-        <button class=\"nav-tab active\" data-tab=\"library\"><i>📚</i> <span>Library</span></button>
-        <button class=\"nav-tab\" data-tab=\"convert\"><i>📝</i> <span>Production</span></button>
-        <button class=\"nav-tab\" data-tab=\"queue\"><i>⏳</i> <span>Queue</span> <span class=\"badge hidden\" id=\"queue-badge\">0</span></button>
-        <button class=\"nav-tab\" data-tab=\"voices\"><i>🗣️</i> <span>Voices</span></button>
-        <button class=\"nav-tab\" data-tab=\"history\"><i>📋</i> <span>Archive</span></button>
-        <button class=\"nav-tab\" data-tab=\"settings\"><i>⚙️</i> <span>Config</span></button>
-    </nav>
-    <div class=\"sidebar-footer\">
-        <div id=\"gpu-sidebar-status\"><span id=\"gpu-state-dot\" class=\"gpu-dot\"></span> <span id=\"gpu-state-label\">GPU Offline</span></div>
-    </div>
-</aside>
-<main class=\"app-main\">
-    <header class=\"top-bar\">
-        <h1 class=\"page-title\" id=\"view-title\">Library</h1>
-        <div class=\"theme-selector\">
-            <button class=\"theme-btn active\" data-theme=\"light\">☀️</button>
-            <button class=\"theme-btn\" data-theme=\"dark\">🌙</button>
+[data-theme="dark"] .top-bar { background: rgba(15, 15, 15, 0.8); border-color: #262626; }
+[data-theme="dark"] .sidebar { border-right: 1px solid #262626; }
+</style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <span class="logo-text">Studio</span>
+            <span class="logo-sub">Audiobook Engine</span>
         </div>
-    </header>
-    <div class=\"content-body\">
-        <div class=\"tab-panel active\" id=\"tab-library\">
-            <div class=\"card\">
-                <div style=\"display: flex; gap: 20px; align-items: center; margin-bottom: 32px;\">
-                    <input type=\"text\" id=\"library-search\" class=\"input-control\" style=\"max-width: 400px;\" placeholder=\"Search your library...\">
-                    <select id=\"library-voice-select\" class=\"input-control\" style=\"width: auto;\">
-                        <option value=\"en-GB-RyanNeural\">Default: Ryan (British)</option>
-                        {% for id, v in voices.items() %}<option value=\"{{ id }}\">{{ v.name }} ({{ v.accent }})</option>{% endfor %}
-                    </select>
-                </div>
-                <div id=\"library-stats\" style=\"font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;\"></div>
-                <div id=\"library-grid\" class=\"library-grid\"></div>
+        <nav class="nav-links">
+            <button class="nav-tab active" data-tab="library"><i>📚</i> <span>Library</span></button>
+            <button class="nav-tab" data-tab="convert"><i>📝</i> <span>Production</span></button>
+            <button class="nav-tab" data-tab="queue"><i>⏳</i> <span>Queue</span> <span class="badge hidden" id="queue-badge">0</span></button>
+            <button class="nav-tab" data-tab="voices"><i>🗣️</i> <span>Voices</span></button>
+            <button class="nav-tab" data-tab="history"><i>📋</i> <span>Archive</span></button>
+            <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Config</span></button>
+        </nav>
+        <div class="sidebar-footer">
+            <div id="gpu-sidebar-status"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label">GPU Offline</span></div>
+        </div>
+    </aside>
+    <main class="app-main">
+        <header class="top-bar">
+            <h1 class="page-title" id="view-title">Library</h1>
+            <div class="theme-selector">
+                <button class="theme-btn active" data-theme="light">☀️</button>
+                <button class="theme-btn" data-theme="dark">🌙</button>
             </div>
-        </div>
-        <div class=\"tab-panel\" id=\"tab-convert\">
-            <div class=\"card\">
-                <form id=\"convert-form\">
-                    <div id=\"upload-area\" style=\"border: 2px dashed var(--border); padding: 80px; text-align: center; border-radius: 20px; cursor: pointer;\">
-                        <div style=\"font-size: 4rem; margin-bottom: 20px;\">📖</div>
-                        <h3 id=\"file-name-display\">Drop manuscript here</h3>
-                        <div id=\"file-name\" class=\"hidden\"></div>
+        </header>
+        <div class="content-body">
+            <div class="tab-panel active" id="tab-library">
+                <div class="card">
+                    <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 32px;">
+                        <input type="text" id="library-search" class="input-control" style="max-width: 400px;" placeholder="Search your library...">
+                        <select id="library-voice-select" class="input-control" style="width: auto;">
+                            <option value="en-GB-RyanNeural">Default: Ryan (British)</option>
+                            {% for id, v in voices.items() %}
+                            <option value="{{ id }}">{{ v.name }} ({{ v.accent }})</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <input type=\"file\" id=\"file-input\" class=\"hidden\">
-                    <div style=\"margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;\">
-                        <div class=\"input-group\">
-                            <label>Narrator</label>
-                            <select id=\"voice-select-simple\" class=\"input-control\">
-                                <optgroup label=\"Edge (Stable)\">
-                                    {% for id, v in voices.items() if v.engine == 'edge' %}
-                                    <option value=\"{{ id }}\" {% if id == 'en-GB-RyanNeural' %}selected{% endif %}>{{ v.name }} ({{ v.accent }})</option>
-                                    {% endfor %}
-                                </optgroup>
-                                <optgroup label=\"Kokoro (High Quality)\">
-                                    {% for id, v in voices.items() if v.engine == 'kokoro' %}
-                                    <option value=\"{{ id }}\">{{ v.name }} ({{ v.accent }})</option>
-                                    {% endfor %}
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class=\"input-group\">
-                            <label>Speed</label>
-                            <input type=\"number\" id=\"tts-speed\" class=\"input-control\" step=\"0.1\" value=\"1.0\">
-                        </div>
-                    </div>
-                    <button type=\"submit\" id=\"convert-btn\" class=\"btn btn-primary\" style=\"margin-top: 32px; height: 60px;\" disabled>Start Production</button>
-                </form>
-            </div>
-        </div>
-        <div class=\"tab-panel\" id=\"tab-queue\"><div class=\"card\"><div id=\"queue-content\"></div></div></div>
-        <div class=\"tab-panel\" id=\"tab-voices\"><div class=\"card\"><div id=\"kokoro-voices\"></div></div></div>
-        <div class=\"tab-panel\" id=\"tab-history\"><div class=\"card\"><div id=\"history-content\"></div></div></div>
-        <div class=\"tab-panel\" id=\"tab-settings\">
-            <div class=\"card\">
-                <div class=\"setting-row\">
-                    <div class=\"input-group\"><label>Polly Secret</label><input type=\"password\" id=\"setting-AWS_SECRET_ACCESS_KEY\" class=\"input-control\"></div>
-                    <div class=\"input-group\"><label>OpenAI Key</label><input type=\"password\" id=\"setting-OPENAI_API_KEY\" class=\"input-control\"></div>
+                    <div id="library-stats" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;"></div>
+                    <div id="library-grid" class="library-grid"></div>
                 </div>
-                <button id=\"save-settings-btn\" class=\"btn btn-primary\" style=\"width:auto;\">Save Infrastructure Config</button>
+            </div>
+            <div class="tab-panel" id="tab-convert">
+                <div class="card">
+                    <form id="convert-form">
+                        <div id="upload-area" style="border: 2px dashed var(--border); padding: 80px; text-align: center; border-radius: 20px; cursor: pointer;">
+                            <div style="font-size: 4rem; margin-bottom: 20px;">📖</div>
+                            <h3 id="file-name-display">Drop manuscript here</h3>
+                            <div id="file-name" class="hidden"></div>
+                        </div>
+                        <input type="file" id="file-input" class="hidden">
+                        <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                            <div class="input-group">
+                                <label>Narrator</label>
+                                <select id="voice-select-simple" class="input-control">
+                                    <optgroup label="Edge (Stable)">
+                                        {% for id, v in voices.items() if v.engine == 'edge' %}
+                                        <option value="{{ id }}" {% if id == 'en-GB-RyanNeural' %}selected{% endif %}>{{ v.name }} ({{ v.accent }})</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    <optgroup label="Kokoro (High Quality)">
+                                        {% for id, v in voices.items() if v.engine == 'kokoro' %}
+                                        <option value="{{ id }}">{{ v.name }} ({{ v.accent }})</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Speed</label>
+                                <input type="number" id="tts-speed" class="input-control" step="0.1" value="1.0">
+                            </div>
+                        </div>
+                        <button type="submit" id="convert-btn" class="btn btn-primary" style="margin-top: 32px; height: 60px;">Start Production</button>
+                    </form>
+                </div>
+            </div>
+            <div class="tab-panel" id="tab-queue"><div class="card"><div id="queue-content"></div></div></div>
+            <div class="tab-panel" id="tab-voices"><div class="card"><div id="kokoro-voices"></div></div></div>
+            <div class="tab-panel" id="tab-history"><div class="card"><div id="history-content"></div></div></div>
+            <div class="tab-panel" id="tab-settings">
+                <div class="card">
+                    <div class="setting-row">
+                        <div class="input-group"><label>Polly Secret</label><input type="password" id="setting-AWS_SECRET_ACCESS_KEY" class="input-control"></div>
+                        <div class="input-group"><label>OpenAI Key</label><input type="password" id="setting-OPENAI_API_KEY" class="input-control"></div>
+                    </div>
+                    <button id="save-settings-btn" class="btn btn-primary" style="width:auto;">Save Infrastructure Config</button>
+                </div>
             </div>
         </div>
+    </main>
+    <div id="preview-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closePreview()">✕</button>
+            <h2 id="preview-title" style="font-family: var(--font-display); margin: 0;">Manuscript Preview</h2>
+            <p id="preview-title-text" style="font-size: 0.9rem; color: var(--text-secondary); margin: 4px 0 20px 0;"></p>
+            <div id="preview-content"></div>
+        </div>
     </div>
-</main>
-<div id=\"preview-modal\" class=\"modal-overlay hidden\">
-    <div class=\"modal-content\">
-        <button class=\"modal-close\" onclick=\"closePreview()\">✕</button>
-        <h2 id=\"preview-title\" style=\"font-family: var(--font-display); margin: 0;\">Manuscript Preview</h2>
-        <p id=\"preview-title-text\" style=\"font-size: 0.9rem; color: var(--text-secondary); margin: 4px 0 20px 0;\"></p>
-        <div id=\"preview-content\"></div>
-    </div>
-</div>
-<audio id=\"preview-audio\"></audio>
+    <audio id="preview-audio"></audio>
 <script>﻿
         // ============ State ============
         const voices = {{ voices | tojson }};
@@ -266,7 +273,8 @@ body {
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
 
             document.querySelector('.nav-tab[data-tab="' + tabId + '"]')?.classList.add('active');
-            document.getElementById('tab-' + tabId)?.classList.add('active');\n            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+            document.getElementById('tab-' + tabId)?.classList.add('active');
+            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
 
             localStorage.setItem('audiobook-tab', tabId);
 
@@ -1458,7 +1466,6 @@ body {
         loadGpuStatus();
         setInterval(loadJobs, 15000);
     
-
 
 async function previewBook(path) {
     const modal = document.getElementById('preview-modal');
