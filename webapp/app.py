@@ -1614,14 +1614,18 @@ def convert_to_epub(input_path: Path) -> Path:
 
 def sanitize_filename(name: str) -> str:
     """Sensibly rename book titles to remove special characters and junk tags."""
-    # 1. Remove common junk tags (case-insensitive)
-    name = re.sub(r'(?i)[\\(\\[](retail|epub|v\\d+\\.\\d+|v\\d+|HQ|mq|fixed|re-read)[\\)\\]]', '', name)
-    # 2. Remove characters that cause issues in filenames/rsync/ABS
-    name = re.sub(r'[^a-zA-Z0-9\\s\\.\\-_]', ' ', name)
-    # 3. Clean up whitespace and underscores
-    name = re.sub(r'\\s+', '_', name).strip('_')
-    # 4. Final collapse of multiple underscores
-    name = re.sub(r'_+', '_', name)
+    # 1. Strip file extension if present
+    name = name.rsplit('.', 1)[0] if '.' in name else name
+    # 2. Remove common junk tags (case-insensitive)
+    name = re.sub(r'(?i)[\\(\\[](retail|epub|v\\d+\\.\\d+|v\\d+|HQ|mq|fixed|re-read|unabridged|audiobook|book)[\\)\\]]', '', name)
+    # 3. Clean up specific characters that look like junk or cause issues
+    name = name.replace("\'", "").replace("'", "")
+    # 4. Replace anything that isnt alphanumeric or dash with a space
+    name = re.sub(r'[^a-zA-Z0-9-]', ' ', name)
+    # 5. Collapse spaces into a single underscore
+    name = re.sub(r'\\s+', '_', name.strip())
+    # 6. Final cleanup
+    name = re.sub(r'_+', '_', name).strip('_')
     return name or "unknown_book"
 
 def get_epub_toc(epub_path: Path) -> List[Dict[str, Any]]:
@@ -3812,6 +3816,23 @@ def list_library():
     # Sort by title
     books.sort(key=lambda x: x['title'].lower())
     return jsonify(books)
+
+
+@app.route('/api/library/toc', methods=['POST'])
+def library_toc():
+    """Get EPUB Table of Contents with caching."""
+    data = request.json or {}
+    path_str = data.get('path')
+    if not path_str: return jsonify({'error': 'No path'}), 400
+    try:
+        path = Path(path_str)
+        if not path.exists(): return jsonify({'error': 'Not found'}), 404
+        if path.suffix.lower() == '.epub':
+            chapters = get_epub_toc(path)
+            return jsonify({'chapters': [{'index': c['index'], 'title': c['title']} for c in chapters]})
+        return jsonify({'chapters': []})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/library/preview', methods=['POST'])
 def library_preview():
