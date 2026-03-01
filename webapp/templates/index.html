@@ -290,7 +290,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                 const opts = data.chapters.map(c => `<option value="${c.index}">${c.index}. ${escapeHtml(c.title)}</option>`).join('');
                 startSel.innerHTML = opts;
                 endSel.innerHTML = opts;
-                if(data.chapters.length > 0) endSel.value = data.chapters[data.chapters.length-1].index;
+                if(data.chapters.length > 0) {
+                    startSel.value = 1;
+                    endSel.value = data.chapters[data.chapters.length-1].index;
+                }
             } catch(e) { console.error(e); }
         }
     }
@@ -301,7 +304,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         const filtered = libraryBooks.filter(b => b.title.toLowerCase().includes(query));
 
         const engines = [...new Set(Object.values(voices).map(v => v.engine))];
-        const voiceOptions = engines.map(engine => {
+        window.voiceOptions = engines.map(engine => {
             const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
             return `<optgroup label="${engine.toUpperCase()} ENGINE">${engineVoices.map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}</optgroup>`;
         }).join('');
