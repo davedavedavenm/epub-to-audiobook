@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Audiobook Studio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
-    <style>/* Luxury/Editorial Theme */
+<meta charset="UTF-8">
+<title>Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@700&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+<style>/* Luxury/Editorial Theme */
 :root {
     --bg-primary: #fdfcf9;
     --bg-card: #ffffff;
@@ -94,167 +94,85 @@ body {
 .card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; margin-bottom: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
 .hidden { display: none !important; }
 
-:root {
-    --bg-primary: #fdfcf9;
-    --bg-card: #ffffff;
-    --bg-sidebar: #1a1a1a;
-    --bg-element: #f5f3ef;
-    --bg-hover: #ece9e2;
-    --accent: #c28e5e;
-    --text-primary: #1a1a1a;
-    --text-secondary: #6b665f;
-    --border: #e8e4de;
-    --radius-lg: 24px;
-}
-[data-theme="dark"] {
-    --bg-primary: #0f0f0f;
-    --bg-card: #1a1a1a;
-    --bg-sidebar: #080808;
-    --bg-element: #262626;
-    --bg-hover: #333333;
-    --text-primary: #f5f5f5;
-    --text-secondary: #a3a3a3;
-    --border: #262626;
-}
-body { transition: background 0.3s, color 0.3s; }
-.card { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
-.input-control, .btn { background: var(--bg-element); border: 1px solid var(--border); color: var(--text-primary); }
-.nav-tab.active { background: var(--accent); color: #fff; }
-.top-bar { background: var(--bg-primary); opacity: 0.9; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
-</style>
-</head>
-<body>
-    <aside class="sidebar">
-        <div class="sidebar-brand">
-            <span class="logo-text">Studio</span>
-            <span class="logo-sub">Audiobook Engine</span>
+[data-theme="dark"] .card { background: #1a1a1a; border-color: #262626; color: #f5f5f5; }
+[data-theme="dark"] .input-control, [data-theme="dark"] .btn { background: #262626; border-color: #333; color: #fff; }
+[data-theme="dark"] .top-bar { background: rgba(15, 15, 15, 0.8); border-bottom: 1px solid #262626; }
+[data-theme="dark"] body { background: #0f0f0f; color: #f5f5f5; }
+.gpu-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; background: #444; }
+.gpu-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.gpu-dot.provisioning { background: var(--warning); animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+</style></head><body>
+<aside class="sidebar">
+    <div class="sidebar-brand"><span class="logo-text">Studio</span><span class="logo-sub">Audiobook Engine</span></div>
+    <nav class="nav-links">
+        <button class="nav-tab active" data-tab="library"><i>📚</i> <span>Library</span></button>
+        <button class="nav-tab" data-tab="convert"><i>📝</i> <span>Production</span></button>
+        <button class="nav-tab" data-tab="queue"><i>⏳</i> <span>Queue</span> <span class="badge hidden" id="queue-badge">0</span></button>
+        <button class="nav-tab" data-tab="voices"><i>🗣️</i> <span>Voices</span></button>
+        <button class="nav-tab" data-tab="history"><i>📋</i> <span>Archive</span></button>
+        <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Config</span></button>
+    </nav>
+    <div class="sidebar-footer">
+        <div id="gpu-sidebar-status" style="font-size: 0.8rem; opacity: 0.8; display: flex; align-items: center;">
+            <span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label">GPU Offline</span>
         </div>
-        <nav class="nav-links">
-            <button class="nav-tab active" data-tab="library"><i>📚</i> <span>Library</span></button>
-            <button class="nav-tab" data-tab="convert"><i>📝</i> <span>Production</span></button>
-            <button class="nav-tab" data-tab="queue"><i>⏳</i> <span>Queue</span> <span class="badge hidden" id="queue-badge">0</span></button>
-            <button class="nav-tab" data-tab="voices"><i>🗣️</i> <span>Voices</span></button>
-            <button class="nav-tab" data-tab="history"><i>📋</i> <span>Archive</span></button>
-            <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Config</span></button>
-        </nav>
-        <div class="sidebar-footer">
-            <div id="gpu-sidebar-status"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label">GPU Offline</span></div>
-        </div>
-    </aside>
-    <main class="app-main">
-        <header class="top-bar">
-            <h1 class="page-title" id="view-title">Library</h1>
-            <div class="theme-selector">
-                <button class="theme-btn active" data-theme="light">☀️</button>
-                <button class="theme-btn" data-theme="dark">🌙</button>
-            </div>
-        </header>
-        <div class="content-body">
-            <div class="tab-panel active" id="tab-library">
-                <div class="card">
-                    <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 32px;">
-                        <input type="text" id="library-search" class="input-control" style="max-width: 400px;" placeholder="Search your library...">
-                        <select id="library-sort-key" class="input-control" style="width: auto;">
-                            <option value="title">Sort: Title</option>
-                            <option value="modified_ts">Sort: Date</option>
-                            <option value="size">Sort: Size</option>
-                        </select>
-                        <select id="library-sort-dir" class="input-control" style="width: auto;">
-                            <option value="asc">Asc</option>
-                            <option value="desc">Desc</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center;">
-                        <select id="library-voice-select" class="input-control" style="width: auto;">
-                            <option value="en-GB-RyanNeural">Default Narrator: Ryan (British)</option>
-                            {% for id, v in voices.items() %}
-                            <option value="{{ id }}">{{ v.name }} ({{ v.accent }})</option>
-                            {% endfor %}
-                        </select>
-                        <label><input type="checkbox" id="library-notify-whatsapp"> WhatsApp Alert</label>
-                        <input type="tel" id="library-whatsapp-number" class="input-control hidden" style="max-width: 200px;" placeholder="+44...">
-                    </div>
-                    <div id="library-stats" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;"></div>
-                    <div id="library-grid" class="library-grid"></div>
-                </div>
-            </div>
-
-            <div class="tab-panel" id="tab-convert">
-                <div class="card">
-                    <form id="convert-form">
-                        <div id="upload-area" style="border: 2px dashed var(--border); padding: 80px; text-align: center; border-radius: 20px; cursor: pointer;">
-                            <div style="font-size: 4rem; margin-bottom: 20px;">📖</div>
-                            <h3 id="file-name-display">Drop manuscript here</h3>
-                            <div id="file-name" class="hidden"></div>
-                        </div>
-                        <input type="file" id="file-input" class="hidden">
-                        
-                        <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
-                            <div class="input-group">
-                                <label>Narrator</label>
-                                <select id="voice-select-simple" class="input-control">
-                                    <optgroup label="Edge (Stable)">
-                                        {% for id, v in voices.items() if v.engine == 'edge' %}
-                                        <option value="{{ id }}" {% if id == 'en-GB-RyanNeural' %}selected{% endif %}>{{ v.name }} ({{ v.accent }})</option>
-                                        {% endfor %}
-                                    </optgroup>
-                                    <optgroup label="Kokoro (High Quality)">
-                                        {% for id, v in voices.items() if v.engine == 'kokoro' %}
-                                        <option value="{{ id }}">{{ v.name }} ({{ v.accent }})</option>
-                                        {% endfor %}
-                                    </optgroup>
-                                </select>
-                            </div>
-                            <div class="input-group">
-                                <label>Narrative Speed</label>
-                                <input type="number" id="tts-speed" class="input-control" step="0.1" value="1.0">
-                            </div>
-                        </div>
-                        <button type="submit" id="convert-btn" class="btn btn-primary" style="margin-top: 32px; height: 60px;">Start Production</button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="tab-panel" id="tab-queue">
-                <div class="card"><div id="queue-content"></div></div>
-            </div>
-
-            <div class="tab-panel" id="tab-voices">
-                <div class="card">
-                    <input type="text" id="voice-search" class="input-control" style="margin-bottom: 24px;" placeholder="Search voices...">
-                    <div id="kokoro-voices" class="library-grid"></div>
-                </div>
-            </div>
-
-            <div class="tab-panel" id="tab-history">
-                <div class="card">
-                    <input type="text" id="history-search" class="input-control" style="margin-bottom: 24px;" placeholder="Filter archive...">
-                    <div id="history-content"></div>
-                    <button id="clear-history-btn" class="btn" style="margin-top: 24px; color: var(--error);">🗑️ Clear Archive</button>
-                </div>
-            </div>
-
-            <div class="tab-panel" id="tab-settings">
-                <div class="card">
-                    <div class="setting-row">
-                        <div class="input-group"><label>Polly Secret</label><input type="password" id="setting-AWS_SECRET_ACCESS_KEY" class="input-control"></div>
-                        <div class="input-group"><label>OpenAI Key</label><input type="password" id="setting-OPENAI_API_KEY" class="input-control"></div>
-                    </div>
-                    <button id="save-settings-btn" class="btn btn-primary" style="width:auto;">Save Config</button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div id="preview-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closePreview()">✕</button>
-            <h2 id="preview-title" style="font-family: var(--font-display); margin: 0;">Manuscript Preview</h2>
-            <p id="preview-title-text" style="font-size: 0.9rem; color: var(--text-secondary); margin: 4px 0 20px 0;"></p>
-            <div id="preview-content" style="overflow-y: auto; flex: 1;"></div>
+        <div id="gpu-telemetry" class="hidden" style="font-size: 0.7rem; margin-top: 8px; opacity: 0.6;">
+            <span id="gpu-session-time"></span> | <span id="gpu-session-cost"></span>
         </div>
     </div>
-    <audio id="preview-audio"></audio>
+</aside>
+<main class="app-main">
+    <header class="top-bar">
+        <h1 class="page-title" id="view-title">Library</h1>
+        <div class="theme-selector"><button class="theme-btn active" data-theme="light">☀️</button><button class="theme-btn" data-theme="dark">🌙</button></div>
+    </header>
+    <div class="content-body">
+        <div class="tab-panel active" id="tab-library">
+            <div class="card">
+                <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 32px;">
+                    <input type="text" id="library-search" class="input-control" style="max-width: 400px;" placeholder="Filter your library...">
+                    <select id="library-sort-key" class="input-control" style="width: auto;"><option value="title">Sort: Title</option><option value="modified_ts">Sort: Date</option></select>
+                </div>
+                <div style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center;">
+                    <select id="library-voice-select" class="input-control" style="width: auto;">
+                        <option value="en-GB-RyanNeural">Narrator: Ryan (British)</option>
+                        {% for id, v in voices.items() %}<option value="{{ id }}">{{ v.name }} ({{ v.accent }})</option>{% endfor %}
+                    </select>
+                    <label style="font-size: 0.9rem; cursor: pointer;"><input type="checkbox" id="library-notify-whatsapp"> WhatsApp Alert</label>
+                </div>
+                <div id="library-stats" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;"></div>
+                <div id="library-grid" class="library-grid"></div>
+            </div>
+        </div>
+        <div class="tab-panel" id="tab-convert">
+            <div class="card">
+                <form id="convert-form">
+                    <div id="upload-area" style="border: 2px dashed var(--border); padding: 80px; text-align: center; border-radius: 20px; cursor: pointer;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">📖</div><h3 id="file-name-display">Drop manuscript here</h3><div id="file-name" class="hidden"></div>
+                    </div>
+                    <input type="file" id="file-input" class="hidden">
+                    <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                        <div class="input-group"><label>Narrator</label><select id="voice-select-simple" class="input-control">
+                            {% for id, v in voices.items() if v.engine == 'edge' %}<option value="{{ id }}" {% if id == 'en-GB-RyanNeural' %}selected{% endif %}>{{ v.name }} ({{ v.accent }})</option>{% endfor %}
+                        </select></div>
+                        <div class="input-group"><label>Speed</label><input type="number" id="tts-speed" class="input-control" step="0.1" value="1.0"></div>
+                    </div>
+                    <button type="submit" id="convert-btn" class="btn btn-primary" style="margin-top: 32px; height: 60px;" disabled>Start Production</button>
+                </form>
+            </div>
+        </div>
+        <div class="tab-panel" id="tab-queue"><div class="card"><div id="queue-content"></div></div></div>
+        <div class="tab-panel" id="tab-voices"><div class="card"><input type="text" id="voice-search" class="input-control" placeholder="Search voices..."><div id="kokoro-voices" class="library-grid"></div></div></div>
+        <div class="tab-panel" id="tab-history"><div class="card"><input type="text" id="history-search" class="input-control" placeholder="Filter archive..."><div id="history-content"></div><button id="clear-history-btn" class="btn" style="margin-top: 24px; color: var(--error);">🗑️ Clear Archive</button></div></div>
+        <div class="tab-panel" id="tab-settings"><div class="card"><div class="setting-row">
+            <div class="input-group"><label>AWS Key</label><input type="text" id="setting-AWS_ACCESS_KEY_ID" class="input-control"></div>
+            <div class="input-group"><label>OpenAI Key</label><input type="password" id="setting-OPENAI_API_KEY" class="input-control"></div>
+        </div><button id="save-settings-btn" class="btn btn-primary" style="width:auto;">Save Infrastructure Config</button></div></div>
+    </div>
+</main>
+<div id="preview-modal" class="modal-overlay hidden"><div class="modal-content"><button class="modal-close" onclick="closePreview()">✕</button><h2 id="preview-title" style="font-family: var(--font-display); margin: 0;">Manuscript Preview</h2><p id="preview-title-text" style="font-size: 0.9rem; color: var(--text-secondary); margin: 4px 0 20px 0;"></p><div id="preview-content" style="overflow-y: auto; flex: 1;"></div></div></div>
+<audio id="preview-audio"></audio>
 <script>﻿
         // ============ State ============
         const voices = {{ voices | tojson }};
@@ -1526,27 +1444,17 @@ async function previewBook(path) {
     const modal = document.getElementById('preview-modal');
     const content = document.getElementById('preview-content');
     const title = document.getElementById('preview-title-text');
-    
     content.innerHTML = '<div class="spinner"></div> Scanning manuscript...';
     title.textContent = path.split('/').pop();
     modal.classList.remove('hidden');
-
     try {
-        const resp = await fetch('/api/library/preview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path })
-        });
+        const resp = await fetch('/api/library/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }) });
         const data = await resp.json();
         if (data.error) throw new Error(data.error);
-        
         content.innerHTML = `<div style="white-space: pre-wrap; line-height: 1.6; font-family: var(--font-display); font-size: 1.1rem;">${escapeHtml(data.preview)}</div>`;
     } catch (err) {
-        content.innerHTML = `<div class="error-box">${escapeHtml(err.message)}</div>`;
+        content.innerHTML = `<div class="error-box" style="color: var(--error); padding: 20px; background: var(--accent-subtle); border-radius: 8px;">${escapeHtml(err.message)}</div>`;
     }
 }
-
-function closePreview() {
-    document.getElementById('preview-modal').classList.add('hidden');
-}
+function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); }
 </script></body></html>
