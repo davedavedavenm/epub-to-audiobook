@@ -3,164 +3,2025 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audiobook Studio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <style>/* Luxury/Editorial Theme */
-:root {
-    --bg-primary: #fdfcf9;
-    --bg-card: #ffffff;
-    --bg-sidebar: #1a1a1a;
-    --bg-element: #f5f3ef;
-    --bg-hover: #ece9e2;
-    --accent: #c28e5e;
-    --accent-hover: #a67246;
-    --accent-subtle: rgba(194, 142, 94, 0.1);
-    --text-primary: #1a1a1a;
-    --text-secondary: #6b665f;
-    --text-on-dark: #fdfcf9;
-    --border: #e8e4de;
-    --success: #4a7c59;
-    --error: #af4d4d;
-    --warning: #d4a373;
-    --font-display: 'Lora', serif;
-    --font-ui: 'Outfit', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
-    --sidebar-width: 280px;
-    --radius-lg: 24px;
-    --radius-md: 12px;
-    --radius-sm: 8px;
-}
+    <title>EPUB to Audiobook</title>
+    <style>
+        :root {
+            /* Light Theme (default) - Clean, modern */
+            --bg-primary: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-element: #f1f5f9;
+            --bg-hover: #e2e8f0;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-subtle: rgba(59, 130, 246, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+            --font-ui: "Segoe UI", Roboto, sans-serif;
+        }
 
-[data-theme="dark"] {
-    --bg-primary: #0f0f0f;
-    --bg-card: #1a1a1a;
-    --bg-sidebar: #080808;
-    --bg-element: #262626;
-    --bg-hover: #333333;
-    --text-primary: #f5f5f5;
-    --text-secondary: #a3a3a3;
-    --border: #262626;
-    --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.3);
-}
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --bg-element: #334155;
+            --bg-hover: #475569;
+            --accent: #60a5fa;
+            --accent-hover: #3b82f6;
+            --accent-subtle: rgba(96, 165, 250, 0.15);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+        }
 
-* { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        [data-theme="midnight"] {
+            --bg-primary: #0c0a1d;
+            --bg-card: #13102a;
+            --bg-element: #1e1a3a;
+            --bg-hover: #2a2550;
+            --accent: #818cf8;
+            --accent-hover: #6366f1;
+            --accent-subtle: rgba(129, 140, 248, 0.15);
+            --text-primary: #e8e8ff;
+            --text-secondary: #a5a5c9;
+            --border: #2a2550;
+            --shadow: 0 1px 3px rgba(0,0,0,0.4);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.5);
+        }
 
-body {
-    font-family: var(--font-ui);
-    margin: 0;
-    padding: 0;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    min-height: 100vh;
-    display: flex;
-    overflow: hidden;
-}
+        [data-theme="forest"] {
+            --bg-primary: #0a1a14;
+            --bg-card: #0f261c;
+            --bg-element: #163829;
+            --bg-hover: #1f4a36;
+            --accent: #4ade80;
+            --accent-hover: #22c55e;
+            --accent-subtle: rgba(74, 222, 128, 0.15);
+            --text-primary: #e8f5e9;
+            --text-secondary: #81c784;
+            --border: #1f4a36;
+            --shadow: 0 1px 3px rgba(0,0,0,0.4);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.5);
+        }
 
-.sidebar {
-    width: var(--sidebar-width);
-    background: var(--bg-sidebar);
-    color: var(--text-on-dark);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    padding: 40px 24px;
-    position: fixed;
-    left: 0; top: 0; z-index: 1000;
-}
+        * {
+            box-sizing: border-box;
+        }
 
-.sidebar-brand { margin-bottom: 60px; padding-left: 12px; }
-.sidebar-brand .logo-text { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; }
-.sidebar-brand .logo-sub { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--accent); margin-top: 4px; font-weight: 600; }
+        body {
+            font-family: var(--font-ui);
+            margin: 0;
+            padding: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
 
-.nav-links { display: flex; flex-direction: column; gap: 8px; flex: 1; }
-.nav-tab {
-    background: transparent; border: none; color: rgba(255,255,255,0.5);
-    padding: 14px 18px; border-radius: var(--radius-md); cursor: pointer;
-    display: flex; align-items: center; gap: 16px; font-size: 1rem; width: 100%;
-}
-.nav-tab:hover { color: var(--text-on-dark); background: rgba(255,255,255,0.05); }
-.nav-tab.active { background: var(--accent); color: #fff; }
+        /* ============ Header ============ */
+        .app-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
 
-.app-main {
-    margin-left: var(--sidebar-width); flex: 1; height: 100vh; overflow-y: auto;
-    display: flex; flex-direction: column; position: relative;
-}
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 60px;
+            padding: 10px 0;
+            gap: 12px;
+        }
 
-.top-bar { padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: rgba(253, 252, 249, 0.8); backdrop-filter: blur(10px); z-index: 900; }
-.page-title { font-family: var(--font-display); font-size: 2rem; font-weight: 700; }
+        .logo {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-.content-body { padding: 0 40px 60px; max-width: 1200px; width: 100%; margin: 0 auto; }
-.card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; margin-bottom: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-.hidden { display: none !important; }
-</style>
+        .logo-icon {
+            font-size: 1.2em;
+        }
+
+        .theme-toggle {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(78px, auto));
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-element);
+            padding: 6px;
+            border-radius: 20px;
+            max-width: 100%;
+        }
+
+        .theme-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.85em;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            line-height: 1.2;
+            flex: 0 0 auto;
+            text-align: center;
+        }
+
+        .theme-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .theme-btn.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+        }
+
+        .top-controls {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 10px;
+            align-items: center;
+            justify-content: flex-end;
+            margin-left: auto;
+            flex: 1 1 680px;
+            min-width: 0;
+        }
+
+        .design-toggle {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(82px, auto));
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-element);
+            padding: 6px;
+            border-radius: 20px;
+            max-width: 100%;
+        }
+
+        .design-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.82em;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            line-height: 1.2;
+            flex: 0 0 auto;
+            text-align: center;
+        }
+
+        .design-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .design-btn.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+        }
+
+        @media (max-width: 1100px) {
+            .header-content {
+                align-items: flex-start;
+            }
+
+            .top-controls {
+                width: 100%;
+                grid-template-columns: auto auto;
+                justify-content: flex-start;
+            }
+        }
+
+        /* ============ Navigation Tabs ============ */
+        .nav-tabs {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .tabs-container {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-element);
+            border-radius: 12px;
+            padding: 4px;
+            margin: 16px 0;
+            width: fit-content;
+            border: 1px solid var(--border);
+        }
+
+        .nav-tab {
+            padding: 10px 24px;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-element);
+        }
+
+        .nav-tab.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-tab .badge {
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .nav-tab.active .badge {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* ============ Main Content ============ */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px 40px;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============ Cards ============ */
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .card-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-top: 4px;
+        }
+
+        /* ============ Convert Tab Layout ============ */
+        .convert-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .convert-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .convert-left {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .convert-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ============ Upload Area ============ */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--bg-element);
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent);
+            background: var(--accent-subtle);
+        }
+
+        .upload-area.has-file {
+            border-color: var(--success);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .upload-formats {
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        .file-name {
+            color: var(--success);
+            font-weight: 600;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .file-badge {
+            background: var(--success);
+            color: var(--bg-primary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* ============ Options Panel ============ */
+        .options-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .option-label {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .option-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .option-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .chapter-range {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chapter-input {
+            flex: 1;
+            padding: 10px 12px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .chapter-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .range-separator {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .checkbox-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: var(--text-primary);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .whatsapp-input-container {
+            margin-top: 8px;
+            display: none;
+        }
+
+        .whatsapp-input-container.visible {
+            display: block;
+        }
+
+        .whatsapp-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+        }
+
+        .whatsapp-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .library-whatsapp-input {
+            width: 140px;
+            display: none;
+        }
+
+        .library-whatsapp-input.visible {
+            display: inline-block;
+        }
+
+        /* ============ Engine Tabs ============ */
+        .engine-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .engine-tab {
+            flex: 1;
+            padding: 12px 16px;
+            background: var(--bg-element);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .engine-tab:hover {
+            background: var(--bg-hover);
+        }
+
+        .engine-tab.active {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .engine-name {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+
+        .engine-desc {
+            display: block;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* ============ Voice Search ============ */
+        .voice-search-container {
+            margin-bottom: 16px;
+        }
+
+        .voice-search {
+            width: 100%;
+            padding: 10px 14px;
+            padding-left: 36px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+            transition: border-color 0.2s ease;
+        }
+
+        .voice-search:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .voice-search-wrapper {
+            position: relative;
+        }
+
+        .voice-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        /* ============ Voice Pills ============ */
+        .voice-section {
+            margin-bottom: 16px;
+        }
+
+        .voice-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .voice-section-label {
+            font-size: 0.8em;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .voice-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .voice-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            min-height: 38px;
+            background: var(--bg-element);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .voice-pill:hover {
+            background: var(--bg-hover);
+        }
+
+        .voice-pill.selected {
+            border-color: var(--accent);
+            background: var(--accent-subtle);
+        }
+
+        .voice-pill.hidden {
+            display: none;
+        }
+
+        .voice-pill-name {
+            font-weight: 500;
+            font-size: 0.9em;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .voice-pill-meta {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        .voice-pill .preview-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: none;
+            color: var(--bg-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .voice-pill .preview-btn:hover {
+            transform: scale(1.1);
+            background: var(--accent-hover);
+        }
+
+        .voice-pill .preview-btn.loading {
+            opacity: 0.5;
+            cursor: wait;
+        }
+
+        .engine-voices {
+            max-height: 320px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-top: 6px;
+            scroll-padding-top: 8px;
+            padding-right: 8px;
+        }
+
+        .engine-voices::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .engine-voices::-webkit-scrollbar-track {
+            background: var(--bg-element);
+            border-radius: 3px;
+        }
+
+        .engine-voices::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .piper-note {
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--bg-element);
+            border-radius: 8px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .piper-note code {
+            background: var(--bg-primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        /* ============ Convert Button ============ */
+        .convert-btn-container {
+            margin-top: 20px;
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 16px 24px;
+            font-size: 1.05em;
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ============ Queue Tab ============ */
+        .queue-section {
+            margin-bottom: 24px;
+        }
+
+        .queue-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .queue-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .queue-count {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .active-job-card {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-element));
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .active-job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .active-job-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: var(--text-primary);
+        }
+
+        .active-job-chapter {
+            color: var(--accent);
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .active-job-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .active-job-voice {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .waiting-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .waiting-item {
+            background: var(--bg-element);
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .waiting-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .waiting-item-number {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .waiting-item-title {
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .no-jobs-message {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+
+        .no-jobs-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* ============ Job Actions ============ */
+        .job-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .job-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .job-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .job-btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .job-btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .job-btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .job-btn-danger {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .job-btn-success {
+            background: var(--success);
+            color: #000;
+        }
+
+        /* ============ Library Tab ============ */
+        .library-header {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .library-search {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+        }
+
+        .library-search:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .library-stats {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .library-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .library-item {
+            background: var(--bg-element);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .library-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .library-item-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .library-item-icon {
+            font-size: 1.5em;
+        }
+
+        .library-item-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .library-item-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .library-item-meta {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 12px;
+            margin-top: 2px;
+        }
+
+        .library-item-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-badge.done {
+            background: var(--success);
+            color: #000;
+        }
+
+        .status-badge.converting {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .library-convert-btn {
+            padding: 8px 16px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-primary);
+            font-weight: 500;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .library-convert-btn:hover {
+            transform: translateY(-1px);
+            background: var(--accent-hover);
+        }
+
+        .library-convert-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ============ History Tab ============ */
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .history-search {
+            flex: 1;
+            max-width: 300px;
+            padding: 10px 14px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9em;
+        }
+
+        .history-search:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .history-clear-btn {
+            padding: 8px 14px;
+            background: var(--bg-element);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-clear-btn:hover {
+            background: var(--error);
+            color: #fff;
+            border-color: var(--error);
+        }
+
+        .history-group {
+            margin-bottom: 24px;
+        }
+
+        .history-group-title {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-item {
+            background: var(--bg-element);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-item-title {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-item-meta {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .history-item-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .history-action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 8px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .history-action-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .history-action-btn.danger:hover {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .history-action-btn.success:hover {
+            background: var(--success);
+            color: #000;
+        }
+
+        /* ============ Status Tags ============ */
+        .status-tag {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-queued { background: var(--warning); color: #000; }
+        .status-converting { background: #3b82f6; color: #fff; }
+        .status-completed { background: var(--success); color: #000; }
+        .status-failed { background: var(--error); color: #fff; }
+        .status-cancelled { background: #6b7280; color: #fff; }
+
+        /* ============ Spinner ============ */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ============ GPU Compute Panel ============ */
+        .gpu-card-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .gpu-status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .gpu-state-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .gpu-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .gpu-dot.idle { background: #6b7280; }
+        .gpu-dot.provisioning {
+            background: #f59e0b;
+            animation: gpu-pulse 1.2s ease-in-out infinite;
+        }
+        .gpu-dot.active {
+            background: #22c55e;
+            animation: gpu-pulse 2s ease-in-out infinite;
+        }
+        .gpu-dot.error { background: #ef4444; }
+
+        @keyframes gpu-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+            50% { opacity: 0.6; box-shadow: 0 0 8px 2px currentColor; }
+        }
+
+        .gpu-mode-badge {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 0.82em;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .gpu-mode-badge.cpu {
+            background: var(--bg-element);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .gpu-mode-badge.gpu {
+            background: rgba(249, 115, 22, 0.15);
+            color: #f97316;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .gpu-telemetry {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: #0f172a;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #1e293b;
+        }
+
+        .gpu-telemetry-cell {
+            background: #1a1f2e;
+            padding: 12px 14px;
+            text-align: center;
+        }
+
+        .gpu-telemetry-label {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 0.65em;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .gpu-telemetry-value {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .gpu-telemetry-value.cost { color: #fbbf24; }
+
+        .gpu-cap-bar {
+            margin-top: 6px;
+            height: 3px;
+            background: #334155;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .gpu-cap-fill {
+            height: 100%;
+            background: #fbbf24;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .gpu-cap-fill.warning { background: #f97316; }
+        .gpu-cap-fill.danger { background: #ef4444; }
+
+        .gpu-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .gpu-auto-label {
+            margin-left: auto;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            font-family: 'Courier New', Consolas, monospace;
+        }
+
+        .gpu-auto-label .on { color: var(--success); font-weight: 600; }
+        .gpu-auto-label .off { color: var(--text-secondary); }
+
+        /* Header GPU pip */
+        .gpu-header-pip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7em;
+            font-family: 'Courier New', Consolas, monospace;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #f97316;
+            cursor: pointer;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid rgba(249, 115, 22, 0.25);
+            transition: opacity 0.3s ease;
+        }
+
+        .gpu-header-pip .gpu-dot {
+            width: 6px;
+            height: 6px;
+        }
+
+        /* ============ Hidden ============ */
+        .hidden {
+            display: none !important;
+        }
+
+        /* ============ Audio Player ============ */
+        #preview-audio {
+            display: none;
+        }
+
+        /* ============ Responsive ============ */
+        @media (max-width: 600px) {
+            .header-content {
+                flex-wrap: wrap;
+                height: auto;
+                gap: 12px;
+            }
+
+            .top-controls {
+                width: 100%;
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .design-toggle,
+            .theme-toggle {
+                width: 100%;
+                grid-template-columns: repeat(2, minmax(100px, 1fr));
+            }
+
+            .tabs-container {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .nav-tab {
+                padding: 8px 12px;
+                font-size: 0.85em;
+            }
+
+            .nav-tab span:not(.badge) {
+                display: none;
+            }
+
+            .library-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .history-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .history-search {
+                max-width: none;
+            }
+        }
+
+        /* ============ Design Mode Variants ============ */
+        [data-design="editorial"] {
+            --font-ui: "Source Serif 4", Georgia, serif;
+            --accent: #b45309;
+            --accent-hover: #92400e;
+            --accent-subtle: rgba(180, 83, 9, 0.14);
+            --shadow: 0 1px 0 rgba(0,0,0,0.08);
+            --shadow-lg: 0 3px 0 rgba(0,0,0,0.12);
+        }
+
+        [data-design="editorial"] .card,
+        [data-design="editorial"] .tabs-container,
+        [data-design="editorial"] .nav-tab,
+        [data-design="editorial"] .theme-toggle,
+        [data-design="editorial"] .design-toggle {
+            border-radius: 8px;
+        }
+
+        [data-design="editorial"] .card-title {
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            font-size: 1.05rem;
+        }
+
+        [data-design="technical"] {
+            --font-ui: "JetBrains Mono", "Fira Code", monospace;
+            --accent: #06b6d4;
+            --accent-hover: #0891b2;
+            --accent-subtle: rgba(6, 182, 212, 0.12);
+            --shadow: none;
+            --shadow-lg: none;
+        }
+
+        [data-design="technical"] .card,
+        [data-design="technical"] .tabs-container {
+            border-width: 2px;
+        }
+
+        [data-design="technical"] .nav-tab.active,
+        [data-design="technical"] .theme-btn.active,
+        [data-design="technical"] .design-btn.active {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+        }
+
+        [data-design="minimal"] {
+            --font-ui: "Manrope", "Segoe UI", sans-serif;
+            --accent: #0ea5e9;
+            --accent-hover: #0284c7;
+            --accent-subtle: rgba(14, 165, 233, 0.1);
+            --shadow: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        [data-design="minimal"] .card {
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        [data-design="minimal"] .tabs-container,
+        [data-design="minimal"] .nav-tab {
+            border-radius: 999px;
+        }
+    </style>
 </head>
 <body>
-    <aside class="sidebar">
-        <div class="sidebar-brand">
-            <span class="logo-text">Studio</span>
-            <span class="logo-sub">Audiobook Engine</span>
-        </div>
-        <nav class="nav-links">
-            <button class="nav-tab active" data-tab="convert"><i>📝</i> <span>Convert</span></button>
-            <button class="nav-tab" data-tab="queue"><i>⏳</i> <span>Queue</span> <span class="badge hidden" id="queue-badge">0</span></button>
-            <button class="nav-tab" data-tab="library"><i>📚</i> <span>Library</span></button>
-            <button class="nav-tab" data-tab="voices"><i>🗣️</i> <span>Voices</span></button>
-            <button class="nav-tab" data-tab="history"><i>📋</i> <span>History</span></button>
-            <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Settings</span></button>
-        </nav>
-    </aside>
-    <main class="app-main">
-        <header class="top-bar">
-            <h1 class="page-title" id="view-title">Convert</h1>
-        </header>
-        <div class="content-body">
-            <div class="tab-panel active" id="tab-convert">
-                <div class="card">
-                    <form id="convert-form">
-                        <div id="upload-area" style="border: 2px dashed var(--border); padding: 60px; text-align: center; border-radius: 20px; cursor: pointer;">
-                            <div style="font-size: 4rem;">📖</div>
-                            <h3 id="file-name-display">Drop manuscript here</h3>
-                            <div class="file-name hidden" id="file-name"></div>
-                        </div>
-                        <input type="file" id="file-input" class="hidden" accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.html,.htm,.docx">
-                        
-                        <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
-                            <div class="option-group">
-                                <label class="option-label">Voice</label>
-                                <select id="voice-select-simple" class="option-select">
-                                    <optgroup label="Kokoro">
-                                        {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
-                                        <option value="{{ voice_id }}">{{ voice.name }}</option>
-                                        {% endfor %}
-                                    </optgroup>
-                                    <optgroup label="Edge">
-                                        {% for voice_id, voice in voices.items() if voice.engine == 'edge' %}
-                                        <option value="{{ voice_id }}">{{ voice.name }}</option>
-                                        {% endfor %}
-                                    </optgroup>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button type="submit" id="convert-btn" class="convert-btn" style="margin-top: 32px;" disabled>Start Production</button>
-                        <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
-                    </form>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🎧</span>
+                <span>Audiobook Studio</span>
+                <span class="gpu-header-pip hidden" id="gpu-header-pip" title="GPU active — click for details">
+                    <span class="gpu-dot active"></span> GPU
+                </span>
+            </div>
+            <div class="top-controls">
+                <div class="design-toggle">
+                    <button class="design-btn active" data-design="studio">Studio</button>
+                    <button class="design-btn" data-design="editorial">Editorial</button>
+                    <button class="design-btn" data-design="technical">Technical</button>
+                    <button class="design-btn" data-design="minimal">Minimal</button>
+                </div>
+                <div class="theme-toggle">
+                    <button class="theme-btn active" data-theme="light">Light</button>
+                    <button class="theme-btn" data-theme="dark">Dark</button>
+                    <button class="theme-btn" data-theme="midnight">Midnight</button>
+                    <button class="theme-btn" data-theme="forest">Forest</button>
                 </div>
             </div>
-            
-            <div class="tab-panel" id="tab-queue"><div class="card"><div id="queue-content"></div></div></div>
-            <div class="tab-panel" id="tab-library"><div class="card"><div id="library-grid"></div></div></div>
-            <div class="tab-panel" id="tab-voices"><div class="card">Voices Explorer</div></div>
-            <div class="tab-panel" id="tab-history"><div class="card"><div id="history-content"></div></div></div>
-            <div class="tab-panel" id="tab-settings"><div class="card">Settings</div></div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <div class="tabs-container">
+            <button class="nav-tab active" data-tab="convert">
+                <span>📝</span> <span>Convert</span>
+            </button>
+            <button class="nav-tab" data-tab="queue">
+                <span>⏳</span> <span>Queue</span>
+                <span class="badge hidden" id="queue-badge">0</span>
+            </button>
+            <button class="nav-tab" data-tab="library">
+                <span>📚</span> <span>Library</span>
+            </button>
+            <button class="nav-tab" data-tab="ops">
+                <span>🛠️</span> <span>Ops</span>
+            </button>
+            <button class="nav-tab" data-tab="history">
+                <span>📋</span> <span>History</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Convert Tab -->
+        <div class="tab-panel active" id="tab-convert">
+            <form id="convert-form">
+                <div class="convert-grid">
+                    <!-- Left Column -->
+                    <div class="convert-left">
+                        <!-- Upload Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Upload File</h2>
+                                    <p class="card-subtitle">Drag & drop or click to browse</p>
+                                </div>
+                            </div>
+                            <div class="upload-area" id="upload-area">
+                                <div class="upload-icon">📖</div>
+                                <div class="upload-text">Drop your ebook here</div>
+                                <div class="upload-formats">EPUB, PDF, MOBI, AZW3, FB2, TXT, HTML, DOCX</div>
+                                <div class="file-name hidden" id="file-name"></div>
+                            </div>
+                            <input type="file" id="file-input" accept=".epub,.pdf,.mobi,.azw3,.fb2,.txt,.html,.htm,.docx">
+                        </div>
+
+                        <!-- Options Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Options</h2>
+                            </div>
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <label class="option-label">Voice Mix (Kokoro only)</label>
+                                    <select id="voice2-select" class="option-select">
+                                        <option value="">None (single voice)</option>
+                                        {% for voice_id, voice in voices.items() if voice.engine == 'kokoro' %}
+                                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }} {{ voice.gender }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Chapter Range</label>
+                                    <div class="chapter-range">
+                                        <input type="number" id="start-chapter" class="chapter-input" placeholder="Start" min="1">
+                                        <span class="range-separator">to</span>
+                                        <input type="number" id="end-chapter" class="chapter-input" placeholder="End" min="1">
+                                    </div>
+                                </div>
+                                <div class="option-group">
+                                    <div class="checkbox-row">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="notify-whatsapp">
+                                            <span>WhatsApp alert</span>
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="notify-telegram">
+                                            <span>Telegram alert</span>
+                                        </label>
+                                    </div>
+                                    <div class="whatsapp-input-container" id="whatsapp-container">
+                                        <input type="tel" id="whatsapp-number" class="whatsapp-input" placeholder="+44 7xxx xxx xxx">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="convert-right">
+                        <!-- Voice Selection Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Select Voice</h2>
+                                    <p class="card-subtitle">Click to select, play to preview</p>
+                                </div>
+                            </div>
+
+                            <!-- Engine Tabs -->
+                            <div class="engine-tabs">
+                                <button type="button" class="engine-tab active" data-engine="kokoro">
+                                    <span class="engine-name">Kokoro</span>
+                                    <span class="engine-desc">High quality, voice mixing</span>
+                                </button>
+                                <button type="button" class="engine-tab" data-engine="piper">
+                                    <span class="engine-name">Piper</span>
+                                    <span class="engine-desc">Fast, lightweight</span>
+                                </button>
+                                <button type="button" class="engine-tab" data-engine="edge">
+                                    <span class="engine-name">Edge</span>
+                                    <span class="engine-desc">Free, Azure-quality</span>
+                                </button>
+                            </div>
+
+                            <!-- Voice Search -->
+                            <div class="voice-search-container">
+                                <div class="voice-search-wrapper">
+                                    <span class="voice-search-icon">🔍</span>
+                                    <input type="text" class="voice-search" id="voice-search" placeholder="Search voices...">
+                                </div>
+                            </div>
+
+                            <!-- Kokoro Voices -->
+                            <div class="engine-voices" id="kokoro-voices">
+                                <div class="voice-section">
+                                    <div class="voice-section-label">British</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'kokoro' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">American</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'kokoro' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">European</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'European' and voice.engine == 'kokoro' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="kokoro" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Piper Voices -->
+                            <div class="engine-voices hidden" id="piper-voices">
+                                <div class="voice-section">
+                                    <div class="voice-section-label">British</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'piper' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="piper" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">American</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'piper' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="piper" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                                                                        <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="piper-note">
+                                    <strong>Note:</strong> Piper requires <code>docker compose --profile piper up</code>
+                                </div>
+                            </div>
+
+                            <!-- Edge Voices -->
+                            <div class="engine-voices hidden" id="edge-voices">
+                                <div class="voice-section">
+                                    <div class="voice-section-label">American</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'American' and voice.engine == 'edge' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="edge" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">British</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent == 'British' and voice.engine == 'edge' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="edge" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }}</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="voice-section">
+                                    <div class="voice-section-label">Other</div>
+                                    <div class="voice-pills">
+                                        {% for voice_id, voice in voices.items() if voice.accent not in ['American', 'British'] and voice.engine == 'edge' %}
+                                        <div class="voice-pill" data-voice="{{ voice_id }}" data-engine="edge" data-name="{{ voice.name }}">
+                                            <span class="voice-pill-name">{{ voice.name }} ({{ voice.accent }})</span>
+                                            <button type="button" class="preview-btn" data-voice="{{ voice_id }}" title="Preview">▶</button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <input type="hidden" id="selected-voice" name="voice" value="bf_emma">
+                            <input type="hidden" id="selected-engine" name="engine" value="kokoro">
+                        </div>
+
+                        <!-- Advanced Options Card -->
+                        <div class="card" style="margin-top: 20px;">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Advanced Options</h2>
+                                    <p class="card-subtitle">Refine parsing and pronunciation</p>
+                                </div>
+                            </div>
+
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <label class="option-label">Paragraph Detection</label>
+                                    <select name="newline_mode" class="option-select">
+                                        <option value="double" selected>Double Newline (Recommended)</option>
+                                        <option value="single">Single Newline (Dense Text)</option>
+                                        <option value="none">None (Continuous)</option>
+                                    </select>
+                                </div>
+
+                                <div class="option-group">
+                                    <label class="option-label">Chapter Title Mode</label>
+                                    <select name="title_mode" class="option-select">
+                                        <option value="auto" selected>Auto (Recommended)</option>
+                                        <option value="tag_text">Tag Text Only</option>
+                                        <option value="first_few">First Few Lines</option>
+                                    </select>
+                                </div>
+
+                                <div class="option-group">
+                                    <label class="option-label">Pronunciation Fixes (Regex)</label>
+                                    <textarea name="custom_regex" class="option-select" style="height: 80px; font-family: monospace; resize: vertical;" placeholder="search==replace
+Barbadoes==Barbayduss
+[0-9]+=="></textarea>
+                                    <p class="card-subtitle" style="font-size: 0.75em;">One rule per line: <code>search==replace</code></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Convert Button -->
+                <div class="convert-btn-container">
+                    <button type="submit" class="convert-btn" id="convert-btn" disabled>
+                        <span>🎧</span> Select a file and voice to start
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Queue Tab -->
+        <div class="tab-panel" id="tab-queue">
+            <div id="queue-content">
+                <div class="no-jobs-message">
+                    <div class="no-jobs-icon">⏳</div>
+                    <div>No active conversions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library Tab -->
+        <div class="tab-panel" id="tab-library">
+            <div class="card">
+                <div class="library-header">
+                    <select id="library-voice-select" class="option-select" style="width: auto; min-width: 150px;">
+                        <option value="bf_emma">Emma (British)</option>
+                        {% for voice_id, voice in voices.items() %}
+                        <option value="{{ voice_id }}">{{ voice.name }} ({{ voice.accent }})</option>
+                        {% endfor %}
+                    </select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="library-notify-whatsapp">
+                        <span>WhatsApp</span>
+                    </label>
+                    <input type="tel" id="library-whatsapp-number" class="whatsapp-input library-whatsapp-input" placeholder="Phone (optional)">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="library-notify-telegram">
+                        <span>Telegram</span>
+                    </label>
+                    <input type="text" class="library-search" id="library-search" placeholder="🔍 Filter books...">
+                    <select id="library-sort-key" class="option-select" style="width:auto; min-width: 120px;" title="Sort library">
+                        <option value="title">Title</option>
+                        <option value="modified_ts">Date</option>
+                        <option value="size">Size</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <select id="library-sort-dir" class="option-select" style="width:auto; min-width: 90px;" title="Sort order">
+                        <option value="asc">Asc</option>
+                        <option value="desc">Desc</option>
+                    </select>
+                    <span class="library-stats" id="library-stats">Loading...</span>
+                </div>
+                <div class="library-grid" id="library-grid">
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">📚</div>
+                        <div>Loading library...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ops Tab -->
+        <div class="tab-panel" id="tab-ops">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Queue Operations</h2>
+                        <p class="card-subtitle">Control queue, retries, and recovery</p>
+                    </div>
+                </div>
+                <div id="ops-controls" class="options-grid">
+                    <button class="job-btn" id="queue-pause-btn">Pause Queue</button>
+                    <button class="job-btn" id="queue-resume-btn">Resume Queue</button>
+                    <button class="job-btn" id="queue-retry-failed-btn">Bulk Retry Failed</button>
+                    <button class="job-btn" id="ops-refresh-btn">Refresh Ops</button>
+                </div>
+                <div id="ops-queue-status" class="progress-info" style="margin-top:12px;"></div>
+            </div>
+
+            <div class="card" id="gpu-card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">GPU Compute</h2>
+                        <p class="card-subtitle">Cloud GPU auto-scaling and cost tracking</p>
+                    </div>
+                </div>
+                <div class="gpu-card-inner">
+                    <div class="gpu-status-row">
+                        <div class="gpu-state-indicator">
+                            <span class="gpu-dot idle" id="gpu-state-dot"></span>
+                            <span id="gpu-state-label">Idle</span>
+                        </div>
+                        <span class="gpu-mode-badge cpu" id="gpu-mode-badge">CPU</span>
+                    </div>
+
+                    <div class="gpu-telemetry hidden" id="gpu-telemetry">
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Session</div>
+                            <div class="gpu-telemetry-value" id="gpu-session-time">0m</div>
+                        </div>
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Cost</div>
+                            <div class="gpu-telemetry-value cost" id="gpu-session-cost">$0.00</div>
+                        </div>
+                        <div class="gpu-telemetry-cell">
+                            <div class="gpu-telemetry-label">Cap</div>
+                            <div class="gpu-telemetry-value" id="gpu-cost-cap">$1.00</div>
+                            <div class="gpu-cap-bar">
+                                <div class="gpu-cap-fill" id="gpu-cap-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gpu-controls">
+                        <button class="job-btn" id="gpu-scale-up-btn">⚡ Force GPU</button>
+                        <button class="job-btn" id="gpu-scale-down-btn" disabled>🔌 Force CPU</button>
+                        <span class="gpu-auto-label" id="gpu-auto-label">
+                            Auto: <span class="off">OFF</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Conversion Timeline</h2>
+                        <p class="card-subtitle">Live stage + container logs</p>
+                    </div>
+                </div>
+                <div id="ops-timeline-content" class="no-jobs-message">
+                    <div class="no-jobs-icon">🧭</div>
+                    <div>No active conversion</div>
+                </div>
+                <pre id="ops-log-preview" style="margin-top:12px; max-height:280px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Recovery Center</h2>
+                        <p class="card-subtitle">Failed/cancelled jobs and fast actions</p>
+                    </div>
+                </div>
+                <div id="ops-recovery-content"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Diagnostics</h2>
+                        <p class="card-subtitle">Queue health and runtime resources</p>
+                    </div>
+                </div>
+                <pre id="ops-diagnostics" style="max-height:260px; overflow:auto; background:var(--bg-element); border:1px solid var(--border); padding:12px; border-radius:10px; font-size:0.8em;"></pre>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div class="tab-panel" id="tab-history">
+            <div class="card">
+                <div class="history-header">
+                    <input type="text" class="history-search" id="history-search" placeholder="🔍 Search history...">
+                    <button class="history-clear-btn" id="clear-history-btn">Clear All</button>
+                </div>
+                <div id="history-content">
+                    <div class="no-jobs-message">
+                        <div class="no-jobs-icon">📋</div>
+                        <div>Loading history...</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
+
     <audio id="preview-audio"></audio>
-﻿<script>
+
+    <script>
         // ============ State ============
-        const voices = {{ voices | tojson }};
         let selectedFile = null;
         let selectedVoice = 'bf_emma';
         let selectedEngine = 'kokoro';
@@ -231,7 +2092,7 @@ body {
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
 
             document.querySelector(`.nav-tab[data-tab="${tabId}"]`)?.classList.add('active');
-            document.getElementById(`tab-${tabId}`)?.classList.add('active');\n            document.getElementById('view-title').textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+            document.getElementById(`tab-${tabId}`)?.classList.add('active');
 
             localStorage.setItem('audiobook-tab', tabId);
 
@@ -240,7 +2101,6 @@ body {
             if (tabId === 'library') loadLibrary();
             if (tabId === 'ops') loadOps();
             if (tabId === 'history') loadHistory();
-            if (tabId === 'settings') loadSettings();
         }
 
         document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -273,13 +2133,6 @@ body {
                 }
                 updateConvertButton();
             });
-        });
-
-        document.getElementById('voice-select-simple')?.addEventListener('change', (e) => {
-            const voiceId = e.target.value;
-            selectedVoice = voiceId;
-            selectedVoiceInput.value = voiceId;
-            updateConvertButton();
         });
 
         // ============ Voice Search ============
@@ -369,37 +2222,37 @@ body {
                 const voiceId = btn.dataset.voice;
 
                 if (currentPreviewBtn) {
-                    currentPreviewBtn.textContent = 'â–¶';
+                    currentPreviewBtn.textContent = '▶';
                     currentPreviewBtn.classList.remove('loading');
                 }
 
                 if (previewAudio.src && !previewAudio.paused && currentPreviewBtn === btn) {
                     previewAudio.pause();
-                    btn.textContent = 'â–¶';
+                    btn.textContent = '▶';
                     currentPreviewBtn = null;
                     return;
                 }
 
-                btn.textContent = 'â³';
+                btn.textContent = '⏳';
                 btn.classList.add('loading');
                 currentPreviewBtn = btn;
 
                 try {
                     previewAudio.src = `/api/preview/${voiceId}`;
                     await previewAudio.play();
-                    btn.textContent = 'â¹';
+                    btn.textContent = '⏹';
                     btn.classList.remove('loading');
                 } catch (err) {
-                    btn.textContent = 'âŒ';
+                    btn.textContent = '❌';
                     btn.classList.remove('loading');
-                    setTimeout(() => btn.textContent = 'â–¶', 2000);
+                    setTimeout(() => btn.textContent = '▶', 2000);
                 }
             });
         });
 
         previewAudio.addEventListener('ended', () => {
             if (currentPreviewBtn) {
-                currentPreviewBtn.textContent = 'â–¶';
+                currentPreviewBtn.textContent = '▶';
                 currentPreviewBtn = null;
             }
         });
@@ -409,10 +2262,10 @@ body {
             if (selectedFile && selectedVoice) {
                 convertBtn.disabled = false;
                 const voiceName = document.querySelector(`[data-voice="${selectedVoice}"] .voice-pill-name`)?.textContent || selectedVoice;
-                convertBtn.innerHTML = `<span>ðŸŽ§</span> Convert "${escapeHtml(selectedFile.name.substring(0, 30))}" with ${voiceName}`;
+                convertBtn.innerHTML = `<span>🎧</span> Convert "${escapeHtml(selectedFile.name.substring(0, 30))}" with ${voiceName}`;
             } else {
                 convertBtn.disabled = true;
-                convertBtn.innerHTML = '<span>ðŸŽ§</span> Select a file and voice to start';
+                convertBtn.innerHTML = '<span>🎧</span> Select a file and voice to start';
             }
         }
 
@@ -471,7 +2324,7 @@ body {
             }
 
             convertBtn.disabled = true;
-            convertBtn.innerHTML = '<span>ðŸŽ§</span> Select a file and voice to start';
+            convertBtn.innerHTML = '<span>🎧</span> Select a file and voice to start';
         });
 
         // ============ Queue/Jobs Loading ============
@@ -499,7 +2352,7 @@ body {
                 if (activeJobs.length === 0) {
                     queueContent.innerHTML = `
                         <div class="no-jobs-message">
-                            <div class="no-jobs-icon">â³</div>
+                            <div class="no-jobs-icon">⏳</div>
                             <div>No active conversions</div>
                         </div>
                     `;
@@ -562,8 +2415,8 @@ body {
                                             <span class="waiting-item-title">${escapeHtml(job.book_name)}</span>
                                         </div>
                                         <div class="job-actions">
-                                            <button class="job-btn" onclick="moveQueue('${job.id}', -1)" ${i === 0 ? 'disabled' : ''}>â†‘</button>
-                                            <button class="job-btn" onclick="moveQueue('${job.id}', 1)" ${i === waitingJobs.length - 1 ? 'disabled' : ''}>â†“</button>
+                                            <button class="job-btn" onclick="moveQueue('${job.id}', -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+                                            <button class="job-btn" onclick="moveQueue('${job.id}', 1)" ${i === waitingJobs.length - 1 ? 'disabled' : ''}>↓</button>
                                             <button class="job-btn job-btn-danger" onclick="cancelJob('${job.id}')">Cancel</button>
                                         </div>
                                     </div>
@@ -619,7 +2472,7 @@ body {
                 const failed = jobs.filter(j => j.status === 'failed' || j.status === 'cancelled');
 
                 document.getElementById('ops-queue-status').innerHTML =
-                    `Queue: <strong>${queue.queued_count}</strong> waiting Â· State: <strong>${queue.paused ? 'Paused' : 'Running'}</strong>`;
+                    `Queue: <strong>${queue.queued_count}</strong> waiting · State: <strong>${queue.paused ? 'Paused' : 'Running'}</strong>`;
 
                 document.getElementById('queue-pause-btn').disabled = queue.paused;
                 document.getElementById('queue-resume-btn').disabled = !queue.paused;
@@ -634,7 +2487,7 @@ body {
                         <div class="active-job-card">
                             <div class="active-job-header">
                                 <span class="active-job-title">${escapeHtml(converting.book_name)}</span>
-                                <span class="active-job-chapter">Ch ${converting.current_chapter || '?'} Â· ${converting.progress_percent || 0}%</span>
+                                <span class="active-job-chapter">Ch ${converting.current_chapter || '?'} · ${converting.progress_percent || 0}%</span>
                             </div>
                             <div class="progress-bar"><div class="progress-fill" style="width:${converting.progress_percent || 0}%"></div></div>
                             <div class="progress-info">
@@ -645,7 +2498,7 @@ body {
                                 ${timeline.stages.map(s => `
                                     <div class="waiting-item">
                                         <div class="waiting-item-info">
-                                            <span class="waiting-item-number">${s.state === 'done' ? 'âœ“' : s.state === 'active' ? 'â–¶' : 'â€¢'}</span>
+                                            <span class="waiting-item-number">${s.state === 'done' ? '✓' : s.state === 'active' ? '▶' : '•'}</span>
                                             <span class="waiting-item-title">${escapeHtml(s.label)}</span>
                                         </div>
                                         <span class="status-tag status-${s.state === 'done' ? 'completed' : s.state === 'active' ? 'converting' : 'queued'}">${s.state}</span>
@@ -657,14 +2510,14 @@ body {
                     document.getElementById('ops-log-preview').textContent = logs.logs || '(no logs)';
                 } else {
                     document.getElementById('ops-timeline-content').innerHTML = `
-                        <div class="no-jobs-message"><div class="no-jobs-icon">ðŸ§­</div><div>No active conversion</div></div>
+                        <div class="no-jobs-message"><div class="no-jobs-icon">🧭</div><div>No active conversion</div></div>
                     `;
                     document.getElementById('ops-log-preview').textContent = '';
                 }
 
                 if (failed.length === 0) {
                     document.getElementById('ops-recovery-content').innerHTML = `
-                        <div class="no-jobs-message"><div class="no-jobs-icon">âœ…</div><div>No failed/cancelled jobs</div></div>
+                        <div class="no-jobs-message"><div class="no-jobs-icon">✅</div><div>No failed/cancelled jobs</div></div>
                     `;
                 } else {
                     document.getElementById('ops-recovery-content').innerHTML = `
@@ -736,23 +2589,12 @@ body {
                 _gpuState = gpu.state || 'idle';
 
                 // State dot
-                                // State dot
                 const dot = document.getElementById('gpu-state-dot');
-                if (dot) dot.className = 'gpu-dot ' + _gpuState;
+                dot.className = 'gpu-dot ' + _gpuState;
 
                 // State label
-                const labels = { idle: 'GPU Offline', provisioning: 'Provisioning...', active: 'GPU Active', error: 'GPU Error' };
-                const label = document.getElementById('gpu-state-label');
-                if (label) label.textContent = labels[_gpuState] || _gpuState;
-
-                const detailRow = document.getElementById('gpu-detail-row');
-                if (_gpuState === 'active') {
-                    detailRow?.classList.remove('hidden');
-                    const inst = document.getElementById('gpu-instance-id');
-                    if (inst) inst.textContent = `Instance: ${gpu.instance_id || 'Unknown'}`;
-                } else {
-                    detailRow?.classList.add('hidden');
-                }
+                const labels = { idle: 'Idle', provisioning: 'Provisioning…', active: 'Active', error: 'Error' };
+                document.getElementById('gpu-state-label').textContent = labels[_gpuState] || _gpuState;
 
                 // Mode badge
                 const badge = document.getElementById('gpu-mode-badge');
@@ -785,7 +2627,7 @@ body {
                 // Auto-scale label
                 const autoLabel = document.getElementById('gpu-auto-label');
                 if (gpu.autoscale_enabled) {
-                    autoLabel.innerHTML = `Auto: <span class="on">ON (â‰¥${gpu.autoscale_threshold} books)</span>`;
+                    autoLabel.innerHTML = `Auto: <span class="on">ON (≥${gpu.autoscale_threshold} books)</span>`;
                 } else {
                     autoLabel.innerHTML = `Auto: <span class="off">OFF</span>`;
                 }
@@ -812,7 +2654,7 @@ body {
 
         document.getElementById('gpu-scale-up-btn')?.addEventListener('click', async () => {
             document.getElementById('gpu-scale-up-btn').disabled = true;
-            document.getElementById('gpu-state-label').textContent = 'Provisioningâ€¦';
+            document.getElementById('gpu-state-label').textContent = 'Provisioning…';
             document.getElementById('gpu-state-dot').className = 'gpu-dot provisioning';
             try {
                 await fetch('/api/gpu/scale-up', { method: 'POST' });
@@ -831,87 +2673,13 @@ body {
         document.getElementById('gpu-header-pip')?.addEventListener('click', () => {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelector('.nav-tab[data-tab="queue"]')?.classList.add('active'); switchTab('queue');
-            
-            localStorage.setItem('audiobook-tab', 'queue');
+            document.querySelector('.nav-tab[data-tab="ops"]')?.classList.add('active');
+            document.getElementById('tab-ops')?.classList.add('active');
+            localStorage.setItem('audiobook-tab', 'ops');
             loadOps();
         });
 
         // ============ History Loading ============
-        async function loadSettings() {
-            try {
-                const response = await fetch('/api/settings');
-                const settings = await response.json();
-                
-                for (const [key, value] of Object.entries(settings)) {
-                    const input = document.getElementById(`setting-${key}`);
-                    if (input) {
-                        if (value && value.includes('...')) {
-                            input.placeholder = value; // Show masked key as placeholder
-                        } else {
-                            input.value = value;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to load settings:', err);
-            }
-        }
-
-        async function saveSettings() {
-            const btn = document.getElementById('save-settings-btn');
-            const status = document.getElementById('settings-status');
-            
-            const keys = [
-                'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION',
-                'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN'
-            ];
-            
-            const data = {};
-            keys.forEach(key => {
-                const val = document.getElementById(`setting-${key}`)?.value;
-                if (val && val.trim() && !val.includes('...')) {
-                    data[key] = val.trim();
-                }
-            });
-
-            if (Object.keys(data).length === 0) {
-                status.textContent = 'No changes to save.';
-                status.style.color = 'var(--warning)';
-                return;
-            }
-
-            btn.disabled = true;
-            status.textContent = 'Saving...';
-            status.style.color = 'var(--text-secondary)';
-
-            try {
-                const response = await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                if (response.ok) {
-                    status.textContent = 'âœ… Settings saved successfully!';
-                    status.style.color = 'var(--success)';
-                    // Clear password fields
-                    keys.forEach(key => {
-                        const input = document.getElementById(`setting-${key}`);
-                        if (input && input.type === 'password') input.value = '';
-                    });
-                    loadSettings();
-                } else {
-                    throw new Error('Failed to save');
-                }
-            } catch (err) {
-                status.textContent = 'âŒ Error: ' + err.message;
-                status.style.color = 'var(--error)';
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
         async function loadHistory() {
             try {
                 const response = await fetch('/api/history');
@@ -922,7 +2690,7 @@ body {
                 if (history.length === 0) {
                     historyContent.innerHTML = `
                         <div class="no-jobs-message">
-                            <div class="no-jobs-icon">ðŸ“‹</div>
+                            <div class="no-jobs-icon">📋</div>
                             <div>No completed conversions yet</div>
                         </div>
                     `;
@@ -957,18 +2725,18 @@ body {
                                         <div class="history-item" data-title="${escapeHtml(job.book_name.toLowerCase())}">
                                             <div class="history-item-info">
                                                 <div class="history-item-title">
-                                                    âœ… ${escapeHtml(job.book_name)}${engineBadge}
+                                                    ✅ ${escapeHtml(job.book_name)}${engineBadge}
                                                 </div>
                                                 <div class="history-item-meta">
-                                                    ${voiceInfo} Â· ${job.file_count || '?'} chapters
-                                                    ${job.synced_to_abs ? ' Â· Synced' : ''}
+                                                    ${voiceInfo} · ${job.file_count || '?'} chapters
+                                                    ${job.synced_to_abs ? ' · Synced' : ''}
                                                 </div>
                                             </div>
                                             <div class="history-item-actions">
-                                                <button class="history-action-btn" onclick="downloadJob('${job.id}')" title="Download">â¬‡ï¸</button>
-                                                ${!job.synced_to_abs ? `<button class="history-action-btn success" onclick="syncJob('${job.id}')" title="Sync to ABS">â˜ï¸</button>` : ''}
-                                                <button class="history-action-btn" onclick="retryJob('${job.id}')" title="Re-convert">ðŸ”„</button>
-                                                <button class="history-action-btn danger" onclick="deleteJob('${job.id}')" title="Delete">ðŸ—‘ï¸</button>
+                                                <button class="history-action-btn" onclick="downloadJob('${job.id}')" title="Download">⬇️</button>
+                                                ${!job.synced_to_abs ? `<button class="history-action-btn success" onclick="syncJob('${job.id}')" title="Sync to ABS">☁️</button>` : ''}
+                                                <button class="history-action-btn" onclick="retryJob('${job.id}')" title="Re-convert">🔄</button>
+                                                <button class="history-action-btn danger" onclick="deleteJob('${job.id}')" title="Delete">🗑️</button>
                                             </div>
                                         </div>
                                     `;
@@ -983,7 +2751,7 @@ body {
                 console.error('Failed to load history:', err);
                 document.getElementById('history-content').innerHTML = `
                     <div class="no-jobs-message">
-                        <div class="no-jobs-icon">âŒ</div>
+                        <div class="no-jobs-icon">❌</div>
                         <div>Failed to load history</div>
                     </div>
                 `;
@@ -1010,7 +2778,7 @@ body {
                 console.error('Failed to load library:', err);
                 document.getElementById('library-grid').innerHTML = `
                     <div class="no-jobs-message">
-                        <div class="no-jobs-icon">ðŸ“š</div>
+                        <div class="no-jobs-icon">📚</div>
                         <div>Library not available</div>
                     </div>
                 `;
@@ -1062,12 +2830,12 @@ body {
                 return cmp * dirMul;
             });
 
-            document.getElementById('library-stats').textContent = `${sorted.length} books Â· ${sortKey.replace('_ts','')} ${sortDir}`;
+            document.getElementById('library-stats').textContent = `${sorted.length} books · ${sortKey.replace('_ts','')} ${sortDir}`;
 
             if (sorted.length === 0) {
                 libraryGrid.innerHTML = `
                     <div class="no-jobs-message">
-                        <div class="no-jobs-icon">ðŸ“š</div>
+                        <div class="no-jobs-icon">📚</div>
                         <div>${searchQuery ? 'No matching books' : 'No books in library'}</div>
                     </div>
                 `;
@@ -1081,190 +2849,37 @@ body {
                     : '';
                 let statusHtml = '';
 
-                if (book.status === 'converting') {
-                    statusHtml = `<span class="status-badge converting">â³ ${book.progress || 0}%</span>`;
+                if (book.status === 'completed') {
+                    statusHtml = '<span class="status-badge done">✅ Done</span>';
+                } else if (book.status === 'converting') {
+                    statusHtml = `<span class="status-badge converting">⏳ ${book.progress || 0}%</span>`;
                 } else {
-                    const doneBadge = book.status === 'completed' ? '<span class="status-badge done" style="margin-right:8px;">âœ… Done</span>' : '';
-                    const btnLabel = book.status === 'completed' ? 'New Version' : 'Options';
-                    statusHtml = `
-                        <div class="config-btn-group">
-                            ${doneBadge}
-                            <button class="library-config-btn" title="Configure settings" data-path="${escapeHtml(book.path)}">
-                                <span>âš™ï¸</span><span>${btnLabel}</span>
-                            </button>
-                            ${book.status !== 'completed' ? `<button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>` : ''}
-                        </div>
-                    `;
+                    // Avoid inline onclick: titles/paths can contain apostrophes and break attribute JS.
+                    statusHtml = `<button class="library-convert-btn" data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}">Convert</button>`;
                 }
 
-                const icon = book.format === 'pdf' ? 'ðŸ“•' : 'ðŸ“—';
-                const bookId = btoa(book.path).replace(/[^a-z0-9]/gi, '');
+                const icon = book.format === 'pdf' ? '📕' : '📗';
 
                 return `
-                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}">
-                        <div class="library-item-row">
-                            <div class="library-item-info">
-                                <span class="library-item-icon">${icon}</span>
-                                <div class="library-item-details">
-                                    <div class="library-item-title">${escapeHtml(book.title)}</div>
-                                    <div class="library-item-meta">
-                                        <span>${book.format?.toUpperCase() || 'EPUB'}</span>
-                                        <span>${sizeStr}</span>
-                                    </div>
+                    <div class="library-item" data-title="${escapeHtml(book.title.toLowerCase())}" title="${modifiedStr ? `Modified: ${escapeHtml(modifiedStr)}` : ''}">
+                        <div class="library-item-info">
+                            <span class="library-item-icon">${icon}</span>
+                            <div class="library-item-details">
+                                <div class="library-item-title">${escapeHtml(book.title)}</div>
+                                <div class="library-item-meta">
+                                    <span>${book.format?.toUpperCase() || 'EPUB'}</span>
+                                    <span>${sizeStr}</span>
                                 </div>
-                            </div>
-                            <div class="library-item-status">
-                                ${statusHtml}
                             </div>
                         </div>
-                        
-                        <div class="library-item-config" id="config-${bookId}">
-                            <div class="options-grid" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 16px;">
-                                <div class="option-group">
-                                    <label class="option-label">Voice Override</label>
-                                    <select class="option-select cfg-voice">
-                                        <option value="">Use Library Default</option>
-                                        <optgroup label="Kokoro">
-                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'kokoro').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
-                                        </optgroup>
-                                        <optgroup label="Edge">
-                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'edge').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
-                                        </optgroup>
-                                        <optgroup label="Polly">
-                                            ${Object.entries(voices).filter(([_,v]) => v.engine === 'polly').map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
-                                        </optgroup>
-                                    </select>
-                                </div>
-                                <div class="option-group">
-                                    <label class="option-label">Speed</label>
-                                    <input type="number" step="0.1" min="0.5" max="2.0" class="option-select cfg-speed" value="1.0">
-                                </div>
-                                <div class="option-group">
-                                    <label class="option-label">Chapters (Start - End)</label>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="number" placeholder="Start" class="option-select cfg-start" style="flex:1">
-                                        <input type="number" placeholder="End" class="option-select cfg-end" style="flex:1">
-                                    </div>
-                                </div>
-                                <div class="option-group">
-                                    <label class="option-label">Pronunciation Fixes (Regex)</label>
-                                    <textarea class="option-select cfg-regex" style="height: 60px; font-family: monospace; font-size: 0.8em;" placeholder="word==replacement"></textarea>
-                                </div>
-                            </div>
-                            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <div class="cfg-cost-estimate" style="font-size: 0.9em; color: var(--text-secondary);">
-                                    <span class="cost-label">Estimated cost:</span>
-                                    <strong class="cost-value">$0.00</strong>
-                                    <span class="char-count" style="margin-left: 8px; font-size: 0.85em; opacity: 0.8;"></span>
-                                </div>
-                                <button class="convert-btn library-start-btn" style="width: auto; padding: 8px 24px;" 
-                                        data-path="${escapeHtml(book.path)}" data-title="${escapeHtml(book.title)}" data-id="${bookId}">
-                                    Add to Queue with Custom Settings
-                                </button>
-                            </div>
+                        <div class="library-item-status">
+                            ${statusHtml}
                         </div>
                     </div>
                 `;
             }).join('');
 
-            // Function to update cost estimate in drawer
-            const updateDrawerEstimate = async (drawer, path) => {
-                const voiceId = drawer.querySelector('.cfg-voice').value || document.getElementById('library-voice-select').value;
-                const costValue = drawer.querySelector('.cost-value');
-                const charLabel = drawer.querySelector('.char-count');
-
-                if (!voiceId) return;
-
-                try {
-                    const resp = await fetch('/api/library/estimate_cost', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path, voice: voiceId })
-                    });
-                    const data = await resp.json();
-                    if (data.estimated_cost !== undefined) {
-                        costValue.textContent = `$${data.estimated_cost.toFixed(2)}`;
-                        charLabel.textContent = `(~${(data.char_count / 1000).toFixed(0)}k chars)`;
-                        
-                        // Handle GPU info if present
-                        const gpuLabel = drawer.querySelector('.gpu-trigger-info');
-                        if (data.gpu_info && data.gpu_info.triggered) {
-                            if (!gpuLabel) {
-                                const el = document.createElement('div');
-                                el.className = 'gpu-trigger-info';
-                                el.style.fontSize = '0.85em';
-                                el.style.color = 'var(--accent)';
-                                el.style.marginTop = '4px';
-                                el.innerHTML = `âš¡ Will trigger GPU rent: <strong>${data.gpu_info.rate}</strong>`;
-                                drawer.querySelector('.cfg-cost-estimate').appendChild(el);
-                            } else {
-                                gpuLabel.innerHTML = `âš¡ Will trigger GPU rent: <strong>${data.gpu_info.rate}</strong>`;
-                                gpuLabel.style.display = 'block';
-                            }
-                        } else if (gpuLabel) {
-                            gpuLabel.style.display = 'none';
-                        }
-
-                        // Highlight if not free
-                        if (data.estimated_cost > 0) {
-                            costValue.style.color = 'var(--warning)';
-                        } else {
-                            costValue.style.color = 'inherit';
-                        }
-                    }
-                } catch (err) {
-                    console.error('Cost estimation failed:', err);
-                }
-            };
-
-            // Wire up config buttons
-            document.querySelectorAll('.library-config-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const path = btn.dataset.path;
-                    const bookId = btoa(path).replace(/[^a-z0-9]/gi, '');
-                    const drawer = document.getElementById(`config-${bookId}`);
-                    const isActive = drawer?.classList.toggle('active');
-                    btn.classList.toggle('active');
-
-                    if (isActive) {
-                        updateDrawerEstimate(drawer, path);
-                    }
-                });
-            });
-
-            // Wire up voice change in drawers
-            document.querySelectorAll('.cfg-voice').forEach(select => {
-                select.addEventListener('change', (e) => {
-                    const drawer = e.target.closest('.library-item-config');
-                    const path = drawer.id.replace('config-', '');
-                    // We need the original path which is stored on the start button
-                    const originalPath = drawer.querySelector('.library-start-btn').dataset.path;
-                    updateDrawerEstimate(drawer, originalPath);
-                });
-            });
-
-            // Wire up start buttons inside drawers
-            document.querySelectorAll('.library-start-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const path = btn.dataset.path;
-                    const title = btn.dataset.title;
-                    const bookId = btn.dataset.id;
-                    const drawer = document.getElementById(`config-${bookId}`);
-                    
-                    const options = {
-                        voice: drawer.querySelector('.cfg-voice').value || document.getElementById('library-voice-select').value,
-                        tts_speed: parseFloat(drawer.querySelector('.cfg-speed').value) || 1.0,
-                        start_chapter: drawer.querySelector('.cfg-start').value || null,
-                        end_chapter: drawer.querySelector('.cfg-end').value || null,
-                        custom_regex: drawer.querySelector('.cfg-regex').value || null
-                    };
-                    
-                    convertFromLibrary(path, title, options);
-                });
-            });
-
-            // Wire up quick convert buttons
+            // Wire up convert buttons after rendering (safer than inline JS).
             document.querySelectorAll('.library-convert-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const path = btn.dataset.path || '';
@@ -1292,8 +2907,8 @@ body {
             if (d) document.getElementById('library-sort-dir').value = d;
         })();
 
-        async function convertFromLibrary(path, title, options = {}) {
-            const voice = options.voice || document.getElementById('library-voice-select').value;
+        async function convertFromLibrary(path, title) {
+            const voice = document.getElementById('library-voice-select').value;
             const notifyWhatsapp = document.getElementById('library-notify-whatsapp').checked;
             const notifyTelegram = document.getElementById('library-notify-telegram').checked;
             const whatsappNumber = document.getElementById('library-whatsapp-number').value;
@@ -1307,11 +2922,7 @@ body {
                         voice,
                         notify_whatsapp: notifyWhatsapp,
                         notify_telegram: notifyTelegram,
-                        whatsapp_number: whatsappNumber,
-                        tts_speed: options.tts_speed || 1.0,
-                        start_chapter: options.start_chapter,
-                        end_chapter: options.end_chapter,
-                        custom_regex: options.custom_regex
+                        whatsapp_number: whatsappNumber
                     })
                 });
 
@@ -1415,8 +3026,6 @@ body {
             div.textContent = str;
             return div.innerHTML;
         }
-
-        document.getElementById('save-settings-btn')?.addEventListener('click', saveSettings);
 
         // ============ Initial Load ============
         loadJobs();
