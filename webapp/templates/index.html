@@ -94,11 +94,33 @@ body {
 .card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 32px; margin-bottom: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
 .hidden { display: none !important; }
 
-[data-theme="dark"] .card { background: #1a1a1a; border-color: #262626; color: #f5f5f5; }
-[data-theme="dark"] .input-control { background: #262626; border-color: #333; color: #fff; }
-[data-theme="dark"] .btn { background: #262626; border-color: #333; color: #fff; }
-[data-theme="dark"] .top-bar { background: rgba(15, 15, 15, 0.8); border-color: #262626; }
-[data-theme="dark"] .sidebar { border-right: 1px solid #262626; }
+:root {
+    --bg-primary: #fdfcf9;
+    --bg-card: #ffffff;
+    --bg-sidebar: #1a1a1a;
+    --bg-element: #f5f3ef;
+    --bg-hover: #ece9e2;
+    --accent: #c28e5e;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6b665f;
+    --border: #e8e4de;
+    --radius-lg: 24px;
+}
+[data-theme="dark"] {
+    --bg-primary: #0f0f0f;
+    --bg-card: #1a1a1a;
+    --bg-sidebar: #080808;
+    --bg-element: #262626;
+    --bg-hover: #333333;
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --border: #262626;
+}
+body { transition: background 0.3s, color 0.3s; }
+.card { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); }
+.input-control, .btn { background: var(--bg-element); border: 1px solid var(--border); color: var(--text-primary); }
+.nav-tab.active { background: var(--accent); color: #fff; }
+.top-bar { background: var(--bg-primary); opacity: 0.9; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -132,17 +154,31 @@ body {
                 <div class="card">
                     <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 32px;">
                         <input type="text" id="library-search" class="input-control" style="max-width: 400px;" placeholder="Search your library...">
+                        <select id="library-sort-key" class="input-control" style="width: auto;">
+                            <option value="title">Sort: Title</option>
+                            <option value="modified_ts">Sort: Date</option>
+                            <option value="size">Sort: Size</option>
+                        </select>
+                        <select id="library-sort-dir" class="input-control" style="width: auto;">
+                            <option value="asc">Asc</option>
+                            <option value="desc">Desc</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center;">
                         <select id="library-voice-select" class="input-control" style="width: auto;">
-                            <option value="en-GB-RyanNeural">Default: Ryan (British)</option>
+                            <option value="en-GB-RyanNeural">Default Narrator: Ryan (British)</option>
                             {% for id, v in voices.items() %}
                             <option value="{{ id }}">{{ v.name }} ({{ v.accent }})</option>
                             {% endfor %}
                         </select>
+                        <label><input type="checkbox" id="library-notify-whatsapp"> WhatsApp Alert</label>
+                        <input type="tel" id="library-whatsapp-number" class="input-control hidden" style="max-width: 200px;" placeholder="+44...">
                     </div>
                     <div id="library-stats" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;"></div>
                     <div id="library-grid" class="library-grid"></div>
                 </div>
             </div>
+
             <div class="tab-panel" id="tab-convert">
                 <div class="card">
                     <form id="convert-form">
@@ -152,6 +188,7 @@ body {
                             <div id="file-name" class="hidden"></div>
                         </div>
                         <input type="file" id="file-input" class="hidden">
+                        
                         <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
                             <div class="input-group">
                                 <label>Narrator</label>
@@ -169,7 +206,7 @@ body {
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label>Speed</label>
+                                <label>Narrative Speed</label>
                                 <input type="number" id="tts-speed" class="input-control" step="0.1" value="1.0">
                             </div>
                         </div>
@@ -177,26 +214,44 @@ body {
                     </form>
                 </div>
             </div>
-            <div class="tab-panel" id="tab-queue"><div class="card"><div id="queue-content"></div></div></div>
-            <div class="tab-panel" id="tab-voices"><div class="card"><div id="kokoro-voices"></div></div></div>
-            <div class="tab-panel" id="tab-history"><div class="card"><div id="history-content"></div></div></div>
+
+            <div class="tab-panel" id="tab-queue">
+                <div class="card"><div id="queue-content"></div></div>
+            </div>
+
+            <div class="tab-panel" id="tab-voices">
+                <div class="card">
+                    <input type="text" id="voice-search" class="input-control" style="margin-bottom: 24px;" placeholder="Search voices...">
+                    <div id="kokoro-voices" class="library-grid"></div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="tab-history">
+                <div class="card">
+                    <input type="text" id="history-search" class="input-control" style="margin-bottom: 24px;" placeholder="Filter archive...">
+                    <div id="history-content"></div>
+                    <button id="clear-history-btn" class="btn" style="margin-top: 24px; color: var(--error);">🗑️ Clear Archive</button>
+                </div>
+            </div>
+
             <div class="tab-panel" id="tab-settings">
                 <div class="card">
                     <div class="setting-row">
                         <div class="input-group"><label>Polly Secret</label><input type="password" id="setting-AWS_SECRET_ACCESS_KEY" class="input-control"></div>
                         <div class="input-group"><label>OpenAI Key</label><input type="password" id="setting-OPENAI_API_KEY" class="input-control"></div>
                     </div>
-                    <button id="save-settings-btn" class="btn btn-primary" style="width:auto;">Save Infrastructure Config</button>
+                    <button id="save-settings-btn" class="btn btn-primary" style="width:auto;">Save Config</button>
                 </div>
             </div>
         </div>
     </main>
+
     <div id="preview-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close" onclick="closePreview()">✕</button>
             <h2 id="preview-title" style="font-family: var(--font-display); margin: 0;">Manuscript Preview</h2>
             <p id="preview-title-text" style="font-size: 0.9rem; color: var(--text-secondary); margin: 4px 0 20px 0;"></p>
-            <div id="preview-content"></div>
+            <div id="preview-content" style="overflow-y: auto; flex: 1;"></div>
         </div>
     </div>
     <audio id="preview-audio"></audio>
@@ -326,7 +381,7 @@ body {
         });
 
         // ============ Voice Search ============
-        document.getElementById('voice-search').addEventListener('input', (e) => {
+        document.getElementById('voice-search')?.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
             const currentEngine = selectedEngine;
 
@@ -337,12 +392,12 @@ body {
         });
 
         // ============ WhatsApp Toggle ============
-        document.getElementById('notify-whatsapp').addEventListener('change', (e) => {
+        document.getElementById('notify-whatsapp')?.addEventListener('change', (e) => {
             document.getElementById('whatsapp-container').classList.toggle('visible', e.target.checked);
         });
 
         // Library WhatsApp Toggle
-        document.getElementById('library-notify-whatsapp').addEventListener('change', (e) => {
+        document.getElementById('library-notify-whatsapp')?.addEventListener('change', (e) => {
             document.getElementById('library-whatsapp-number').classList.toggle('visible', e.target.checked);
         });
 
@@ -1034,7 +1089,7 @@ body {
         }
 
         // History search
-        document.getElementById('history-search').addEventListener('input', (e) => {
+        document.getElementById('history-search')?.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
             document.querySelectorAll('.history-item').forEach(item => {
                 const title = item.dataset.title || '';
@@ -1317,12 +1372,12 @@ body {
             });
         }
 
-        document.getElementById('library-search').addEventListener('input', renderLibrary);
-        document.getElementById('library-sort-key').addEventListener('change', () => {
+        document.getElementById('library-search')?.addEventListener('input', renderLibrary);
+        document.getElementById('library-sort-key')?.addEventListener('change', () => {
             localStorage.setItem('librarySortKey', document.getElementById('library-sort-key').value);
             renderLibrary();
         });
-        document.getElementById('library-sort-dir').addEventListener('change', () => {
+        document.getElementById('library-sort-dir')?.addEventListener('change', () => {
             localStorage.setItem('librarySortDir', document.getElementById('library-sort-dir').value);
             renderLibrary();
         });
@@ -1434,7 +1489,7 @@ body {
         }
 
         // Clear all history
-        document.getElementById('clear-history-btn').addEventListener('click', async () => {
+        document.getElementById('clear-history-btn')?.addEventListener('click', async () => {
             if (!confirm('Delete ALL completed conversions and their files?')) return;
 
             try {
