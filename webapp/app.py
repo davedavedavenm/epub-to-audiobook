@@ -1624,6 +1624,65 @@ def estimate_epub_size(epub_path: Path) -> int:
         return 100000
 
 
+
+
+
+def get_epub_toc(epub_path: Path) -> List[Dict[str, Any]]:
+    """Extract Table of Contents from EPUB."""
+    import xml.etree.ElementTree as ET
+    import zipfile
+    import re
+    try:
+        with zipfile.ZipFile(epub_path, 'r') as zf:
+            container_xml = zf.read('META-INF/container.xml').decode('utf-8')
+            root = ET.fromstring(container_xml)
+            rootfile = None
+            for rf in root.iter():
+                if rf.tag.split('}')[-1] == 'rootfile':
+                    rootfile = rf
+                    break
+            if rootfile is None: return []
+            opf_path = rootfile.get('full-path')
+            
+            opf_content = zf.read(opf_path).decode('utf-8')
+            opf_root = ET.fromstring(opf_content)
+            
+            manifest_node = None
+            spine_node = None
+            for node in opf_root.iter():
+                tag = node.tag.split('}')[-1]
+                if tag == 'manifest': manifest_node = node
+                elif tag == 'spine': spine_node = node
+            
+            if manifest_node is None or spine_node is None: return []
+
+            manifest = {item.get('id'): item.get('href') for item in manifest_node if item.tag.split('}')[-1] == 'item'}
+            spine = [item.get('idref') for item in spine_node if item.tag.split('}')[-1] == 'itemref']
+            
+            chapters = []
+            for i, idref in enumerate(spine, 1):
+                href = manifest.get(idref)
+                if not href: continue
+                
+                opf_dir = Path(opf_path).parent
+                full_href = str(opf_dir / href).replace('\\', '/').replace('./', '')
+                
+                try:
+                    content = zf.read(full_href).decode('utf-8', errors='ignore')
+                    title_match = re.search(r'<title>(.*?)</title>', content, re.I | re.S)
+                    title = title_match.group(1).strip() if title_match else f"Chapter {i}"
+                    
+                    if not title or title.lower() in ['untitled', 'chapter']:
+                        h_match = re.search(r'<h[12][^>]*>(.*?)</h[12]>', content, re.I | re.S)
+                        if h_match:
+                            title = re.sub(r'<[^>]+>', '', h_match.group(1)).strip()
+                    
+                    chapters.append({'index': i, 'title': title[:100], 'href': full_href})
+                except:
+                    chapters.append({'index': i, 'title': f"Chapter {i}", 'href': full_href})
+            return chapters
+    except Exception as e:
+        return []
 def calculate_timeout(char_count: int) -> int:
     """Calculate timeout in seconds based on character count."""
     base_timeout = 1800  # 30 minutes minimum
@@ -3705,15 +3764,15 @@ def list_library():
     books.sort(key=lambda x: x['title'].lower())
     return jsonify(books)
 
-
 @app.route('/api/library/preview', methods=['POST'])
 def library_preview():
     data = request.json or {}
     file_path_str = data.get('path')
+    chapter_index = data.get('chapter_index')
+    
     if not file_path_str:
         return jsonify({'error': 'No path provided'}), 400
     
-    # Security: Prevent directory traversal
     try:
         requested_path = Path(file_path_str).resolve()
         library_base = LIBRARY_DIR.resolve()
@@ -3721,30 +3780,45 @@ def library_preview():
             return jsonify({'error': 'Unauthorized path access'}), 403
     except Exception:
         return jsonify({'error': 'Invalid path'}), 400
+        
     file_path = Path(file_path_str)
     if not file_path.exists():
         return jsonify({'error': 'File not found'}), 404
+        
     try:
         preview_text = ''
+        chapters = []
+        
         if file_path.suffix.lower() == '.epub':
+            chapters = get_epub_toc(file_path)
+            
             with zipfile.ZipFile(file_path, 'r') as zf:
-                content_files = [n for n in zf.namelist() if n.endswith(('.html', '.xhtml', '.htm')) and 'toc' not in n.lower() and 'nav' not in n.lower()]
-                if content_files:
+                if chapter_index:
+                    target = next((c for c in chapters if c['index'] == int(chapter_index)), None)
+                    if target:
+                        content = zf.read(target['href']).decode('utf-8', errors='ignore')
+                        text = re.sub(r'<[^>]+>', ' ', content)
+                        text = re.sub(r'\s+', ' ', text).strip()
+                        preview_text = text[:5000]
+                else:
+                    # Default: first 3 non-nav items
+                    content_files = [c['href'] for c in chapters if 'toc' not in c['href'].lower() and 'nav' not in c['href'].lower()]
                     for cf in content_files[:3]:
                         content = zf.read(cf).decode('utf-8', errors='ignore')
                         text = re.sub(r'<[^>]+>', ' ', content)
                         text = re.sub(r'\s+', ' ', text).strip()
-                        preview_text += text + '\n\n'
+                        preview_text += text + "\n\n"
                         if len(preview_text) > 5000: break
         elif file_path.suffix.lower() == '.txt':
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 preview_text = f.read(5000)
-        else:
-            return jsonify({'error': f'Preview not supported for {file_path.suffix}'}), 400
-        return jsonify({'preview': preview_text[:5000]})
+        
+        return jsonify({
+            'preview': preview_text[:5000],
+            'chapters': [{'index': c['index'], 'title': c['title']} for c in chapters]
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 @app.route('/api/library/estimate_cost', methods=['POST'])
 def estimate_cost_api():
     """Estimate cost for a library book conversion."""
