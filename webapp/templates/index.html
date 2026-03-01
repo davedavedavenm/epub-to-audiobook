@@ -9,60 +9,51 @@
     <style>
 :root {
     --bg-primary: #f8f7f4; --bg-card: #ffffff; --bg-sidebar: #121212; --bg-element: #f1efeb; --bg-hover: #e8e5e0;
-    --accent: #c28e5e; --accent-hover: #a67246; --accent-subtle: rgba(194, 142, 94, 0.1);
-    --text-primary: #1a1a1a; --text-secondary: #6b665f; --text-on-dark: #fdfcf9;
+    --accent: #c28e5e; --text-primary: #1a1a1a; --text-secondary: #6b665f; --text-on-dark: #fdfcf9;
     --border: #e8e4de; --success: #4a7c59; --error: #af4d4d; --warning: #d4a373;
     --font-display: 'Lora', serif; --font-ui: 'Outfit', sans-serif;
-    --sidebar-width: 280px; --radius-lg: 24px; --radius-md: 12px; --radius-sm: 8px;
-    --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.05);
+    --sidebar-width: 280px; --radius-lg: 24px; --radius-md: 12px;
 }
 [data-theme="dark"] {
     --bg-primary: #0a0a0a; --bg-card: #141414; --bg-sidebar: #050505; --bg-element: #1f1f1f; --bg-hover: #2a2a2a;
     --text-primary: #f0f0f0; --text-secondary: #a0a0a0; --border: #262626;
 }
 * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--text-primary); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: all 0.3s; }
+body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--text-primary); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: 0.3s; }
 
 .tab-panel { display: none; width: 100%; }
-.tab-panel.active { display: block; animation: fadeIn 0.4s ease forwards; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.tab-panel.active { display: block; }
 
-.sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-on-dark); padding: 48px 24px; display: flex; flex-direction: column; flex-shrink: 0; position: fixed; left: 0; top: 0; bottom: 0; }
-.sidebar-brand { margin-bottom: 64px; padding-left: 12px; }
-.sidebar-brand .logo-text { font-family: var(--font-display); font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+.sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); color: var(--text-on-dark); padding: 48px 24px; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; }
+.sidebar-brand { margin-bottom: 64px; font-family: var(--font-display); font-size: 2rem; font-weight: 700; }
 .nav-links { display: flex; flex-direction: column; gap: 12px; flex: 1; }
-.nav-tab { background: transparent; border: none; color: rgba(255,255,255,0.4); padding: 14px 20px; border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; gap: 16px; font-size: 1.05rem; transition: all 0.2s; text-align: left; }
+.nav-tab { background: transparent; border: none; color: rgba(255,255,255,0.4); padding: 14px 20px; border-radius: var(--radius-md); cursor: pointer; display: flex; align-items: center; gap: 16px; font-size: 1.05rem; text-align: left; transition: 0.2s; }
 .nav-tab:hover { background: rgba(255,255,255,0.05); color: #fff; }
-.nav-tab.active { background: var(--accent); color: #fff; box-shadow: 0 8px 20px rgba(194, 142, 94, 0.25); }
+.nav-tab.active { background: var(--accent); color: #fff; }
 
 .app-main { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
-.top-bar { padding: 24px 48px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg-primary); border-bottom: 1px solid var(--border); z-index: 100; backdrop-filter: blur(12px); opacity: 0.98; }
+.top-bar { padding: 24px 48px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg-primary); border-bottom: 1px solid var(--border); z-index: 100; backdrop-filter: blur(12px); }
 .page-title { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; margin: 0; }
 .theme-selector { display: flex; background: var(--bg-element); padding: 4px; border-radius: 40px; border: 1px solid var(--border); }
-.theme-btn { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: transparent; color: var(--text-secondary); transition: all 0.2s; font-size: 1.3rem; }
-.theme-btn.active { background: var(--bg-card); color: var(--accent); box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.theme-btn { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: transparent; font-size: 1.3rem; }
+.theme-btn.active { background: var(--bg-card); color: var(--accent); }
 
 .content-body { padding: 48px; max-width: 1300px; width: 100%; margin: 0 auto; }
-.card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 40px; margin-bottom: 40px; box-shadow: var(--shadow-md); }
+.card { background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 40px; margin-bottom: 40px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
 .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 24px; }
-.library-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 28px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
-.library-item:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1); }
+.library-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 28px; transition: 0.3s; display: flex; flex-direction: column; }
+.library-item:hover { border-color: var(--accent); transform: translateY(-4px); }
 
-.input-control { width: 100%; padding: 14px 18px; background: var(--bg-element); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-family: var(--font-ui); font-size: 1rem; }
-.btn { padding: 12px 24px; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--bg-element); color: var(--text-primary); transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+.input-control, .btn { padding: 14px 18px; background: var(--bg-element); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-family: var(--font-ui); font-size: 1rem; }
+.btn { font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
 .btn-primary { background: var(--text-primary); color: #fff; border: none; }
 .btn-primary:hover { background: var(--accent); }
 
 .gpu-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 10px; background: #444; }
-.gpu-dot.active { background: var(--success); box-shadow: 0 0 10px var(--success); }
-.gpu-dot.provisioning { background: var(--warning); animation: pulse 1.5s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.gpu-dot.active { background: var(--success); }
 
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .modal-content { background: var(--bg-card); width: 90%; max-width: 900px; max-height: 85vh; border-radius: var(--radius-lg); padding: 48px; position: relative; display: flex; flex-direction: column; }
-.modal-close { position: absolute; top: 24px; right: 24px; background: transparent; border: none; font-size: 1.8rem; cursor: pointer; color: var(--text-secondary); }
-#preview-content { overflow-y: auto; flex: 1; margin-top: 24px; font-family: var(--font-display); font-size: 1.15rem; line-height: 1.7; white-space: pre-wrap; }
-
 .hidden { display: none !important; }
 </style>
 </head>
@@ -79,9 +70,9 @@ body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--
         <button class="nav-tab" data-tab="settings"><i>⚙️</i> <span>Config</span></button>
     </nav>
     <div class="sidebar-footer">
-        <div style="display: flex; align-items: center; margin-bottom: 8px;"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label" style="font-size: 0.85rem; font-weight: 600;">GPU Offline</span></div>
-        <div id="gpu-telemetry" class="hidden" style="font-size: 0.75rem; opacity: 0.7;">
-            <span id="gpu-mode-badge">CPU Mode</span> | <span id="gpu-session-time">0m</span>
+        <div style="display: flex; align-items: center;"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label">GPU Offline</span></div>
+        <div id="gpu-telemetry" class="hidden" style="font-size: 0.75rem; opacity: 0.7; margin-top: 8px;">
+            <span id="gpu-mode-badge">CPU</span> | <span id="gpu-session-time">0m</span>
         </div>
     </div>
 </aside>
@@ -94,65 +85,56 @@ body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--
         <div class="tab-panel active" id="tab-library">
             <div class="card">
                 <div style="display: flex; gap: 24px; margin-bottom: 40px;">
-                    <input type="text" id="library-search" class="input-control" placeholder="Search collection...">
+                    <input type="text" id="library-search" class="input-control" style="flex: 1;" placeholder="Search your collection...">
                     <select id="library-sort-key" class="input-control" style="width: auto;"><option value="title">Title</option><option value="modified_ts">Date</option></select>
                 </div>
-                <div style="margin-bottom: 32px; display: flex; gap: 24px; align-items: center;">
+                <div style="display: flex; gap: 24px; align-items: center; margin-bottom: 24px;">
                     <select id="library-voice-select" class="input-control" style="width: auto;">
-                        <option value="en-GB-RyanNeural">Narrator: Ryan (British Actor)</option>
+                        <option value="en-GB-RyanNeural">Narrator: Ryan (British)</option>
                         {% for id, v in voices.items() %}<option value="{{ id }}">{{ v.name }} ({{ v.accent }})</option>{% endfor %}
                     </select>
                     <label><input type="checkbox" id="library-notify-whatsapp"> WhatsApp</label>
                 </div>
-                <div id="library-stats" style="font-size: 0.9rem; margin-bottom: 12px;"></div>
                 <div id="library-grid" class="library-grid"></div>
             </div>
         </div>
         <div class="tab-panel" id="tab-convert">
             <div class="card">
                 <form id="convert-form">
-                    <div id="upload-area" style="border: 2px dashed var(--border); padding: 100px 40px; text-align: center; border-radius: var(--radius-lg); cursor: pointer;">
-                        <div style="font-size: 5rem;">📖</div>
-                        <h2 style="font-family: var(--font-display);">Drop manuscript here</h2>
-                        <div id="file-name" class="hidden" style="font-weight: 700; color: var(--accent);"></div>
+                    <div id="upload-area" style="border: 2px dashed var(--border); padding: 80px; text-align: center; border-radius: var(--radius-lg); cursor: pointer;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">📖</div><h3 id="file-name-display">Drop manuscript here</h3><div id="file-name" class="hidden"></div>
                     </div>
                     <input type="file" id="file-input" class="hidden">
-                    <div style="margin-top: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px;">
+                    <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
                         <select id="voice-select-simple" class="input-control">
                             {% for id, v in voices.items() if v.engine == 'edge' %}<option value="{{ id }}" {% if id == 'en-GB-RyanNeural' %}selected{% endif %}>{{ v.name }}</option>{% endfor %}
                         </select>
                         <input type="number" id="tts-speed" class="input-control" step="0.1" value="1.0">
                     </div>
-                    <button type="submit" id="convert-btn" class="btn btn-primary" style="margin-top: 48px; height: 72px; width: 100%;" disabled>Begin Production</button>
+                    <button type="submit" id="convert-btn" class="btn btn-primary" style="margin-top: 32px; height: 60px; width: 100%;" disabled>Start Production</button>
                 </form>
             </div>
         </div>
         <div class="tab-panel" id="tab-queue"><div id="queue-content"></div></div>
-        <div class="tab-panel" id="tab-voices"><div class="card"><input type="text" id="voice-search" class="input-control" placeholder="Search samples..."><div id="kokoro-voices" class="library-grid"></div></div></div>
+        <div class="tab-panel" id="tab-voices"><div class="card"><input type="text" id="voice-search" class="input-control" placeholder="Search voices..."><div id="kokoro-voices" class="library-grid"></div></div></div>
         <div class="tab-panel" id="tab-history"><div class="card"><input type="text" id="history-search" class="input-control" placeholder="Filter archive..."><div id="history-content"></div><button id="clear-history-btn" class="btn" style="margin-top: 24px; color: var(--error);">Purge Archive</button></div></div>
-        <div class="tab-panel" id="tab-settings"><div class="card"><div class="setting-row"><div class="input-group"><label>AWS Key</label><input type="text" id="setting-AWS_ACCESS_KEY_ID" class="input-control"></div><div class="input-group"><label>OpenAI Key</label><input type="password" id="setting-OPENAI_API_KEY" class="input-control"></div></div><button id="save-settings-btn" class="btn btn-primary" style="width:auto;">Save Production Config</button></div></div>
+        <div class="tab-panel" id="tab-settings"><div class="card"><div class="setting-row"><div class="input-group"><label>AWS Key</label><input type="text" id="setting-AWS_ACCESS_KEY_ID" class="input-control"></div><div class="input-group"><label>OpenAI Key</label><input type="password" id="setting-OPENAI_API_KEY" class="input-control"></div></div><button id="save-settings-btn" class="btn btn-primary" style="width:auto;">Save Config</button></div></div>
     </div>
 </main>
-<div id="preview-modal" class="modal-overlay hidden"><div class="modal-content"><button class="modal-close" onclick="closePreview()">✕</button><h2 style="font-family: var(--font-display);">Manuscript Preview</h2><p id="preview-title-text" style="color: var(--text-secondary);"></p><div id="preview-content"></div></div></div>
+<div id="preview-modal" class="modal-overlay hidden"><div class="modal-content"><button class="modal-close" onclick="closePreview()">✕</button><h2 style="font-family: var(--font-display);">Manuscript Preview</h2><p id="preview-title-text" style="color: var(--text-secondary);"></p><div id="preview-content" style="overflow-y: auto;"></div></div></div>
 <audio id="preview-audio"></audio>
 
     <script>
-        // ============ State ============
-        const voices = {{ voices | tojson }};
-        let selectedFile = null;
-        let libraryBooks = [];
-        let allJobs = [];
-
-        ﻿
-        // ============ State ============
+        // ============ State (Surgically Controlled) ============
         const voices = {{ voices | tojson }};
         let selectedFile = null;
         let selectedVoice = 'en-GB-RyanNeural';
-        let selectedEngine = 'kokoro';
+        let selectedEngine = 'edge';
         let currentPreviewBtn = null;
         let libraryBooks = [];
         let allJobs = [];
 
+        ﻿
         // ============ DOM Elements ============
         const uploadArea = document.getElementById('upload-area');
         const fileInput = document.getElementById('file-input');
@@ -209,7 +191,7 @@ body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--
         });
 
         // ============ Tab Navigation ============
-        const savedTab = localStorage.getItem('audiobook-tab') || 'library';
+        const savedTab = localStorage.getItem('audiobook-tab') || 'convert';
 
         function switchTab(tabId) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -1419,11 +1401,7 @@ body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--
             content.innerHTML = '<div class="spinner"></div> Scanning manuscript...';
             modal.classList.remove('hidden');
             try {
-                const resp = await fetch('/api/library/preview', {
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ path })
-                });
+                const resp = await fetch('/api/library/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }) });
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
                 content.innerHTML = `<div>${escapeHtml(data.preview)}</div>`;
@@ -1434,9 +1412,14 @@ body { font-family: var(--font-ui); background: var(--bg-primary); color: var(--
         }
         function closePreview() { document.getElementById('preview-modal')?.classList.add('hidden'); }
 
-        loadJobs();
-        loadGpuStatus();
-        setInterval(loadJobs, 15000);
+        // Initialize default state
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTab = localStorage.getItem('audiobook-tab') || 'library';
+            switchTab(savedTab);
+            loadJobs();
+            loadGpuStatus();
+            setInterval(loadJobs, 15000);
+        });
     </script>
 </body>
 </html>
