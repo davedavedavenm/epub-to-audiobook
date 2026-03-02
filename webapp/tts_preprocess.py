@@ -201,14 +201,7 @@ def normalize_text_for_tts(text: str) -> str:
     # Standardize ellipses and add space for a breath
     text = re.sub(r'\\.{2,}', '... ', text)
     
-    # Inject breath pauses into overly long sentences (heuristic: >150 chars without punctuation)
-    def inject_breaths(m):
-        sentence = m.group(0)
-        if len(sentence) > 150 and ',' not in sentence:
-            return re.sub(r'(.{80,}?) (and|but|or|because) ', r'\\1, \\2 ', sentence, count=1)
-        return sentence
-        
-    text = re.sub(r'[^.!?]+[.!?]', inject_breaths, text)
+    # (Note: Removed legacy inject_breaths regex. Pacing should be handled by NLP tokenization prior to TTS generation.)
 
     return text
 
