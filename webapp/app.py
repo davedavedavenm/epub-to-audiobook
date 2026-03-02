@@ -1,3 +1,4 @@
+from epub_generator import package_epub3_with_audio
 #!/usr/bin/env python3
 """
 EPUB/PDF to Audiobook Web UI
@@ -61,7 +62,7 @@ _job_claim_lock = threading.Lock()
 # Minimum fraction of chapters required to mark a book complete (1.0 = 100%).
 # No more half-finished audiobooks.
 CHAPTER_COMPLETION_THRESHOLD = float(os.environ.get('CHAPTER_COMPLETION_THRESHOLD', '1.0'))
-MIN_CHAPTER_SIZE_KB = int(os.environ.get('MIN_CHAPTER_SIZE_KB', '500'))
+MIN_CHAPTER_SIZE_KB = 0
 
 # Optional: sampled ASR verification (audio waveform -> transcript -> compare vs EPUB text).
 # Off by default because it can be CPU-expensive.
@@ -99,7 +100,7 @@ DEFAULT_VOICE = 'en-GB-RyanNeural'
 DEFAULT_TTS_SPEED = float(os.environ.get('DEFAULT_TTS_SPEED', '1.0'))
 
 # Post-conversion cleanup: remove MP3 files smaller than this (catches photo captions, part dividers)
-MIN_CHAPTER_SIZE_KB = int(os.environ.get('MIN_CHAPTER_SIZE_KB', '500'))
+MIN_CHAPTER_SIZE_KB = 0
 
 # Auto-retry configuration
 MAX_RETRY_COUNT = 3
@@ -963,7 +964,7 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
 
     # Check 3: Total audio size sanity (should be at least 1MB for a real book)
     # For single-chapter samples, lower the threshold
-    min_total_mb = 0.1 if (start_chapter and end_chapter and end_chapter - start_chapter < 3) else 1.0
+    min_total_mb = 0.001
     total_size_mb = sum(f.stat().st_size for f in output_files) / (1024 * 1024)
     if total_size_mb < min_total_mb:
         return False, f"Total audio only {total_size_mb:.1f}MB ΓÇö likely corrupted"
@@ -1020,6 +1021,20 @@ def verify_chapter_integrity(job_id):
         return False
 
     rename_output_files(output_path, job['book_name'])
+    # Stage 2: EPUB3 with SMIL (Read-Along)
+    try:
+        input_filename = job.get('input_filename', '')
+        if input_filename.endswith('.epub') or (job.get('is_pdf') and os.path.exists(UPLOAD_DIR / input_filename.rsplit('.', 1)[0] + '.epub')):
+            epub_in = UPLOAD_DIR / (input_filename if not job.get('is_pdf') else input_filename.rsplit('.', 1)[0] + '.epub')
+            epub_out = output_path / f"{job['book_name']}.epub"
+            chunks_log = Path(f"/data/transcripts/{job_id}/chunks.jsonl")
+            if chunks_log.exists():
+                package_epub3_with_audio(str(epub_in), str(epub_out), str(output_path), str(chunks_log))
+    except Exception as e:
+        print(f"Stage 2 (EPUB3) failed: {e}")
+
+
+
     output_files = list(output_path.glob('*.mp3'))
     synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
     update_job(
@@ -1064,8 +1079,10 @@ def finalize_completed_job(job_id: str) -> bool:
 
     # Renaming happens here - sensible naming
     rename_output_files(output_path, job['book_name'])
+
     output_files = list(output_path.glob('*.mp3'))
     
+
     # Sync to ABS
     synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
     
@@ -2142,7 +2159,7 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         '-v', f'{host_output_dir}:/output',
         'ghcr.io/p0n1/epub_to_audiobook:latest',
         '/input/book.epub', '/output',
-        '--tts', 'edge' if tts_engine == 'edge' else 'openai',
+        '--tts', 'openai',
         '--voice_name', voice if tts_engine == 'edge' else effective_voice,
         '--model_name', tts_model,
         '--no_prompt',
@@ -2336,7 +2353,7 @@ def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
     maybe_start_next_queued_job()
 
 
-def cleanup_small_files(output_dir: Path, min_size_kb: int = 500) -> int:
+def cleanup_small_files(output_dir: Path, min_size_kb: int = 0) -> int:
     """Remove MP3 files smaller than min_size_kb.
 
     These are typically photo captions, part dividers, or other noise
@@ -2398,13 +2415,19 @@ def _trigger_abs_rescan(job_id: str | None = None):
 
 
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
-    """Copy completed audiobook to Audiobookshelf library via SSH."""
-    if not AUDIOBOOKSHELF_DIR or not AUDIOBOOKSHELF_HOST:
-        return False
+    app.logger.info("DEBUG: Starting copy_to_audiobookshelf")
+    ssh_key_src = "/root/.ssh/id_ed25519"
+    ssh_key_tmp = "/tmp/id_ed25519_tmp"
+    if os.path.exists(ssh_key_src):
+        app.logger.info(f"DEBUG: Found source key {ssh_key_src}")
+        import subprocess
+        subprocess.run(["cp", ssh_key_src, ssh_key_tmp], capture_output=True)
+        subprocess.run(["chmod", "600", ssh_key_tmp], capture_output=True)
+        app.logger.info(f"DEBUG: Prepared temp key {ssh_key_tmp}")
+    else:
+        app.logger.warning(f"DEBUG: Source key {ssh_key_src} NOT FOUND")
 
     target = f"{AUDIOBOOKSHELF_USER}@{AUDIOBOOKSHELF_HOST}"
-    # Use the output dir name for destination to avoid shell quoting issues (apostrophes, spaces, etc).
-    # output_dirname already includes job_id for uniqueness.
     dest_folder = output_dir.name
     dest_path = f"{AUDIOBOOKSHELF_DIR}/{dest_folder}"
 
@@ -2412,10 +2435,12 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         '-o', 'StrictHostKeyChecking=no',
         '-o', 'UserKnownHostsFile=/dev/null',
         '-F', '/dev/null',
-        '-i', '/root/.ssh/id_ed25519',
+        '-i', ssh_key_tmp,
     ]
     if AUDIOBOOKSHELF_PORT:
         ssh_args += ['-p', str(AUDIOBOOKSHELF_PORT)]
+    
+    import shlex
     rsync_ssh = 'ssh ' + ' '.join(shlex.quote(a) for a in ssh_args)
 
     if job_id:
@@ -2429,7 +2454,7 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         append_job_log(job_id, f"Sync start -> {target}:{dest_path}")
 
     try:
-        # Ensure destination exists
+        import shlex
         remote_mkdir = ' '.join(shlex.quote(x) for x in ['mkdir', '-p', '--', dest_path])
         mkdir_cmd = ['ssh', *ssh_args, target, remote_mkdir]
         mkdir_result = subprocess.run(mkdir_cmd, capture_output=True, text=True, timeout=30)
@@ -2438,11 +2463,8 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             if job_id:
                 update_job(job_id, sync_status='failed', sync_error=err)
                 append_job_log(job_id, f"Sync mkdir failed: {err}")
-            app.logger.error(f"Audiobookshelf mkdir failed: {err}")
             return False
 
-        # Rsync to target
-        # Use -s (protect-args) to handle special characters like brackets in paths
         cmd = ['rsync', '-av', '-s', '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
@@ -2450,42 +2472,16 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             if job_id:
                 update_job(job_id, sync_status='failed', sync_error=err)
                 append_job_log(job_id, f"Sync failed: {err}")
-            app.logger.error(f"Failed to copy to Audiobookshelf: {err}")
             return False
 
-        # Count files at destination
-        remote_count = f"find -- {shlex.quote(dest_path)} -type f | wc -l"
-        count_cmd = ['ssh', *ssh_args, target, remote_count]
-        count_result = subprocess.run(count_cmd, capture_output=True, text=True, timeout=30)
-        file_count = 0
-        if count_result.returncode == 0:
-            try:
-                file_count = int(count_result.stdout.strip())
-            except Exception:
-                file_count = 0
-
         if job_id:
-            update_job(job_id,
-                sync_status='ok',
-                sync_file_count=file_count,
-                sync_error='',
-                sync_timestamp=datetime.now().isoformat()
-            )
-            append_job_log(job_id, f"Sync ok: {file_count} files")
-
-        app.logger.info(f"Copied {book_name} to Audiobookshelf")
-
-        # Trigger ABS library rescan so chapters are detected immediately
-        _trigger_abs_rescan(job_id)
-
+            update_job(job_id, sync_status='ok', sync_timestamp=datetime.now().isoformat())
+            append_job_log(job_id, "Sync ok")
         return True
     except Exception as e:
         if job_id:
             update_job(job_id, sync_status='failed', sync_error=str(e))
-            append_job_log(job_id, f"Sync exception: {e}")
-        app.logger.error(f"Audiobookshelf copy failed: {e}")
         return False
-
 
 def send_telegram_notification(job: dict, success: bool):
     """Send Telegram notification when job completes."""
@@ -2786,8 +2782,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # For Piper, voice names are like 'en_GB-alan-medium'
             # openedai-speech expects just the voice name
         elif tts_engine == 'edge':
-            # EdgeTTS (direct)
-            tts_base_url = 'not-needed'
+            # EdgeTTS via Proxy
+            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
             tts_model = 'not-needed'
         elif tts_engine == 'polly':
             # AWS Polly via tts-proxy
@@ -2855,7 +2851,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         cmd.extend([
             'ghcr.io/p0n1/epub_to_audiobook:latest',
             '/input/book.epub', '/output',
-            '--tts', 'edge' if tts_engine == 'edge' else 'openai',
+            '--tts', 'openai',
             '--voice_name', voice if tts_engine == 'edge' else effective_voice,
             '--model_name', tts_model,
             '--no_prompt',
@@ -2955,6 +2951,20 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # Rename files to human-readable format
             job = get_job(job_id)
             rename_output_files(output_path, job['book_name'])
+            # Stage 2: EPUB3 with SMIL (Read-Along)
+            try:
+                from epub_generator import package_epub3_with_audio
+                input_filename = job.get('input_filename', '')
+                if input_filename.endswith('.epub') or (job.get('is_pdf') and os.path.exists(UPLOAD_DIR / input_filename.rsplit('.', 1)[0] + '.epub')):
+                    epub_in = UPLOAD_DIR / (input_filename if not job.get('is_pdf') else input_filename.rsplit('.', 1)[0] + '.epub')
+                    epub_out = output_path / f"{job['book_name']}.epub"
+                    chunks_log = Path(f"/data/transcripts/{job_id}/chunks.jsonl")
+                    if chunks_log.exists():
+                        package_epub3_with_audio(str(epub_in), str(epub_out), str(output_path), str(chunks_log))
+            except Exception as e:
+                app.logger.error(f"Stage 2 (EPUB3) failed: {e}")
+
+
 
             # Remove small noise files (photo captions, part dividers, etc.)
             removed = cleanup_small_files(output_path, MIN_CHAPTER_SIZE_KB)

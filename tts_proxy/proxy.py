@@ -1,66 +1,24 @@
-#!/usr/bin/env python3
-"""OpenAI-compatible TTS proxy with transcript capture.
-
-The conversion container is launched with:
-  OPENAI_BASE_URL=http://tts-proxy:8882/j/<job_id>/v1
-
-The proxy forwards requests to Kokoro and logs exact input texts to:
-  /data/transcripts/<job_id>/chunks.jsonl
-"""
-
-from __future__ import annotations
-
-import hashlib
-import json
-import os
 import re
+import os
+import io
+import json
+import hashlib
 import time
-import boto3
 import sqlite3
+import boto3
+import httpx
+import asyncio
+import functools
 from pathlib import Path
 from typing import Any
-
-import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
+from mutagen.mp3 import MP3
+import edge_tts
 
 app = FastAPI()
 
-DB_PATH = Path(os.environ.get('DB_PATH', '/data/jobs.db'))
-
-def get_db_setting(key: str, default: Any = None) -> Any:
-    """Retrieve a setting from shared SQLite DB."""
-    try:
-        if not DB_PATH.exists():
-            return os.environ.get(key, default)
-        
-        with sqlite3.connect(str(DB_PATH), timeout=10) as conn:
-            conn.row_factory = sqlite3.Row
-            res = conn.execute('SELECT value FROM app_settings WHERE key = ?', (key,)).fetchone()
-            if res:
-                return res['value']
-    except Exception as e:
-        print(f"Setting error for {key}: {e}")
-    return os.environ.get(key, default)
-
-def get_polly_client():
-    """Initialize AWS Polly client using keys from DB or Env."""
-    access_key = get_db_setting('AWS_ACCESS_KEY_ID')
-    secret_key = get_db_setting('AWS_SECRET_ACCESS_KEY')
-    region = get_db_setting('AWS_REGION', 'us-east-1')
-    
-    if access_key and secret_key:
-        try:
-            return boto3.client(
-                'polly', 
-                aws_access_key_id=access_key, 
-                aws_secret_access_key=secret_key, 
-                region_name=region
-            )
-        except Exception as e:
-            print(f"Warning: Could not initialize AWS Polly client: {e}")
-    return None
-
+DB_PATH = Path(os.environ.get("DB_PATH", "/data/jobs.db"))
 UPSTREAM_BASE = os.environ.get("TTS_UPSTREAM_BASE", "http://kokoro-tts:8880/v1").rstrip("/")
 STORE_ROOT = Path(os.environ.get("TRANSCRIPTS_DIR", "/data/transcripts"))
 STORE_ROOT.mkdir(parents=True, exist_ok=True)
@@ -68,20 +26,26 @@ STORE_ROOT.mkdir(parents=True, exist_ok=True)
 _re_ws = re.compile(r"\s+")
 _re_punct = re.compile(r"[^\w\s]+", flags=re.UNICODE)
 
-def text_to_ssml(text: str) -> str:
-    # Temporarily disable SSML features to find what Long-form dislikes
-    return text
+def get_audio_duration(audio_bytes: bytes) -> float:
+    try:
+        audio_file = io.BytesIO(audio_bytes)
+        mp3 = MP3(audio_file)
+        return mp3.info.length
+    except Exception as e:
+        print(f"Duration error: {e}")
+        return 0.0
 
 def _now_iso() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
+def sha256_hex(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8", errors="replace")).hexdigest()
 
 def normalize_strict(s: str) -> str:
     s = s.replace("\r\n", "\n").replace("\r", "\n")
     s = "\n".join([ln.rstrip() for ln in s.split("\n")])
     s = _re_ws.sub(" ", s).strip()
     return s
-
 
 def normalize_loose(s: str) -> str:
     s = s.casefold()
@@ -90,45 +54,23 @@ def normalize_loose(s: str) -> str:
     s = _re_ws.sub(" ", s).strip()
     return s
 
-
-def sha256_hex(s: str) -> str:
-    return hashlib.sha256(s.encode("utf-8", errors="replace")).hexdigest()
-
-
 def job_dir(job_id: str) -> Path:
     d = STORE_ROOT / job_id
     d.mkdir(parents=True, exist_ok=True)
     return d
-
 
 def append_jsonl(path: Path, obj: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
-
-async def upstream_get(path: str) -> Response:
-    url = f"{UPSTREAM_BASE}/{path.lstrip('/')}"
-    async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.get(url)
-    return Response(content=r.content, status_code=r.status_code, media_type=r.headers.get("content-type"))
-
-
-@app.get("/healthz")
-async def healthz():
-    client = get_polly_client()
-    return {"ok": True, "upstream": UPSTREAM_BASE, "polly_ready": client is not None}
-
-
-@app.get("/j/{job_id}/v1/models")
-async def models(job_id: str):
-    return await upstream_get("models")
-
-
-@app.get("/j/{job_id}/v1/audio/voices")
-async def voices(job_id: str):
-    return await upstream_get("audio/voices")
-
+async def get_edge_audio(text: str, voice: str) -> bytes:
+    communicate = edge_tts.Communicate(text, voice)
+    audio_data = b""
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_data += chunk["data"]
+    return audio_data
 
 @app.post("/j/{job_id}/v1/audio/speech")
 async def audio_speech(job_id: str, request: Request):
@@ -138,15 +80,24 @@ async def audio_speech(job_id: str, request: Request):
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
     text = payload.get("input") or payload.get("text") or ""
-    if not isinstance(text, str):
-        text = str(text)
-
+    voice = payload.get("voice", "")
     d = job_dir(job_id)
     chunks_path = d / "chunks.jsonl"
-    strict = normalize_strict(text)
-    loose = normalize_loose(text)
-    voice = payload.get("voice", "")
+    
+    # Check if this is an Edge voice or specifically requested via engine
+    is_edge = voice.endswith("Neural") or payload.get("model") == "edge"
+    
+    if is_edge:
+        print(f"Processing Edge request for voice: {voice}")
+        audio_content = await get_edge_audio(text, voice)
+    else:
+        # Upstream Kokoro/OpenAI
+        upstream_url = f"{UPSTREAM_BASE}/audio/speech"
+        async with httpx.AsyncClient(timeout=None) as client:
+            r = await client.post(upstream_url, json=payload)
+        audio_content = r.content
 
+    duration = get_audio_duration(audio_content)
     append_jsonl(
         chunks_path,
         {
@@ -154,97 +105,23 @@ async def audio_speech(job_id: str, request: Request):
             "job_id": job_id,
             "text": text,
             "text_sha256": sha256_hex(text),
-            "strict": strict,
-            "strict_sha256": sha256_hex(strict),
-            "loose": loose,
-            "loose_sha256": sha256_hex(loose),
+            "strict": normalize_strict(text),
+            "loose": normalize_loose(text),
             "model": payload.get("model"),
             "voice": voice,
-        },
+            "duration_s": duration
+        }
     )
-
-    # AWS Polly Intercept
-    if voice.startswith("polly_"):
-        client = get_polly_client()
-        if not client:
-            raise HTTPException(status_code=500, detail="AWS Polly is not configured. Please set API keys in Settings tab.")
-        
-        actual_voice_id = voice.replace("polly_", "").capitalize()
-        ssml = text_to_ssml(text)
-        print(f"Processing Polly request for voice: {actual_voice_id} (Long-form)")
-        
-        try:
-            # Run boto3 synchronously using asyncio executor since it's blocking
-            import asyncio
-            import functools
-            loop = asyncio.get_running_loop()
-            
-            polly_call = functools.partial(
-                client.synthesize_speech,
-                Engine='long-form',
-                LanguageCode='en-US',
-                OutputFormat='mp3',
-                Text=ssml,
-                TextType='text',
-                VoiceId=actual_voice_id
-            )
-            response = await loop.run_in_executor(None, polly_call)
-            
-            audio_stream = response['AudioStream'].read()
-            return Response(content=audio_stream, status_code=200, media_type='audio/mpeg')
-        except Exception as e:
-            print(f"Polly Error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
-
-    # Standard Upstream Kokoro fallback
-    upstream_url = f"{UPSTREAM_BASE}/audio/speech"
-    async with httpx.AsyncClient(timeout=None) as client:
-        r = await client.post(upstream_url, json=payload)
-
-    ct = r.headers.get("content-type", "application/octet-stream")
-    return Response(content=r.content, status_code=r.status_code, media_type=ct)
-
+    
+    return Response(content=audio_content, status_code=200, media_type="audio/mpeg")
 
 @app.post("/j/{job_id}/finalize")
 async def finalize(job_id: str):
     d = job_dir(job_id)
-    chunks_path = d / "chunks.jsonl"
-    if not chunks_path.exists():
-        return JSONResponse({"ok": False, "error": "no chunks captured"}, status_code=404)
-
-    raw_all: list[str] = []
-    strict_all: list[str] = []
-    loose_all: list[str] = []
-    n = 0
-
-    with chunks_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except Exception:
-                continue
-            t = obj.get("text") or ""
-            raw_all.append(t)
-            strict_all.append(obj.get("strict") or normalize_strict(t))
-            loose_all.append(obj.get("loose") or normalize_loose(t))
-            n += 1
-
-    raw_join = "\n".join(raw_all)
-    strict_join = "\n".join(strict_all)
-    loose_join = "\n".join(loose_all)
-
-    out = {
-        "ok": True,
-        "job_id": job_id,
-        "chunks": n,
-        "raw_sha256": sha256_hex(raw_join),
-        "strict_sha256": sha256_hex(strict_join),
-        "loose_sha256": sha256_hex(loose_join),
-        "created_at": _now_iso(),
-    }
-
+    out = {"ok": True, "job_id": job_id, "created_at": _now_iso()}
     (d / "finalize.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
     return out
+
+@app.get("/healthz")
+async def healthz():
+    return {"ok": True}
