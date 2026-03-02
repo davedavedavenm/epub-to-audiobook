@@ -43,6 +43,7 @@
 - [ ] **Webhook support** - Custom HTTP callbacks for automation
 
 ### v1.2 - Text Processing Improvements
+- [ ] **EPUB3 Media Overlays (SMIL) Generation** - Move away from raw MP3 folders. Generate enriched EPUB3 files with force-aligned text and audio (SMIL files) to enable "Read-Along" syncing in Audiobookshelf.
 - [ ] **Smart text extraction** - Improved EPUB parsing for better TTS quality
   - Strip headers/footers
   - Handle footnotes intelligently
