@@ -15,6 +15,7 @@ import re
 import zipfile
 import shutil
 import tempfile
+import logging
 from pathlib import Path
 
 # num2words is optional — gracefully degrade if not installed
@@ -23,6 +24,23 @@ try:
     HAS_NUM2WORDS = True
 except ImportError:
     HAS_NUM2WORDS = False
+
+# NLTK for sentence tokenization
+try:
+    import nltk
+    # Ensure the punkt tokenizer is available
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt', quiet=True)
+    try:
+        nltk.data.find('tokenizers/punkt_tab')
+    except LookupError:
+        nltk.download('punkt_tab', quiet=True)
+    HAS_NLTK = True
+except ImportError:
+    HAS_NLTK = False
+    logging.warning("nltk not installed. Sentence tokenization will degrade to basic regex.")
 
 
 def _number_to_words(n: int, lang: str = 'en') -> str:
@@ -195,13 +213,18 @@ def normalize_text_for_tts(text: str) -> str:
 
     # === Pacing and Punctuation (Enhance Flow) ===
     # Convert em-dashes and en-dashes to commas for better breath pauses
-    text = re.sub(r'\\s*[—–]\\s*', ', ', text)
-    text = re.sub(r'\\s*--\\s*', ', ', text)
+    text = re.sub(r'\s*[—–]\s*', ', ', text)
+    text = re.sub(r'\s*--\s*', ', ', text)
     
     # Standardize ellipses and add space for a breath
-    text = re.sub(r'\\.{2,}', '... ', text)
+    text = re.sub(r'\.{2,}', '... ', text)
     
-    # (Note: Removed legacy inject_breaths regex. Pacing should be handled by NLP tokenization prior to TTS generation.)
+    # NLP Sentence Tokenization
+    # Splits large paragraphs into distinct sentences and forces a double-newline break
+    # This prevents the TTS engine from losing prosody on massive text blocks.
+    if HAS_NLTK and len(text) > 100:
+        sentences = nltk.tokenize.sent_tokenize(text)
+        text = '\n\n'.join(sentences)
 
     return text
 
