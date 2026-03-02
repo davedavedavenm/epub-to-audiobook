@@ -44,6 +44,7 @@
 
 ### v1.2 - Text Processing Improvements
 - [ ] **EPUB3 Media Overlays (SMIL) Generation** - Move away from raw MP3 folders. Generate enriched EPUB3 files with force-aligned text and audio (SMIL files) to enable "Read-Along" syncing in Audiobookshelf.
+- [ ] **NLP Sentence Tokenization & Pacing** - Replace regex breath injection with proper NLP sentence tokenization (e.g., `nltk` or `spacy`). Send individual sentences to the TTS engine and programmatically insert precise millisecond silences between sentences and paragraphs for natural pacing without corrupting prosody.
 - [ ] **Smart text extraction** - Improved EPUB parsing for better TTS quality
   - Strip headers/footers
   - Handle footnotes intelligently
