@@ -53,12 +53,9 @@
 - [ ] **Text preprocessing** - Clean up common OCR errors
 - [ ] **Abbreviation expansion** - Expand common abbreviations for natural speech
 
-### v1.3 - Voice Cloning (Experimental)
-- [ ] **Chatterbox TTS** - Voice cloning with emotion control
-  - Clone any voice from ~10 seconds of audio
-  - Emotion/style control (happy, sad, angry, etc.)
-  - Exaggeration control
-  - See: https://github.com/resemble-ai/chatterbox
+### v1.3 - High-Fidelity & Intent-Aware TTS (Polly Long-Form Alternatives)
+- [ ] **Commercial "Long-Form" API Fallbacks** - Integrate pay-as-you-go commercial APIs (like Async Voice API, OpenAI TTS, or ElevenLabs) to offer an on-demand "Polly Long-Form" tier of quality for specific books, bypassing the need for heavy local GPU cloning.
+- [ ] **Next-Gen Open-Weight Tracking** - Monitor HuggingFace TTS Arena for zero-cost, intent-aware models (e.g., F5-TTS, advanced Kokoro variants) that match commercial long-form prosody without the API cost.
 
 ### Future Considerations
 - [ ] Background music/ambient sound mixing
