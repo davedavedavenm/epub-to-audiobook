@@ -5,7 +5,9 @@
 Run Kokoro TTS on a rented cloud GPU (RTX 3060, ~$0.05/hr) for **15x faster** audiobook conversion.
 Same audio quality, same API, same voices — just faster.
 
-**Cost:** ~$0.01 per book | 11 books in one session = ~$0.18 total
+**Cost Strategy:** 
+- **Bulk/Standard Quality (Kokoro):** ~$0.01 per book | 11 books in one session = ~$0.18 total using RTX 3060.
+- **High-Fidelity/Intent-Aware Quality:** Up to ~$1.00 - $3.00 per book. Willing to scale up to heavier GPUs (RTX 3090/4090 at ~$0.30+/hr) for next-gen models (like F5-TTS or advanced Kokoro variants) to achieve Amazon Polly Long-Form level intonation and prosody. Quality is the absolute priority over chasing zero cost for premium reads.
 
 ## Prerequisites
 
@@ -231,3 +233,12 @@ docker rm -f audiobook-<JOB_ID>
 4. **MAX_CONCURRENT_JOBS=3** is the sweet spot for RTX 3060. More than that doesn't improve throughput.
 5. **Recovery mode works.** If a converter container dies mid-book, the webapp detects missing chapters and retries them one at a time. Let it work.
 6. **Some EPUBs have problematic chapters** that crash the converter. If a book fails repeatedly at the same chapter, the EPUB content may need cleaning.
+
+## Future: High-Fidelity "Intent-Aware" Models
+
+As per the v1.3 Roadmap, the goal is to achieve Amazon Polly Long-Form quality (superior prosody, emotional pacing, intent-awareness) using open-weight models.
+
+When transitioning from standard Kokoro to next-gen models (e.g., F5-TTS, large param Kokoro variants):
+- **VRAM Requirements:** RTX 3060 (12GB) will likely OOM. You must search for **RTX 3090 or RTX 4090** instances (24GB VRAM).
+- **Concurrency:** Drop `MAX_CONCURRENT_JOBS` from 3 down to 1 to ensure the model has the full GPU.
+- **Cost Expectation:** Hourly rates will jump from ~$0.05/hr to ~$0.30 - $0.50/hr. A 10-hour audiobook may cost $1.00 - $3.00. This is acceptable and expected to achieve absolute maximum vocal quality.
