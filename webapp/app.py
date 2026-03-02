@@ -32,6 +32,8 @@ TTS_PROXY_URL = os.environ.get('TTS_PROXY_URL', '').strip().rstrip('/')
 
 app = Flask(__name__)
 
+
+
 # Configuration
 # NOTE: KOKORO_URL is a mutable global — gpu_manager.py switches it
 # between CPU and GPU endpoints at runtime. Do NOT cache this value.
@@ -971,7 +973,27 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
         + (f" ({len(output_files)}/{expected} chapters)" if expected else ""))
 
 
-def finalize_completed_job_if_outputs_exist(job_id):
+
+def verify_chapter_integrity(job_id: str) -> bool:
+    """Strictly verify that every requested chapter exists and is valid."""
+    job = get_job(job_id)
+    if not job: return False
+    
+    output_dir = OUTPUT_DIR / job['output_dirname']
+    if not output_dir.exists(): return False
+    
+    files = list(output_dir.glob('*.mp3'))
+    if not files: return False
+    
+    for f in files:
+        if f.stat().st_size < 1024:
+            app.logger.error(f"Job {job_id}: Found invalid/tiny chapter file {f.name}")
+            return False
+            
+    return True
+
+
+def verify_chapter_integrity(job_id):
     """Mark an in-flight job completed when output files prove success.
 
     This is mainly used after webapp restarts, where the original worker thread
@@ -1042,6 +1064,8 @@ def cleanup_orphan_jobs():
         orphan_count = 0
         for job in converting_jobs:
             job_id = job['id']
+            if _recovery_in_progress.get(job_id): continue
+            job_id = job['id']
             container_name = job['container_name']
             retry_count = int(job['retry_count'] or 0)
 
@@ -1051,7 +1075,7 @@ def cleanup_orphan_jobs():
 
             # If conversion actually finished during downtime, output files prove success.
             try:
-                if finalize_completed_job_if_outputs_exist(job_id):
+                if verify_chapter_integrity(job_id):
                     continue
             except Exception:
                 # Fall through to re-queue/fail logic.
@@ -1274,6 +1298,29 @@ def restart_kokoro(label: str = '') -> bool:
 
 # ============ Auto-Retry Logic ============
 
+
+def _do_recovery(job_id):
+    """Background thread to perform chapter-level recovery."""
+    import time as time_module
+    time_module.sleep(30)  # Brief delay to let engine settle
+    try:
+        recover_partial_conversion(job_id)
+    except Exception as e:
+        app.logger.error(f"Recovery failed for {job_id}: {e}")
+        append_job_log(job_id, f"Recovery failed: {e}")
+        with get_db() as conn:
+            conn.execute('''
+                UPDATE jobs
+                SET status = 'failed',
+                    error = ?,
+                    completed_at = ?
+                WHERE id = ?
+            ''', (f"Recovery failed: {e}", datetime.now().isoformat(), job_id))
+            conn.commit()
+        maybe_start_next_queued_job()
+    finally:
+        _recovery_in_progress.pop(job_id, None)
+
 def handle_job_failure(job_id, error_type, error_msg):
     """Handle job failure with smart recovery.
 
@@ -1334,27 +1381,7 @@ def handle_job_failure(job_id, error_type, error_msg):
             conn.commit()
 
         # Run recovery in background thread (it may take a while)
-        def _do_recovery():
-            time_module.sleep(30)  # Brief delay to let Kokoro settle
-            try:
-                recover_partial_conversion(job_id)
-            except Exception as e:
-                app.logger.error(f"Recovery failed for {job_id}: {e}")
-                append_job_log(job_id, f"Recovery failed: {e}")
-                with get_db() as conn:
-                    conn.execute('''
-                        UPDATE jobs
-                        SET status = 'failed',
-                            error = ?,
-                            completed_at = ?
-                        WHERE id = ?
-                    ''', (f"Recovery failed: {e}", datetime.now().isoformat(), job_id))
-                    conn.commit()
-                maybe_start_next_queued_job()
-            finally:
-                _recovery_in_progress.pop(job_id, None)
-
-        recovery_thread = threading.Thread(target=_do_recovery, daemon=True)
+        recovery_thread = threading.Thread(target=_do_recovery, args=(job_id,), daemon=True)
         recovery_thread.start()
         return True
 
@@ -1445,7 +1472,7 @@ def watchdog_loop():
 
                     # --- Check 1: Container dead ---
                     if not container_running:
-                        if finalize_completed_job_if_outputs_exist(job_id):
+                        if verify_chapter_integrity(job_id):
                             _watchdog_last_progress.pop(job_id, None)
                             continue
                         app.logger.warning(
@@ -1542,20 +1569,28 @@ def start_watchdog():
     watchdog_thread.start()
 
 
+
 def resume_inflight_jobs():
     """Reattach monitors to running conversion containers after restart."""
     with get_db() as conn:
         rows = conn.execute('''
-            SELECT id, container_name
+            SELECT id, container_name, status
             FROM jobs
-            WHERE status IN ('converting', 'converting PDF', 'converting to audio')
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
         ''').fetchall()
 
     resumed = 0
     for row in rows:
         job_id = row['id']
         container_name = row['container_name']
-        if check_container_running(container_name):
+        current_status = row['status']
+        
+        if current_status == 'recovering':
+            recovery_thread = threading.Thread(target=_do_recovery, args=(job_id,), daemon=True)
+            recovery_thread.start()
+            resumed += 1
+            app.logger.info(f"Resumed recovery for job {job_id}")
+        elif container_name and check_container_running(container_name):
             running_containers[job_id] = container_name
             monitor_thread = threading.Thread(target=monitor_conversion, args=(job_id, container_name), daemon=True)
             monitor_thread.start()
@@ -1563,6 +1598,9 @@ def resume_inflight_jobs():
             app.logger.info(f"Resumed monitoring for job {job_id} ({container_name})")
 
     if resumed:
+        app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
+        app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
+
         app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
 
 
@@ -1956,7 +1994,7 @@ def retry_missing_chapters(
                 clean.append(c)
             clean.extend(['--chapter_start', str(ch), '--chapter_end', str(ch)])
 
-            app.logger.info(f"Retry chapter {ch} attempt {attempt}/{MAX_CHAPTER_RETRIES}")
+            app.logger.info(f"Retry chapter {ch} attempt {attempt}/{MAX_CHAPTER_RETRIES}: {' '.join(clean)}")
             append_job_log(job_id, f"Retrying chapter {ch} (attempt {attempt}/{MAX_CHAPTER_RETRIES})")
 
             subprocess.run(['docker', 'rm', '-f', retry_container], capture_output=True)
@@ -1964,6 +2002,10 @@ def retry_missing_chapters(
             try:
                 proc = subprocess.Popen(clean, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 stdout, stderr = proc.communicate(timeout=timeout_seconds)
+                if proc.returncode != 0:
+                    app.logger.error(f"Retry chapter {ch} failed with return code {proc.returncode}")
+                    app.logger.error(f"STDERR: {stderr.decode('utf-8', errors='ignore')[:1000]}")
+                    append_job_log(job_id, f"Chapter {ch} retry error: {stderr.decode('utf-8', errors='ignore')[:200]}")
             except subprocess.TimeoutExpired:
                 proc.kill()
                 subprocess.run(['docker', 'stop', retry_container], capture_output=True)
@@ -1971,7 +2013,11 @@ def retry_missing_chapters(
                 continue
             finally:
                 subprocess.run(['docker', 'rm', '-f', retry_container], capture_output=True)
-
+            
+            # Wait for file system sync
+            import time as time_module
+            time_module.sleep(5)
+            
             # Check if the chapter file now exists
             ch_files = list(output_path.glob(f'{ch:04d}_*.mp3'))
             if ch_files and all(f.stat().st_size > 1024 for f in ch_files):
@@ -1980,7 +2026,7 @@ def retry_missing_chapters(
                 success = True
                 break
             else:
-                app.logger.warning(f"Chapter {ch} still missing after attempt {attempt}")
+                app.logger.warning(f"Chapter {ch} still missing after attempt {attempt}. Retrying...")
                 # Small delay before next attempt to let Kokoro recover
                 import time
                 time.sleep(10)
@@ -2018,15 +2064,21 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
     if tts_engine == 'kokoro' and job.get('voice2'):
         effective_voice = f"{voice}+{job['voice2']}"
 
-    # TTS configuration
+    # TTS configuration (matching convert_book logic)
     if tts_engine == 'piper':
         tts_base_url = 'http://piper-tts:8000/v1'
         tts_model = 'tts-1'
+    elif tts_engine == 'edge':
+        tts_base_url = 'not-needed'
+        tts_model = 'not-needed'
+    elif tts_engine == 'polly':
+        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+        tts_model = 'polly'
     else:
         tts_base_url = KOKORO_URL
         tts_model = 'kokoro'
 
-    # Optional TTS proxy
+    # Optional: route Kokoro via proxy if configured
     if tts_engine == 'kokoro' and TTS_PROXY_URL:
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
 
@@ -2042,8 +2094,8 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         '-v', f'{host_output_dir}:/output',
         'ghcr.io/p0n1/epub_to_audiobook:latest',
         '/input/book.epub', '/output',
-        '--tts', 'openai',
-        '--voice_name', effective_voice,
+        '--tts', 'edge' if tts_engine == 'edge' else 'openai',
+        '--voice_name', voice if tts_engine == 'edge' else effective_voice,
         '--model_name', tts_model,
         '--no_prompt',
         '--remove_endnotes',
@@ -3211,6 +3263,47 @@ def version_info():
     })
 
 
+
+@app.route('/api/jobs/<job_id>/resume', methods=['POST'])
+def resume_job(job_id):
+    """Resume a failed job with intelligent recovery and optional Narrator switch."""
+    data = request.get_json(silent=True) or {}
+    new_voice = data.get('voice')
+    
+    job = get_job(job_id)
+    if not job: return jsonify({'error': 'Job not found'}), 404
+
+    output_path = OUTPUT_DIR / job.get('output_dirname', '')
+    has_partial = any(output_path.glob('*.mp3')) if output_path.exists() else False
+    
+    with get_db() as conn:
+        if new_voice and new_voice in VOICES:
+            engine = VOICES[new_voice].get('engine', 'kokoro')
+            name = VOICES[new_voice]['name']
+            conn.execute("""
+                UPDATE jobs 
+                SET voice = ?, voice_name = ?, tts_engine = ?, 
+                    status = ?, container_name = NULL, error = NULL 
+                WHERE id = ?
+            """, (new_voice, name, engine, 'recovering' if has_partial else 'queued', job_id))
+        else:
+            conn.execute("""
+                UPDATE jobs 
+                SET status = ?, container_name = NULL, error = NULL 
+                WHERE id = ?
+            """, ('recovering' if has_partial else 'queued', job_id))
+        conn.commit()
+
+    if has_partial:
+        threading.Thread(target=_do_recovery, args=(job_id,), daemon=True).start()
+    else:
+        threading.Thread(target=start_next_queued_job, daemon=True).start()
+
+    return jsonify({
+        'status': 'success', 
+        'message': f'Job resumed using {new_voice if new_voice else "original voice"} (' + ('partial recovery' if has_partial else 'full retry') + ')'
+    })
+
 @app.route('/api/history')
 def get_history():
     """Get conversion history (completed books)."""
@@ -3948,130 +4041,100 @@ def estimate_cost_api():
 
 @app.route('/api/library/convert', methods=['POST'])
 def convert_from_library():
-    """Start conversion of a book from the library.
-
-    Request JSON:
-    - path: Path to the ebook file
-    - voice: Voice ID to use
-    - notify_whatsapp: Whether to send WhatsApp notification
-    - notify_telegram: Whether to send Telegram notification
-    """
-    data = request.get_json() or {}
-    file_path = Path(data.get('path', ''))
-    voice = data.get('voice', DEFAULT_VOICE)
-    notify_telegram = data.get('notify_telegram', False)
-    notify_whatsapp = data.get('notify_whatsapp', False)
-    tts_speed = float(data.get('tts_speed', DEFAULT_TTS_SPEED))
-    start_chapter = data.get('start_chapter')
-    end_chapter = data.get('end_chapter')
-
-    # Validate file exists
-    if not file_path.exists():
-        return jsonify({'error': 'File not found'}), 404
-
-    # Validate file is in library directory (security check)
+    """Start conversion of a book from the library."""
     try:
-        file_path.resolve().relative_to(LIBRARY_DIR.resolve())
-    except ValueError:
-        return jsonify({'error': 'File not in library directory'}), 403
-
-    # Validate voice
-    if voice not in VOICES:
-        return jsonify({'error': 'Invalid voice selected'}), 400
-
-    # Create job
-    job_id = str(uuid.uuid4())[:8]
-    book_name = file_path.stem
-    safe_name = sanitize_filename(book_name)
-    file_ext = file_path.suffix.lower()
-
-    # New parsing and pronunciation options (defaults for library conversion)
-    newline_mode = data.get('newline_mode', 'double')
-    title_mode = data.get('title_mode', 'auto')
-    custom_regex = (data.get('custom_regex') or '').strip() or None
-
-    is_pdf = file_ext == '.pdf'
-    needs_conversion = file_ext not in {'.epub', '.pdf'}
-
-    # Copy file to upload directory
-    input_filename = f"{job_id}_{safe_name}{file_ext}"
-    input_path = UPLOAD_DIR / input_filename
-    shutil.copy2(file_path, input_path)
-
-    # Convert non-standard formats to EPUB
-    if needs_conversion:
+        import json, sys
+        raw_data = request.get_data()
+        print(f"DEBUG RAW: {raw_data}", file=sys.stderr)
+        
         try:
-            epub_path = convert_to_epub(input_path)
-            input_filename = epub_path.name
-            input_path = epub_path
-        except RuntimeError as e:
-            return jsonify({'error': f'Format conversion failed: {str(e)}'}), 500
+            data = json.loads(raw_data.decode('utf-8'))
+        except:
+            data = request.form.to_dict() or {}
+            
+        print(f"DEBUG PARSED: {data}", file=sys.stderr)
+        
+        file_path_str = data.get('path', '')
+        if not file_path_str:
+            return jsonify({'error': 'No path provided', 'received': data}), 400
+            
+        file_path = Path(file_path_str)
+        voice = data.get('voice', DEFAULT_VOICE)
+        
+        def safe_int(v): 
+            try: return int(v) if v and str(v).strip() else None
+            except: return None
+        
+        def safe_float(v, default): 
+            try: return float(v) if v and str(v).strip() else default
+            except: return default
 
-    # Create output directory
-    output_dirname = f"{safe_name}_{job_id}"
-    output_dir = OUTPUT_DIR / output_dirname
-    output_dir.mkdir(parents=True, exist_ok=True)
+        tts_speed = safe_float(data.get('tts_speed'), DEFAULT_TTS_SPEED)
+        start_chapter = safe_int(data.get('start_chapter'))
+        end_chapter = safe_int(data.get('end_chapter'))
 
-    # Determine TTS engine
-    tts_engine = VOICES[voice].get('engine', 'kokoro')
+        if not file_path.exists():
+            return jsonify({'error': f'File not found: {file_path}'}), 404
 
-    # Save job to database
-    job = {
-        'id': job_id,
-        'book_name': book_name,
-        'voice': voice,
-        'voice_name': VOICES[voice]['name'],
-        'voice2': None,
-        'voice2_name': None,
-        'tts_engine': VOICES[voice].get('engine', 'kokoro'),
-        'status': 'queued',
-        'created_at': datetime.now().isoformat(),
-        'input_filename': input_filename,
-        'output_dirname': book_name,
-        'is_pdf': is_pdf,
-        'start_chapter': start_chapter,
-        'end_chapter': end_chapter,
-        'notify_telegram': notify_telegram,
-        'tts_speed': tts_speed,
-        'queue_rank': next_queue_rank(),
-        'sync_status': 'pending',
-        'job_log_path': str(get_job_log_path(job_id)),
-        'newline_mode': newline_mode,
-        'title_mode': title_mode,
-        'custom_regex': custom_regex
-    }
-    save_job(job)
-    ch_range = f", chapters {start_chapter}-{end_chapter}" if start_chapter or end_chapter else ""
-    append_job_log(job_id, f"Library job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed}{ch_range})")
+        job_id = str(uuid.uuid4())[:8]
+        book_name = file_path.stem
+        safe_name = sanitize_filename(book_name)
+        file_ext = file_path.suffix.lower()
 
-    # Do NOT start convert_book() here — let the worker pick it up from the queue.
-    # The webapp should NEVER run conversions directly to prevent dual-execution bugs.
-    app.logger.info(f"Library job {job_id} queued — worker will pick it up")
+        input_filename = f"{job_id}_{safe_name}{file_ext}"
+        input_path = UPLOAD_DIR / input_filename
+        shutil.copy2(file_path, input_path)
 
-    return jsonify({'job_id': job_id, 'status': 'queued'})
+        output_dirname = f"{safe_name}_{job_id}"
+        tts_engine = VOICES.get(voice, {}).get('engine', 'kokoro')
+
+        save_job({
+            'id': job_id,
+            'book_name': book_name,
+            'input_filename': input_filename,
+            'output_dirname': output_dirname,
+            'voice': voice,
+            'voice_name': VOICES.get(voice, {}).get('name', voice),
+            'tts_engine': tts_engine,
+            'tts_speed': tts_speed,
+            'status': 'queued',
+            'is_pdf': file_ext == '.pdf',
+            'start_chapter': start_chapter,
+            'end_chapter': end_chapter,
+            'notify_telegram': 1 if data.get('notify_telegram') else 0,
+            'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0
+        })
+
+        threading.Thread(target=start_next_queued_job, daemon=True).start()
+        return jsonify({'status': 'success', 'job_id': job_id})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
-# Initialize database on startup
-init_db()
 
-# Clean up any orphan jobs from previous runs
-cleanup_orphan_jobs()
-
-# Reattach monitors for jobs already running in Docker (Backgrounded to prevent Gunicorn timeout)
 def background_startup():
-    threading.Thread(target=index_library_background, daemon=True).start()
+    """Execute startup tasks in a background thread."""
+    import time
+    time.sleep(5)  # Let gunicorn workers initialize
     app.logger.info("Starting background maintenance and queue tasks...")
+    threading.Thread(target=index_library_background, daemon=True).start()
+    
     if QUEUE_RUNNER_ENABLED:
         try:
             resume_inflight_jobs()
             start_watchdog()
-            threading.Thread(target=index_library_background, daemon=True).start()
             start_next_queued_job()
         except Exception as e:
             app.logger.error(f"Background startup error: {e}")
 
-import threading
-threading.Thread(target=background_startup, daemon=True).start()
+            app.logger.error(f"Background startup error: {e}")
+
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8881, debug=True)
+    app.run(host='0.0.0.0', port=8881, debug=DEBUG)
+
+threading.Thread(target=background_startup, daemon=True).start()
