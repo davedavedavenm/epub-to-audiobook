@@ -1,89 +1,49 @@
 # PLAN v4: The "Read-Along" Transition (Stage 2)
 
-## Status Update (March 2026)
-We are actively transitioning the application to support **EPUB3 SMIL Media Overlays** (Read-Along) while improving base TTS pacing using NLP. 
-The Windows dev environment has been decommissioned in favor of deploying directly to the primary Zorin host (`192.168.1.88`).
+## Status Update (March 3, 2026)
+We have successfully resolved the UI blockers and implemented the core SMIL generation engine. The application now generates EPUB3 containers with precise SMIL Media Overlays synchronized using `chunks.jsonl` durations.
 
 ## 1. Stage 1: NLP Pacing (Completed & Deployed)
 - Replaced legacy regex comma-injection with `nltk` sentence tokenization.
-- **Edge TTS Integration**: Edge TTS is now routed through the `tts-proxy` rather than executing directly inside the `p0n1` container. This ensures Edge conversions benefit from both NLP pacing and the new timing capture.
+- **Edge TTS Integration**: Edge TTS is now routed through the `tts-proxy`.
 
 ## 2. Stage 2: Timing Logs & EPUB3 Foundation (Completed)
-- **TTS Proxy Upgrades**: `tts_proxy/proxy.py` now imports `mutagen` and `edge-tts`. It intercepts all speech synthesis, calculates the precise audio duration (`duration_s`), and logs it to `chunks.jsonl`.
-- **EPUB3 Skeleton**: Added `epub_generator.py` to the webapp. The finalization flow now triggers this module to generate a base EPUB3 container holding the audio files and XHTML documents.
-- **Docker Updates**: Added `ebooklib`, `beautifulsoup4`, `lxml` to the webapp image, and `mutagen`, `edge-tts` to the proxy image.
+- **TTS Proxy Upgrades**: Logs precise audio duration (`duration_s`) to `chunks.jsonl`.
+- **EPUB3 Skeleton**: Added `epub_generator.py` to the webapp.
+- **Docker Updates**: Images now include `ebooklib`, `beautifulsoup4`, `lxml`, `mutagen`, and `edge-tts`.
 
-## 3. Immediate Next Steps (Zorin Deployment & Execution)
-The immediate focus on the Zorin host is to resolve lingering deployment snags and implement the core SMIL alignment logic.
+## 3. Stage 2.5: UI Recovery & SMIL Engine (Completed & Verified)
+- **Task 1: Fix Zorin Host UI/CSS Leak**:
+  - Removed redundant `</style>` tags in `index.html`.
+  - Upgraded the Voices tab with a new `renderVoices` UI and `playVoicePreview` functionality.
+  - **Verified via Playwright CLI**: Confirmed no CSS leak is visible.
+- **Task 2: Implement SMIL Generation Strategy**:
+  - Ported alignment logic inspired by `audible-epub3-maker`.
+  - Implemented exact timing mapping using `chunks.jsonl` and running accumulators.
+  - Developed a robust `_fix_uids` mechanism to patch inconsistent EPUB containers and prevent `ebooklib` crashes.
+  - **Verified via E2E**: Successfully generated an EPUB3 with valid Media Overlay declarations and SMIL files.
 
-### A. Environment Recovery
-- Restore the UI/UX templates (`index.html`) which were temporarily degraded during UTF-16 debugging.
-- Fix the `copy_to_audiobookshelf` SSH permission error. The Docker NTFS mount workaround failed on Windows, but the Zorin deployment requires a robust SSH key configuration (likely using a dedicated volume or correct host permissions).
+## 4. Remaining Actions & Next Steps
 
-### B. Stage 2.5: SMIL Generation Engine
-- **HTML Parsing**: Update `epub_generator.py` to parse the original EPUB's XHTML content.
-- **Instrumentation**: Inject unique `<span>` IDs around every sentence in the text.
-- **Alignment**: Map the `duration_s` values from `chunks.jsonl` to the corresponding `<span>` IDs.
-- **Assembly**: Generate valid `.smil` XML files and pack them into the final `.epub` container.
+### A. SMIL Timing Refinement
+- [ ] **Heuristic Improvement**: Currently, tags with internal formatting (`<b>`, `<i>`) are wrapped as a single span. We should evaluate if we can split sentences *across* formatting tags for even more granular highlighting without breaking HTML validness.
+- [ ] **Sync Validation**: Open a generated book in Thorium or Apple Books and verify that the "highlight drift" is actually zero.
 
-### C. Validation (Full E2E)
-- Run a multi-chapter conversion using Kokoro or Edge.
-- Verify the final EPUB3 imports correctly into Audiobookshelf and that the Read-Along tracking highlights the text in sync with the audio.
-
----
-
-## 4. Current Blockers & Next Actions (March 2026 Audit)
-
-During a live playwright audit on `192.168.1.88:8881`, two critical tasks were identified that must be resolved next. 
-
-### Task 1: Fix Zorin Host UI/CSS Leak (High Priority)
-- **Issue:** The CSS for the `Voices` tab (e.g., `.engine-section`, `.voices-grid`, `.preview-btn`) is bleeding directly into the visible HTML on the browser instead of rendering.
-- **Cause:** A malformed CSS injection in `webapp/templates/index.html` on the Zorin host (likely caused by a duplicate `</style>` tag or text placed outside the style block).
-- **Subtasks:**
-  - [ ] Connect to `192.168.1.88` and inspect `/home/dave/ai/lab/stacks/epub-to-audiobook/webapp/templates/index.html`.
-  - [ ] Locate the CSS leak around the `<style>` block and ensure all CSS rules are properly encapsulated within valid tags.
-  - [ ] Verify the UI fixes by checking `http://192.168.1.88:8881` without causing any downtime to other running services.
-
-### Task 2: Implement SMIL Generation Strategy (Feature Development)
-- **Issue:** Reinventing the sentence segmentation and forced alignment logic from scratch is prone to errors.
-- **Strategy:** Adapt the open-source logic from the `funway/audible-epub3-maker` repository. 
-- **Subtasks:**
-  - [ ] Review how `audible-epub3-maker` performs sentence segmentation directly from parsed XHTML.
-  - [ ] Review their force alignment generation (mapping audio timing to text IDs).
-  - [ ] Review their final `.smil` file generation inside the EPUB3 container.
-  - [ ] Implement this logic into `webapp/epub_generator.py`, taking advantage of our already working NLP tokenization and `chunks.jsonl` audio duration logs.
-  - [ ] Map the `duration_s` values from `chunks.jsonl` to injected `<span>` IDs in the XHTML.
-  - [ ] Assemble valid `.smil` files and pack them into the `.epub` container.
+### B. Infrastructure & Deployment
+- [ ] **ABS Sync**: Ensure the `copy_to_audiobookshelf` mechanism correctly handles the new EPUB3 files.
+- [ ] **Cleanup**: Implement an automatic cleanup for `/data/transcripts/{job_id}/` after a job is successfully synced.
 
 ---
 
 ### AI Agent Prompt to Resume Work
 *Copy and paste this to your AI Agent to seamlessly pick up where we left off:*
 
-> We are resuming work on the `epub-to-audiobook` repository. 
+> We are continuing work on the `epub-to-audiobook` repository. 
 > 
 > **Current State & Context:**
-> We are currently executing Stage 2.5 of `PLAN-v4-read-along.md`. Our ultimate goal is to generate EPUB3 files with SMIL Media Overlays ("Read-Along" functionality). However, a recent live audit revealed a critical UI bug that needs immediate fixing before we proceed to feature development.
+> Stage 2.5 of `PLAN-v4-read-along.md` is mostly complete. We have successfully implemented the SMIL generator and fixed the UI leak. The application now produces EPUB3 files with Media Overlays.
 > 
-> **Required Reading (Please review these files first):**
-> 1.  `PLAN-v4-read-along.md` - Read the entire document, specifically paying attention to "Stage 2.5" and "4. Current Blockers & Next Actions".
-> 2.  `webapp/templates/index.html` - This is where the UI bug lives.
-> 3.  `webapp/epub_generator.py` - This is where the new SMIL logic will be implemented.
-> 4.  `INFRASTRUCTURE.md` - For context on the Zorin host deployment.
-> 
-> **Your Tasks (Execute in order):**
-> 
-> **Task 1: Fix the Zorin Host CSS Leak (High Priority)**
-> During the last UI update, a CSS injection corrupted `webapp/templates/index.html`. The raw CSS rules for `.engine-section`, `.voices-grid`, and `.preview-btn` are bleeding out and displaying as raw text on the webpage.
-> *   **Action:** Inspect `webapp/templates/index.html`. Look for malformed, premature, or duplicate `</style>` tags. Ensure all CSS injected for the "Voices" tab is properly encapsulated inside the `<style>` block.
-> *   **Deployment:** Provide the exact `scp` and `sudo cp` commands needed to push the fixed `index.html` to the Zorin host (`dave@192.168.1.88`) at `/home/dave/ai/lab/stacks/epub-to-audiobook/webapp/templates/index.html` without tearing down the whole stack.
-> 
-> **Task 2: Implement SMIL Generation Strategy (Feature Development)**
-> Once the UI is fixed, we need to build the SMIL Media Overlay generator. Do not reinvent the wheel. 
-> *   **Action:** Review how the open-source project `funway/audible-epub3-maker` handles sentence segmentation, forced alignment mapping, and SMIL XML generation. 
-> *   **Implementation:** Port those specific mechanisms into our `webapp/epub_generator.py`. We already have NLP sentence tokenization working and audio duration timings logging to `chunks.jsonl`. Your job is to parse the original EPUB's XHTML, inject `<span>` IDs around the sentences, map those IDs to our `chunks.jsonl` durations, and assemble the valid `.smil` files into the final EPUB3 container.
-> 
-> **Rules:**
-> *   Safe and reversible changes.
-> *   Always use the official documentation for projects (e.g., EPUB3 SMIL specs, BeautifulSoup, lxml).
-> *   Present your plan for Task 1, execute it, verify with me, and then present your architectural plan for Task 2 before writing the massive `epub_generator.py` refactor.
+> **Next Tasks:**
+> 1. **Visual Validation**: We need to confirm the read-along highlighting is perfectly in sync. Download a generated EPUB from the Zorin host (`192.168.1.88`) and inspect the SMIL timings against the audio.
+> 2. **Granular Highlighting**: Refactor `instrument_html` in `epub_generator.py` to allow sentence splitting even inside formatted tags (e.g., `<p>Hello <b>world</b>. Next sentence.</p>` should ideally have two spans, not one).
+> 3. **Final Integration**: Verify the full pipeline from conversion to Audiobookshelf (ABS) sync works with the new EPUB3 format.
