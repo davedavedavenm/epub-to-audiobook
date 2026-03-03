@@ -1,0 +1,345 @@
+- generic [active] [ref=e1]:
+  - text: ".engine-section { margin-bottom: 64px; } .engine-header { font-family: 'Lora', serif; font-size: 1.4rem; font-weight: 800; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 16px; display: flex; align-items: center; gap: 16px; } .engine-header::after { content: ''; flex: 1; height: 1px; background: var(--border); opacity: 0.5; } .voices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; } .voice-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px; transition: 0.3s; display: flex; justify-content: space-between; align-items: center; } .voice-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 12px 30px -10px rgba(0,0,0,0.1); } .voice-name { font-family: 'Lora', serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 4px; } .voice-meta { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; } .preview-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-element); transition: 0.2s; color: var(--text-primary); } .preview-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }"
+  - complementary [ref=e2]:
+    - generic [ref=e3]: Studio
+    - navigation [ref=e4]:
+      - button "Library" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Library
+      - button "Upload" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: Upload
+      - button "Queue" [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: Queue
+      - button "Voices" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: Voices
+      - button "History" [ref=e13] [cursor=pointer]:
+        - generic [ref=e14]: History
+      - button "Config" [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: Config
+    - generic [ref=e20]: GPU OFFLINE
+  - main:
+    - generic [ref=e21]:
+      - heading "Voices" [level=1] [ref=e22]
+      - generic [ref=e23]:
+        - button [ref=e24]
+        - button [ref=e25]
+    - generic [ref=e26]:
+      - generic:
+        - generic:
+          - generic:
+            - generic: KOKORO ENGINE
+            - generic:
+              - generic [ref=e27]:
+                - generic [ref=e28]:
+                  - generic [ref=e29]: Bella
+                  - generic [ref=e30]: American - Female
+                - button "▶" [ref=e31] [cursor=pointer]:
+                  - generic [ref=e32]: ▶
+              - generic [ref=e33]:
+                - generic [ref=e34]:
+                  - generic [ref=e35]: Nicole
+                  - generic [ref=e36]: American - Female
+                - button "▶" [ref=e37] [cursor=pointer]:
+                  - generic [ref=e38]: ▶
+              - generic [ref=e39]:
+                - generic [ref=e40]:
+                  - generic [ref=e41]: Nova
+                  - generic [ref=e42]: American - Female
+                - button "▶" [ref=e43] [cursor=pointer]:
+                  - generic [ref=e44]: ▶
+              - generic [ref=e45]:
+                - generic [ref=e46]:
+                  - generic [ref=e47]: Sky
+                  - generic [ref=e48]: American - Female
+                - button "▶" [ref=e49] [cursor=pointer]:
+                  - generic [ref=e50]: ▶
+              - generic [ref=e51]:
+                - generic [ref=e52]:
+                  - generic [ref=e53]: Adam
+                  - generic [ref=e54]: American - Male
+                - button "▶" [ref=e55] [cursor=pointer]:
+                  - generic [ref=e56]: ▶
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - generic [ref=e59]: Eric
+                  - generic [ref=e60]: American - Male
+                - button "▶" [ref=e61] [cursor=pointer]:
+                  - generic [ref=e62]: ▶
+              - generic [ref=e63]:
+                - generic [ref=e64]:
+                  - generic [ref=e65]: Liam
+                  - generic [ref=e66]: American - Male
+                - button "▶" [ref=e67] [cursor=pointer]:
+                  - generic [ref=e68]: ▶
+              - generic [ref=e69]:
+                - generic [ref=e70]:
+                  - generic [ref=e71]: Michael
+                  - generic [ref=e72]: American - Male
+                - button "▶" [ref=e73] [cursor=pointer]:
+                  - generic [ref=e74]: ▶
+              - generic [ref=e75]:
+                - generic [ref=e76]:
+                  - generic [ref=e77]: Alice
+                  - generic [ref=e78]: British - Female
+                - button "▶" [ref=e79] [cursor=pointer]:
+                  - generic [ref=e80]: ▶
+              - generic [ref=e81]:
+                - generic [ref=e82]:
+                  - generic [ref=e83]: Emma
+                  - generic [ref=e84]: British - Female
+                - button "▶" [ref=e85] [cursor=pointer]:
+                  - generic [ref=e86]: ▶
+              - generic [ref=e87]:
+                - generic [ref=e88]:
+                  - generic [ref=e89]: Lily
+                  - generic [ref=e90]: British - Female
+                - button "▶" [ref=e91] [cursor=pointer]:
+                  - generic [ref=e92]: ▶
+              - generic [ref=e93]:
+                - generic [ref=e94]:
+                  - generic [ref=e95]: Emma Classic
+                  - generic [ref=e96]: British - Female
+                - button "▶" [ref=e97] [cursor=pointer]:
+                  - generic [ref=e98]: ▶
+              - generic [ref=e99]:
+                - generic [ref=e100]:
+                  - generic [ref=e101]: Isabella
+                  - generic [ref=e102]: British - Female
+                - button "▶" [ref=e103] [cursor=pointer]:
+                  - generic [ref=e104]: ▶
+              - generic [ref=e105]:
+                - generic [ref=e106]:
+                  - generic [ref=e107]: Daniel
+                  - generic [ref=e108]: British - Male
+                - button "▶" [ref=e109] [cursor=pointer]:
+                  - generic [ref=e110]: ▶
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - generic [ref=e113]: Fable
+                  - generic [ref=e114]: British - Male
+                - button "▶" [ref=e115] [cursor=pointer]:
+                  - generic [ref=e116]: ▶
+              - generic [ref=e117]:
+                - generic [ref=e118]:
+                  - generic [ref=e119]: George
+                  - generic [ref=e120]: British - Male
+                - button "▶" [ref=e121] [cursor=pointer]:
+                  - generic [ref=e122]: ▶
+              - generic [ref=e123]:
+                - generic [ref=e124]:
+                  - generic [ref=e125]: Lewis
+                  - generic [ref=e126]: British - Male
+                - button "▶" [ref=e127] [cursor=pointer]:
+                  - generic [ref=e128]: ▶
+              - generic [ref=e129]:
+                - generic [ref=e130]:
+                  - generic [ref=e131]: George Classic
+                  - generic [ref=e132]: British - Male
+                - button "▶" [ref=e133] [cursor=pointer]:
+                  - generic [ref=e134]: ▶
+              - generic [ref=e135]:
+                - generic [ref=e136]:
+                  - generic [ref=e137]: Lewis Classic
+                  - generic [ref=e138]: British - Male
+                - button "▶" [ref=e139] [cursor=pointer]:
+                  - generic [ref=e140]: ▶
+              - generic [ref=e141]:
+                - generic [ref=e142]:
+                  - generic [ref=e143]: Dora
+                  - generic [ref=e144]: European - Female
+                - button "▶" [ref=e145] [cursor=pointer]:
+                  - generic [ref=e146]: ▶
+              - generic [ref=e147]:
+                - generic [ref=e148]:
+                  - generic [ref=e149]: Alex
+                  - generic [ref=e150]: European - Male
+                - button "▶" [ref=e151] [cursor=pointer]:
+                  - generic [ref=e152]: ▶
+              - generic [ref=e153]:
+                - generic [ref=e154]:
+                  - generic [ref=e155]: Santa
+                  - generic [ref=e156]: European - Male
+                - button "▶" [ref=e157] [cursor=pointer]:
+                  - generic [ref=e158]: ▶
+          - generic:
+            - generic: PIPER ENGINE
+            - generic:
+              - generic [ref=e159]:
+                - generic [ref=e160]:
+                  - generic [ref=e161]: Cori
+                  - generic [ref=e162]: British - Female
+                - button "▶" [ref=e163] [cursor=pointer]:
+                  - generic [ref=e164]: ▶
+              - generic [ref=e165]:
+                - generic [ref=e166]:
+                  - generic [ref=e167]: Lessac
+                  - generic [ref=e168]: American - Female
+                - button "▶" [ref=e169] [cursor=pointer]:
+                  - generic [ref=e170]: ▶
+              - generic [ref=e171]:
+                - generic [ref=e172]:
+                  - generic [ref=e173]: LibriTTS 1
+                  - generic [ref=e174]: American - Neutral
+                - button "▶" [ref=e175] [cursor=pointer]:
+                  - generic [ref=e176]: ▶
+              - generic [ref=e177]:
+                - generic [ref=e178]:
+                  - generic [ref=e179]: LibriTTS 2
+                  - generic [ref=e180]: American - Neutral
+                - button "▶" [ref=e181] [cursor=pointer]:
+                  - generic [ref=e182]: ▶
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - generic [ref=e185]: LibriTTS 3
+                  - generic [ref=e186]: American - Neutral
+                - button "▶" [ref=e187] [cursor=pointer]:
+                  - generic [ref=e188]: ▶
+              - generic [ref=e189]:
+                - generic [ref=e190]:
+                  - generic [ref=e191]: LJ Speech
+                  - generic [ref=e192]: American - Female
+                - button "▶" [ref=e193] [cursor=pointer]:
+                  - generic [ref=e194]: ▶
+              - generic [ref=e195]:
+                - generic [ref=e196]:
+                  - generic [ref=e197]: Ryan
+                  - generic [ref=e198]: American - Male
+                - button "▶" [ref=e199] [cursor=pointer]:
+                  - generic [ref=e200]: ▶
+          - generic:
+            - generic: EDGE ENGINE
+            - generic:
+              - generic [ref=e201]:
+                - generic [ref=e202]:
+                  - generic [ref=e203]: Natasha
+                  - generic [ref=e204]: Australian - Female
+                - button "▶" [ref=e205] [cursor=pointer]:
+                  - generic [ref=e206]: ▶
+              - generic [ref=e207]:
+                - generic [ref=e208]:
+                  - generic [ref=e209]: William
+                  - generic [ref=e210]: Australian - Male
+                - button "▶" [ref=e211] [cursor=pointer]:
+                  - generic [ref=e212]: ▶
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - generic [ref=e215]: Libby
+                  - generic [ref=e216]: British - Female
+                - button "▶" [ref=e217] [cursor=pointer]:
+                  - generic [ref=e218]: ▶
+              - generic [ref=e219]:
+                - generic [ref=e220]:
+                  - generic [ref=e221]: Maisie
+                  - generic [ref=e222]: British - Female
+                - button "▶" [ref=e223] [cursor=pointer]:
+                  - generic [ref=e224]: ▶
+              - generic [ref=e225]:
+                - generic [ref=e226]:
+                  - generic [ref=e227]: Ryan
+                  - generic [ref=e228]: British - Male
+                - button "▶" [ref=e229] [cursor=pointer]:
+                  - generic [ref=e230]: ▶
+              - generic [ref=e231]:
+                - generic [ref=e232]:
+                  - generic [ref=e233]: Sonia
+                  - generic [ref=e234]: British - Female
+                - button "▶" [ref=e235] [cursor=pointer]:
+                  - generic [ref=e236]: ▶
+              - generic [ref=e237]:
+                - generic [ref=e238]:
+                  - generic [ref=e239]: Thomas
+                  - generic [ref=e240]: British - Male
+                - button "▶" [ref=e241] [cursor=pointer]:
+                  - generic [ref=e242]: ▶
+              - generic [ref=e243]:
+                - generic [ref=e244]:
+                  - generic [ref=e245]: Andrew
+                  - generic [ref=e246]: American - Male
+                - button "▶" [ref=e247] [cursor=pointer]:
+                  - generic [ref=e248]: ▶
+              - generic [ref=e249]:
+                - generic [ref=e250]:
+                  - generic [ref=e251]: Aria
+                  - generic [ref=e252]: American - Female
+                - button "▶" [ref=e253] [cursor=pointer]:
+                  - generic [ref=e254]: ▶
+              - generic [ref=e255]:
+                - generic [ref=e256]:
+                  - generic [ref=e257]: Ava
+                  - generic [ref=e258]: American - Female
+                - button "▶" [ref=e259] [cursor=pointer]:
+                  - generic [ref=e260]: ▶
+              - generic [ref=e261]:
+                - generic [ref=e262]:
+                  - generic [ref=e263]: Brian
+                  - generic [ref=e264]: American - Male
+                - button "▶" [ref=e265] [cursor=pointer]:
+                  - generic [ref=e266]: ▶
+              - generic [ref=e267]:
+                - generic [ref=e268]:
+                  - generic [ref=e269]: Christopher
+                  - generic [ref=e270]: American - Male
+                - button "▶" [ref=e271] [cursor=pointer]:
+                  - generic [ref=e272]: ▶
+              - generic [ref=e273]:
+                - generic [ref=e274]:
+                  - generic [ref=e275]: Emma
+                  - generic [ref=e276]: American - Female
+                - button "▶" [ref=e277] [cursor=pointer]:
+                  - generic [ref=e278]: ▶
+              - generic [ref=e279]:
+                - generic [ref=e280]:
+                  - generic [ref=e281]: Guy
+                  - generic [ref=e282]: American - Male
+                - button "▶" [ref=e283] [cursor=pointer]:
+                  - generic [ref=e284]: ▶
+              - generic [ref=e285]:
+                - generic [ref=e286]:
+                  - generic [ref=e287]: Jenny
+                  - generic [ref=e288]: American - Female
+                - button "▶" [ref=e289] [cursor=pointer]:
+                  - generic [ref=e290]: ▶
+              - generic [ref=e291]:
+                - generic [ref=e292]:
+                  - generic [ref=e293]: Michelle
+                  - generic [ref=e294]: American - Female
+                - button "▶" [ref=e295] [cursor=pointer]:
+                  - generic [ref=e296]: ▶
+              - generic [ref=e297]:
+                - generic [ref=e298]:
+                  - generic [ref=e299]: Roger
+                  - generic [ref=e300]: American - Male
+                - button "▶" [ref=e301] [cursor=pointer]:
+                  - generic [ref=e302]: ▶
+              - generic [ref=e303]:
+                - generic [ref=e304]:
+                  - generic [ref=e305]: Steffan
+                  - generic [ref=e306]: American - Male
+                - button "▶" [ref=e307] [cursor=pointer]:
+                  - generic [ref=e308]: ▶
+          - generic:
+            - generic: POLLY ENGINE
+            - generic:
+              - generic [ref=e309]:
+                - generic [ref=e310]:
+                  - generic [ref=e311]: Danielle
+                  - generic [ref=e312]: American - Female
+                - button "▶" [ref=e313] [cursor=pointer]:
+                  - generic [ref=e314]: ▶
+              - generic [ref=e315]:
+                - generic [ref=e316]:
+                  - generic [ref=e317]: Gregory
+                  - generic [ref=e318]: American - Male
+                - button "▶" [ref=e319] [cursor=pointer]:
+                  - generic [ref=e320]: ▶
+              - generic [ref=e321]:
+                - generic [ref=e322]:
+                  - generic [ref=e323]: Patrick
+                  - generic [ref=e324]: American - Male
+                - button "▶" [ref=e325] [cursor=pointer]:
+                  - generic [ref=e326]: ▶
+              - generic [ref=e327]:
+                - generic [ref=e328]:
+                  - generic [ref=e329]: Ruth
+                  - generic [ref=e330]: American - Female
+                - button "▶" [ref=e331] [cursor=pointer]:
+                  - generic [ref=e332]: ▶
