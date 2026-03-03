@@ -1,0 +1,135 @@
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]: Studio
+    - navigation [ref=e4]:
+      - button "📚 Library" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: 📚
+        - generic [ref=e7]: Library
+      - button "📝 Upload" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: 📝
+        - generic [ref=e10]: Upload
+      - button "⏳ Queue" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: ⏳
+        - generic [ref=e13]: Queue
+      - button "🗣️ Voices" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: 🗣️
+        - generic [ref=e16]: Voices
+      - button "📋 History" [active] [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: 📋
+        - generic [ref=e19]: History
+      - button "⚙️ Config" [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: ⚙️
+        - generic [ref=e22]: Config
+    - generic [ref=e26]: IDLE
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "History" [level=1] [ref=e728]
+      - generic [ref=e30]:
+        - button "☀️" [ref=e31]
+        - button "🌙" [ref=e32]
+    - generic [ref=e730]:
+      - generic [ref=e731]:
+        - generic [ref=e733]: ✅ Chris Hammer - Legacy
+        - button "Download" [ref=e734] [cursor=pointer]
+      - generic [ref=e735]:
+        - generic [ref=e737]: ✅ Chris Hammer - Legacy
+        - button "Download" [ref=e738] [cursor=pointer]
+      - generic [ref=e739]:
+        - generic [ref=e741]: ✅ Chris Hammer - Legacy
+        - button "Download" [ref=e742] [cursor=pointer]
+      - generic [ref=e743]:
+        - generic [ref=e745]: ✅ B A Paris - Bring Me Back (retail)
+        - button "Download" [ref=e746] [cursor=pointer]
+      - generic [ref=e747]:
+        - generic [ref=e749]: ✅ Arthur Conan Doyle - [Sherlock Holmes] - The Adventure of Wisteria Lodge (Duke Classics) (v5.0)
+        - button "Download" [ref=e750] [cursor=pointer]
+      - generic [ref=e751]:
+        - generic [ref=e753]: ✅ S_C_Gwynne_-_Empire_of_the_Summer_Moon-The_Comanches
+        - button "Download" [ref=e754] [cursor=pointer]
+      - generic [ref=e755]:
+        - generic [ref=e757]: ✅ Ezra Klein - Why We're Polarized (retail)
+        - button "Download" [ref=e758] [cursor=pointer]
+      - generic [ref=e759]:
+        - generic [ref=e761]: ✅ Brad Stone - The Everything Store_ Jeff Bezos and the Age of Amazon
+        - button "Download" [ref=e762] [cursor=pointer]
+      - generic [ref=e763]:
+        - generic [ref=e765]: ✅ Jamila_Gavin_-_Coram_Boy_(Retail)
+        - button "Download" [ref=e766] [cursor=pointer]
+      - generic [ref=e767]:
+        - generic [ref=e769]: ✅ Ezra Klein - Abundance- What Progress Takes
+        - button "Download" [ref=e770] [cursor=pointer]
+      - generic [ref=e771]:
+        - generic [ref=e773]: ✅ Patrick McGee - Apple in China
+        - button "Download" [ref=e774] [cursor=pointer]
+      - generic [ref=e775]:
+        - generic [ref=e777]: ✅ Alice_Feeney_-_His_&_Hers_(retail)
+        - button "Download" [ref=e778] [cursor=pointer]
+      - generic [ref=e779]:
+        - generic [ref=e781]: ✅ Andrew_Miller_-_The_Land_in_Winter
+        - button "Download" [ref=e782] [cursor=pointer]
+      - generic [ref=e783]:
+        - generic [ref=e785]: ✅ Brad Stone - The Everything Store- Jeff Bezos and the Age of Amazon (epub)
+        - button "Download" [ref=e786] [cursor=pointer]
+      - generic [ref=e787]:
+        - generic [ref=e789]: ✅ Jamila_Gavin_-_Coram_Boy_(Retail)
+        - button "Download" [ref=e790] [cursor=pointer]
+      - generic [ref=e791]:
+        - generic [ref=e793]: ✅ S_C_Gwynne_-_Empire_of_the_Summer_Moon-The_Comanches
+        - button "Download" [ref=e794] [cursor=pointer]
+      - generic [ref=e795]:
+        - generic [ref=e797]: ✅ Ezra Klein - Why We're Polarized
+        - button "Download" [ref=e798] [cursor=pointer]
+      - generic [ref=e799]:
+        - generic [ref=e801]: ✅ Sophie's_World_A_Novel_About_th_-_Jostein_Gaarder
+        - button "Download" [ref=e802] [cursor=pointer]
+      - generic [ref=e803]:
+        - generic [ref=e805]: ✅ Steven_Pressfield_-_The_War_of_Art-_Break_Through_the_Blocks_and_Win_Your_Inner_Creative_Battles
+        - button "Download" [ref=e806] [cursor=pointer]
+      - generic [ref=e807]:
+        - generic [ref=e809]: ✅ Frankenstein,_or,_The_modern_Prometheus_the_1818_text_-_Mary_Wollstonecraft_Shelley
+        - button "Download" [ref=e810] [cursor=pointer]
+      - generic [ref=e811]:
+        - generic [ref=e813]: ✅ Alice's_Adventures_in_Wonderland_-_Lewis_Carroll
+        - button "Download" [ref=e814] [cursor=pointer]
+      - generic [ref=e815]:
+        - generic [ref=e817]: ✅ Adam Lashinsky - Inside Apple- The Secrets Behind the Past and Future Success of Steve Jobs's Iconic Brand (retail) (epub)
+        - button "Download" [ref=e818] [cursor=pointer]
+      - generic [ref=e819]:
+        - generic [ref=e821]: ✅ Adam Lashinsky - Inside Apple- The Secrets Behind the Past and Future Success of Steve Jobs's Iconic Brand (retail) (epub)
+        - button "Download" [ref=e822] [cursor=pointer]
+      - generic [ref=e823]:
+        - generic [ref=e825]: ✅ Alice's_Adventures_in_Wonderland_-_Lewis_Carroll
+        - button "Download" [ref=e826] [cursor=pointer]
+      - generic [ref=e827]:
+        - generic [ref=e829]: ✅ S_C_Gwynne_-_Empire_of_the_Summer_Moon-The_Comanches
+        - button "Download" [ref=e830] [cursor=pointer]
+      - generic [ref=e831]:
+        - generic [ref=e833]: ✅ Frankenstein,_or,_The_modern_Prometheus_the_1818_text_-_Mary_Wollstonecraft_Shelley
+        - button "Download" [ref=e834] [cursor=pointer]
+      - generic [ref=e835]:
+        - generic [ref=e837]: ✅ Sophie's_World_A_Novel_About_th_-_Jostein_Gaarder
+        - button "Download" [ref=e838] [cursor=pointer]
+      - generic [ref=e839]:
+        - generic [ref=e841]: ✅ Brad Stone - The Everything Store- Jeff Bezos and the Age of Amazon (epub)
+        - button "Download" [ref=e842] [cursor=pointer]
+      - generic [ref=e843]:
+        - generic [ref=e845]: ✅ Ezra Klein - Why We're Polarized (retail)
+        - button "Download" [ref=e846] [cursor=pointer]
+      - generic [ref=e847]:
+        - generic [ref=e849]: ✅ Adam Lashinsky - Inside Apple- The Secrets Behind the Past and Future Success of Steve Jobs's Iconic Brand (retail) (epub)
+        - button "Download" [ref=e850] [cursor=pointer]
+      - generic [ref=e851]:
+        - generic [ref=e853]: ✅ test-audiobook
+        - button "Download" [ref=e854] [cursor=pointer]
+      - generic [ref=e855]:
+        - generic [ref=e857]: ✅ test-audiobook
+        - button "Download" [ref=e858] [cursor=pointer]
+      - generic [ref=e859]:
+        - generic [ref=e861]: ✅ test-audiobook
+        - button "Download" [ref=e862] [cursor=pointer]
+      - generic [ref=e863]:
+        - generic [ref=e865]: ✅ test-audiobook
+        - button "Download" [ref=e866] [cursor=pointer]
+      - generic [ref=e867]:
+        - generic [ref=e869]: ✅ Jamila_Gavin_-_Coram_Boy_(Retail)
+        - button "Download" [ref=e870] [cursor=pointer]

@@ -1,0 +1,525 @@
+[2026-03-02T21:15:46] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:15:46] TTS preprocessing skipped: [Errno 2] No such file or directory: '/data/uploads/nlp_test.epub'
+[2026-03-02T21:15:46] Estimated chars=100000, ETA=200m, timeout=130m
+[2026-03-02T21:15:47] Using container audiobook-test-ryan
+[2026-03-02T21:15:47] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:15:47] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:15:47] Failed: 2026-03-02 21:15:47,433 - audiobook_generator.py:90 - run - INFO - Starting audiobook generation...
+2026-03-02 21:15:47,507 - audiobook_generator.py:175 - run - ERROR - Error during audiobook generati
+[2026-03-02T21:15:47] Auto-retry scheduled (attempt 1/3) after 30s
+[2026-03-02T21:16:10] Watchdog: container died ΓÇö triggering recovery
+[2026-03-02T21:16:10] Auto-retry scheduled (attempt 2/3) after 60s
+[2026-03-02T21:16:36] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:16:36] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:16:36] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:16:36] Using container audiobook-test-ryan
+[2026-03-02T21:16:36] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:16:36] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:16:42] All 3 chapters present (no retries needed)
+[2026-03-02T21:16:42] Removed 3 small noise files (<500KB)
+[2026-03-02T21:16:42] Verification failed: No output MP3 files found
+[2026-03-02T21:17:08] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:17:09] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:17:09] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:17:09] Using container audiobook-test-ryan
+[2026-03-02T21:17:09] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:17:09] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:17:10] Failed: 2026-03-02 21:17:10,376 - audiobook_generator.py:90 - run - INFO - Starting audiobook generation...
+2026-03-02 21:17:10,450 - audiobook_generator.py:175 - run - ERROR - Error during audiobook generati
+[2026-03-02T21:17:10] Auto-retry scheduled (attempt 1/3) after 30s
+[2026-03-02T21:17:37] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:17:38] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:17:38] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:17:38] Using container audiobook-test-ryan
+[2026-03-02T21:17:38] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:17:38] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:17:44] All 3 chapters present (no retries needed)
+[2026-03-02T21:17:44] Removed 3 small noise files (<500KB)
+[2026-03-02T21:17:44] Verification failed: No output MP3 files found
+[2026-03-02T21:18:07] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:18:07] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:18:08] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:18:08] Using container audiobook-test-ryan
+[2026-03-02T21:18:08] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:18:08] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:18:12] All 3 chapters present (no retries needed)
+[2026-03-02T21:18:12] Removed 3 small noise files (<500KB)
+[2026-03-02T21:18:12] Verification failed: No output MP3 files found
+[2026-03-02T21:18:41] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:18:41] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:18:41] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:18:41] Using container audiobook-test-ryan
+[2026-03-02T21:18:41] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:18:41] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:18:45] All 3 chapters present (no retries needed)
+[2026-03-02T21:18:45] Removed 3 small noise files (<500KB)
+[2026-03-02T21:18:45] Verification failed: No output MP3 files found
+[2026-03-02T21:19:26] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:19:26] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:19:26] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:19:26] Using container audiobook-test-ryan
+[2026-03-02T21:19:26] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:19:26] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:19:30] All 3 chapters present (no retries needed)
+[2026-03-02T21:19:30] Removed 3 small noise files (<500KB)
+[2026-03-02T21:19:30] Verification failed: No output MP3 files found
+[2026-03-02T21:19:58] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:19:58] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:19:58] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:19:58] Using container audiobook-test-ryan
+[2026-03-02T21:19:58] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:19:58] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:20:02] All 3 chapters present (no retries needed)
+[2026-03-02T21:20:02] Removed 3 small noise files (<500KB)
+[2026-03-02T21:20:02] Verification failed: No output MP3 files found
+[2026-03-02T21:20:49] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:20:49] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:20:49] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:20:49] Using container audiobook-test-ryan
+[2026-03-02T21:20:49] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:20:49] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:20:53] All 3 chapters present (no retries needed)
+[2026-03-02T21:20:53] Removed 3 small noise files (<500KB)
+[2026-03-02T21:20:53] Verification failed: No output MP3 files found
+[2026-03-02T21:21:07] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:21:07] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:21:07] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:21:07] Using container audiobook-test-ryan
+[2026-03-02T21:21:07] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:21:07] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:21:11] All 3 chapters present (no retries needed)
+[2026-03-02T21:21:11] Removed 3 small noise files (<500KB)
+[2026-03-02T21:21:11] Verification failed: No output MP3 files found
+[2026-03-02T21:21:19] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:21:19] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:21:19] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:21:19] Using container audiobook-test-ryan
+[2026-03-02T21:21:19] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:21:19] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:21:23] All 3 chapters present (no retries needed)
+[2026-03-02T21:21:23] Removed 3 small noise files (<500KB)
+[2026-03-02T21:21:23] Verification failed: No output MP3 files found
+[2026-03-02T21:22:23] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:22:24] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:22:24] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:22:24] Using container audiobook-test-ryan
+[2026-03-02T21:22:24] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:22:24] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:22:25] Failed: 2026-03-02 21:22:25,305 - audiobook_generator.py:90 - run - INFO - Starting audiobook generation...
+2026-03-02 21:22:25,380 - audiobook_generator.py:175 - run - ERROR - Error during audiobook generati
+[2026-03-02T21:22:25] Auto-retry scheduled (attempt 1/3) after 30s
+[2026-03-02T21:22:52] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:22:54] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:22:54] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:22:54] Using container audiobook-test-ryan
+[2026-03-02T21:22:54] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:22:54] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:22:58] All 3 chapters present (no retries needed)
+[2026-03-02T21:22:58] Verification failed: Total audio only 0.2MB ΓÇö likely corrupted
+[2026-03-02T21:23:32] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:23:32] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:23:32] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:23:32] Using container audiobook-test-ryan
+[2026-03-02T21:23:32] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:23:32] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:23:35] All 3 chapters present (no retries needed)
+[2026-03-02T21:23:35] Verification failed: Total audio only 0.3MB ΓÇö likely corrupted
+[2026-03-02T21:24:20] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:24:22] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:24:22] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:24:22] Using container audiobook-test-ryan
+[2026-03-02T21:24:22] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:24:22] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:24:24] Verification passed: Verified: 6 files, 0MB total (6/3 chapters)
+[2026-03-02T21:24:24] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:24:24] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:24:25] Verification written: overlap(book)=0.968, overlap(tts)=0.504
+[2026-03-02T21:24:25] Completed with 6 files
+[2026-03-02T21:25:26] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:25:27] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:25:27] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:25:27] Using container audiobook-test-ryan
+[2026-03-02T21:25:27] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:25:27] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:25:28] Verification passed: Verified: 6 files, 0MB total (6/3 chapters)
+[2026-03-02T21:25:28] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:25:28] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:25:28] Verification written: overlap(book)=0.968, overlap(tts)=0.504
+[2026-03-02T21:25:28] Completed with 6 files
+[2026-03-02T21:25:57] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:25:57] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:25:57] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:25:57] Using container audiobook-test-ryan
+[2026-03-02T21:25:57] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:25:57] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:25:58] Verification passed: Verified: 6 files, 0MB total (6/3 chapters)
+[2026-03-02T21:25:58] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:25:58] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:25:59] Verification written: overlap(book)=0.968, overlap(tts)=0.504
+[2026-03-02T21:25:59] Completed with 6 files
+[2026-03-02T21:26:46] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:26:46] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:26:46] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:26:46] Using container audiobook-test-ryan
+[2026-03-02T21:26:46] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:26:46] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:26:47] Verification passed: Verified: 6 files, 0MB total (6/3 chapters)
+[2026-03-02T21:26:47] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:26:47] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:26:48] Verification written: overlap(book)=0.968, overlap(tts)=0.504
+[2026-03-02T21:26:48] Completed with 6 files
+[2026-03-02T21:26:55] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:26:55] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:26:55] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:26:55] Using container audiobook-test-ryan
+[2026-03-02T21:26:55] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:26:55] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:26:55] Verification passed: Verified: 6 files, 0MB total (6/3 chapters)
+[2026-03-02T21:26:55] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:26:55] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:26:56] Verification written: overlap(book)=0.968, overlap(tts)=0.504
+[2026-03-02T21:26:56] Completed with 6 files
+[2026-03-02T21:28:10] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:28:12] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:28:12] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:28:12] Using container audiobook-test-ryan
+[2026-03-02T21:28:12] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:28:12] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:28:13] Verification passed: Verified: 6 files, 0MB total (6/3 chapters)
+[2026-03-02T21:28:13] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:28:13] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:28:14] Verification written: overlap(book)=0.968, overlap(tts)=0.504
+[2026-03-02T21:28:14] Completed with 6 files
+[2026-03-02T21:30:31] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:30:33] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:30:33] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:30:33] Using container audiobook-test-ryan
+[2026-03-02T21:30:33] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:30:33] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:30:34] Removed 6 small noise files (<500KB)
+[2026-03-02T21:30:34] Verification failed: No output MP3 files found
+[2026-03-02T21:31:16] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:31:17] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:31:17] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:31:17] Using container audiobook-test-ryan
+[2026-03-02T21:31:17] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:31:17] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:31:18] Failed: 2026-03-02 21:31:18,061 - audiobook_generator.py:90 - run - INFO - Starting audiobook generation...
+2026-03-02 21:31:18,140 - audiobook_generator.py:175 - run - ERROR - Error during audiobook generati
+[2026-03-02T21:31:18] Auto-retry scheduled (attempt 1/3) after 30s
+[2026-03-02T21:31:51] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:31:53] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:31:53] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:31:53] Using container audiobook-test-ryan
+[2026-03-02T21:31:53] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:31:53] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:31:57] All 3 chapters present (no retries needed)
+[2026-03-02T21:31:57] Verification failed: Total audio only 0.2MB ΓÇö likely corrupted
+[2026-03-02T21:32:35] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:32:36] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:32:37] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:32:37] Using container audiobook-test-ryan
+[2026-03-02T21:32:37] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:32:37] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:32:38] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T21:32:38] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:32:38] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:32:38] Verification written: overlap(book)=0.968, overlap(tts)=0.337
+[2026-03-02T21:32:38] Completed with 3 files
+[2026-03-02T21:34:08] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:34:10] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:34:10] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:34:10] Using container audiobook-test-ryan
+[2026-03-02T21:34:10] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:34:10] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:34:11] Verification failed: Total audio only 0.2MB ΓÇö likely corrupted
+[2026-03-02T21:34:44] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:34:45] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:34:45] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:34:46] Using container audiobook-test-ryan
+[2026-03-02T21:34:46] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:34:46] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:34:48] All 3 chapters present (no retries needed)
+[2026-03-02T21:34:48] Verification passed: Verified: 6 files, 0MB total (6/3 chapters)
+[2026-03-02T21:34:48] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:34:49] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:34:49] Verification written: overlap(book)=0.968, overlap(tts)=0.253
+[2026-03-02T21:34:49] Completed with 6 files
+[2026-03-02T21:44:38] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:44:38] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:44:38] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:44:38] Using container audiobook-test-ryan
+[2026-03-02T21:44:38] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:44:38] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:44:42] All 3 chapters present (no retries needed)
+[2026-03-02T21:44:42] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T21:44:42] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:44:42] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:44:43] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T21:44:43] Completed with 3 files
+[2026-03-02T21:58:42] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T21:58:43] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T21:58:43] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T21:58:44] Using container audiobook-test-ryan
+[2026-03-02T21:58:44] Pronunciation regex rules (global + custom) applied
+[2026-03-02T21:58:44] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T21:58:45] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T21:58:45] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T21:58:45] Sync mkdir failed: Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T21:58:46] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T21:58:46] Completed with 3 files
+[2026-03-02T22:01:03] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T22:01:04] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T22:01:04] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T22:01:04] Using container audiobook-test-ryan
+[2026-03-02T22:01:04] Pronunciation regex rules (global + custom) applied
+[2026-03-02T22:01:05] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T22:01:06] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T22:01:06] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T22:01:06] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T22:01:07] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T22:01:07] Completed with 3 files
+[2026-03-02T22:01:47] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T22:01:49] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T22:01:49] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T22:01:49] Using container audiobook-test-ryan
+[2026-03-02T22:01:49] Pronunciation regex rules (global + custom) applied
+[2026-03-02T22:01:49] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T22:01:49] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T22:01:49] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T22:01:49] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T22:01:49] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T22:01:49] Completed with 3 files
+[2026-03-02T22:03:23] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T22:03:25] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T22:03:25] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T22:03:25] Using container audiobook-test-ryan
+[2026-03-02T22:03:25] Pronunciation regex rules (global + custom) applied
+[2026-03-02T22:03:25] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T22:03:26] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T22:03:26] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T22:03:27] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T22:03:27] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T22:03:27] Completed with 3 files
+[2026-03-02T22:04:24] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T22:04:26] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T22:04:26] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T22:04:26] Using container audiobook-test-ryan
+[2026-03-02T22:04:27] Pronunciation regex rules (global + custom) applied
+[2026-03-02T22:04:27] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T22:04:28] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T22:04:28] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T22:04:28] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T22:04:29] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T22:04:29] Completed with 3 files
+[2026-03-02T22:05:14] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T22:05:16] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T22:05:16] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T22:05:16] Using container audiobook-test-ryan
+[2026-03-02T22:05:16] Pronunciation regex rules (global + custom) applied
+[2026-03-02T22:05:16] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T22:05:17] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T22:05:17] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T22:05:17] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T22:05:18] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T22:05:18] Completed with 3 files
+[2026-03-02T22:06:32] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T22:06:32] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T22:06:33] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T22:06:33] Using container audiobook-test-ryan
+[2026-03-02T22:06:33] Pronunciation regex rules (global + custom) applied
+[2026-03-02T22:06:33] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T22:06:34] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T22:06:34] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T22:06:34] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T22:06:34] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T22:06:34] Completed with 3 files
+[2026-03-02T22:08:00] Conversion start (input=nlp_test.epub, output=nlp_test_ryan)
+[2026-03-02T22:08:00] Text preprocessed (numbers, abbreviations normalized for TTS)
+[2026-03-02T22:08:00] Estimated chars=613, ETA=1m, timeout=30m
+[2026-03-02T22:08:00] Using container audiobook-test-ryan
+[2026-03-02T22:08:00] Pronunciation regex rules (global + custom) applied
+[2026-03-02T22:08:00] Running conversion (engine=edge, voice=en-GB-RyanNeural)
+[2026-03-02T22:08:01] Verification passed: Verified: 3 files, 0MB total (3/3 chapters)
+[2026-03-02T22:08:01] Sync start -> dave@docker-vm:/data/abs/nlp_test_ryan
+[2026-03-02T22:08:01] Sync mkdir failed: Warning: Identity file /tmp/id_ed25519_tmp not accessible: No such file or directory.
+Warning: Permanently added 'docker-vm' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0777 for '/root/.ssh/id_ed25519' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/root/.ssh/id_ed25519": bad permissions
+Permission denied, please try again.
+Permission denied, please try again.
+dave@docker-vm: Permission denied (publickey,password).
+[2026-03-02T22:08:02] Verification written: overlap(book)=0.935, overlap(tts)=0.967
+[2026-03-02T22:08:02] Completed with 3 files

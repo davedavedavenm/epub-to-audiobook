@@ -1,0 +1,6 @@
+[    2297ms] [ERROR] Failed to load resource: the server responded with a status of 404 (NOT FOUND) @ http://192.168.1.88:8881/favicon.ico:0
+[    2301ms] ReferenceError: voices is not defined
+    at http://192.168.1.88:8881/:273:169
+    at Array.map (<anonymous>)
+    at renderLibrary (http://192.168.1.88:8881/:261:35)
+    at loadLibrary (http://192.168.1.88:8881/:254:9)

@@ -1,0 +1,42 @@
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]: Studio
+    - navigation [ref=e4]:
+      - button "📚 Library" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: 📚
+        - generic [ref=e7]: Library
+      - button "📝 Upload" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: 📝
+        - generic [ref=e10]: Upload
+      - button "⏳ Queue" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: ⏳
+        - generic [ref=e13]: Queue
+      - button "🗣️ Voices" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: 🗣️
+        - generic [ref=e16]: Voices
+      - button "📋 History" [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: 📋
+        - generic [ref=e19]: History
+      - button "⚙️ Config" [active] [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: ⚙️
+        - generic [ref=e22]: Config
+    - generic [ref=e26]: IDLE
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "Settings" [level=1] [ref=e871]
+      - generic [ref=e30]:
+        - button "☀️" [ref=e31]
+        - button "🌙" [ref=e32]
+    - generic [ref=e873]:
+      - heading "Infrastructure Configuration" [level=2] [ref=e874]
+      - generic [ref=e875]:
+        - generic [ref=e876]:
+          - text: ABS URL
+          - textbox [ref=e877]
+        - generic [ref=e878]:
+          - text: ABS TOKEN
+          - textbox [ref=e879]: eyJh...qEvM
+        - generic [ref=e880]:
+          - text: OPENAI API KEY
+          - textbox [ref=e881]
+        - button "Save Configuration" [ref=e882] [cursor=pointer]

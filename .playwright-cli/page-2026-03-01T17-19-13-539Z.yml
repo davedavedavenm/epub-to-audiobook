@@ -1,0 +1,69 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]: Studio
+    - navigation [ref=e4]:
+      - button "📚 Library" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: 📚
+        - generic [ref=e7]: Library
+      - button "📝 Upload" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: 📝
+        - generic [ref=e10]: Upload
+      - button "⏳ Queue" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: ⏳
+        - generic [ref=e13]: Queue
+      - button "🗣️ Voices" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: 🗣️
+        - generic [ref=e16]: Voices
+      - button "📋 History" [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: 📋
+        - generic [ref=e19]: History
+      - button "⚙️ Config" [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: ⚙️
+        - generic [ref=e22]: Config
+    - generic [ref=e26]: GPU OFFLINE
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "Queue" [level=1] [ref=e37]
+      - generic [ref=e30]:
+        - button "☀️" [ref=e31]
+        - button "🌙" [ref=e32]
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: queued
+            - generic [ref=e44]: Adam Lashinsky - Inside Apple- The Secrets Behind the Past and Future Success of Steve Jobs's Iconic Brand (retail) (epub)
+          - generic [ref=e45]:
+            - generic [ref=e46]: null%
+            - generic [ref=e47]: "ETA: ?m"
+        - generic [ref=e48]:
+          - generic [ref=e49]: Narrator Patrick
+          - generic [ref=e50]: Engine POLLY
+          - generic [ref=e51]: Speed 1x
+          - generic [ref=e52]: Range 1 - 19
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]: queued
+            - generic [ref=e57]: Adam Lashinsky - Inside Apple- The Secrets Behind the Past and Future Success of Steve Jobs's Iconic Brand (retail) (epub)
+          - generic [ref=e58]:
+            - generic [ref=e59]: null%
+            - generic [ref=e60]: "ETA: ?m"
+        - generic [ref=e61]:
+          - generic [ref=e62]: Narrator Patrick
+          - generic [ref=e63]: Engine POLLY
+          - generic [ref=e64]: Speed 1x
+          - generic [ref=e65]: Range 1 - 19
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - generic [ref=e69]: queued
+            - generic [ref=e70]: Adam Lashinsky - Inside Apple- The Secrets Behind the Past and Future Success of Steve Jobs's Iconic Brand (retail) (epub)
+          - generic [ref=e71]:
+            - generic [ref=e72]: null%
+            - generic [ref=e73]: "ETA: ?m"
+        - generic [ref=e74]:
+          - generic [ref=e75]: Narrator Bella
+          - generic [ref=e76]: Engine KOKORO
+          - generic [ref=e77]: Speed 1x
+          - generic [ref=e78]: Range 1 - 19

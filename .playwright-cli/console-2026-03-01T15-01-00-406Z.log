@@ -1,0 +1,10 @@
+[    1992ms] [ERROR] Failed to load resource: the server responded with a status of 404 (NOT FOUND) @ http://192.168.1.88:8881/favicon.ico:0
+[  143450ms] [ERROR] Failed to load resource: net::ERR_NETWORK_CHANGED @ http://192.168.1.88:8881/api/settings:0
+[  143450ms] [ERROR] Failed to load resource: net::ERR_NETWORK_CHANGED @ http://192.168.1.88:8881/api/jobs:0
+[  143451ms] [ERROR] Failed to load resource: net::ERR_NETWORK_CHANGED @ http://192.168.1.88:8881/api/gpu/status:0
+[  143456ms] TypeError: Failed to fetch
+    at loadSettings (http://192.168.1.88:8881/:206:28)
+    at switchTab (http://192.168.1.88:8881/:194:34)
+    at HTMLButtonElement.onclick (http://192.168.1.88:8881/:85:85)
+[  143457ms] TypeError: Failed to fetch
+    at loadJobs (http://192.168.1.88:8881/:325:28)

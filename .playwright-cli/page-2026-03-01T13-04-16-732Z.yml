@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]: Studio
+    - navigation [ref=e4]:
+      - button "📚 Library" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: 📚
+        - generic [ref=e7]: Library
+      - button "📝 Production" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: 📝
+        - generic [ref=e10]: Production
+      - button "⏳ Queue" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: ⏳
+        - generic [ref=e13]: Queue
+      - button "🗣️ Voices" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: 🗣️
+        - generic [ref=e16]: Voices
+      - button "📋 Archive" [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: 📋
+        - generic [ref=e19]: Archive
+      - button "⚙️ Config" [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: ⚙️
+        - generic [ref=e22]: Config
+    - generic [ref=e26]: GPU Offline
+  - main [ref=e27]:
+    - generic [ref=e28]:
+      - heading "Library" [level=1] [ref=e29]
+      - generic [ref=e30]:
+        - button "☀️" [ref=e31] [cursor=pointer]
+        - button "🌙" [ref=e32] [cursor=pointer]
+    - generic [ref=e36]:
+      - textbox "Search your collection..." [ref=e37]
+      - combobox [ref=e38]:
+        - 'option "Sort: Title" [selected]'
+        - 'option "Sort: Date"'
