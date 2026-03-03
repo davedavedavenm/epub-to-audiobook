@@ -80,6 +80,7 @@ services:
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
       - PIPER_URL=http://piper-tts:8000/v1
       - UPLOAD_DIR=/data/uploads
+      - LIBRARY_DIR=${LIBRARY_DIR:-/data/uploads}
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
@@ -142,6 +143,7 @@ services:
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
       - PIPER_URL=http://piper-tts:8000/v1
       - UPLOAD_DIR=/data/uploads
+      - LIBRARY_DIR=${LIBRARY_DIR:-/data/uploads}
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
