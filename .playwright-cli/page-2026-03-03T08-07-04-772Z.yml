@@ -1,0 +1,71 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]: Studio
+    - navigation [ref=e4]:
+      - button "📖 Library" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: 📖
+        - generic [ref=e7]: Library
+      - button "📥 Upload" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: 📥
+        - generic [ref=e10]: Upload
+      - button "⏳ Queue" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: ⏳
+        - generic [ref=e13]: Queue
+      - button "Voices" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: Voices
+      - button "History" [ref=e16] [cursor=pointer]:
+        - generic [ref=e17]: History
+      - button "Config" [ref=e18] [cursor=pointer]:
+        - generic [ref=e19]: Config
+    - generic [ref=e23]: GPU OFFLINE
+  - main [ref=e24]:
+    - generic [ref=e25]:
+      - heading "Library" [level=1] [ref=e26]
+      - generic [ref=e27]:
+        - button [ref=e28]
+        - button [ref=e29]
+    - generic [ref=e32]:
+      - textbox "Search your collection..." [ref=e33]
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - generic [ref=e37]: 631123c7_modest proposal
+            - generic [ref=e38]: epub
+          - generic [ref=e39]:
+            - button "Preview" [ref=e40] [cursor=pointer]
+            - button "Narrate this Book" [ref=e41] [cursor=pointer]
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: 631123c7_modest proposal_tts
+            - generic [ref=e45]: epub
+          - generic [ref=e46]:
+            - button "Preview" [ref=e47] [cursor=pointer]
+            - button "Narrate this Book" [ref=e48] [cursor=pointer]
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: jekyll_hyde
+            - generic [ref=e52]: epub
+          - generic [ref=e53]:
+            - button "Preview" [ref=e54] [cursor=pointer]
+            - button "Narrate this Book" [ref=e55] [cursor=pointer]
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: jekyll_hyde_tts
+            - generic [ref=e59]: epub
+          - generic [ref=e60]:
+            - button "Preview" [ref=e61] [cursor=pointer]
+            - button "Narrate this Book" [ref=e62] [cursor=pointer]
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]: modest_proposal
+            - generic [ref=e66]: epub
+          - generic [ref=e67]:
+            - button "Preview" [ref=e68] [cursor=pointer]
+            - button "Narrate this Book" [ref=e69] [cursor=pointer]
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - generic [ref=e72]: modest_proposal_tts
+            - generic [ref=e73]: epub
+          - generic [ref=e74]:
+            - button "Preview" [ref=e75] [cursor=pointer]
+            - button "Narrate this Book" [ref=e76] [cursor=pointer]

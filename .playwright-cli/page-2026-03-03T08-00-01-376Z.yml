@@ -1,0 +1,114 @@
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]: Studio
+    - navigation [ref=e4]:
+      - button "Library" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Library
+      - button "Upload" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: Upload
+      - button "Queue" [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: Queue
+      - button "Voices" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: Voices
+      - button "History" [ref=e13] [cursor=pointer]:
+        - generic [ref=e14]: History
+      - button "Config" [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: Config
+    - generic [ref=e20]: IDLE
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - heading "Library" [level=1] [ref=e23]
+      - generic [ref=e24]:
+        - button [ref=e25]
+        - button [ref=e26]
+    - generic [ref=e29]:
+      - textbox "Search your collection..." [ref=e30]: modest
+      - generic [ref=e31]:
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: modest_proposal
+            - generic [ref=e63]: epub
+          - generic [ref=e64]:
+            - button "Preview" [ref=e65] [cursor=pointer]
+            - button "Narrate this Book" [ref=e66] [cursor=pointer]
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - generic [ref=e77]: Narrator
+                - combobox [ref=e78]:
+                  - option "Bella (American)" [selected]
+                  - option "Nicole (American)"
+                  - option "Nova (American)"
+                  - option "Sky (American)"
+                  - option "Adam (American)"
+                  - option "Eric (American)"
+                  - option "Liam (American)"
+                  - option "Michael (American)"
+                  - option "Alice (British)"
+                  - option "Emma (British)"
+                  - option "Lily (British)"
+                  - option "Emma Classic (British)"
+                  - option "Isabella (British)"
+                  - option "Daniel (British)"
+                  - option "Fable (British)"
+                  - option "George (British)"
+                  - option "Lewis (British)"
+                  - option "George Classic (British)"
+                  - option "Lewis Classic (British)"
+                  - option "Dora (European)"
+                  - option "Alex (European)"
+                  - option "Santa (European)"
+                  - option "Cori (British)"
+                  - option "Lessac (American)"
+                  - option "LibriTTS 1 (American)"
+                  - option "LibriTTS 2 (American)"
+                  - option "LibriTTS 3 (American)"
+                  - option "LJ Speech (American)"
+                  - option "Ryan (American)"
+                  - option "Natasha (Australian)"
+                  - option "William (Australian)"
+                  - option "Libby (British)"
+                  - option "Maisie (British)"
+                  - option "Ryan (British)"
+                  - option "Sonia (British)"
+                  - option "Thomas (British)"
+                  - option "Andrew (American)"
+                  - option "Aria (American)"
+                  - option "Ava (American)"
+                  - option "Brian (American)"
+                  - option "Christopher (American)"
+                  - option "Emma (American)"
+                  - option "Guy (American)"
+                  - option "Jenny (American)"
+                  - option "Michelle (American)"
+                  - option "Roger (American)"
+                  - option "Steffan (American)"
+                  - option "Danielle (American)"
+                  - option "Gregory (American)"
+                  - option "Patrick (American)"
+                  - option "Ruth (American)"
+              - generic [ref=e79]:
+                - generic [ref=e80]: Start
+                - combobox [ref=e81]:
+                  - option "1. \"Cover\"" [selected]
+                  - option "2. A Modest Proposal | Project Gutenberg"
+                  - option "3. A Modest Proposal | Project Gutenberg"
+                  - option "4. A Modest Proposal | Project Gutenberg"
+              - generic [ref=e82]:
+                - generic [ref=e83]: End
+                - combobox [ref=e84]:
+                  - option "1. \"Cover\""
+                  - option "2. A Modest Proposal | Project Gutenberg"
+                  - option "3. A Modest Proposal | Project Gutenberg"
+                  - option "4. A Modest Proposal | Project Gutenberg" [selected]
+              - generic [ref=e85]:
+                - generic [ref=e86]: Speed
+                - spinbutton [ref=e87]: "1.0"
+            - button "Create Audiobook" [active] [ref=e88] [cursor=pointer]
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - generic [ref=e69]: modest_proposal_tts
+            - generic [ref=e70]: epub
+          - generic [ref=e71]:
+            - button "Preview" [ref=e72] [cursor=pointer]
+            - button "Narrate this Book" [ref=e73] [cursor=pointer]
