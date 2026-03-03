@@ -17515,3 +17515,10 @@
 [90164186ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://192.168.1.88:8881/api/gpu/status:0
 [90164185ms] TypeError: Failed to fetch
     at loadJobs (http://192.168.1.88:8881/:364:28)
+[90634537ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://192.168.1.88:8881/api/jobs:0
+[90634538ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://192.168.1.88:8881/api/gpu/status:0
+[90634537ms] TypeError: Failed to fetch
+    at loadJobs (http://192.168.1.88:8881/:364:28)
+[90639757ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://192.168.1.88:8881/api/jobs:0
+[90639756ms] TypeError: Failed to fetch
+    at loadJobs (http://192.168.1.88:8881/:364:28)
