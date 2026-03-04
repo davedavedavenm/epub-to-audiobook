@@ -3169,7 +3169,7 @@ def api_settings():
                 if len(val) > 10:
                     settings[key] = f"{val[:4]}...{val[-4:]}"
                 else:
-                    settings[key] = "********"
+                    settings[key] = "********...********"
             else:
                 settings[key] = val
         else:
@@ -3191,9 +3191,35 @@ def test_abs_connection():
         resp = requests.get(f"{url.rstrip('/')}/api/libraries", 
                             headers={'Authorization': f'Bearer {token}'}, 
                             timeout=10)
-        if resp.status_code == 200:
+                if resp.status_code == 200:
             return jsonify({'status': 'success', 'message': 'Connected to ABS!'})
-        return jsonify({'error': f'ABS returned status {resp.status_code}'}), 400
+        return jsonify({'error': f'ABS returned status {resp.status_code}: {resp.text[:100]}'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/test_polly', methods=['POST'])
+def test_polly_connection():
+    """Test connection to Amazon Polly."""
+    try:
+        data = request.json or {}
+        access_key = data.get('access_key') or get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID')
+        secret_key = data.get('secret_key') or get_setting('AWS_SECRET_ACCESS_KEY') or os.environ.get('AWS_SECRET_ACCESS_KEY')
+        region = data.get('region') or get_setting('AWS_REGION') or os.environ.get('AWS_REGION', 'us-east-1')
+        
+        if not access_key or not secret_key:
+            return jsonify({'error': 'Missing AWS Keys'}), 400
+            
+        import boto3
+        client = boto3.client('polly', 
+                              aws_access_key_id=access_key, 
+                              aws_secret_access_key=secret_key, 
+                              region_name=region)
+        # describe voices to test credentials
+        resp = client.describe_voices(LanguageCode='en-US')
+        if 'Voices' in resp:
+            return jsonify({'status': 'success', 'message': 'Connected to AWS Polly!'})
+        return jsonify({'error': 'Invalid response from AWS Polly'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

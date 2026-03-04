@@ -167,71 +167,99 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         <div class="tab-panel" id="tab-queue"><div id="queue-content"></div></div>
         <div class="tab-panel" id="tab-voices"><div id="voices-content"></div></div>
         <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
-        <div class="tab-panel" id="tab-settings">
+                <div class="tab-panel" id="tab-settings">
             <div class="card">
-                <h2 style="margin-top:0; font-family: 'Lora'; margin-bottom:24px;">System Settings</h2>
+                <h2 style="margin-top:0; font-family: 'Lora'; margin-bottom:24px;">Setup &amp; Configuration</h2>
+                <p style="font-size:1.1rem; line-height:1.6; color:var(--text-secondary); margin-bottom:40px;">
+                    Welcome to Audiobook Studio! These settings help you connect your studio to other services. 
+                    <strong>None of these are strictly required to start converting books</strong>, but they unlock powerful extra features like automatic syncing to your library and faster processing.
+                </p>
                 <div style="display:grid; gap:32px;">
-                    <div>
-                        <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">Audiobookshelf (ABS) API URL</label>
-                        <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; margin-bottom:8px;">The URL where your Audiobookshelf is hosted (e.g., http://192.168.1.100:1337). Required for automatic synchronization.</p>
-                        <input type="text" id="set-ABS_API_URL" class="input-control">
-                    </div>
-                                        <div style="display:flex; gap:16px; align-items:flex-end;">
-                        <div style="flex:1;">
-                            <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">Audiobookshelf API Token</label>
-                            <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; margin-bottom:8px;">Found in ABS under Settings > Users > API Token.</p>
-                            <input type="password" id="set-ABS_API_TOKEN" class="input-control">
-                        </div>
-                        <button class="btn" style="height:48px;" onclick="testSetting('abs', this)">Test ABS</button>
-                    </div>
-                                        <div style="display:flex; gap:16px; align-items:flex-end;">
-                        <div style="flex:1;">
-                            <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">OpenAI API Key</label>
-                            <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; margin-bottom:8px;">Used for advanced heuristic verification: checking if the generated audio transcript matches the source EPUB text using Whisper ASR. Optional.</p>
-                            <input type="password" id="set-OPENAI_API_KEY" class="input-control">
-                        </div>
-                        <button class="btn" style="height:48px;" onclick="testSetting('openai', this)">Test OpenAI</button>
-                    </div>
-                    <div style="border-top: 1px solid var(--border); padding-top: 32px; margin-top: 16px;">
-                        <h3 style="font-family: 'Lora'; margin-top: 0; margin-bottom: 8px;">Amazon Polly</h3>
-                        <p style="font-size:0.9rem; color:var(--text-secondary); line-height: 1.6; margin-bottom: 24px;">
-                            Required only if you wish to use the Amazon Polly TTS engine. AWS credentials must have permissions for polly:SynthesizeSpeech.
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top:0; font-family:'Lora';">Audiobookshelf Sync</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            Automatically send finished audiobooks directly to your Audiobookshelf server. 
+                            Find your token inside Audiobookshelf by clicking your username (top right) -&gt; <strong>Settings</strong> -&gt; <strong>Users</strong> -&gt; select your user -&gt; <strong>API Token</strong>.
                         </p>
-                        <div style="display:grid; gap:24px;">
+                        <div style="display:flex; gap:16px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Server URL (e.g., http://192.168.1.100:1337)</label>
+                                <input type="text" id="set-ABS_API_URL" class="input-control" style="margin-top:8px;">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
+                            <div style="flex:1;">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Token</label>
+                                <input type="password" id="set-ABS_API_TOKEN" class="input-control" style="margin-top:8px;">
+                            </div>
+                            <button class="btn" style="height:48px;" onclick="testSetting('abs', this)">Test Connection</button>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top:0; font-family:'Lora';">OpenAI Verification (Optional)</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            If you provide an OpenAI API key, the studio will use AI to "listen" to the generated audiobook and double-check that the spoken words perfectly match your original book text. This is purely for quality assurance.
+                        </p>
+                        <div style="display:flex; gap:16px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">OpenAI API Key</label>
+                                <input type="password" id="set-OPENAI_API_KEY" class="input-control" style="margin-top:8px;">
+                            </div>
+                            <button class="btn" style="height:48px;" onclick="testSetting('openai', this)">Test Key</button>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top:0; font-family:'Lora';">Amazon Polly Voices (Optional)</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            The studio comes with excellent free voices (Kokoro and Piper). If you also want to use Amazon's premium Polly voices, enter your AWS credentials here. You must have an AWS account with 'polly:SynthesizeSpeech' permissions.
+                        </p>
+                        <div style="display:grid; gap:16px;">
                             <div>
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">AWS Access Key ID</label>
-                                <input type="text" id="set-AWS_ACCESS_KEY_ID" class="input-control">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Access Key ID</label>
+                                <input type="text" id="set-AWS_ACCESS_KEY_ID" class="input-control" style="margin-top:8px;">
                             </div>
                             <div>
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">AWS Secret Access Key</label>
-                                <input type="password" id="set-AWS_SECRET_ACCESS_KEY" class="input-control">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Secret Access Key</label>
+                                <input type="password" id="set-AWS_SECRET_ACCESS_KEY" class="input-control" style="margin-top:8px;">
                             </div>
-                            <div>
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">AWS Region</label>
-                                <input type="text" id="set-AWS_REGION" class="input-control" placeholder="e.g. us-east-1">
+                            <div style="display:flex; gap:16px; align-items:flex-end;">
+                                <div style="flex:1;">
+                                    <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Region</label>
+                                    <select id="set-AWS_REGION" class="input-control" style="margin-top:8px;">
+                                        <option value="us-east-1" selected>US East (N. Virginia) - us-east-1</option>
+                                        <option value="us-east-2">US East (Ohio) - us-east-2</option>
+                                        <option value="us-west-1">US West (N. California) - us-west-1</option>
+                                        <option value="us-west-2">US West (Oregon) - us-west-2</option>
+                                        <option value="eu-west-1">Europe (Ireland) - eu-west-1</option>
+                                        <option value="eu-west-2">Europe (London) - eu-west-2</option>
+                                        <option value="eu-central-1">Europe (Frankfurt) - eu-central-1</option>
+                                        <option value="ap-southeast-1">Asia Pacific (Singapore) - ap-southeast-1</option>
+                                        <option value="ap-southeast-2">Asia Pacific (Sydney) - ap-southeast-2</option>
+                                    </select>
+                                </div>
+                                <button class="btn" style="height:48px;" onclick="testSetting('polly', this)">Test Polly</button>
                             </div>
                         </div>
                     </div>
-                    <div style="border-top: 1px solid var(--border); padding-top: 32px; margin-top: 16px;">
-                        <h3 style="font-family: 'Lora'; margin-top: 0; margin-bottom: 8px;">Vast.ai GPU Acceleration</h3>
-                        <p style="font-size:0.9rem; color:var(--text-secondary); line-height: 1.6; margin-bottom: 24px;">
-                            This stack is configured to automatically scale out to cloud GPUs (via Vast.ai) when the queue gets long. 
-                            The indicator in the bottom-left of the sidebar shows the current GPU status. 
-                            <br><br>
-                            <strong>Idle:</strong> Local CPU processing.<br>
-                            <strong>Booting:</strong> Queue is long, provisioning a GPU on Vast.ai.<br>
-                            <strong>Online:</strong> Conversions are currently routed to the cloud GPU at ~15x speed.<br>
-                            <strong>Cooling:</strong> Queue is empty, preparing to terminate the GPU to save costs.
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top: 0; font-family: 'Lora';">Vast.ai Cloud GPU Speedup (Optional)</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
+                            When you add multiple books to the queue, it can take a long time to process on your local machine. If you provide a Vast.ai API key, the studio will automatically rent a cloud GPU for a few cents an hour to process the books ~15x faster, and then automatically shut it down when finished.
                         </p>
                         <div>
-                            <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary);">Vast.ai API Key</label>
-                            <input type="password" id="set-VAST_API_KEY" class="input-control">
+                            <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Vast.ai API Key</label>
+                            <input type="password" id="set-VAST_API_KEY" class="input-control" style="margin-top:8px;">
                         </div>
                     </div>
-                    <button id="save-config-btn" class="btn btn-primary" style="width:100%; height:70px; margin-top: 24px;" onclick="saveSettings()">Save Configuration</button>
+                    
+                    <button id="save-config-btn" class="btn btn-primary" style="width:100%; height:70px; font-size:1.2rem; margin-top: 16px;" onclick="saveSettings()">Save Configuration</button>
                 </div>
             </div>
         </div>
+    </div>
     </div>
 </main>
 <div id="preview-modal" class="modal-overlay hidden">
@@ -361,7 +389,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         grid.innerHTML = filtered.map(b => {
             const bookId = btoa(b.path).replace(/[^a-z0-9]/gi, '');
             let statusBadge = '';
-            if(b.status === 'completed') statusBadge = '<div style="background:var(--success); color:#fff; font-size:0.75rem; font-weight:900; padding:4px 12px; border-radius:20px; text-transform:uppercase; margin-left:12px;">✅ Exists</div>';
+            if(b.status === 'completed') statusBadge = '<div style="background:var(--success); color:#fff; font-size:0.75rem; font-weight:900; padding:4px 12px; border-radius:20px; text-transform:uppercase; margin-left:12px;">✅ Full Audiobook</div>';
             else if(b.status === 'converting') statusBadge = `<div style="background:var(--accent); color:#fff; font-size:0.75rem; font-weight:900; padding:4px 12px; border-radius:20px; text-transform:uppercase; margin-left:12px;">⏳ ${b.progress}%</div>`;
             return `
                 <div class="library-item">
@@ -517,10 +545,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                 <div class="card" style="${j.status === 'failed' ? 'border-color: var(--error);' : ''}">
                     <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
                         <div>
-                            <div style="text-transform:uppercase; font-size:0.75rem; font-weight:900; color:${j.status === 'failed' ? 'var(--error)' : 'var(--accent)'};">
-                                ${j.status === 'failed' ? '⚠️ FAILED' : j.status}
+                            <div style="text-transform:uppercase; font-size:0.85rem; font-weight:900; color:${j.status === 'failed' ? 'var(--error)' : 'var(--accent)'}; display:flex; align-items:center; gap:6px;">
+                                ${j.status === 'failed' ? '<span style="font-size: 1.4rem;">⚠️</span> FAILED' : j.status}
                             </div>
-                            <div class="library-item-title">${escapeHtml(j.book_name)}</div>
+                            <div class="library-item-title" style="margin-top:8px;">${escapeHtml(j.book_name)}</div>
                             ${j.status === 'failed' && j.error ? `<div style="color:var(--error); font-size:0.85rem; margin-top:4px; max-width:80%;">${escapeHtml(j.error)}</div>` : ''}
                         </div>
                         <div style="text-align:right;">
@@ -541,7 +569,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                             <label class="setup-label">Switch Narrator (Fallback)</label>
                             <select id="fallback-voice-${j.id}" class="input-control">
                                 <option value="">Keep original (${j.voice_name || j.voice})</option>
-                                ${Object.entries(voices).map(([id, v]) => \`<option value="${id}">${v.name} (${v.accent})</option>\`).join('')}
+                                ${Object.entries(voices).map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
                             </select>
                         </div>
                         <div style="display:flex; gap:16px;">
@@ -588,7 +616,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     async function deleteJob(jobId) {
         if(!confirm('Permanently delete this job and its partial files?')) return;
         await fetch(`/api/jobs/${jobId}/delete`, { method: 'DELETE' });
-        loadJobs();
+        setTimeout(loadJobs, 500); // Give backend time to delete rows
     }
     
     async function testSetting(type, btn) {
@@ -604,6 +632,13 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
             } else if(type === 'openai') {
                 endpoint = '/api/settings/test_openai';
                 payload = { token: document.getElementById('set-OPENAI_API_KEY').value };
+            } else if(type === 'polly') {
+                endpoint = '/api/settings/test_polly';
+                payload = { 
+                    access_key: document.getElementById('set-AWS_ACCESS_KEY_ID').value,
+                    secret_key: document.getElementById('set-AWS_SECRET_ACCESS_KEY').value,
+                    region: document.getElementById('set-AWS_REGION').value 
+                };
             }
             const resp = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const data = await resp.json();
