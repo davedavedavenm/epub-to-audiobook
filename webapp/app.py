@@ -419,13 +419,9 @@ VOICES = {
     'am_liam': {'name': 'Liam', 'accent': 'American', 'gender': 'Male', 'engine': 'kokoro'},
 
     # ============ PIPER VOICES - HIGH QUALITY ONLY ============
-    'cori': {'name': 'Cori', 'accent': 'British', 'gender': 'Female', 'engine': 'piper'},
-    'lessac': {'name': 'Lessac', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
-    'ljspeech': {'name': 'LJ Speech', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
-    'ryan': {'name': 'Ryan', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
-    'libritts_1': {'name': 'LibriTTS 1', 'accent': 'American', 'gender': 'Neutral', 'engine': 'piper'},
-    'libritts_2': {'name': 'LibriTTS 2', 'accent': 'American', 'gender': 'Neutral', 'engine': 'piper'},
-    'libritts_3': {'name': 'LibriTTS 3', 'accent': 'American', 'gender': 'Neutral', 'engine': 'piper'},
+    # ============ PIPER VOICES (LOCAL, FAST) ============
+    'en_GB-northern_english_male-medium': {'name': 'Northern Male', 'accent': 'British', 'gender': 'Male', 'engine': 'piper'},
+    'en_US-libritts_r-medium': {'name': 'LibriTTS R', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
 
     # ============ EDGETTS VOICES (FREE, HIGH QUALITY) ============
     # British Edge Voices
@@ -1893,6 +1889,10 @@ def get_voice_preview(voice_id: str) -> Path:
             with open(preview_path, 'wb') as f:
                 f.write(response.content)
         elif engine == 'polly':
+            # Skip if AWS keys are not set
+            if not (get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID')):
+                raise Exception("AWS credentials not configured for Polly")
+                
             # Use AWS Polly via tts-proxy
             # Map internal network alias if available, otherwise assume localhost for dev
             proxy_base = os.environ.get('TTS_PROXY_URL', 'http://tts-proxy:8882')

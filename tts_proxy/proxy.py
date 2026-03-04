@@ -64,6 +64,19 @@ def append_jsonl(path: Path, obj: dict[str, Any]) -> None:
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
+def get_setting(key: str, default=None):
+    try:
+        if not DB_PATH.exists():
+            return os.environ.get(key, default)
+        with sqlite3.connect(str(DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute('SELECT value FROM app_settings WHERE key = ?', (key,)).fetchone()
+            if row:
+                return row['value']
+    except Exception as e:
+        print(f"Error fetching setting {key}: {e}")
+    return os.environ.get(key, default)
+
 async def get_edge_audio(text: str, voice: str) -> bytes:
     communicate = edge_tts.Communicate(text, voice)
     audio_data = b""
@@ -71,6 +84,41 @@ async def get_edge_audio(text: str, voice: str) -> bytes:
         if chunk["type"] == "audio":
             audio_data += chunk["data"]
     return audio_data
+
+async def get_polly_audio(text: str, voice: str) -> bytes:
+    access_key = get_setting('AWS_ACCESS_KEY_ID')
+    secret_key = get_setting('AWS_SECRET_ACCESS_KEY')
+    region = get_setting('AWS_REGION', 'us-east-1')
+    
+    if not access_key or not secret_key:
+        raise Exception("AWS Credentials missing for Polly")
+        
+    loop = asyncio.get_event_loop()
+    client = await loop.run_in_executor(
+        None, 
+        lambda: boto3.client(
+            'polly',
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region
+        )
+    )
+    
+    # Map our internal IDs to Polly Voice IDs if necessary
+    # webapp uses polly_ruth, polly_danielle etc.
+    polly_voice = voice.replace('polly_', '').capitalize()
+    
+    response = await loop.run_in_executor(
+        None,
+        lambda: client.synthesize_speech(
+            Text=text,
+            VoiceId=polly_voice,
+            OutputFormat='mp3',
+            Engine='neural'
+        )
+    )
+    
+    return response['AudioStream'].read()
 
 @app.post("/j/{job_id}/v1/audio/speech")
 async def audio_speech(job_id: str, request: Request):
@@ -86,16 +134,27 @@ async def audio_speech(job_id: str, request: Request):
     
     # Check if this is an Edge voice or specifically requested via engine
     is_edge = voice.endswith("Neural") or payload.get("model") == "edge"
+    is_polly = voice.startswith("polly_") or payload.get("model") == "polly"
     
-    if is_edge:
-        print(f"Processing Edge request for voice: {voice}")
-        audio_content = await get_edge_audio(text, voice)
-    else:
-        # Upstream Kokoro/OpenAI
-        upstream_url = f"{UPSTREAM_BASE}/audio/speech"
-        async with httpx.AsyncClient(timeout=None) as client:
-            r = await client.post(upstream_url, json=payload)
-        audio_content = r.content
+    try:
+        if is_edge:
+            print(f"Processing Edge request for voice: {voice}")
+            audio_content = await get_edge_audio(text, voice)
+        elif is_polly:
+            print(f"Processing Polly request for voice: {voice}")
+            audio_content = await get_polly_audio(text, voice)
+        else:
+            # Upstream Kokoro/OpenAI
+            upstream_url = f"{UPSTREAM_BASE}/audio/speech"
+            async with httpx.AsyncClient(timeout=None) as client:
+                r = await client.post(upstream_url, json=payload)
+            if r.status_code != 200:
+                print(f"Upstream error: {r.status_code} - {r.text}")
+                raise HTTPException(status_code=r.status_code, detail=f"Upstream error: {r.text}")
+            audio_content = r.content
+    except Exception as e:
+        print(f"TTS Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
     duration = get_audio_duration(audio_content)
     append_jsonl(
