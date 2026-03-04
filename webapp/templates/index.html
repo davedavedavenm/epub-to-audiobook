@@ -552,7 +552,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                             ${j.status === 'failed' && j.error ? `<div style="color:var(--error); font-size:0.85rem; margin-top:4px; max-width:80%;">${escapeHtml(j.error)}</div>` : ''}
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:1.5rem; font-weight:800; color:${j.status === 'failed' ? 'var(--error)' : 'var(--text-primary)'};">${j.progress_percent}%</div>
+                            <div style="font-size:1.5rem; font-weight:800; color:${j.status === 'failed' ? 'var(--error)' : 'var(--text-primary)'};">${j.progress_percent || 0}%</div>
                             <div style="font-size:0.7rem; color:var(--text-secondary);">ETA: ${j.eta_minutes || '?'}m</div>
                         </div>
                     </div>
