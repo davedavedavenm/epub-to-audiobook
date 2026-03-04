@@ -2154,7 +2154,7 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
 
     # TTS configuration (matching convert_book logic)
     if tts_engine == 'piper':
-        tts_base_url = 'http://piper-tts:8000/v1'
+        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
         tts_model = 'tts-1'
     elif tts_engine == 'edge':
         tts_base_url = 'not-needed'
@@ -2819,11 +2819,9 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
         # Configure TTS settings based on engine
         if tts_engine == 'piper':
-            # Piper via openedai-speech
-            tts_base_url = 'http://piper-tts:8000/v1'
+            # Piper via Proxy
+            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
             tts_model = 'tts-1'  # openedai-speech model name
-            # For Piper, voice names are like 'en_GB-alan-medium'
-            # openedai-speech expects just the voice name
         elif tts_engine == 'edge':
             # EdgeTTS via Proxy
             tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"

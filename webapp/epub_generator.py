@@ -65,14 +65,23 @@ def split_html_into_words(html_str):
 def instrument_html(html_content, chunk_iterator):
     if isinstance(html_content, bytes):
         html_content = html_content.decode('utf-8')
-    soup = BeautifulSoup(html_content, 'lxml')
+    # Use html.parser to avoid lxml adding html/body tags if they are missing
+    soup = BeautifulSoup(html_content, 'html.parser')
     counter = 1
     durations = []
     
-    for tag in soup.find_all(['p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+    # Target common text tags
+    tags = soup.find_all(['p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
+    print(f"DEBUG: Found {len(tags)} tags to instrument")
+    
+    for tag in tags:
         text = tag.get_text().strip()
         if not text: continue
         
+        # Don't instrument if already instrumented (has span with id starting with s)
+        if tag.find('span', id=re.compile(r'^s\d+')):
+            continue
+            
         inner_html = tag.decode_contents()
         html_words = split_html_into_words(inner_html)
         
@@ -81,18 +90,17 @@ def instrument_html(html_content, chunk_iterator):
         tag.clear()
         for html_word in html_words:
             span = soup.new_tag("span", id=f"s{counter}")
+            # Use html.parser for the fragment too
             part_soup = BeautifulSoup(html_word, 'html.parser')
-            # Extract plain text to calculate duration
             part_text = part_soup.get_text()
             
             span.extend(part_soup.contents)
             tag.append(span)
             
-            # Duration based on characters in this word/segment
             durations.append(chunk_iterator.next_duration(part_text))
             counter += 1
             
-    # Ensure html tag has epub namespace
+    # Ensure html tag has epub namespace if it's a full document
     html_tag = soup.find('html')
     if html_tag and not html_tag.has_attr('xmlns:epub'):
         html_tag['xmlns:epub'] = "http://www.idpf.org/2007/ops"
