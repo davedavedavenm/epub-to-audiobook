@@ -130,7 +130,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         <button class="nav-tab" data-tab="queue" onclick="switchTab('queue')"><i>⏳</i> <span>Queue</span> <span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
         <button class="nav-tab" data-tab="voices" onclick="switchTab('voices')"><i>🗣️</i> <span>Voices</span></button>
         <button class="nav-tab" data-tab="history" onclick="switchTab('history')"><i>📂</i> <span>History</span></button>
-        <button class="nav-tab" data-tab="settings" onclick="switchTab('settings')"><i>⚙️</i> <span>Config</span></button>
+        <button class="nav-tab" data-tab="settings" onclick="switchTab('settings')"><i>⚙️</i> <span>Settings</span></button>
     </nav>
     <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div style="display: flex; align-items: center;"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label" style="font-size: 0.9rem; font-weight: 600;">GPU OFFLINE</span></div>
@@ -211,7 +211,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         if(target) target.classList.add('active');
         if(nav) nav.classList.add('active');
         const titleEl = document.getElementById('view-title');
-        if(titleEl) titleEl.textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+        if(titleEl) {
+            if (tabId === 'convert') titleEl.textContent = 'Upload';
+            else titleEl.textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+        }
         localStorage.setItem('audiobook-tab', tabId);
         if(tabId === 'library') loadLibrary();
         if(tabId === 'history') loadHistory();
@@ -298,7 +301,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         const engines = [...new Set(Object.values(voices).map(v => v.engine))];
         const voiceOptions = engines.map(engine => {
             const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
-            return `<optgroup label="${engine.toUpperCase()} ENGINE">${engineVoices.map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}</optgroup>`;
+            return `<optgroup label="${engine.toUpperCase()} ENGINE">${engineVoices.map(([id, v]) => `<option value="${id}" ${id === 'en-GB-RyanNeural' ? 'selected' : ''}>${v.name} (${v.accent})</option>`).join('')}</optgroup>`;
         }).join('');
 
         grid.innerHTML = filtered.map(b => {
@@ -475,8 +478,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                             </select>
                         </div>
                         <div style=\"display:flex; gap:16px;\">
-                            <button class=\"btn btn-primary\" style=\"flex:1; background:var(--success); border-color:var(--success);\" onclick=\"resumeJob('${j.id}')\">🔄 Resume from failure</button>
-                            <button class=\"btn\" style=\"flex:1;\" onclick=\"deleteJob('${j.id}')\">🗑️ Delete</button>
+                            <button class=\"btn btn-primary\" style=\"flex:1; background:var(--success); border-color:var(--success); white-space: nowrap;\" onclick=\"resumeJob('${j.id}')\">🔄 Resume from failure</button>
+                            <button class=\"btn\" style=\"flex:1; white-space: nowrap;\" onclick=\"deleteJob('${j.id}')\">🗑️ Delete</button>
                         </div>` : ''}
                         <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
                         <div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>
