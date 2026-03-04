@@ -108,15 +108,47 @@ async def get_polly_audio(text: str, voice: str) -> bytes:
     # webapp uses polly_ruth, polly_danielle etc.
     polly_voice = voice.replace('polly_', '').capitalize()
     
-    response = await loop.run_in_executor(
-        None,
-        lambda: client.synthesize_speech(
-            Text=text,
-            VoiceId=polly_voice,
-            OutputFormat='mp3',
-            Engine='neural'
+    try:
+        response = await loop.run_in_executor(
+            None,
+            lambda: client.synthesize_speech(
+                Text=text,
+                VoiceId=polly_voice,
+                OutputFormat='mp3',
+                Engine='neural'
+            )
         )
-    )
+    except Exception as e:
+        err_msg = str(e)
+        if "selected engine: neural" in err_msg:
+            # Try long-form (some newer voices like Patrick only support this)
+            try:
+                print(f"Fallback to long-form engine for voice: {polly_voice}")
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: client.synthesize_speech(
+                        Text=text,
+                        VoiceId=polly_voice,
+                        OutputFormat='mp3',
+                        Engine='long-form'
+                    )
+                )
+            except Exception as e2:
+                if "selected engine: long-form" in str(e2):
+                    print(f"Fallback to standard engine for voice: {polly_voice}")
+                    response = await loop.run_in_executor(
+                        None,
+                        lambda: client.synthesize_speech(
+                            Text=text,
+                            VoiceId=polly_voice,
+                            OutputFormat='mp3',
+                            Engine='standard'
+                        )
+                    )
+                else:
+                    raise e2
+        else:
+            raise e
     
     return response['AudioStream'].read()
 
