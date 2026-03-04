@@ -420,8 +420,12 @@ VOICES = {
 
     # ============ PIPER VOICES - HIGH QUALITY ONLY ============
     # ============ PIPER VOICES (LOCAL, FAST) ============
-    'en_GB-northern_english_male-medium': {'name': 'Northern Male', 'accent': 'British', 'gender': 'Male', 'engine': 'piper'},
-    'en_US-libritts_r-medium': {'name': 'LibriTTS R', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
+    'fable': {'name': 'Northern Male', 'accent': 'British', 'gender': 'Male', 'engine': 'piper'},
+    'alloy': {'name': 'Alloy (Piper)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
+    'echo': {'name': 'Echo (Piper)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
+    'onyx': {'name': 'Onyx (Piper)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
+    'nova': {'name': 'Nova (Piper)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
+    'shimmer': {'name': 'Shimmer (Piper)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
 
     # ============ EDGETTS VOICES (FREE, HIGH QUALITY) ============
     # British Edge Voices
