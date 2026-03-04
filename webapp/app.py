@@ -36,7 +36,7 @@ app = Flask(__name__)
 
 
 # Configuration
-# NOTE: KOKORO_URL is a mutable global ΓÇö gpu_manager.py switches it
+# NOTE: KOKORO_URL is a mutable global — gpu_manager.py switches it
 # between CPU and GPU endpoints at runtime. Do NOT cache this value.
 KOKORO_URL = os.environ.get('KOKORO_URL', 'http://localhost:8880/v1')
 PIPER_URL = os.environ.get('PIPER_URL', 'http://piper-tts:8000/v1')
@@ -923,7 +923,7 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
     to ensure no half-finished audiobooks ever get synced.
 
     When *start_chapter* / *end_chapter* are set (chapter-range jobs), only
-    the requested range is expected ΓÇö not the full book.
+    the requested range is expected — not the full book.
 
     *cleaned_up_count* reduces the expected chapter count to account for
     intentionally removed noise/tiny files (e.g. photo captions, part dividers).
@@ -967,7 +967,7 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
     min_total_mb = 0.001
     total_size_mb = sum(f.stat().st_size for f in output_files) / (1024 * 1024)
     if total_size_mb < min_total_mb:
-        return False, f"Total audio only {total_size_mb:.1f}MB ΓÇö likely corrupted"
+        return False, f"Total audio only {total_size_mb:.1f}MB — likely corrupted"
 
     return True, (
         f"Verified: {len(output_files)} files, {total_size_mb:.0f}MB total"
@@ -1168,7 +1168,7 @@ def cleanup_orphan_jobs():
             # If the container exists but isn't running anymore, remove it to avoid name conflicts on retry.
             remove_stale_container(container_name)
 
-            # Check for partial output ΓÇö if chapters exist, use chapter-level recovery
+            # Check for partial output — if chapters exist, use chapter-level recovery
             # instead of re-running the entire book from scratch.
             job_data = get_job(job_id)
             output_dirname = job_data.get('output_dirname', '') if job_data else ''
@@ -1177,7 +1177,7 @@ def cleanup_orphan_jobs():
 
             job_status = job_data.get('status', '') if job_data else ''
             if partial_files and len(partial_files) >= 3:
-                # Significant partial output exists ΓÇö recover missing chapters only
+                # Significant partial output exists — recover missing chapters only
                 _recovery_in_progress[job_id] = True
                 # Don't double-increment retry_count if already in 'recovering' status
                 # (means a previous recovery thread was killed by restart)
@@ -1190,7 +1190,7 @@ def cleanup_orphan_jobs():
                 ''', (new_retry, job_id))
                 conn.commit()
                 orphan_count += 1
-                print(f"Orphan job {job_id} has {len(partial_files)} chapters ΓÇö starting chapter recovery")
+                print(f"Orphan job {job_id} has {len(partial_files)} chapters — starting chapter recovery")
                 append_job_log(job_id,
                     f"Orphan cleanup: {len(partial_files)} chapters exist; "
                     f"recovering missing chapters instead of full restart")
@@ -1216,7 +1216,7 @@ def cleanup_orphan_jobs():
                 threading.Thread(target=_orphan_recovery, daemon=True).start()
                 continue
 
-            # No significant partial output ΓÇö re-queue from scratch
+            # No significant partial output — re-queue from scratch
             if retry_count < MAX_RETRY_COUNT:
                 conn.execute('''
                     UPDATE jobs
@@ -1310,7 +1310,7 @@ def start_next_queued_job():
         # This prevents any other caller from seeing it as 'queued' and starting
         # a duplicate conversion.
         update_job(job['id'], status='converting', started_at=datetime.now().isoformat())
-        app.logger.info(f"Claimed job {job['id']} for conversion (status ΓåÆ converting)")
+        app.logger.info(f"Claimed job {job['id']} for conversion (status → converting)")
 
     # Start conversion thread OUTSIDE the lock (thread will see status already set)
     thread = threading.Thread(
@@ -1336,7 +1336,7 @@ def maybe_start_next_queued_job():
 _watchdog_last_progress = {}
 
 STALL_TIMEOUT_MINUTES = 45   # Kill job if no progress (chapter OR chunk) for this long
-ETA_KILL_MULTIPLIER = 3      # Kill job if elapsed > N ├ù ETA
+ETA_KILL_MULTIPLIER = 3      # Kill job if elapsed > N × ETA
 
 
 def wait_for_kokoro(timeout: int = 300, label: str = '') -> bool:
@@ -1433,7 +1433,7 @@ def handle_job_failure(job_id, error_type, error_msg):
 
     retry_count = job.get('retry_count', 0)
 
-    # Check for partial output ΓÇö if chapters exist, try chapter-level recovery
+    # Check for partial output — if chapters exist, try chapter-level recovery
     output_dirname = job.get('output_dirname', '')
     output_path = OUTPUT_DIR / output_dirname
     existing_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
@@ -1445,7 +1445,7 @@ def handle_job_failure(job_id, error_type, error_msg):
             return True
 
         app.logger.info(
-            f"Job {job_id} died with {len(existing_files)} chapters done ΓÇö "
+            f"Job {job_id} died with {len(existing_files)} chapters done — "
             f"attempting chapter-level recovery")
         append_job_log(
             job_id,
@@ -1469,7 +1469,7 @@ def handle_job_failure(job_id, error_type, error_msg):
         recovery_thread.start()
         return True
 
-    # No partial output ΓÇö fall back to full job retry
+    # No partial output — fall back to full job retry
     if retry_count < MAX_RETRY_COUNT and error_type in ('container_died', 'timeout'):
         delay = RETRY_BACKOFF_BASE * (2 ** retry_count)  # 30s, 60s, 120s
         new_rank = next_queue_rank()
@@ -1523,9 +1523,9 @@ def watchdog_loop():
     """Background thread to monitor job health.
 
     Runs every 60 seconds and checks for:
-    1. Dead containers ΓåÆ recovery/retry
-    2. Stalled progress (no chapter advance for STALL_TIMEOUT_MINUTES) ΓåÆ kill + retry
-    3. Exceeded ETA_KILL_MULTIPLIER ├ù ETA ΓåÆ kill + retry
+    1. Dead containers → recovery/retry
+    2. Stalled progress (no chapter advance for STALL_TIMEOUT_MINUTES) → kill + retry
+    3. Exceeded ETA_KILL_MULTIPLIER × ETA → kill + retry
 
     Self-healing: all detected failures feed into handle_job_failure() which
     does chapter-level recovery if partial output exists, or full retry up to
@@ -1561,7 +1561,7 @@ def watchdog_loop():
                             continue
                         app.logger.warning(
                             f"Watchdog: {book_label} container died, triggering recovery")
-                        append_job_log(job_id, "Watchdog: container died ΓÇö triggering recovery")
+                        append_job_log(job_id, "Watchdog: container died — triggering recovery")
                         handle_job_failure(job_id, 'container_died',
                                           'Container died unexpectedly (detected by watchdog)')
                         continue
@@ -1580,18 +1580,18 @@ def watchdog_loop():
                         chunk_advanced = (current_pct > prev_pct)
 
                         if chapter_advanced or chunk_advanced:
-                            # Any progress (chapter or chunk) ΓåÆ reset stall timer
+                            # Any progress (chapter or chunk) → reset stall timer
                             _watchdog_last_progress[job_id] = (current_ch, current_pct, now)
                         elif current_ch is not None:
                             stall_minutes = (now - prev_time) / 60
                             if stall_minutes >= STALL_TIMEOUT_MINUTES:
                                 app.logger.warning(
                                     f"Watchdog: {book_label} STALLED at ch {current_ch} "
-                                    f"({current_pct}%) for {stall_minutes:.0f} min ΓÇö killing container")
+                                    f"({current_pct}%) for {stall_minutes:.0f} min — killing container")
                                 append_job_log(
                                     job_id,
                                     f"Watchdog: stalled at ch {current_ch} ({current_pct}%) for "
-                                    f"{stall_minutes:.0f} min ΓÇö killing and retrying")
+                                    f"{stall_minutes:.0f} min — killing and retrying")
                                 # Kill the stuck container
                                 subprocess.run(['docker', 'stop', container_name],
                                                capture_output=True, timeout=10)
@@ -1602,13 +1602,13 @@ def watchdog_loop():
                                     f'Stalled at chapter {current_ch} ({current_pct}%) for '
                                     f'{stall_minutes:.0f} min (watchdog kill)')
                                 continue
-                        # If current_ch is None, don't update ΓÇö keep previous tracking
+                        # If current_ch is None, don't update — keep previous tracking
                     else:
-                        # First time seeing this job ΓÇö start tracking
+                        # First time seeing this job — start tracking
                         if current_ch is not None:
                             _watchdog_last_progress[job_id] = (current_ch, current_pct, now)
 
-                    # --- Check 3: Exceeded ETA_KILL_MULTIPLIER ├ù ETA ---
+                    # --- Check 3: Exceeded ETA_KILL_MULTIPLIER × ETA ---
                     eta_minutes = job['eta_minutes']
                     started_at = job['started_at']
                     if eta_minutes and eta_minutes > 0 and started_at:
@@ -1618,11 +1618,11 @@ def watchdog_loop():
                             app.logger.warning(
                                 f"Watchdog: {book_label} running {elapsed:.0f}min, "
                                 f"exceeds {ETA_KILL_MULTIPLIER}x ETA ({eta_minutes}min) "
-                                f"ΓÇö killing container")
+                                f"— killing container")
                             append_job_log(
                                 job_id,
                                 f"Watchdog: exceeded {ETA_KILL_MULTIPLIER}x ETA "
-                                f"({elapsed:.0f}m vs {eta_minutes}m) ΓÇö killing and retrying")
+                                f"({elapsed:.0f}m vs {eta_minutes}m) — killing and retrying")
                             subprocess.run(['docker', 'stop', container_name],
                                            capture_output=True, timeout=10)
                             subprocess.run(['docker', 'rm', '-f', container_name],
@@ -2057,7 +2057,7 @@ def retry_missing_chapters(
         success = False
         for attempt in range(1, MAX_CHAPTER_RETRIES + 1):
             retry_container = f"audiobook-{job_id}-retry-ch{ch}"
-            # Build retry command ΓÇö same as original but targeting a single chapter
+            # Build retry command — same as original but targeting a single chapter
             retry_cmd = [c for c in cmd_template]  # shallow copy
             # Replace container name
             name_idx = retry_cmd.index('--name') + 1
@@ -2302,7 +2302,7 @@ def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
             job_id, missing, cmd, host_output_dir, output_path, timeout_seconds)
 
         if still_missing:
-            # ANY missing chapters ΓåÆ fail. No more half-finished audiobooks.
+            # ANY missing chapters → fail. No more half-finished audiobooks.
             error_msg = (f"Recovery failed: {len(still_missing)}/{total_chapters} chapters "
                          f"still missing after retries: {still_missing}")
             app.logger.error(f"Recovery {job_id}: {error_msg}")
@@ -2509,11 +2509,11 @@ def send_telegram_notification(job: dict, success: bool):
 
     try:
         if success:
-            message = f"Γ£à Audiobook completed!\n\n≡ƒôû {job['book_name']}\n≡ƒÄÖ∩╕Å Voice: {job['voice_name']}\n≡ƒôü {job.get('file_count', '?')} MP3 files"
+            message = f"✅ Audiobook completed!\n\n📖 {job['book_name']}\n🎙️ Voice: {job['voice_name']}\n📁 {job.get('file_count', '?')} MP3 files"
             if job.get('synced_to_abs'):
-                message += "\nΓÿü∩╕Å Synced to Audiobookshelf"
+                message += "\n☁️ Synced to Audiobookshelf"
         else:
-            message = f"Γ¥î Audiobook conversion failed\n\n≡ƒôû {job['book_name']}\nΓÜá∩╕Å {job.get('error', 'Unknown error')[:200]}"
+            message = f"❌ Audiobook conversion failed\n\n📖 {job['book_name']}\n⚠️ {job.get('error', 'Unknown error')[:200]}"
 
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         requests.post(url, json={
@@ -2576,7 +2576,7 @@ def parse_conversion_progress(container_name: str, job_id: str):
             except Exception:
                 return None
 
-        # Parse total chapters ΓÇö first try the tail-500 logs we already have
+        # Parse total chapters — first try the tail-500 logs we already have
         chapters_match = re.search(r'Chapters count: (\d+)', logs)
         total_chapters = int(chapters_match.group(1)) if chapters_match else None
 
@@ -2663,7 +2663,7 @@ def parse_conversion_progress(container_name: str, job_id: str):
                         remaining = elapsed * (1.0 / pfrac - 1.0)
                         eta_minutes = int(remaining / 60)
 
-        # Update job ΓÇö never overwrite stored values with None (tail-500 can
+        # Update job — never overwrite stored values with None (tail-500 can
         # lose context, causing transient None values that shouldn't clobber DB).
         update_kwargs = {}
         for key, val in [
@@ -2705,7 +2705,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         current = get_job(job_id)
         if current and current.get('status') == 'converting' and current.get('container_name'):
             app.logger.warning(
-                f"Job {job_id} already has container {current['container_name']} ΓÇö aborting duplicate start")
+                f"Job {job_id} already has container {current['container_name']} — aborting duplicate start")
             return
         update_job(job_id, status='converting', started_at=datetime.now().isoformat())
     append_job_log(job_id, f"Conversion start (input={input_filename}, output={output_dirname})")
@@ -2777,7 +2777,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         if tts_engine in ('kokoro', None):
             append_job_log(job_id, "Checking Kokoro TTS health...")
             if not wait_for_kokoro(timeout=30, label=f"Job {job_id}"):
-                append_job_log(job_id, "Kokoro unhealthy ΓÇö restarting before conversion")
+                append_job_log(job_id, "Kokoro unhealthy — restarting before conversion")
                 if not restart_kokoro(label=f"Job {job_id}"):
                     raise RuntimeError("Kokoro TTS not available after restart")
                 append_job_log(job_id, "Kokoro restarted and healthy")
@@ -2962,7 +2962,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
                     threading.Thread(target=_inline_recovery, daemon=True).start()
                     app.logger.info(f"Job {job_id}: Recovery thread started for {len(missing)} missing chapters")
-                    return  # Exit convert_book ΓÇö recovery thread handles everything from here
+                    return  # Exit convert_book — recovery thread handles everything from here
                 else:
                     app.logger.info(f"Job {job_id}: All {total_chapters} chapters present")
                     append_job_log(job_id, f"All {total_chapters} chapters present (no retries needed)")
@@ -3100,7 +3100,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # Proactively restart Kokoro between books to clear memory leak.
         # CPU Kokoro leaks ~1GB per chapter; restarting between books prevents
         # mid-chapter crashes that kill active conversions.
-        # Skip in GPU mode ΓÇö GPU Kokoro is on Vast.ai, local restart is pointless
+        # Skip in GPU mode — GPU Kokoro is on Vast.ai, local restart is pointless
         # and would interfere with other parallel GPU jobs.
         job_final = get_job(job_id)
         tts_final = job_final.get('tts_engine', 'kokoro') if job_final else 'kokoro'
@@ -3215,7 +3215,7 @@ def test_openai_connection():
         return jsonify({'error': str(e)}), 500
 # ============ GPU Auto-Scaling API ============
 
-# GPU manager singleton ΓÇö set by the worker process at startup.
+# GPU manager singleton — set by the worker process at startup.
 # The webapp process can read status but scaling actions happen in the worker.
 _gpu_manager = None
 
@@ -3519,10 +3519,10 @@ def start_conversion():
     save_job(job)
     append_job_log(job_id, f"Job created: {book_name} (voice={voice}, engine={tts_engine}, speed={tts_speed})")
 
-    # Do NOT start convert_book() here ΓÇö let the worker pick it up from the queue.
+    # Do NOT start convert_book() here — let the worker pick it up from the queue.
     # The webapp should NEVER run conversions directly to prevent dual-execution bugs
     # where both webapp and worker start the same job simultaneously.
-    app.logger.info(f"Job {job_id} queued ΓÇö worker will pick it up")
+    app.logger.info(f"Job {job_id} queued — worker will pick it up")
 
     return jsonify({'job_id': job_id, 'status': 'queued'})
 
@@ -3853,10 +3853,10 @@ def retry_job(job_id: str):
 
     app.logger.info(f"Retrying job {job_id} (attempt {new_retry_count}/3)")
 
-    # Do NOT start convert_book() here ΓÇö let the worker pick it up from the queue.
+    # Do NOT start convert_book() here — let the worker pick it up from the queue.
     # Starting it directly caused dual-execution bugs where both webapp and worker
     # would run convert_book() for the same job simultaneously.
-    app.logger.info(f"Retry job {job_id} queued ΓÇö worker will pick it up")
+    app.logger.info(f"Retry job {job_id} queued — worker will pick it up")
 
     return jsonify({'status': 'queued', 'retry_count': new_retry_count})
 

@@ -125,12 +125,12 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
 <aside class="sidebar">
     <div class="sidebar-brand">Studio</div>
     <nav class="nav-links">
-        <button class="nav-tab active" data-tab="library" onclick="switchTab('library')"><i>≡ƒôÜ</i> <span>Library</span></button>
-        <button class="nav-tab" data-tab="convert" onclick="switchTab('convert')"><i>≡ƒô¥</i> <span>Upload</span></button>
-        <button class="nav-tab" data-tab="queue" onclick="switchTab('queue')"><i>ΓÅ│</i> <span>Queue</span> <span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
-        <button class="nav-tab" data-tab="voices" onclick="switchTab('voices')"><i>≡ƒùú∩╕Å</i> <span>Voices</span></button>
-        <button class="nav-tab" data-tab="history" onclick="switchTab('history')"><i>≡ƒôï</i> <span>History</span></button>
-        <button class="nav-tab" data-tab="settings" onclick="switchTab('settings')"><i>ΓÜÖ∩╕Å</i> <span>Config</span></button>
+        <button class="nav-tab active" data-tab="library" onclick="switchTab('library')"><i>📚</i> <span>Library</span></button>
+        <button class="nav-tab" data-tab="convert" onclick="switchTab('convert')"><i>📤</i> <span>Upload</span></button>
+        <button class="nav-tab" data-tab="queue" onclick="switchTab('queue')"><i>⏳</i> <span>Queue</span> <span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
+        <button class="nav-tab" data-tab="voices" onclick="switchTab('voices')"><i>🗣️</i> <span>Voices</span></button>
+        <button class="nav-tab" data-tab="history" onclick="switchTab('history')"><i>📂</i> <span>History</span></button>
+        <button class="nav-tab" data-tab="settings" onclick="switchTab('settings')"><i>⚙️</i> <span>Config</span></button>
     </nav>
     <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
         <div style="display: flex; align-items: center;"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label" style="font-size: 0.9rem; font-weight: 600;">GPU OFFLINE</span></div>
@@ -140,8 +140,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     <header class="top-bar">
         <h1 class="page-title" id="view-title">Library</h1>
         <div class="theme-selector">
-            <button class="theme-btn" id="btn-light" onclick="setTheme('light')">ΓÿÇ∩╕Å</button>
-            <button class="theme-btn" id="btn-dark" onclick="setTheme('dark')">≡ƒîÖ</button>
+            <button class="theme-btn" id="btn-light" onclick="setTheme('light')">☀️</button>
+            <button class="theme-btn" id="btn-dark" onclick="setTheme('dark')">🌙</button>
         </div>
     </header>
     <div class="content-body">
@@ -156,7 +156,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
             <div class="card">
                 <h2 style="font-family: 'Lora', serif; font-size: 2.2rem; margin-top: 0;">Upload New Book</h2>
                 <div id="upload-area" style="border: 2px dashed var(--border); padding: 100px 40px; text-align: center; border-radius: 32px; cursor: pointer; background: var(--bg-element); margin: 40px 0;" onclick="document.getElementById('file-input').click()">
-                    <div style="font-size: 5rem; margin-bottom: 24px;">≡ƒôû</div>
+                    <div style="font-size: 5rem; margin-bottom: 24px;">📖</div>
                     <h3>Drop manuscript here</h3>
                     <div id="file-name-display" style="margin-top: 24px; font-weight: 700; color: var(--accent);"></div>
                 </div>
@@ -310,7 +310,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                         <div class="library-item-format">${b.format}</div>
                     </div>
                     <div class="workspace-trigger">
-                        <button class="btn" data-path="${escapeHtml(b.path)}" onclick="previewBook(this)">≡ƒæü Preview</button>
+                        <button class="btn" data-path="${escapeHtml(b.path)}" onclick="previewBook(this)">👁️ Preview</button>
                         <button class="btn btn-primary" style="flex:1;" data-path="${escapeHtml(b.path)}" onclick="openWorkspace('${bookId}', this)">Narrate this Book</button>
                     </div>
                     <div id="workspace-${bookId}" class="production-workspace">
@@ -374,7 +374,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         const data = await resp.json();
         if(data.status === 'success') {
             const oldText = el.textContent;
-            el.textContent = 'Γ£à Added to Queue!';
+            el.textContent = '✅ Added to Queue!';
             el.style.backgroundColor = 'var(--success)';
             el.style.borderColor = 'var(--success)';
             setTimeout(() => { 
@@ -475,8 +475,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                             </select>
                         </div>
                         <div style=\"display:flex; gap:16px;\">
-                            <button class=\"btn btn-primary\" style=\"flex:1; background:var(--success); border-color:var(--success);\" onclick=\"resumeJob('${j.id}')\">≡ƒöä Resume from failure</button>
-                            <button class=\"btn\" style=\"flex:1;\" onclick=\"deleteJob('${j.id}')\">≡ƒùæ Delete</button>
+                            <button class=\"btn btn-primary\" style=\"flex:1; background:var(--success); border-color:var(--success);\" onclick=\"resumeJob('${j.id}')\">🔄 Resume from failure</button>
+                            <button class=\"btn\" style=\"flex:1;\" onclick=\"deleteJob('${j.id}')\">🗑️ Delete</button>
                         </div>` : ''}
                         <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
                         <div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>
@@ -492,7 +492,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     async function loadHistory() {
         const resp = await fetch('/api/history');
         const jobs = await resp.json();
-        document.getElementById('history-content').innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:'Lora'; font-size:1.2rem; font-weight:700;">Γ£à ${escapeHtml(j.book_name)}</div></div><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">Download</button></div>`).join('') || '<div class="card">History is empty.</div>';
+        document.getElementById('history-content').innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:'Lora'; font-size:1.2rem; font-weight:700;">✅ ${escapeHtml(j.book_name)}</div></div><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">Download</button></div>`).join('') || '<div class="card">History is empty.</div>';
     }
 
     async function loadGpuStatus() {
