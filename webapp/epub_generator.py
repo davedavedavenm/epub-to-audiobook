@@ -55,28 +55,12 @@ def format_smil_time(seconds: float) -> str:
     s = seconds % 60
     return f"{h:02d}:{m:02d}:{s:06.3f}"
 
-def split_html_into_sentences(html_str):
+def split_html_into_words(html_str):
     import re
-    parts = []
-    current = ""
-    in_tag = False
-    for char in html_str:
-        if char == "<":
-            in_tag = True
-        elif char == ">":
-            in_tag = False
-            
-        current += char
-        
-        if not in_tag and char.isspace():
-            stripped = re.sub(r"(</[^>]+>)+$", "", current.rstrip())
-            stripped = re.sub(r"[\'\"”’]+$", "", stripped)
-            if stripped and stripped[-1] in ".?!":
-                parts.append(current)
-                current = ""
-    if current:
-        parts.append(current)
-    return [p for p in parts if p.strip()]
+    # Match tags or non-whitespace characters, plus trailing whitespace
+    pattern = r'(?:<[^>]+>|[^<\s]+)+\s*'
+    parts = re.findall(pattern, html_str)
+    return [p for p in parts if p.strip() or '<' in p]
 
 def instrument_html(html_content, chunk_iterator):
     if isinstance(html_content, bytes):
@@ -90,25 +74,21 @@ def instrument_html(html_content, chunk_iterator):
         if not text: continue
         
         inner_html = tag.decode_contents()
-        html_sentences = split_html_into_sentences(inner_html)
+        html_words = split_html_into_words(inner_html)
         
-        if not html_sentences: continue
+        if not html_words: continue
         
         tag.clear()
-        for html_sent in html_sentences:
+        for html_word in html_words:
             span = soup.new_tag("span", id=f"s{counter}")
-            part_soup = BeautifulSoup(html_sent, 'html.parser')
+            part_soup = BeautifulSoup(html_word, 'html.parser')
             # Extract plain text to calculate duration
-            part_text = part_soup.get_text().strip()
+            part_text = part_soup.get_text()
             
             span.extend(part_soup.contents)
             tag.append(span)
             
-            # Re-insert the trailing space if the original segment had it, 
-            # or just append a space string so words don't merge
-            if not html_sent.endswith(" ") and html_sent != html_sentences[-1]:
-                tag.append(soup.new_string(" "))
-                
+            # Duration based on characters in this word/segment
             durations.append(chunk_iterator.next_duration(part_text))
             counter += 1
             
