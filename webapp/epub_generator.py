@@ -69,40 +69,48 @@ def instrument_html(html_content, chunk_iterator):
     counter = 1
     durations = []
     
-    # Target only text-heavy leaf tags to avoid nested instrumentation mess
-    # We exclude 'div' here because it's usually a container for other tags
-    target_tags = ['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'section']
+    # Find all text nodes in the document
+    from bs4 import NavigableString
     
-    tags_to_process = []
-    for tag_name in target_tags:
-        for tag in soup.find_all(tag_name):
-            # Only process if it has direct text and no other target tags inside
-            has_nested = any(child.name in target_tags for child in tag.find_all())
-            if not has_nested and tag.get_text().strip():
-                tags_to_process.append(tag)
-
-    print(f"DEBUG: Found {len(tags_to_process)} text-leaf tags to instrument")
+    # We only want text inside the body
+    body = soup.find('body') or soup
     
-    for tag in tags_to_process:
-        inner_html = tag.decode_contents()
-        # Word-level split
-        html_words = split_html_into_words(inner_html)
+    # Get all text nodes recursively
+    text_nodes = [node for node in body.find_all(string=True) if node.parent.name not in ['script', 'style']]
+    
+    for node in text_nodes:
+        text = str(node)
+        if not text.strip(): continue
         
-        if not html_words: continue
+        # Split text into words and whitespace
+        # Match tags (though shouldn't be in text nodes) or non-whitespace characters, plus trailing whitespace
+        pattern = r'(\S+\s*)'
+        words = re.findall(pattern, text)
         
-        tag.clear()
-        for html_word in html_words:
+        if not words: continue
+        
+        # Create a fragment to replace the text node
+        new_content = []
+        for word in words:
             span = soup.new_tag("span", id=f"s{counter}")
-            # Ensure we preserve internal formatting inside the word (like <b>w</b>ord)
-            part_soup = BeautifulSoup(html_word, 'html.parser')
-            part_text = part_soup.get_text()
+            span.string = word
+            new_content.append(span)
             
-            span.extend(part_soup.contents)
-            tag.append(span)
-            
-            durations.append(chunk_iterator.next_duration(part_text))
+            # Estimate duration for this word
+            durations.append(chunk_iterator.next_duration(word.strip()))
             counter += 1
             
+        # Replace the original text node with the list of spans
+        for i, span in enumerate(new_content):
+            if i == 0:
+                node.replace_with(span)
+                last_node = span
+            else:
+                last_node.insert_after(span)
+                last_node = span
+
+    print(f"DEBUG: Instrumented {counter-1} words across {len(text_nodes)} text nodes")
+    
     # Ensure html tag has epub namespace
     html_tag = soup.find('html')
     if html_tag and not html_tag.has_attr('xmlns:epub'):
