@@ -41,14 +41,12 @@ def _read_chunks(chunks_jsonl_path):
 
 class ChunkIterator:
     def __init__(self, chunks):
-        self.chunks = chunks
-        self.index = 0
-    def next_duration(self):
-        if self.index < len(self.chunks):
-            dur = self.chunks[self.index].get('duration_s', 0.0)
-            self.index += 1
-            return dur
-        return 2.0 # fallback
+        total_chars = sum(len(c.get('text', '').strip()) for c in chunks)
+        total_dur = sum(c.get('duration_s', 0.0) for c in chunks)
+        self.sec_per_char = (total_dur / total_chars) if total_chars > 0 else 0.06
+
+    def next_duration(self, text):
+        return len(text) * self.sec_per_char
 
 def format_smil_time(seconds: float) -> str:
     """Format seconds into HH:MM:SS.mmm"""
@@ -56,6 +54,29 @@ def format_smil_time(seconds: float) -> str:
     m = int((seconds % 3600) // 60)
     s = seconds % 60
     return f"{h:02d}:{m:02d}:{s:06.3f}"
+
+def split_html_into_sentences(html_str):
+    import re
+    parts = []
+    current = ""
+    in_tag = False
+    for char in html_str:
+        if char == "<":
+            in_tag = True
+        elif char == ">":
+            in_tag = False
+            
+        current += char
+        
+        if not in_tag and char.isspace():
+            stripped = re.sub(r"(</[^>]+>)+$", "", current.rstrip())
+            stripped = re.sub(r"[\'\"”’]+$", "", stripped)
+            if stripped and stripped[-1] in ".?!":
+                parts.append(current)
+                current = ""
+    if current:
+        parts.append(current)
+    return [p for p in parts if p.strip()]
 
 def instrument_html(html_content, chunk_iterator):
     if isinstance(html_content, bytes):
@@ -68,29 +89,27 @@ def instrument_html(html_content, chunk_iterator):
         text = tag.get_text().strip()
         if not text: continue
         
-        sentences = nltk.sent_tokenize(text)
-        if not sentences: continue
+        inner_html = tag.decode_contents()
+        html_sentences = split_html_into_sentences(inner_html)
         
-        # If tag has no internal HTML elements, we can safely split it into sentences
-        if len(tag.find_all()) == 0:
-            tag.clear()
-            for sent in sentences:
-                span = soup.new_tag("span", id=f"s{counter}")
-                span.string = sent + " "
-                tag.append(span)
-                durations.append(chunk_iterator.next_duration())
-                counter += 1
-        else:
-            # Tag contains internal elements (<b>, <i>, etc). 
-            # To preserve formatting safely without complex tree manipulation,
-            # we wrap the entire tag contents in a single span and sum the chunk durations.
+        if not html_sentences: continue
+        
+        tag.clear()
+        for html_sent in html_sentences:
             span = soup.new_tag("span", id=f"s{counter}")
-            span.extend(tag.contents)
-            tag.clear()
+            part_soup = BeautifulSoup(html_sent, 'html.parser')
+            # Extract plain text to calculate duration
+            part_text = part_soup.get_text().strip()
+            
+            span.extend(part_soup.contents)
             tag.append(span)
             
-            total_dur = sum(chunk_iterator.next_duration() for _ in sentences)
-            durations.append(total_dur)
+            # Re-insert the trailing space if the original segment had it, 
+            # or just append a space string so words don't merge
+            if not html_sent.endswith(" ") and html_sent != html_sentences[-1]:
+                tag.append(soup.new_string(" "))
+                
+            durations.append(chunk_iterator.next_duration(part_text))
             counter += 1
             
     # Ensure html tag has epub namespace
