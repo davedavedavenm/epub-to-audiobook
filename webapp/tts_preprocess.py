@@ -61,8 +61,28 @@ def _ordinal_to_words(n: int, lang: str = 'en') -> str:
     return f"{n}th"
 
 
+def _year_to_words(year_str: str) -> str:
+    \"\"\"Convert a 4-digit year to its spoken word equivalent (e.g., 1962 -> nineteen sixty-two).\"\"\"
+    try:
+        year = int(year_str)
+        if 1000 <= year <= 2099:
+            if year % 100 == 0:
+                return f\"{_number_to_words(year // 100)} hundred\"
+            else:
+                prefix = year // 100
+                suffix = year % 100
+                prefix_words = _number_to_words(prefix)
+                if suffix < 10:
+                    return f\"{prefix_words} oh {_number_to_words(suffix)}\"
+                else:
+                    return f\"{prefix_words} {_number_to_words(suffix)}\"
+    except Exception:
+        pass
+    return year_str
+
+
 def normalize_text_for_tts(text: str) -> str:
-    """Apply all TTS normalization rules to a text string."""
+    \"\"\"Apply all TTS normalization rules to a text string.\"\"\"
 
     # === Abbreviations (must come before period-related rules) ===
     abbreviations = {
@@ -107,6 +127,10 @@ def normalize_text_for_tts(text: str) -> str:
     for pattern, replacement in abbreviations.items():
         text = re.sub(pattern, replacement, text)
 
+    # === Years: 1962 -> nineteen sixty-two ===
+    # Must come before general number handling
+    text = re.sub(r'\b(1[0-9]{3}|20[0-9]{2})\b', lambda m: _year_to_words(m.group(0)), text)
+
     # === Currency (before general number handling) ===
     def replace_currency(m):
         symbol = m.group(1)
@@ -121,7 +145,7 @@ def normalize_text_for_tts(text: str) -> str:
 
         currencies = {'$': 'dollars', '£': 'pounds', '€': 'euros'}
         unit = currencies.get(symbol, symbol)
-        return f"{words} {unit}"
+        return f\"{words} {unit}\"
 
     text = re.sub(r'([$£€])(\d[\d,]*\.?\d*)', replace_currency, text)
 
@@ -131,8 +155,8 @@ def normalize_text_for_tts(text: str) -> str:
         try:
             n = float(num_str)
             if n == int(n):
-                return f"{_number_to_words(int(n))} percent"
-            return f"{num_str} percent"
+                return f\"{_number_to_words(int(n))} percent\"
+            return f\"{num_str} percent\"
         except ValueError:
             return m.group(0)
 
@@ -152,12 +176,12 @@ def normalize_text_for_tts(text: str) -> str:
         year_str = m.group(1)
         year = int(year_str)
         if 1000 <= year <= 2099:
-            # Handle 1860s as "eighteen sixties"
+            # Handle 1860s as \"eighteen sixties\"
             prefix = int(year_str[:2])
             suffix = int(year_str[2:])
             if suffix == 0:
-                return f"{_number_to_words(prefix)} hundreds"
-            return f"{_number_to_words(prefix)} {_number_to_words(suffix)}s"
+                return f\"{_number_to_words(prefix)} hundreds\"
+            return f\"{_number_to_words(prefix)} {_number_to_words(suffix)}s\"
         if HAS_NUM2WORDS:
             return _number_to_words(year) + 's'
         return m.group(0)
@@ -170,7 +194,7 @@ def normalize_text_for_tts(text: str) -> str:
         n = int(m.group(2))
         if n > 200:
             return m.group(0)
-        return f"{label} {_number_to_words(n).title()}"
+        return f\"{label} {_number_to_words(n).title()}\"
 
     text = re.sub(
         r'\b(Chapter|CHAPTER|Part|PART|Book|BOOK|Volume|VOLUME|Section|SECTION|Act|ACT|Scene|SCENE)\s+(\d+)\b',
@@ -195,9 +219,9 @@ def normalize_text_for_tts(text: str) -> str:
     def replace_large_number(m):
         try:
             n = int(m.group(0))
-            # Don't convert years (1800-2099) that appear to be years
-            if 1800 <= n <= 2099:
-                return m.group(0)  # Leave years as-is for TTS to handle
+            # Don't convert years (1000-2099) here as they are handled above
+            if 1000 <= n <= 2099:
+                return m.group(0)
             if n > 999999999999:
                 return m.group(0)
             return _number_to_words(n)
@@ -222,8 +246,9 @@ def normalize_text_for_tts(text: str) -> str:
     # NLP Sentence Tokenization
     # Splits large paragraphs into distinct sentences and forces a double-newline break
     # This prevents the TTS engine from losing prosody on massive text blocks.
-    if HAS_NLTK and len(text) > 100:
+    if HAS_NLTK and len(text) > 50:
         sentences = nltk.tokenize.sent_tokenize(text)
+        # Add a slight extra pause between sentences for clarity
         text = '\n\n'.join(sentences)
 
     return text

@@ -97,7 +97,7 @@ DEFAULT_VOICE = 'en-GB-RyanNeural'
 
 # TTS speed: 1.0 = normal, <1.0 = slower with more pauses, range 0.5-1.5
 # Default 1.0 (Kokoro's natural speed sounds good; adjust per-job if needed)
-DEFAULT_TTS_SPEED = float(os.environ.get('DEFAULT_TTS_SPEED', '1.0'))
+DEFAULT_TTS_SPEED = float(os.environ.get('DEFAULT_TTS_SPEED', '0.9'))
 
 # Post-conversion cleanup: remove MP3 files smaller than this (catches photo captions, part dividers)
 MIN_CHAPTER_SIZE_KB = 0
