@@ -3191,7 +3191,7 @@ def test_abs_connection():
         resp = requests.get(f"{url.rstrip('/')}/api/libraries", 
                             headers={'Authorization': f'Bearer {token}'}, 
                             timeout=10)
-                if resp.status_code == 200:
+        if resp.status_code == 200:
             return jsonify({'status': 'success', 'message': 'Connected to ABS!'})
         return jsonify({'error': f'ABS returned status {resp.status_code}: {resp.text[:100]}'}), 400
     except Exception as e:
