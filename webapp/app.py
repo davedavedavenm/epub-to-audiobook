@@ -3138,7 +3138,7 @@ def api_settings():
         'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY'
     ]
     config_keys = [
-        'ABS_API_URL', 'TELEGRAM_CHAT_ID', 
+        'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
         'AUTOSCALE_ENABLED', 'AUTOSCALE_THRESHOLD', 'AUTOSCALE_COST_CAP'
     ]
 
@@ -4236,12 +4236,24 @@ def convert_from_library():
 
 
 
+def _cache_all_voices_background():
+    app.logger.info("Starting background voice caching...")
+    for voice_id in VOICES.keys():
+        try:
+            # This handles generating and caching locally if not already done
+            get_voice_preview(voice_id)
+        except Exception as e:
+            app.logger.error(f"Failed to cache voice {voice_id}: {e}")
+    app.logger.info("Background voice caching complete.")
+
 def background_startup():
     """Execute startup tasks in a background thread."""
     import time
     time.sleep(5)  # Let gunicorn workers initialize
     app.logger.info("Starting background maintenance and queue tasks...")
     threading.Thread(target=index_library_background, daemon=True).start()
+    threading.Thread(target=_cache_all_voices_background, daemon=True).start()
+
     
     if QUEUE_RUNNER_ENABLED:
         try:
