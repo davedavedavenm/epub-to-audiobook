@@ -2157,11 +2157,11 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
         tts_model = 'tts-1'
     elif tts_engine == 'edge':
-        tts_base_url = 'not-needed'
-        tts_model = 'not-needed'
+        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+        tts_model = 'tts-1'
     elif tts_engine == 'polly':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-        tts_model = 'polly'
+        tts_model = 'tts-1'
     else:
         tts_base_url = KOKORO_URL
         tts_model = 'kokoro'
@@ -2825,12 +2825,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         elif tts_engine == 'edge':
             # EdgeTTS via Proxy
             tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-            tts_model = 'not-needed'
+            tts_model = 'tts-1'
         elif tts_engine == 'polly':
             # AWS Polly via tts-proxy
             # We force it through proxy because the upstream tool doesn't support Polly natively
             tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-            tts_model = 'polly'
+            tts_model = 'tts-1'
         else:
             # Kokoro (default)
             tts_base_url = KOKORO_URL
