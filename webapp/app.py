@@ -1052,6 +1052,16 @@ def verify_chapter_integrity(job_id):
         record_conversion_metrics(job)
         if job.get('notify_telegram'):
             send_telegram_notification(job, success=True)
+            
+    transcript_path = Path(f"/data/transcripts/{job_id}")
+    if transcript_path.exists() and transcript_path.is_dir():
+        import shutil
+        try:
+            shutil.rmtree(transcript_path)
+            app.logger.info(f"Cleaned up transcript directory: {transcript_path}")
+        except Exception as e:
+            app.logger.error(f"Failed to clean up transcript directory: {e}")
+            
     return True
 
 
@@ -1102,6 +1112,15 @@ def finalize_completed_job(job_id: str) -> bool:
     if job.get('notify_telegram'):
         send_telegram_notification(job, success=True)
         
+    transcript_path = Path(f"/data/transcripts/{job_id}")
+    if transcript_path.exists() and transcript_path.is_dir():
+        import shutil
+        try:
+            shutil.rmtree(transcript_path)
+            app.logger.info(f"Cleaned up transcript directory: {transcript_path}")
+        except Exception as e:
+            app.logger.error(f"Failed to clean up transcript directory: {e}")
+            
     return True
 
 
@@ -3029,6 +3048,17 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # Send Telegram notification if requested
             if job and job.get('notify_telegram'):
                 send_telegram_notification(job, success=True)
+
+            # Cleanup transcript directory since it's successfully converted and synced
+            transcript_path = Path(f"/data/transcripts/{job_id}")
+            if transcript_path.exists() and transcript_path.is_dir():
+                import shutil
+                try:
+                    shutil.rmtree(transcript_path)
+                    app.logger.info(f"Cleaned up transcript directory: {transcript_path}")
+                    append_job_log(job_id, "Cleaned up transcript chunks")
+                except Exception as e:
+                    app.logger.error(f"Failed to clean up transcript directory: {e}")
         else:
             error_msg = stderr.decode()[:1000] if stderr else 'No output files created'
             app.logger.error(f"Job {job_id} failed: {error_msg}")
