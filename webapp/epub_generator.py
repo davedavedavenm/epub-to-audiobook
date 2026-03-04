@@ -209,8 +209,10 @@ def package_epub3_with_audio(input_epub_path, output_epub_path, audio_dir, chunk
         
         for idx, html_item in enumerate(html_items):
             ch_idx = idx + 1
+            print(f"DEBUG: Checking chapter {ch_idx} (file: {html_item.file_name})")
             if ch_idx in audio_items:
                 audio_item = audio_items[ch_idx]
+                print(f"DEBUG: Instrumenting chapter {ch_idx} using audio {audio_item.file_name}")
                 
                 new_html, durations = instrument_html(html_item.content, chunk_iter)
                 html_item.content = new_html.encode('utf-8')
