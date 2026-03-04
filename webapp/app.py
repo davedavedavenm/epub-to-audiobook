@@ -2500,6 +2500,26 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         if job_id:
             update_job(job_id, sync_status='ok', sync_timestamp=datetime.now().isoformat())
             append_job_log(job_id, "Sync ok")
+            
+            # Automatically trigger library scan in ABS
+            abs_url = get_setting('ABS_API_URL') or ABS_API_URL
+            abs_token = get_setting('ABS_API_TOKEN') or ABS_API_TOKEN
+            if abs_url and abs_token:
+                try:
+                    # 1. Get libraries
+                    resp = requests.get(f"{abs_url.rstrip('/')}/api/libraries", 
+                                        headers={'Authorization': f'Bearer {abs_token}'}, 
+                                        timeout=10)
+                    if resp.status_code == 200:
+                        libs = resp.json().get('libraries', [])
+                        # 2. Trigger scan for each library (usually just one main one)
+                        for lib in libs:
+                            scan_url = f"{abs_url.rstrip('/')}/api/libraries/{lib['id']}/scan"
+                            requests.post(scan_url, headers={'Authorization': f'Bearer {abs_token}'}, timeout=10)
+                        append_job_log(job_id, f"Triggered ABS scan for {len(libs)} libraries")
+                except Exception as e:
+                    app.logger.warning(f"Failed to trigger ABS scan: {e}")
+                    
         return True
     except Exception as e:
         if job_id:
