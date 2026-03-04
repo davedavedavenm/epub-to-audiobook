@@ -3890,6 +3890,39 @@ def download_job(job_id: str):
     )
 
 
+
+@app.route('/api/jobs/<job_id>/download_epub', methods=['GET'])
+def download_epub_job(job_id: str):
+    """Download the generated EPUB file (with Media Overlays)."""
+    job = get_job(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+
+    if job['status'] != 'completed':
+        return jsonify({'error': 'Job not completed'}), 400
+
+    output_dir = OUTPUT_DIR / job['output_dirname']
+    epub_path = output_dir / f"{job['book_name']}.epub"
+    if not epub_path.exists():
+        # Fallback to original EPUB in uploads if the generated one is missing
+        input_filename = job.get('input_filename', '')
+        if input_filename:
+            fallback_path = UPLOAD_DIR / input_filename
+            if fallback_path.exists():
+                epub_path = fallback_path
+            else:
+                return jsonify({'error': 'EPUB file not found'}), 404
+        else:
+            return jsonify({'error': 'EPUB file not found'}), 404
+
+    return send_file(
+        epub_path,
+        mimetype='application/epub+zip',
+        as_attachment=True,
+        download_name=epub_path.name
+    )
+
+
 @app.route('/api/jobs/<job_id>/sync', methods=['POST'])
 def sync_job(job_id: str):
     """Manually sync a completed job to Audiobookshelf."""

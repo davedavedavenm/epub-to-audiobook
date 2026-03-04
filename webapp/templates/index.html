@@ -457,34 +457,41 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         const queueContent = document.getElementById('queue-content');
         if(queueContent && active.length > 0) {
             queueContent.innerHTML = active.map(j => `
-                <div class="card">
+                <div class="card" style="${j.status === 'failed' ? 'border-color: var(--error);' : ''}">
                     <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
-                        <div><div style="text-transform:uppercase; font-size:0.75rem; font-weight:900; color:var(--accent);">${j.status}</div><div class="library-item-title">${escapeHtml(j.book_name)}</div></div>
-                        <div style="text-align:right;"><div style="font-size:1.5rem; font-weight:800;">${j.progress_percent}%</div><div style="font-size:0.7rem; color:var(--text-secondary);">ETA: ${j.eta_minutes || '?'}m</div></div>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width: ${j.progress_percent}%"></div></div>
-                                        <div class=\"job-detail-row\">
-                        <div class=\"job-detail-item\">Narrator <b>${j.voice_name || j.voice}</b></div>
-                        <div class=\"job-detail-item\">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
-                        <div class=\"job-detail-item\">Speed <b>${j.tts_speed || '1.0'}x</b></div>
-                        <div class=\"job-detail-item\">Range <b>${j.start_chapter || 1} - ${j.end_chapter || 'End'}</b></div>
-                    </div>
-                    ${j.status === 'failed' ? `<div style=\"margin-top:24px; padding-top:24px; border-top:1px solid var(--border);\">
-                        <div class=\"setup-field\" style=\"margin-bottom:16px;\">
-                            <label class=\"setup-label\">Switch Narrator (Fallback)</label>
-                            <select id=\"fallback-voice-${j.id}\" class=\"input-control\">
-                                <option value=\"\">Keep original (${j.voice_name || j.voice})</option>
-                                ${Object.entries(voices).map(([id, v]) => `<option value=\"${id}\">${v.name} (${v.accent})</option>`).join('')}
-                            </select>
+                        <div>
+                            <div style="text-transform:uppercase; font-size:0.75rem; font-weight:900; color:${j.status === 'failed' ? 'var(--error)' : 'var(--accent)'};">
+                                ${j.status === 'failed' ? '⚠️ FAILED' : j.status}
+                            </div>
+                            <div class="library-item-title">${escapeHtml(j.book_name)}</div>
+                            ${j.status === 'failed' && j.error ? `<div style="color:var(--error); font-size:0.85rem; margin-top:4px; max-width:80%;">${escapeHtml(j.error)}</div>` : ''}
                         </div>
-                        <div style=\"display:flex; gap:16px;\">
-                            <button class=\"btn btn-primary\" style=\"flex:1; background:var(--success); border-color:var(--success); white-space: nowrap;\" onclick=\"resumeJob('${j.id}')\">🔄 Resume from failure</button>
-                            <button class=\"btn\" style=\"flex:1; white-space: nowrap;\" onclick=\"deleteJob('${j.id}')\">🗑️ Delete</button>
-                        </div>` : ''}
+                        <div style="text-align:right;">
+                            <div style="font-size:1.5rem; font-weight:800; color:${j.status === 'failed' ? 'var(--error)' : 'var(--text-primary)'};">${j.progress_percent}%</div>
+                            <div style="font-size:0.7rem; color:var(--text-secondary);">ETA: ${j.eta_minutes || '?'}m</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${j.progress_percent}%; ${j.status === 'failed' ? 'background: var(--error);' : ''}"></div></div>
+                    <div class="job-detail-row">
+                        <div class="job-detail-item">Narrator <b>${j.voice_name || j.voice}</b></div>
                         <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
                         <div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>
                         <div class="job-detail-item">Range <b>${j.start_chapter || 1} - ${j.end_chapter || 'End'}</b></div>
                     </div>
+                    ${j.status === 'failed' ? `
+                    <div style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">
+                        <div class="setup-field" style="margin-bottom:16px;">
+                            <label class="setup-label">Switch Narrator (Fallback)</label>
+                            <select id="fallback-voice-${j.id}" class="input-control">
+                                <option value="">Keep original (${j.voice_name || j.voice})</option>
+                                ${Object.entries(voices).map(([id, v]) => \`<option value="${id}">${v.name} (${v.accent})</option>\`).join('')}
+                            </select>
+                        </div>
+                        <div style="display:flex; gap:16px;">
+                            <button class="btn btn-primary" style="flex:1; background:var(--success); border-color:var(--success); white-space: nowrap;" onclick="resumeJob('${j.id}')">🔄 Resume from failure</button>
+                            <button class="btn" style="flex:1; white-space: nowrap;" onclick="deleteJob('${j.id}')">🗑️ Delete</button>
+                        </div>
+                    </div>` : ''}
                 </div>
             `).join('');
         } else if(queueContent) {
@@ -495,7 +502,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     async function loadHistory() {
         const resp = await fetch('/api/history');
         const jobs = await resp.json();
-        document.getElementById('history-content').innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:'Lora'; font-size:1.2rem; font-weight:700;">✅ ${escapeHtml(j.book_name)}</div></div><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">Download</button></div>`).join('') || '<div class="card">History is empty.</div>';
+        document.getElementById('history-content').innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:'Lora'; font-size:1.2rem; font-weight:700;">✅ ${escapeHtml(j.book_name)}</div></div><div style="display:flex; gap:12px;"><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button></div></div>`).join('') || '<div class="card">History is empty.</div>';
     }
 
     async function loadGpuStatus() {
