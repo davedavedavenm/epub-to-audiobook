@@ -2793,6 +2793,19 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         end_chapter = job.get('end_chapter') if job else None
         file_type = 'pdf' if is_pdf else 'epub'
         initial_eta = estimate_eta_minutes(voice, tts_engine, file_type, char_count)
+        
+        # Bulletproof chapter range validation
+        try:
+            if not is_pdf:
+                toc = get_epub_toc(epub_path)
+                max_chapters = len(toc) if toc else 999
+                if start_chapter and start_chapter > max_chapters:
+                    start_chapter = 1
+                if end_chapter and end_chapter > max_chapters:
+                    end_chapter = max_chapters
+                update_job(job_id, start_chapter=start_chapter, end_chapter=end_chapter)
+        except: pass
+
         update_job(job_id, char_count=char_count, timeout_minutes=timeout_seconds // 60, eta_minutes=initial_eta)
         app.logger.info(f"Book has ~{char_count:,} chars, ETA {initial_eta} min, timeout {timeout_seconds // 60} min")
         append_job_log(job_id, f"Estimated chars={char_count}, ETA={initial_eta}m, timeout={timeout_seconds // 60}m")
