@@ -3532,7 +3532,19 @@ def start_conversion():
             return jsonify({'error': f'Format conversion failed: {str(e)}'}), 500
 
     # Create output directory
-    output_dirname = f"{safe_name}_{job_id}"
+    
+        # Validate chapter range against actual book content
+        try:
+            if not file_ext == '.pdf':
+                toc = get_epub_toc(file_path)
+                max_chapters = len(toc) if toc else 999
+                if start_chapter and start_chapter > max_chapters:
+                    start_chapter = 1
+                if end_chapter and end_chapter > max_chapters:
+                    end_chapter = max_chapters
+        except: pass
+
+        output_dirname = f"{safe_name}_{job_id}"
     output_dir = OUTPUT_DIR / output_dirname
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -4253,6 +4265,18 @@ def convert_from_library():
         input_filename = f"{job_id}_{safe_name}{file_ext}"
         input_path = UPLOAD_DIR / input_filename
         shutil.copy2(file_path, input_path)
+
+        
+        # Validate chapter range against actual book content
+        try:
+            if not file_ext == '.pdf':
+                toc = get_epub_toc(file_path)
+                max_chapters = len(toc) if toc else 999
+                if start_chapter and start_chapter > max_chapters:
+                    start_chapter = 1
+                if end_chapter and end_chapter > max_chapters:
+                    end_chapter = max_chapters
+        except: pass
 
         output_dirname = f"{safe_name}_{job_id}"
         tts_engine = VOICES.get(voice, {}).get('engine', 'kokoro')
