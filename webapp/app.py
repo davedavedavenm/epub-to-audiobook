@@ -1090,6 +1090,13 @@ def finalize_completed_job(job_id: str) -> bool:
     # Renaming happens here - sensible naming
     rename_output_files(output_path, job['book_name'])
 
+    # Try to extract cover if missing
+    input_filename = job.get('input_filename', '')
+    is_pdf = job.get('is_pdf', False)
+    epub_in_name = input_filename if not is_pdf else input_filename.rsplit('.', 1)[0] + '.epub'
+    epub_in_path = UPLOAD_DIR / epub_in_name
+    extract_epub_cover(epub_in_path, output_path)
+
     output_files = list(output_path.glob('*.mp3'))
     
 
@@ -2009,6 +2016,45 @@ def rename_output_files(output_dir: Path, book_name: str) -> int:
         app.logger.info(f"Renamed {renamed} files in {output_dir}")
 
     return renamed
+
+
+def extract_epub_cover(epub_path: Path, output_path: Path):
+    \"\"\"Fallback logic to extract cover image from EPUB if tool missed it.\"\"\"
+    if not epub_path.exists():
+        return
+    if (output_path / \"cover.jpg\").exists():
+        return
+    
+    try:
+        from ebooklib import epub
+        book = epub.read_epub(str(epub_path), {\"ignore_ncx\": True})
+        
+        cover_item = None
+        # 1. Try to find cover via metadata/properties
+        for item in book.get_items():
+            if isinstance(item, epub.EpubImage):
+                # Check for cover property or common id/filename
+                iid = (item.id or '').lower()
+                ifname = (item.file_name or '').lower()
+                if 'cover' in iid or 'cover' in ifname:
+                    cover_item = item
+                    break
+        
+        # 2. Try common filenames if not found
+        if not cover_item:
+            for item in book.get_items():
+                if isinstance(item, epub.EpubImage):
+                    ifname = (item.file_name or '').lower()
+                    if any(x in ifname for x in ['thumb', 'title', 'folder']):
+                        cover_item = item
+                        break
+        
+        if cover_item:
+            with open(output_path / \"cover.jpg\", 'wb') as f:
+                f.write(cover_item.content)
+            app.logger.info(f\"Extracted fallback cover to {output_path / 'cover.jpg'}\")
+    except Exception as e:
+        app.logger.warning(f\"Failed fallback cover extraction: {e}\")
 
 
 MAX_CHAPTER_RETRIES = int(os.environ.get('MAX_CHAPTER_RETRIES', '3'))
