@@ -2026,15 +2026,15 @@ def rename_output_files(output_dir: Path, book_name: str) -> int:
 
 
 def extract_epub_cover(epub_path: Path, output_path: Path):
-    \"\"\"Fallback logic to extract cover image from EPUB if tool missed it.\"\"\"
+    """Fallback logic to extract cover image from EPUB if tool missed it."""
     if not epub_path.exists():
         return
-    if (output_path / \"cover.jpg\").exists():
+    if (output_path / "cover.jpg").exists():
         return
     
     try:
         from ebooklib import epub
-        book = epub.read_epub(str(epub_path), {\"ignore_ncx\": True})
+        book = epub.read_epub(str(epub_path), {"ignore_ncx": True})
         
         cover_item = None
         # 1. Try to find cover via metadata/properties
@@ -2057,11 +2057,11 @@ def extract_epub_cover(epub_path: Path, output_path: Path):
                         break
         
         if cover_item:
-            with open(output_path / \"cover.jpg\", 'wb') as f:
+            with open(output_path / "cover.jpg", 'wb') as f:
                 f.write(cover_item.content)
-            app.logger.info(f\"Extracted fallback cover to {output_path / 'cover.jpg'}\")
+            app.logger.info(f"Extracted fallback cover to {output_path / 'cover.jpg'}")
     except Exception as e:
-        app.logger.warning(f\"Failed fallback cover extraction: {e}\")
+        app.logger.warning(f"Failed fallback cover extraction: {e}")
 
 
 MAX_CHAPTER_RETRIES = int(os.environ.get('MAX_CHAPTER_RETRIES', '3'))
