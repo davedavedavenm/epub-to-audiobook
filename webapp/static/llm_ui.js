@@ -65,6 +65,7 @@ function initializeLlmUi(savedUrl, savedModel) {
     // Find provider by URL
     if (savedUrl) {
         for (const [key, data] of Object.entries(LLM_PROVIDERS)) {
+            // Check if saved URL matches the standard endpoint exactly
             if (savedUrl === data.url || savedUrl === data.url + '/') {
                 matchedProvider = key;
                 break;
@@ -72,10 +73,24 @@ function initializeLlmUi(savedUrl, savedModel) {
         }
     }
     
+    // If we have a provider but it's not strictly custom, maybe we can find it via model name fallback
+    if (matchedProvider === 'custom' && savedModel) {
+        for (const [key, data] of Object.entries(LLM_PROVIDERS)) {
+            if (data.models.includes(savedModel)) {
+                // If it's the exact same provider just using a different base url (like open.bigmodel.cn)
+                // then map it to custom but populate correctly.
+                break; 
+            }
+        }
+    }
+
     document.getElementById('llm-provider-select').value = matchedProvider;
     updateLlmProvider();
     
-    if (matchedProvider !== 'custom' && savedModel) {
+    if (matchedProvider === 'custom') {
+        if (savedUrl) document.getElementById('set-LLM_API_BASE_URL').value = savedUrl;
+        if (savedModel) document.getElementById('set-LLM_MODEL_NAME').value = savedModel;
+    } else if (savedModel) {
         const modelSelect = document.getElementById('llm-model-select');
         const options = Array.from(modelSelect.options).map(o => o.value);
         if (options.includes(savedModel)) {
@@ -86,7 +101,5 @@ function initializeLlmUi(savedUrl, savedModel) {
             updateLlmModel();
             document.getElementById('set-LLM_MODEL_NAME').value = savedModel;
         }
-    } else if (savedModel) {
-        document.getElementById('set-LLM_MODEL_NAME').value = savedModel;
     }
 }
