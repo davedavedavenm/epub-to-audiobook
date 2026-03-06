@@ -1364,7 +1364,7 @@ def maybe_start_next_queued_job():
 _watchdog_last_progress = {}
 
 STALL_TIMEOUT_MINUTES = 45   # Kill job if no progress (chapter OR chunk) for this long
-ETA_KILL_MULTIPLIER = 3      # Kill job if elapsed > N × ETA
+ETA_KILL_MULTIPLIER = 5      # Kill job if elapsed > N × ETA
 
 
 def wait_for_kokoro(timeout: int = 300, label: str = '') -> bool:
