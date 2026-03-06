@@ -869,7 +869,7 @@ def estimate_eta_minutes(voice, engine, file_type, char_count):
     # Enforce a minimum ETA of 10 minutes to allow for heavy text preprocessing on large books
     return max(10, int(eta_seconds / 60))
 
-    def calculate_price_estimate(engine: str, char_count: int) -> float:
+def calculate_price_estimate(engine: str, char_count: int) -> float:
     """Calculate estimated USD cost for a given engine and character count."""
     # Prices per 1,000,000 characters
     PRICING = {
