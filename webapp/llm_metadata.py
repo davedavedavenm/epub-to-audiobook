@@ -130,6 +130,11 @@ Here is the book sample:
         metadata = json.loads(content.strip())
         logging.info(f"Successfully generated metadata: {metadata.get('title')}")
         return metadata
+    except Exception as e:
+        logging.error(f"LLM Metadata generation failed: {e}")
+        return {}
+
+
 def generate_lexicon(epub_path: Path) -> dict:
     """Use configured LLM to generate a pronunciation lexicon for complex names in the EPUB."""
     settings = _get_llm_settings()
