@@ -3238,6 +3238,9 @@ def api_settings():
                 if value is not None:
                     v = str(value).strip()
                     if v:
+                        # Prevent saving masked strings from the frontend over real keys
+                        if key in secret_keys and '...' in v:
+                            continue
                         set_setting(key, v)
                         if key == 'VASTAI_API_KEY':
                             key_file = Path('/root/.config/vastai/vast_api_key')
