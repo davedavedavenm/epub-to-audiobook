@@ -197,16 +197,26 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top:0; font-family:'Lora';">OpenAI Verification (Optional)</h3>
+                        <h3 style="margin-top:0; font-family:'Lora';">LLM Integration (Optional)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
-                            If you provide an OpenAI API key, the studio will use AI to "listen" to the generated audiobook and double-check that the spoken words perfectly match your original book text. This is purely for quality assurance.
+                            Connect an OpenAI-compatible LLM (e.g., Z AI, xAI, Groq, OpenAI) to unlock advanced features like automated metadata generation (summaries/titles), custom pronunciation lexicons for tricky names, and quality assurance transcript checks.
                         </p>
-                        <div style="display:flex; gap:16px; align-items:flex-end;">
-                            <div style="flex:1;">
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">OpenAI API Key</label>
-                                <input type="password" id="set-OPENAI_API_KEY" class="input-control" style="margin-top:8px;">
+                        <div style="display:grid; gap:16px;">
+                            <div>
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Base URL</label>
+                                <input type="text" id="set-LLM_API_BASE_URL" class="input-control" placeholder="https://api.openai.com/v1" style="margin-top:8px;">
                             </div>
-                            <button class="btn" style="height:48px;" onclick="testSetting('openai', this)">Test Key</button>
+                            <div>
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Model Name</label>
+                                <input type="text" id="set-LLM_MODEL_NAME" class="input-control" placeholder="gpt-4o-mini" style="margin-top:8px;">
+                            </div>
+                            <div style="display:flex; gap:16px; align-items:flex-end;">
+                                <div style="flex:1;">
+                                    <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Key</label>
+                                    <input type="password" id="set-LLM_API_KEY" class="input-control" style="margin-top:8px;">
+                                </div>
+                                <button class="btn" style="height:48px;" onclick="testSetting('llm', this)">Test LLM</button>
+                            </div>
                         </div>
                     </div>
 
@@ -629,9 +639,13 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
             if(type === 'abs') {
                 endpoint = '/api/settings/test_abs';
                 payload = { url: document.getElementById('set-ABS_API_URL').value, token: document.getElementById('set-ABS_API_TOKEN').value };
-            } else if(type === 'openai') {
-                endpoint = '/api/settings/test_openai';
-                payload = { token: document.getElementById('set-OPENAI_API_KEY').value };
+            } else if(type === 'llm') {
+                endpoint = '/api/settings/test_llm';
+                payload = { 
+                    base_url: document.getElementById('set-LLM_API_BASE_URL').value,
+                    api_key: document.getElementById('set-LLM_API_KEY').value,
+                    model: document.getElementById('set-LLM_MODEL_NAME').value
+                };
             } else if(type === 'polly') {
                 endpoint = '/api/settings/test_polly';
                 payload = { 

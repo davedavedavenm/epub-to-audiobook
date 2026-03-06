@@ -3215,12 +3215,13 @@ def api_settings():
     """Get or update system settings/API keys."""
     secret_keys = [
         'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID',
-        'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN',
+        'LLM_API_KEY', 'TELEGRAM_BOT_TOKEN',
         'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY'
     ]
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
-        'AUTOSCALE_ENABLED', 'AUTOSCALE_THRESHOLD', 'AUTOSCALE_COST_CAP'
+        'AUTOSCALE_ENABLED', 'AUTOSCALE_THRESHOLD', 'AUTOSCALE_COST_CAP',
+        'LLM_API_BASE_URL', 'LLM_MODEL_NAME'
     ]
 
     if request.method == 'POST':
@@ -3304,20 +3305,31 @@ def test_polly_connection():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/settings/test_openai', methods=['POST'])
-def test_openai_connection():
-    """Test OpenAI API Key."""
+@app.route('/api/settings/test_llm', methods=['POST'])
+def test_llm_connection():
+    """Test generic LLM API connection (Z AI, xAI, Groq, OpenAI)."""
     try:
         data = request.json or {}
-        key = data.get('token') or get_setting('OPENAI_API_KEY') or os.environ.get('OPENAI_API_KEY')
-        if not key: return jsonify({'error': 'Missing Key'}), 400
+        api_key = data.get('api_key') or get_setting('LLM_API_KEY') or os.environ.get('LLM_API_KEY')
+        base_url = data.get('base_url') or get_setting('LLM_API_BASE_URL') or os.environ.get('LLM_API_BASE_URL', 'https://api.openai.com/v1')
+        model = data.get('model') or get_setting('LLM_MODEL_NAME') or os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
         
-        resp = requests.get("https://api.openai.com/v1/models", 
-                            headers={'Authorization': f'Bearer {key}'}, 
+        if not api_key: return jsonify({'error': 'Missing API Key'}), 400
+        if not base_url: return jsonify({'error': 'Missing Base URL'}), 400
+        
+        # Test by requesting models list
+        resp = requests.get(f"{base_url.rstrip('/')}/models", 
+                            headers={'Authorization': f'Bearer {api_key}'}, 
                             timeout=10)
+        
         if resp.status_code == 200:
-            return jsonify({'status': 'success', 'message': 'OpenAI Key is valid!'})
-        return jsonify({'error': 'Invalid API Key'}), 400
+            models = resp.json().get('data', [])
+            model_ids = [m.get('id') for m in models if isinstance(m, dict)]
+            if model and model_ids and model not in model_ids:
+                return jsonify({'status': 'warning', 'message': f'Connected, but model {model} not found in provider list.'})
+            return jsonify({'status': 'success', 'message': 'LLM API is valid!'})
+            
+        return jsonify({'error': f'Invalid API Key or URL (HTTP {resp.status_code}): {resp.text[:100]}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 # ============ GPU Auto-Scaling API ============
