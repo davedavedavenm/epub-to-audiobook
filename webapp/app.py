@@ -1104,6 +1104,20 @@ def finalize_completed_job(job_id: str) -> bool:
     epub_in_path = UPLOAD_DIR / epub_in_name
     extract_epub_cover(epub_in_path, output_path)
 
+    # Generate rich metadata via LLM if configured
+    try:
+        from llm_metadata import generate_metadata
+        metadata_file = output_path / "metadata.json"
+        if not metadata_file.exists():
+            llm_meta = generate_metadata(epub_in_path)
+            if llm_meta:
+                with open(metadata_file, 'w', encoding='utf-8') as f:
+                    json.dump(llm_meta, f, indent=2, ensure_ascii=False)
+                app.logger.info(f"Generated rich metadata via LLM: {llm_meta.get('title')}")
+                append_job_log(job_id, f"Generated LLM metadata: {llm_meta.get('title')}")
+    except Exception as e:
+        app.logger.warning(f"LLM Metadata generation skipped/failed: {e}")
+
     output_files = list(output_path.glob('*.mp3'))
     
 
