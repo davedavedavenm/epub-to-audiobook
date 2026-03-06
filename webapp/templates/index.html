@@ -203,12 +203,28 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                         </p>
                         <div style="display:grid; gap:16px;">
                             <div>
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Provider</label>
+                                <select id="llm-provider-select" class="input-control" style="margin-top:8px;" onchange="updateLlmProvider()">
+                                    <option value="zai">Z AI (Zhipu)</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="groq">Groq</option>
+                                    <option value="xai">xAI (Grok)</option>
+                                    <option value="deepseek">DeepSeek</option>
+                                    <option value="custom">Custom (OpenAI-Compatible)</option>
+                                </select>
+                            </div>
+                            <div id="llm-base-url-container" style="display:none;">
                                 <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Base URL</label>
-                                <input type="text" id="set-LLM_API_BASE_URL" class="input-control" placeholder="https://api.openai.com/v1" style="margin-top:8px;">
+                                <input type="text" id="set-LLM_API_BASE_URL" class="input-control" style="margin-top:8px;">
                             </div>
                             <div>
                                 <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Model Name</label>
-                                <input type="text" id="set-LLM_MODEL_NAME" class="input-control" placeholder="gpt-4o-mini" style="margin-top:8px;">
+                                <div style="display:flex; gap:16px; align-items:center; margin-top:8px;">
+                                    <select id="llm-model-select" class="input-control" style="flex:1;" onchange="updateLlmModel()">
+                                        <!-- Populated via JS -->
+                                    </select>
+                                    <input type="text" id="set-LLM_MODEL_NAME" class="input-control" style="flex:1; display:none;" placeholder="Enter custom model">
+                                </div>
                             </div>
                             <div style="display:flex; gap:16px; align-items:flex-end;">
                                 <div style="flex:1;">
@@ -288,6 +304,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     </div>
 </div>
 <audio id="preview-audio"></audio>
+<script src="/static/llm_ui.js"></script>
 <script>
     const voices = {{ voices | tojson }};
     let libraryBooks = [];
