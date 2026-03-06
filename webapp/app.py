@@ -3335,14 +3335,21 @@ def test_llm_connection():
                             headers={'Authorization': f'Bearer {api_key}'}, 
                             timeout=10)
         
-        if resp.status_code == 200:
-            models = resp.json().get('data', [])
+        try:
+            resp_json = resp.json()
+        except Exception:
+            resp_json = {}
+
+        # Some APIs return 200 OK but embed the error inside the JSON
+        if resp.status_code == 200 and resp_json.get('success') is not False and 'error' not in resp_json and 'msg' not in resp_json:
+            models = resp_json.get('data', [])
             model_ids = [m.get('id') for m in models if isinstance(m, dict)]
             if model and model_ids and model not in model_ids:
                 return jsonify({'status': 'warning', 'message': f'Connected, but model {model} not found in provider list.'})
             return jsonify({'status': 'success', 'message': 'LLM API is valid!'})
             
-        return jsonify({'error': f'Invalid API Key or URL (HTTP {resp.status_code}): {resp.text[:100]}'}), 400
+        error_msg = resp_json.get('error', {}).get('message') or resp_json.get('msg') or resp.text[:100]
+        return jsonify({'error': f'Invalid API Key or URL (HTTP {resp.status_code}): {error_msg}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 # ============ GPU Auto-Scaling API ============
