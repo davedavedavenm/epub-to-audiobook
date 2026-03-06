@@ -767,6 +767,13 @@ def set_setting(key: str, value):
         conn.commit()
 
 
+def delete_setting(key: str):
+    """Remove app setting from database."""
+    with get_db() as conn:
+        conn.execute('DELETE FROM app_settings WHERE key = ?', (key,))
+        conn.commit()
+
+
 def is_queue_paused() -> bool:
     """Check whether queue processing is paused."""
     return str(get_setting('queue_paused', '0')).lower() in ('1', 'true', 'yes')
@@ -3236,6 +3243,12 @@ def api_settings():
                             key_file = Path('/root/.config/vastai/vast_api_key')
                             key_file.parent.mkdir(parents=True, exist_ok=True)
                             key_file.write_text(v)
+                    else:
+                        delete_setting(key)
+                        if key == 'VASTAI_API_KEY':
+                            key_file = Path('/root/.config/vastai/vast_api_key')
+                            if key_file.exists():
+                                key_file.unlink()
             return jsonify({"status": "success"})
         except Exception as e:
             return jsonify({"error": str(e)}), 400
