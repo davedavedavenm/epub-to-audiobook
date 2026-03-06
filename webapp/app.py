@@ -2840,9 +2840,20 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
         # Preprocess EPUB for better TTS pronunciation (numbers, abbreviations, etc.)
         try:
+            from llm_metadata import generate_lexicon
             from tts_preprocess import preprocess_epub
+            
+            # Generate custom lexicon if LLM is configured
+            lexicon = {}
+            try:
+                lexicon = generate_lexicon(epub_path)
+                if lexicon:
+                    append_job_log(job_id, f"Generated custom pronunciation lexicon ({len(lexicon)} terms)")
+            except Exception as e:
+                app.logger.warning(f"Lexicon generation failed: {e}")
+                
             preprocessed_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
-            preprocess_epub(epub_path, preprocessed_path)
+            preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
             epub_path = preprocessed_path

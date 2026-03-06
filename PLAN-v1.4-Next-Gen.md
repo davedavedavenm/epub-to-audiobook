@@ -12,6 +12,9 @@ This phase integrates a generic OpenAI-compatible LLM layer (supporting provider
 - [x] **Integration**: Inject this utility into the conversion pipeline so the generated metadata is injected into the EPUB's `metadata.json` right before it gets synced to Audiobookshelf.
 
 ## Phase 3: Automated Pronunciation Lexicon (Rec 2)
-- [ ] **Entity Extraction**: Use the LLM to scan a sample of the book (or chapter by chapter) and identify complex Sci-Fi/Fantasy/Foreign names.
-- [ ] **Phonetic Mapping**: Have the LLM return a dictionary mapping these complex names to phonetic spellings (e.g., `{"Daenerys": "Duh-nair-iss"}`).
-- [ ] **Preprocessing Injection**: Automatically apply this generated dictionary in `tts_preprocess.py` alongside the existing rules.
+- [x] **Entity Extraction**: Use the LLM to scan a sample of the book (or chapter by chapter) and identify complex Sci-Fi/Fantasy/Foreign names.
+- [x] **Phonetic Mapping**: Have the LLM return a dictionary mapping these complex names to phonetic spellings (e.g., `{"Daenerys": "Duh-nair-iss"}`).
+- [x] **Preprocessing Injection**: Automatically apply this generated dictionary in `tts_preprocess.py` alongside the existing rules.
+
+---
+*Execution Status: COMPLETE. All phases implemented, validated, and deployed.*

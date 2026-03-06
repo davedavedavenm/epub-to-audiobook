@@ -81,8 +81,18 @@ def _year_to_words(year_str: str) -> str:
     return year_str
 
 
-def normalize_text_for_tts(text: str) -> str:
+def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
     """Apply all TTS normalization rules to a text string."""
+    
+    # === Apply Custom LLM Lexicon Replacements ===
+    if lexicon:
+        # Sort keys by length descending so longer phrases are matched first
+        for word in sorted(lexicon.keys(), key=len, reverse=True):
+            phonetic = lexicon[word]
+            # Use regex with word boundaries to avoid replacing parts of other words, 
+            # while allowing case-insensitive matching.
+            pattern = r'\b' + re.escape(word) + r'\b'
+            text = re.sub(pattern, phonetic, text, flags=re.IGNORECASE)
 
     # === Abbreviations (must come before period-related rules) ===
     abbreviations = {
@@ -247,7 +257,7 @@ def normalize_text_for_tts(text: str) -> str:
 
 
 
-def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None) -> Path:
+def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None, lexicon: dict = None) -> Path:
     """Preprocess an EPUB file: normalize text for better TTS pronunciation.
 
     Modifies HTML content inside the EPUB. If output_path is None,
@@ -282,7 +292,7 @@ def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None
                             # Only normalize text content, not HTML tags/attributes
                             # Simple approach: normalize text between > and <
                             def normalize_segment(m):
-                                return normalize_text_for_tts(m.group(0))
+                                return normalize_text_for_tts(m.group(0), lexicon=lexicon)
 
                             normalized = re.sub(
                                 r'(?<=>)[^<]+(?=<)',

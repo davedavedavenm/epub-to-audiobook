@@ -130,8 +130,64 @@ Here is the book sample:
         metadata = json.loads(content.strip())
         logging.info(f"Successfully generated metadata: {metadata.get('title')}")
         return metadata
+def generate_lexicon(epub_path: Path) -> dict:
+    """Use configured LLM to generate a pronunciation lexicon for complex names in the EPUB."""
+    settings = _get_llm_settings()
+    
+    if not settings['LLM_API_KEY']:
+        logging.info("LLM_API_KEY not set. Skipping automated lexicon generation.")
+        return {}
+        
+    sample_text = extract_sample_text(epub_path, max_chars=30000)
+    if not sample_text:
+        return {}
+
+    prompt = f"""
+You are an expert linguist and text-to-speech engineer. I will provide you with a sample from a book.
+Your task is to identify any complex Sci-Fi, Fantasy, non-English, or made-up names and terms that a standard text-to-speech engine might mispronounce.
+For each term, provide a simple English phonetic spelling to help the TTS engine pronounce it correctly (e.g., "Daenerys": "Duh-nair-iss").
+
+Return ONLY a valid JSON object where keys are the original words and values are the phonetic spellings. Do not include markdown formatting like ```json or any other text. 
+If you find no such words, return an empty JSON object {{}}.
+
+Here is the book sample:
+
+{sample_text}
+"""
+
+    headers = {
+        "Authorization": f"Bearer {settings['LLM_API_KEY']}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": settings['LLM_MODEL_NAME'],
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant that outputs strictly valid JSON without any markdown wrapping."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1
+    }
+    
+    try:
+        endpoint = f"{settings['LLM_API_BASE_URL'].rstrip('/')}/chat/completions"
+        logging.info(f"Requesting LLM lexicon from {endpoint} using model {settings['LLM_MODEL_NAME']}...")
+        resp = requests.post(endpoint, headers=headers, json=payload, timeout=60)
+        resp.raise_for_status()
+        
+        data = resp.json()
+        content = data['choices'][0]['message']['content'].strip()
+        
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+            
+        lexicon = json.loads(content.strip())
+        logging.info(f"Successfully generated lexicon with {len(lexicon)} entries.")
+        return lexicon
     except Exception as e:
-        logging.error(f"LLM Metadata generation failed: {e}")
-        if 'resp' in locals():
-            logging.error(f"Response: {resp.text}")
+        logging.error(f"LLM Lexicon generation failed: {e}")
         return {}
