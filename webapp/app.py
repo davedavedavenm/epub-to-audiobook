@@ -3074,16 +3074,27 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         monitor_thread.start()
 
         # Wait for completion
+        stdout, stderr = b'', b''
         try:
             stdout, stderr = process.communicate(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
             process.kill()
+            # Capture what we can before killing
+            try:
+                out, err = process.communicate(timeout=5)
+                stdout += out
+                stderr += err
+            except: pass
             subprocess.run(['docker', 'stop', container_name], capture_output=True)
             raise
         finally:
             running_processes.pop(job_id, None)
             running_containers.pop(job_id, None)
             subprocess.run(['docker', 'rm', '-f', container_name], capture_output=True)
+
+        # Combine output for error parsing
+        combined_output = (stdout.decode(errors='replace') + '\n' +
+                           stderr.decode(errors='replace'))
 
         # Check results
         output_path = Path(f"/data/audiobooks/{output_dirname}")
@@ -3098,8 +3109,6 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
         if process.returncode == 0 and output_files:
             # --- Chapter completeness check with retry ---
-            combined_output = (stdout.decode(errors='replace') + '\n' +
-                               stderr.decode(errors='replace'))
             total_chapters = get_expected_chapter_count(combined_output)
             if total_chapters:
                 missing = find_missing_chapters(
@@ -3228,8 +3237,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 except Exception as e:
                     app.logger.error(f"Failed to clean up transcript directory: {e}")
         else:
-            error_msg = stderr.decode()[:1000] if stderr else 'No output files created'
-            app.logger.error(f"Job {job_id} failed: {error_msg}")
+            error_msg = combined_output if combined_output.strip() else (stderr.decode()[:1000] if stderr else 'No output files created')
+            app.logger.error(f"Job {job_id} failed: {error_msg[:500]}...")
             append_job_log(job_id, f"Failed: {error_msg[:200]}")
 
             # Always attempt recovery/retry for conversion failures.
