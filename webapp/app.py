@@ -1498,9 +1498,10 @@ def handle_job_failure(job_id, error_type, error_msg):
             app.logger.info(f"Self-Healing {job_id}: Found ground truth total chapters: {actual_total}")
             with get_db() as conn:
                 conn.execute('UPDATE jobs SET total_chapters = ? WHERE id = ?', (actual_total, job_id))
-                if job.get('end_chapter') and job['end_chapter'] > actual_total:
-                    app.logger.info(f"Self-Healing {job_id}: Capping end_chapter from {job['end_chapter']} to {actual_total}")
-                    append_job_log(job_id, f"Auto-correcting range: capping end_chapter at {actual_total}")
+                # ALWAYS cap end_chapter to ground truth if it's over
+                if not job.get('end_chapter') or job['end_chapter'] > actual_total:
+                    app.logger.info(f"Self-Healing {job_id}: Capping end_chapter to {actual_total}")
+                    append_job_log(job_id, f"Auto-correcting range: capping end_chapter at {actual_total} (based on ground truth)")
                     conn.execute('UPDATE jobs SET end_chapter = ? WHERE id = ?', (actual_total, job_id))
                 conn.commit()
             # Refresh local job object
@@ -1514,7 +1515,7 @@ def handle_job_failure(job_id, error_type, error_msg):
             max_allowed = int(range_error.group(1)) - 1
             if max_allowed > 0 and (not job.get('end_chapter') or job['end_chapter'] > max_allowed):
                 app.logger.info(f"Self-Healing {job_id}: Automatically capping end_chapter to {max_allowed}")
-                append_job_log(job_id, f"Auto-correcting range: capping end_chapter at {max_allowed}")
+                append_job_log(job_id, f"Auto-correcting range: capping end_chapter at {max_allowed} (based on error index)")
                 with get_db() as conn:
                     conn.execute('UPDATE jobs SET end_chapter = ? WHERE id = ?', (max_allowed, job_id))
                     conn.commit()
