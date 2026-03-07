@@ -903,6 +903,34 @@ def check_container_running(container_name):
         return False
 
 
+def check_disk_heartbeat(job_id: str, output_dirname: str, max_age_minutes: int = 10) -> bool:
+    \"\"\"Check if the job has written any files to disk recently.
+    
+    Checks both the MP3 output folder and the transcript chunks log.
+    If any file has been modified within max_age_minutes, the job is 'Alive'.
+    \"\"\"
+    try:
+        now = datetime.now().timestamp()
+        cutoff = now - (max_age_minutes * 60)
+        
+        # 1. Check MP3 output folder
+        out_path = OUTPUT_DIR / output_dirname
+        if out_path.exists():
+            for f in out_path.glob('*'):
+                if f.is_file() and f.stat().st_mtime > cutoff:
+                    return True
+                    
+        # 2. Check transcript directory
+        trans_path = TRANSCRIPTS_DIR / job_id
+        if trans_path.exists():
+            for f in trans_path.glob('*'):
+                if f.is_file() and f.stat().st_mtime > cutoff:
+                    return True
+    except Exception:
+        pass
+    return False
+
+
 def remove_stale_container(container_name):
     """Remove an existing container by name to avoid name conflicts."""
     if not container_name:
@@ -1440,7 +1468,9 @@ def handle_job_failure(job_id, error_type, error_msg):
     tries chapter-level recovery instead of re-running the entire book.
     Falls back to full job retry if no partial output exists.
 
-    Self-healing: always retries up to MAX_RETRY_COUNT regardless of error type.
+    Self-healing: 
+    1. Always retries up to MAX_RETRY_COUNT regardless of error type.
+    2. Automatically corrects invalid chapter ranges if out-of-range error detected.
 
     Args:
         job_id: The job ID
@@ -1458,6 +1488,20 @@ def handle_job_failure(job_id, error_type, error_msg):
     job = get_job(job_id)
     if not job:
         return False
+
+    # --- Self-Healing: Automatic Chapter Range Correction ---
+    # Catch: "ValueError: Chapter end index X is out of range."
+    range_error = re.search(r'Chapter end index (\d+) is out of range', error_msg)
+    if range_error:
+        try:
+            max_allowed = int(range_error.group(1)) - 1
+            if max_allowed > 0:
+                app.logger.info(f"Self-Healing {job_id}: Automatically capping end_chapter to {max_allowed}")
+                append_job_log(job_id, f"Auto-correcting range: capping end_chapter at {max_allowed}")
+                with get_db() as conn:
+                    conn.execute('UPDATE jobs SET end_chapter = ? WHERE id = ?', (max_allowed, job_id))
+                    conn.commit()
+        except: pass
 
     retry_count = job.get('retry_count', 0)
 
@@ -1570,7 +1614,7 @@ def watchdog_loop():
             with get_db() as conn:
                 active_jobs = conn.execute('''
                     SELECT id, container_name, started_at, eta_minutes, book_name,
-                           current_chapter, progress_percent
+                           current_chapter, progress_percent, output_dirname
                     FROM jobs
                     WHERE status IN ('converting', 'converting PDF', 'converting to audio')
                 ''').fetchall()
@@ -1643,6 +1687,17 @@ def watchdog_loop():
                         elapsed = (datetime.now() - datetime.fromisoformat(
                             job['started_at'])).total_seconds() / 60
                         if elapsed > (eta_minutes * ETA_KILL_MULTIPLIER):
+                            # --- Self-Healing Heartbeat ---
+                            # Before killing, check if the disk is still being written to.
+                            # This saves large books from being killed during heavy preprocessing.
+                            if check_disk_heartbeat(job_id, job.get('output_dirname', '')):
+                                app.logger.info(f"Watchdog: {book_label} exceeded ETA but Disk Heartbeat is ALIVE. Skipping kill.")
+                                # Update tracking to avoid immediate re-check
+                                if job_id in _watchdog_last_progress:
+                                    prev_ch, prev_pct, _ = _watchdog_last_progress[job_id]
+                                    _watchdog_last_progress[job_id] = (prev_ch, prev_pct, now)
+                                continue
+
                             app.logger.warning(
                                 f"Watchdog: {book_label} running {elapsed:.0f}min, "
                                 f"exceeds {ETA_KILL_MULTIPLIER}x ETA ({eta_minutes}min) "
