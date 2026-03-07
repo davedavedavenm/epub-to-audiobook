@@ -1490,12 +1490,29 @@ def handle_job_failure(job_id, error_type, error_msg):
         return False
 
     # --- Self-Healing: Automatic Chapter Range Correction ---
-    # Catch: "ValueError: Chapter end index X is out of range."
+    # 1. Parse the actual ground truth from the tool logs if available
+    count_match = re.search(r'Chapters count:\s*(\d+)', error_msg)
+    if count_match:
+        try:
+            actual_total = int(count_match.group(1))
+            app.logger.info(f"Self-Healing {job_id}: Found ground truth total chapters: {actual_total}")
+            with get_db() as conn:
+                conn.execute('UPDATE jobs SET total_chapters = ? WHERE id = ?', (actual_total, job_id))
+                if job.get('end_chapter') and job['end_chapter'] > actual_total:
+                    app.logger.info(f"Self-Healing {job_id}: Capping end_chapter from {job['end_chapter']} to {actual_total}")
+                    append_job_log(job_id, f"Auto-correcting range: capping end_chapter at {actual_total}")
+                    conn.execute('UPDATE jobs SET end_chapter = ? WHERE id = ?', (actual_total, job_id))
+                conn.commit()
+            # Refresh local job object
+            job = get_job(job_id)
+        except: pass
+
+    # 2. Catch: "ValueError: Chapter end index X is out of range." (Fallback if count not found)
     range_error = re.search(r'Chapter end index (\d+) is out of range', error_msg)
     if range_error:
         try:
             max_allowed = int(range_error.group(1)) - 1
-            if max_allowed > 0:
+            if max_allowed > 0 and (not job.get('end_chapter') or job['end_chapter'] > max_allowed):
                 app.logger.info(f"Self-Healing {job_id}: Automatically capping end_chapter to {max_allowed}")
                 append_job_log(job_id, f"Auto-correcting range: capping end_chapter at {max_allowed}")
                 with get_db() as conn:
