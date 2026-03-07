@@ -904,11 +904,11 @@ def check_container_running(container_name):
 
 
 def check_disk_heartbeat(job_id: str, output_dirname: str, max_age_minutes: int = 10) -> bool:
-    \"\"\"Check if the job has written any files to disk recently.
+    """Check if the job has written any files to disk recently.
     
     Checks both the MP3 output folder and the transcript chunks log.
     If any file has been modified within max_age_minutes, the job is 'Alive'.
-    \"\"\"
+    """
     try:
         now = datetime.now().timestamp()
         cutoff = now - (max_age_minutes * 60)
