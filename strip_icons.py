@@ -4,10 +4,10 @@ with open(p, 'r', encoding='utf-8') as f:
     c = f.read()
 
 # Replace emoji icons with plain text labels or remove them
-c = re.sub(r'<i>≡ƒôÜ</i>', '<span>📚</span>', c) # Open Book
-c = re.sub(r'<i>≡ƒô¥</i>', '<span>📥</span>', c) # Tray
-c = re.sub(r'<i>ΓÅ│</i>', '<span>⏳</span>', c) # Hourglass
-c = re.sub(r'<i>≡ƒùú∩╕Å</i>', '<span>🗣️</span>', c) # Speaking head
+c = re.sub(r'<i>📚</i>', '<span>📚</span>', c) # Open Book
+c = re.sub(r'<i>📤</i>', '<span>📥</span>', c) # Tray
+c = re.sub(r'<i>⏳</i>', '<span>⏳</span>', c) # Hourglass
+c = re.sub(r'<i>🗣️</i>', '<span>🗣️</span>', c) # Speaking head
 c = re.sub(r'<i>≡ƒôÃ</i>', '<span>📜</span>', c) # History
 c = re.sub(r'<i>ΓÜâ∩╕Å</i>', '<span>⚙️</span>', c) # Gear
 

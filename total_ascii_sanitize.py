@@ -17,8 +17,8 @@ def sanitize_file(path):
     
     # Replace common mangled separators with ASCII
     text = text.replace('┬╖', ' - ')
-    text = text.replace('ΓåÆ', ' -> ')
-    text = text.replace('Γ£à', '[OK]')
+    text = text.replace('→', ' -> ')
+    text = text.replace('✅', '[OK]')
     
     # Strip all remaining non-ASCII
     clean_text = "".join([i if ord(i) < 128 else " " for i in text])
