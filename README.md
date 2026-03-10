@@ -169,3 +169,9 @@ See [ROADMAP.md](ROADMAP.md) for planned features including:
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+
+---
+
+### ?? Related Projects
+- [audible-epub3-maker](https://github.com/funway/audible-epub3-maker) - udible-epub3-maker is a companion tool focused on EPUB3 Media Overlays (synced text and audio) with Gradio Web GUI support.
