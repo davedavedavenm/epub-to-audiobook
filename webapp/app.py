@@ -457,6 +457,23 @@ VOICES = {
     'polly_danielle': {'name': 'Danielle', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
     'polly_gregory': {'name': 'Gregory', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
     'polly_patrick': {'name': 'Patrick', 'accent': 'American', 'gender': 'Male', 'engine': 'polly'},
+
+    # ============ INWORLD TTS 1.5 VOICES (PREMIUM) ============
+    # British
+    'inworld_Graham': {'name': 'Graham', 'accent': 'British', 'gender': 'Male', 'engine': 'inworld'},
+    'inworld_Rupert': {'name': 'Rupert', 'accent': 'British', 'gender': 'Male', 'engine': 'inworld'},
+    'inworld_Olivia': {'name': 'Olivia', 'accent': 'British', 'gender': 'Female', 'engine': 'inworld'},
+    # American — Narration
+    'inworld_Blake': {'name': 'Blake', 'accent': 'American', 'gender': 'Male', 'engine': 'inworld'},
+    'inworld_Elizabeth': {'name': 'Elizabeth', 'accent': 'American', 'gender': 'Female', 'engine': 'inworld'},
+    'inworld_Dennis': {'name': 'Dennis', 'accent': 'American', 'gender': 'Male', 'engine': 'inworld'},
+    'inworld_Ashley': {'name': 'Ashley', 'accent': 'American', 'gender': 'Female', 'engine': 'inworld'},
+    'inworld_Luna': {'name': 'Luna', 'accent': 'American', 'gender': 'Female', 'engine': 'inworld'},
+    'inworld_Carter': {'name': 'Carter', 'accent': 'American', 'gender': 'Male', 'engine': 'inworld'},
+    # Character / dramatic
+    'inworld_Dominus': {'name': 'Dominus', 'accent': 'Character', 'gender': 'Male', 'engine': 'inworld'},
+    'inworld_Hades': {'name': 'Hades', 'accent': 'Character', 'gender': 'Male', 'engine': 'inworld'},
+    'inworld_Darlene': {'name': 'Darlene', 'accent': 'American Southern', 'gender': 'Female', 'engine': 'inworld'},
 }
 
 PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."
@@ -2013,6 +2030,22 @@ def get_voice_preview(voice_id: str) -> Path:
             response.raise_for_status()
             with open(preview_path, 'wb') as f:
                 f.write(response.content)
+        elif engine == 'inworld':
+            # Call Inworld TTS API via tts-proxy
+            proxy_base = os.environ.get('TTS_PROXY_URL', 'http://tts-proxy:8882')
+            inworld_voice_id = voice_id.replace('inworld_', '') if voice_id.startswith('inworld_') else voice_id
+            response = requests.post(
+                f"{proxy_base}/j/preview/v1/audio/speech",
+                json={
+                    "model": "inworld",
+                    "input": PREVIEW_TEXT,
+                    "voice": f"inworld_{inworld_voice_id}"
+                },
+                timeout=60
+            )
+            response.raise_for_status()
+            with open(preview_path, 'wb') as f:
+                f.write(response.content)
         elif engine == 'edge':
             # Use edge-tts directly via the p0n1 container
             cmd = [
@@ -2973,6 +3006,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # Piper via Proxy
             tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
             tts_model = 'tts-1'  # openedai-speech model name
+        elif tts_engine == 'inworld':
+            # Inworld TTS 1.5 via proxy
+            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+            tts_model = 'inworld'
         elif tts_engine == 'edge':
             # EdgeTTS via Proxy
             tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
@@ -3044,7 +3081,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             'ghcr.io/p0n1/epub_to_audiobook:latest',
             '/input/book.epub', '/output',
             '--tts', 'openai',
-            '--voice_name', voice if tts_engine == 'edge' else effective_voice,
+            '--voice_name', voice if tts_engine in ('edge', 'inworld') else effective_voice,
             '--model_name', tts_model,
             '--no_prompt',
             '--remove_endnotes',
@@ -3317,7 +3354,8 @@ def api_settings():
     secret_keys = [
         'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID',
         'LLM_API_KEY', 'TELEGRAM_BOT_TOKEN',
-        'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY'
+        'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY',
+        'INWORLD_API_KEY'
     ]
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
@@ -3414,6 +3452,36 @@ def test_polly_connection():
         return jsonify({'error': 'Invalid response from AWS Polly'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/settings/test_inworld', methods=['POST'])
+def test_inworld_connection():
+    """Test Inworld TTS API key by synthesising a short phrase."""
+    try:
+        data = request.json or {}
+        api_key = data.get('api_key') or get_setting('INWORLD_API_KEY') or os.environ.get('INWORLD_API_KEY', '')
+        if not api_key:
+            return jsonify({'error': 'No Inworld API key provided'}), 400
+        import base64
+        resp = requests.post(
+            'https://api.inworld.ai/tts/v1/voice',
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Basic {api_key}'
+            },
+            json={
+                'text': 'Hello.',
+                'voiceId': 'Blake',
+                'modelId': 'inworld-tts-1.5-mini',
+                'audioConfig': {'audioEncoding': 'MP3'}
+            },
+            timeout=15
+        )
+        if resp.status_code == 200:
+            return jsonify({'status': 'success', 'message': 'Inworld TTS connected!'})
+        return jsonify({'error': f'Inworld returned {resp.status_code}: {resp.text[:100]}'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/settings/test_llm', methods=['POST'])
 def test_llm_connection():

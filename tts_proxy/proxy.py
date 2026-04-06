@@ -5,6 +5,7 @@ import json
 import hashlib
 import time
 import sqlite3
+import base64
 import boto3
 import httpx
 import asyncio
@@ -153,6 +154,62 @@ async def get_polly_audio(text: str, voice: str) -> bytes:
     
     return response['AudioStream'].read()
 
+def _split_for_inworld(text: str, max_chars: int = 1900) -> list[str]:
+    """Split text into chunks at sentence boundaries to respect Inworld's 2000-char limit."""
+    if len(text) <= max_chars:
+        return [text]
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    chunks, current = [], ''
+    for sentence in sentences:
+        if len(sentence) > max_chars:
+            if current:
+                chunks.append(current.strip())
+                current = ''
+            while len(sentence) > max_chars:
+                chunks.append(sentence[:max_chars])
+                sentence = sentence[max_chars:]
+            current = sentence
+        elif len(current) + len(sentence) + 1 <= max_chars:
+            current = (current + ' ' + sentence).lstrip()
+        else:
+            if current:
+                chunks.append(current.strip())
+            current = sentence
+    if current:
+        chunks.append(current.strip())
+    return chunks
+
+
+async def _inworld_chunk(text: str, voice_id: str, api_key: str) -> bytes:
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Basic {api_key}'
+    }
+    payload = {
+        'text': text,
+        'voiceId': voice_id,
+        'modelId': 'inworld-tts-1.5-mini',
+        'audioConfig': {'audioEncoding': 'MP3', 'sampleRateHertz': 24000}
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post('https://api.inworld.ai/tts/v1/voice', json=payload, headers=headers)
+    if r.status_code != 200:
+        raise Exception(f"Inworld API error {r.status_code}: {r.text[:200]}")
+    data = r.json()
+    return base64.b64decode(data.get('audioContent', ''))
+
+
+async def get_inworld_audio(text: str, voice: str) -> bytes:
+    api_key = get_setting('INWORLD_API_KEY') or os.environ.get('INWORLD_API_KEY', '')
+    if not api_key:
+        raise Exception("Inworld API key not configured")
+    # Strip inworld_ prefix to get the raw API voice ID (e.g. inworld_Blake -> Blake)
+    voice_id = voice.replace('inworld_', '') if voice.startswith('inworld_') else voice
+    chunks = _split_for_inworld(text)
+    parts = [await _inworld_chunk(chunk, voice_id, api_key) for chunk in chunks]
+    return b''.join(parts)
+
+
 @app.post("/j/{job_id}/v1/audio/speech")
 async def audio_speech(job_id: str, request: Request):
     try:
@@ -168,9 +225,13 @@ async def audio_speech(job_id: str, request: Request):
     # Check if this is an Edge voice or specifically requested via engine
     is_edge = voice.endswith("Neural") or payload.get("model") == "edge"
     is_polly = voice.startswith("polly_") or payload.get("model") == "polly"
-    
+    is_inworld = voice.startswith("inworld_") or payload.get("model") == "inworld"
+
     try:
-        if is_edge:
+        if is_inworld:
+            print(f"Processing Inworld request for voice: {voice}")
+            audio_content = await get_inworld_audio(text, voice)
+        elif is_edge:
             print(f"Processing Edge request for voice: {voice}")
             audio_content = await get_edge_audio(text, voice)
         elif is_polly:

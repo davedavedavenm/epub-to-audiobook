@@ -271,6 +271,22 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top:0; font-family:'Lora';">Inworld TTS 1.5 — Premium Voices (Optional)</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            Unlock the #1-ranked AI voice engine (Artificial Analysis leaderboard). Breathtakingly expressive, emotionally nuanced narration.
+                            Pay-as-you-go: ~<strong>£2–£5 per novel</strong>, no subscription required.
+                            <a href="https://inworld.ai/tts-api" target="_blank" style="color:var(--accent);">Get your API key at inworld.ai →</a>
+                        </p>
+                        <div style="display:flex; gap:16px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Inworld API Key</label>
+                                <input type="password" id="set-INWORLD_API_KEY" class="input-control" style="margin-top:8px;" placeholder="Paste your Inworld API key here">
+                            </div>
+                            <button class="btn" style="height:48px;" onclick="testSetting('inworld', this)">Test</button>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top: 0; font-family: 'Lora';">Vast.ai Cloud GPU Speedup (Optional)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
                             When you add multiple books to the queue, it can take a long time to process on your local machine. If you provide a Vast.ai API key, the studio will automatically rent a cloud GPU for a few cents an hour to process the books ~15x faster, and then automatically shut it down when finished.
@@ -665,11 +681,14 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                 };
             } else if(type === 'polly') {
                 endpoint = '/api/settings/test_polly';
-                payload = { 
+                payload = {
                     access_key: document.getElementById('set-AWS_ACCESS_KEY_ID').value,
                     secret_key: document.getElementById('set-AWS_SECRET_ACCESS_KEY').value,
-                    region: document.getElementById('set-AWS_REGION').value 
+                    region: document.getElementById('set-AWS_REGION').value
                 };
+            } else if(type === 'inworld') {
+                endpoint = '/api/settings/test_inworld';
+                payload = { api_key: document.getElementById('set-INWORLD_API_KEY').value };
             }
             const resp = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const data = await resp.json();
