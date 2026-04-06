@@ -1,4 +1,3 @@
-from epub_generator import package_epub3_with_audio
 #!/usr/bin/env python3
 """
 EPUB/PDF to Audiobook Web UI
@@ -22,6 +21,7 @@ from contextlib import contextmanager
 from collections import Counter
 from typing import Any, Optional, Dict, List
 from gpu_manager import GPUManager
+from epub_generator import package_epub3_with_audio
 
 from flask import Flask, render_template, request, jsonify, send_file, Response
 import requests
@@ -2014,20 +2014,7 @@ def get_voice_preview(voice_id: str) -> Path:
             with open(preview_path, 'wb') as f:
                 f.write(response.content)
         elif engine == 'edge':
-            # Use EdgeTTS via Docker
-            # Map PREVIEWS_DIR to /output in the container
-            cmd = [
-                'docker', 'run', '--rm',
-                '-v', f"{HOST_DATA_DIR}/previews:/output",
-                'ghcr.io/p0n1/epub_to_audiobook:latest',
-                '--voice_name', voice_id,
-                '--tts', 'edge',
-                '--preview', # This will output preview to console, but we want a file
-                '--text', PREVIEW_TEXT,
-                '--output_folder', '/output',
-            ]
-            # Wait, the p0n1 tool might not have a simple "generate preview file" command for Edge
-            # Actually, we can use edge-tts directly if the container has it
+            # Use edge-tts directly via the p0n1 container
             cmd = [
                 'docker', 'run', '--rm',
                 '-v', f"{HOST_DATA_DIR}/previews:/output",
@@ -3732,20 +3719,19 @@ def start_conversion():
         except RuntimeError as e:
             return jsonify({'error': f'Format conversion failed: {str(e)}'}), 500
 
-    # Create output directory
-    
-        # Validate chapter range against actual book content
-        try:
-            if not file_ext == '.pdf':
-                toc = get_epub_toc(file_path)
-                max_chapters = len(toc) if toc else 999
-                if start_chapter and start_chapter > max_chapters:
-                    start_chapter = 1
-                if end_chapter and end_chapter > max_chapters:
-                    end_chapter = max_chapters
-        except: pass
+    # Validate chapter range against actual book content
+    try:
+        if not file_ext == '.pdf':
+            toc = get_epub_toc(input_path)
+            max_chapters = len(toc) if toc else 999
+            if start_chapter and start_chapter > max_chapters:
+                start_chapter = 1
+            if end_chapter and end_chapter > max_chapters:
+                end_chapter = max_chapters
+    except: pass
 
-        output_dirname = f"{safe_name}_{job_id}"
+    # Create output directory
+    output_dirname = f"{safe_name}_{job_id}"
     output_dir = OUTPUT_DIR / output_dirname
     output_dir.mkdir(parents=True, exist_ok=True)
 
