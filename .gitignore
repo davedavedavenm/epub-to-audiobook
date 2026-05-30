@@ -27,3 +27,6 @@ Thumbs.db
 
 # Temp scripts
 _tmp_*
+
+# Playwright CLI logs/snapshots
+.playwright-cli/
