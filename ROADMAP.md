@@ -5,6 +5,9 @@
 ### TTS Engines
 - **Kokoro TTS** - High-quality neural TTS with 22 voices (British, American, European, Italian)
 - **Piper TTS** - Lightweight TTS with 7 high-quality voices (for low-resource systems)
+- **EdgeTTS** - Free Microsoft neural voices through `tts-proxy`
+- **AWS Polly** - Legacy paid fallback through `tts-proxy`; avoid for normal audiobook use because good-quality long-form output is too expensive
+- **Inworld TTS 1.5** - Experimental premium fallback through `tts-proxy`
 
 ### Core Features
 - **Extended Format Support** - EPUB, PDF, MOBI, AZW3, FB2, TXT, HTML, DOCX (via Calibre)
@@ -16,6 +19,8 @@
 - Human-readable output file naming
 - Job queue with progress tracking
 - Audiobookshelf integration (auto-sync completed books)
+- EPUB3 read-along packaging work with Media Overlay/SMIL generation
+- Optional LLM-assisted metadata and pronunciation lexicon generation
 
 ### UI Features
 - **Tab Navigation** - Convert, Queue, Library, Ops, History tabs
@@ -38,24 +43,28 @@
 ## Planned Features
 
 ### v1.1 - Notification Expansion
-- [ ] **WhatsApp Integration** - Job notifications via WhatsApp Business API
+- [x] **WhatsApp Integration** - Job notifications via Evolution API
 - [ ] **Email notifications** - SMTP-based completion alerts
 - [ ] **Webhook support** - Custom HTTP callbacks for automation
 
 ### v1.2 - Text Processing Improvements
-- [ ] **EPUB3 Media Overlays (SMIL) Generation** - Move away from raw MP3 folders. Generate enriched EPUB3 files with force-aligned text and audio (SMIL files) to enable "Read-Along" syncing in Audiobookshelf.
-- [ ] **NLP Sentence Tokenization & Pacing** - Replace regex breath injection with proper NLP sentence tokenization (e.g., `nltk` or `spacy`). Send individual sentences to the TTS engine and programmatically insert precise millisecond silences between sentences and paragraphs for natural pacing without corrupting prosody.
-- [ ] **Smart text extraction** - Improved EPUB parsing for better TTS quality
+- [x] **EPUB3 Media Overlays (SMIL) Generation** - Generate enriched EPUB3 files with Media Overlay/SMIL work for read-along syncing.
+- [x] **NLP Sentence Tokenization & Pacing** - Replaced prosody-breaking regex breath injection with safer TTS preprocessing.
+- [ ] **Smart text extraction hardening** - Improved EPUB parsing for better TTS quality
   - Strip headers/footers
   - Handle footnotes intelligently
   - Detect and skip non-prose content (tables, code blocks)
   - Normalize Unicode characters
 - [ ] **Text preprocessing** - Clean up common OCR errors
-- [ ] **Abbreviation expansion** - Expand common abbreviations for natural speech
+- [x] **Abbreviation/number/year handling** - Expand common patterns for natural speech
 
-### v1.3 - High-Fidelity & Intent-Aware TTS (Polly Long-Form Alternatives)
-- [ ] **Commercial "Long-Form" API Fallbacks** - Integrate pay-as-you-go commercial APIs (like Async Voice API, OpenAI TTS, or ElevenLabs) to offer an on-demand "Polly Long-Form" tier of quality for specific books, bypassing the need for heavy local GPU cloning.
-- [ ] **Next-Gen Open-Weight Tracking** - Monitor HuggingFace TTS Arena for zero-cost, intent-aware models (e.g., F5-TTS, advanced Kokoro variants) that match commercial long-form prosody without the API cost.
+### v1.3 - Low-Cost Quality TTS
+- [x] **Budget rule documented** - Keep normal conversions under GBP3/book, preferably much less. See [LOW-COST-TTS.md](LOW-COST-TTS.md).
+- [x] **Polly de-prioritized** - Good-quality Polly long-form is too expensive for this project and should not be used as a default path.
+- [ ] **Lemonfox trial** - Test the OpenAI/ElevenLabs-compatible API because its advertised pricing fits the budget.
+- [ ] **Chatterbox Turbo proof-of-concept** - Test local zero-shot voice cloning and narration quality against Kokoro on representative chapters.
+- [ ] **Kokoro latest audit** - Confirm the deployed Kokoro-FastAPI image is using the best current Kokoro model/voice set.
+- [ ] **Next-gen open-weight tracking** - Monitor Kokoro variants, Chatterbox, F5-TTS, KokoClone, and similar models that could improve quality without per-character billing.
 
 ### Future Considerations
 - [ ] Background music/ambient sound mixing
