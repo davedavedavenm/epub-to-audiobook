@@ -19,6 +19,24 @@ A self-hosted web application for converting ebooks to audiobooks using AI text-
 
 See [LOW-COST-TTS.md](LOW-COST-TTS.md) for the current cost strategy and sub-GBP3/book options.
 
+### Text Preprocessing (mandatory, engine-independent)
+
+Every conversion runs a preprocessing pipeline before any TTS engine sees the
+text — see [PREPROCESSING.md](PREPROCESSING.md):
+- **Structural sanitization** - strips footnote/endnote markers and note bodies
+  at the HTML level (`epub:type="noteref"`, digit-only `<sup>`/links), immune to
+  publisher quote styles
+- **Deterministic normalization** - unicode cleanup; numbers, years, currency,
+  percentages, and abbreviations to spoken form (`$33 billion` becomes
+  "thirty-three billion dollars")
+- **Pronunciation rules** - LLM-generated per-book lexicon plus global and
+  per-job regex rules
+- **Planned** - per-book narration profiles and LLM chunk normalization
+  (PREPROCESSING.md stages 4-5)
+
+The upstream converter's `--remove_endnotes` flag is deliberately not used: it
+corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
+
 ### Core Features
 - **Extended Format Support** - EPUB, PDF, MOBI, AZW3, FB2, TXT, HTML, DOCX
 - **Library Browser** - Browse and convert books from your OpenBooks collection

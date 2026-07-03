@@ -1,15 +1,29 @@
 """Text preprocessing for TTS conversion.
 
-Normalizes text in EPUB files to improve TTS pronunciation:
-- Numbers with commas: 1,000,000 -> one million
-- Currency: $50 -> fifty dollars, £100 -> one hundred pounds
-- Ordinals: 1st, 2nd, 3rd -> first, second, third
-- Chapter/part headings: Chapter 1 -> Chapter One
-- Common abbreviations: Dr. -> Doctor, Mr. -> Mister, etc.
-- Percentages: 50% -> fifty percent
-- Decades: 1990s -> nineteen nineties
+Two layers, both applied to a `_tts.epub` copy before the converter runs:
 
-This runs on EPUB HTML content before the converter sends it to TTS.
+1. Structural sanitization (HTML level, via BeautifulSoup):
+   - Endnote/footnote reference markers: <sup> digits, epub:type="noteref"
+     anchors, pure-digit internal links. These survive text-level regexes
+     because they sit in their own tags until the converter flattens them.
+   - Note bodies: epub:type footnote/endnote/rearnote asides and sections.
+   - Unicode junk: soft hyphens, zero-width chars, exotic spaces.
+
+2. Text normalization (text-segment level):
+   - Numbers with commas: 1,000,000 -> one million
+   - Currency: $50 -> fifty dollars, £100 -> one hundred pounds
+   - Ordinals: 1st, 2nd, 3rd -> first, second, third
+   - Chapter/part headings: Chapter 1 -> Chapter One
+   - Common abbreviations: Dr. -> Doctor, Mr. -> Mister, etc.
+   - Percentages: 50% -> fifty percent
+   - Decades: 1990s -> nineteen nineties
+   - Leftover flattened endnote digits after sentence punctuation
+     (safe patterns that never touch decimals like $2.58)
+
+Because this runs here, the upstream converter's --remove_endnotes flag must
+NOT be used: its regex strips digits after any letter/period, which corrupts
+decimals ("$2.58" -> "$2.") and alphanumerics ("B12" -> "B"), while missing
+markers after curly quotes ('consultant."35').
 """
 import re
 import zipfile
@@ -17,6 +31,16 @@ import shutil
 import tempfile
 import logging
 from pathlib import Path
+
+try:
+    import warnings
+    from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+    # EPUB xhtml parsed with the tolerant HTML parser on purpose
+    warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
+    HAS_BS4 = True
+except ImportError:
+    HAS_BS4 = False
+    logging.warning("beautifulsoup4 not installed. Structural EPUB sanitization disabled.")
 
 # num2words is optional — gracefully degrade if not installed
 try:
@@ -81,9 +105,101 @@ def _year_to_words(year_str: str) -> str:
     return year_str
 
 
+# epub:type / role values that mark note reference links and note bodies
+_NOTEREF_TYPES = {'noteref'}
+_NOTEREF_ROLES = {'doc-noteref'}
+_NOTE_BODY_TYPES = {'footnote', 'footnotes', 'endnote', 'endnotes',
+                    'rearnote', 'rearnotes'}
+_NOTE_BODY_ROLES = {'doc-footnote', 'doc-endnote', 'doc-endnotes'}
+
+_PURE_DIGIT_RE = re.compile(r'^\[?\d{1,4}\]?$')
+
+
+def _attr_tokens(tag, name):
+    """Return an attribute's value as a set of whitespace-split tokens."""
+    # A tag decomposed earlier in the same pass (e.g. child of a removed
+    # aside) has attrs=None; treat it as attribute-less.
+    if not getattr(tag, 'attrs', None):
+        return set()
+    val = tag.attrs.get(name)
+    if not val:
+        return set()
+    if isinstance(val, (list, tuple)):
+        return set(val)
+    return set(str(val).split())
+
+
+def sanitize_html(html: str) -> str:
+    """Structurally remove footnote/endnote apparatus from one HTML document.
+
+    Works on the markup rather than extracted text, so it is immune to
+    quote styles and publisher formatting quirks. Conservative by design:
+    only removes elements that are unambiguously note markers or bodies.
+    """
+    soup = BeautifulSoup(html, 'lxml')
+
+    # 1. Note bodies: <aside epub:type="footnote">, role="doc-endnote", etc.
+    for tag in soup.find_all(True):
+        if (_attr_tokens(tag, 'epub:type') & _NOTE_BODY_TYPES
+                or _attr_tokens(tag, 'role') & _NOTE_BODY_ROLES):
+            tag.decompose()
+
+    # 2. Note reference anchors: epub:type="noteref" / role="doc-noteref"
+    for a in soup.find_all('a'):
+        if (_attr_tokens(a, 'epub:type') & _NOTEREF_TYPES
+                or _attr_tokens(a, 'role') & _NOTEREF_ROLES):
+            a.decompose()
+
+    # 3. Superscripts whose visible text is just a (bracketed) number
+    for sup in soup.find_all('sup'):
+        if getattr(sup, 'decomposed', False):
+            continue
+        if _PURE_DIGIT_RE.match(sup.get_text(strip=True) or ''):
+            sup.decompose()
+
+    # 4. Internal links whose visible text is just a (bracketed) number
+    #    (endnote markers in EPUBs without semantic markup or <sup> tags)
+    for a in soup.find_all('a', href=True):
+        if getattr(a, 'decomposed', False):
+            continue
+        if _PURE_DIGIT_RE.match(a.get_text(strip=True) or ''):
+            a.decompose()
+
+    return str(soup)
+
+
+# Unicode characters that confuse TTS engines
+_UNICODE_SPACES_RE = re.compile("[   -   　]")
+_UNICODE_INVISIBLE_RE = re.compile("[­​‌‍⁠﻿]")
+_UNICODE_LINE_SEP_RE = re.compile("[  ]")
+
+# Flattened endnote digits after sentence punctuation. Fixed-width
+# lookbehinds ensure decimals are never touched: a digit before the
+# period ("$2.58") fails the [a-zA-Z] / quote requirement.
+_ENDNOTE_AFTER_WORD_RE = re.compile(r'(?<=[a-zA-Z][.!?])\d{1,4}(?=\s|$)')
+_ENDNOTE_AFTER_QUOTE_RE = re.compile(r'(?<=[.!?][”’"\'])\d{1,4}(?=\s|$)')
+_ENDNOTE_BRACKETED_RE = re.compile(r'\[\d{1,4}\]')
+
+
+def normalize_unicode_for_tts(text: str) -> str:
+    """Replace/remove unicode whitespace and invisible chars that trip TTS."""
+    text = _UNICODE_SPACES_RE.sub(' ', text)
+    text = _UNICODE_INVISIBLE_RE.sub('', text)
+    text = _UNICODE_LINE_SEP_RE.sub(' ', text)
+    return text
+
+
 def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
     """Apply all TTS normalization rules to a text string."""
-    
+
+    # === Unicode cleanup (before anything else looks at the text) ===
+    text = normalize_unicode_for_tts(text)
+
+    # === Leftover endnote markers already flattened into the text ===
+    text = _ENDNOTE_AFTER_WORD_RE.sub('', text)
+    text = _ENDNOTE_AFTER_QUOTE_RE.sub('', text)
+    text = _ENDNOTE_BRACKETED_RE.sub('', text)
+
     # === Apply Custom LLM Lexicon Replacements ===
     if lexicon:
         # Sort keys by length descending so longer phrases are matched first
@@ -155,9 +271,15 @@ def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
 
         currencies = {'$': 'dollars', '£': 'pounds', '€': 'euros'}
         unit = currencies.get(symbol, symbol)
+        # "$33 billion" must become "thirty-three billion dollars",
+        # not "thirty-three dollars billion"
+        scale = (m.group(3) or '').strip()
+        if scale:
+            return f"{words} {scale} {unit}"
         return f"{words} {unit}"
 
-    text = re.sub(r'([$£€])(\d[\d,]*\.?\d*)', replace_currency, text)
+    text = re.sub(r'([$£€])(\d[\d,]*\.?\d*)(\s+(?:thousand|million|billion|trillion)\b)?',
+                  replace_currency, text)
 
     # === Percentages ===
     def replace_percent(m):
@@ -289,7 +411,18 @@ def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None
                     if suffix in html_extensions:
                         try:
                             text = data.decode('utf-8')
-                            # Only normalize text content, not HTML tags/attributes
+
+                            # Layer 1: structural sanitization (footnote/endnote
+                            # markers and bodies) — must run before text-level
+                            # rules because markers live in their own tags.
+                            if HAS_BS4:
+                                try:
+                                    text = sanitize_html(text)
+                                except Exception as e:
+                                    logging.warning(
+                                        f"sanitize_html failed for {item.filename}: {e}")
+
+                            # Layer 2: normalize text content, not HTML tags/attributes
                             # Simple approach: normalize text between > and <
                             def normalize_segment(m):
                                 return normalize_text_for_tts(m.group(0), lexicon=lexicon)
@@ -299,7 +432,7 @@ def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None
                                 normalize_segment,
                                 text
                             )
-                            if normalized != text:
+                            if normalized != data.decode('utf-8'):
                                 changes_made += 1
                             data = normalized.encode('utf-8')
                         except (UnicodeDecodeError, Exception):

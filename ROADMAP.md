@@ -50,13 +50,21 @@
 ### v1.2 - Text Processing Improvements
 - [x] **EPUB3 Media Overlays (SMIL) Generation** - Generate enriched EPUB3 files with Media Overlay/SMIL work for read-along syncing.
 - [x] **NLP Sentence Tokenization & Pacing** - Replaced prosody-breaking regex breath injection with safer TTS preprocessing.
-- [ ] **Smart text extraction hardening** - Improved EPUB parsing for better TTS quality
-  - Strip headers/footers
-  - Handle footnotes intelligently
-  - Detect and skip non-prose content (tables, code blocks)
-  - Normalize Unicode characters
-- [ ] **Text preprocessing** - Clean up common OCR errors
+- [x] **Footnote/endnote handling** - Structural HTML sanitization (2026-07); superseded the upstream `--remove_endnotes` flag, which corrupted decimals. See [PREPROCESSING.md](PREPROCESSING.md).
+- [x] **Normalize Unicode characters** - Exotic spaces, soft hyphens, zero-width chars (2026-07).
 - [x] **Abbreviation/number/year handling** - Expand common patterns for natural speech
+- [ ] **Non-prose detection** - Skip/handle tables, code blocks, headers/footers
+- [ ] **Text preprocessing** - Clean up common OCR errors
+
+### v1.5 - Preprocessing-First Direction (2026-07)
+**Decision: text preprocessing is mandatory for every conversion, whichever
+voice engine is used.** The Abundance listening test proved the worst quality
+problems were text defects, not voice defects. Full design: [PREPROCESSING.md](PREPROCESSING.md).
+- [x] **Stage 1: Structural EPUB sanitizer** - noteref/sup/digit-link markers and note bodies removed at HTML level; applied to `_tts.epub` copy; recovery paths use the same copy.
+- [x] **Stage 2: Deterministic normalization hardening** - unicode cleanup, safe endnote fallback regexes, currency scale-word ordering ($33 billion -> "thirty-three billion dollars").
+- [x] **Stage 3: Pronunciation rules** - LLM lexicon + global/per-job `--search_and_replace_file` (pre-existing, kept).
+- [ ] **Stage 4: Per-book narration profile** - one LLM pass over sampled excerpts produces a stored, reviewable profile (domain, entity lexicon, structural fingerprint, number style) that steers all other stages.
+- [ ] **Stage 5: LLM chunk normalization** - flash-tier LLM pass per ~4k-char chunk with profile in system prompt, length/content guardrails, free-tier throttling.
 
 ### v1.3 - Low-Cost Quality TTS
 - [x] **Budget rule documented** - Keep normal conversions under GBP3/book, preferably much less. See [LOW-COST-TTS.md](LOW-COST-TTS.md).

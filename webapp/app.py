@@ -2301,11 +2301,18 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
 
     host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
     host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
+    epub_filename = input_filename
 
     # Handle EPUB from PDF conversion
     if job.get('is_pdf'):
         epub_filename = input_filename.rsplit('.', 1)[0] + '.epub'
         host_input_path = f"{HOST_UPLOAD_DIR}/{epub_filename}"
+
+    # Prefer the preprocessed _tts copy so recovered chapters get the same
+    # sanitized/normalized text as the original conversion run
+    tts_filename = epub_filename.rsplit('.', 1)[0] + '_tts.epub'
+    if (UPLOAD_DIR / tts_filename).exists():
+        host_input_path = f"{HOST_UPLOAD_DIR}/{tts_filename}"
 
     # Effective voice (combine if voice2 specified for Kokoro)
     effective_voice = voice
@@ -2346,7 +2353,9 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         '--voice_name', voice if tts_engine == 'edge' else effective_voice,
         '--model_name', tts_model,
         '--no_prompt',
-        '--remove_endnotes',
+        # NOTE: --remove_endnotes is intentionally NOT passed. Its upstream
+        # regex corrupts decimals ($2.58 -> $2.) and alphanumerics (B12 -> B).
+        # Endnote removal happens structurally in tts_preprocess.py instead.
         '--speed', str(tts_speed),
     ]
 
@@ -3084,7 +3093,9 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '--voice_name', voice if tts_engine in ('edge', 'inworld') else effective_voice,
             '--model_name', tts_model,
             '--no_prompt',
-            '--remove_endnotes',
+            # NOTE: --remove_endnotes is intentionally NOT passed. Its upstream
+            # regex corrupts decimals ($2.58 -> $2.) and alphanumerics (B12 -> B).
+            # Endnote removal happens structurally in tts_preprocess.py instead.
             '--speed', str(tts_speed),
         ])
 
