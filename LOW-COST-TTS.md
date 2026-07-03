@@ -2,7 +2,7 @@
 
 Goal: keep audiobook generation below GBP3/book, ideally much less.
 
-Last reviewed: 2026-05-19. Rough conversion used for quick screening: USD1 ~= GBP0.75.
+Last reviewed: 2026-07-02. Rough conversion used for quick screening: USD1 ~= GBP0.75.
 
 ## Book Cost Assumptions
 
@@ -45,10 +45,25 @@ These are the most relevant low/no-cost options because they avoid per-character
 
 | Candidate | Why it matters | First test |
 |-----------|----------------|------------|
-| Kokoro latest direct stack | Kokoro is Apache-2.0, 82M params, fast, cheap, and already the repo default through Kokoro-FastAPI. | Confirm current Docker image uses the latest stable Kokoro voice/model set; benchmark CPU vs GPU on 1 known book. |
-| Chatterbox Turbo | MIT licensed, 350M params, lower compute than original Chatterbox, voice cloning, paralinguistic tags. | Build a small OpenAI-compatible wrapper and run 3 representative chapters against Kokoro Fable/Ryan. |
+| Kokoro latest direct stack | Kokoro is Apache-2.0, 82M params, fast, cheap, and already the repo default through Kokoro-FastAPI. No new model since v1.0 (Jan 2025), so no free upgrade waiting here. | Confirm current Docker image uses the latest stable Kokoro voice/model set; benchmark CPU vs GPU on 1 known book. |
+| Chatterbox Turbo | MIT licensed, 350M params, lower compute than original Chatterbox, voice cloning, paralinguistic tags (`[laugh]`, `[sigh]`, `[chuckle]`). Won a widely-cited mid-2026 blind test vs ElevenLabs (65.3% vs 24.5%). **Sampled 2026-07-02 — see below.** | Done for a synthetic passage; next is a real-book chapter test. Deployment path: [devnen/Chatterbox-TTS-Server](https://github.com/devnen/Chatterbox-TTS-Server) exposes OpenAI-compatible `/v1/audio/speech`, Docker (NVIDIA/AMD/CPU), sentence chunking for audiobooks — drop-in beside Kokoro-FastAPI, no custom wrapper needed. |
+| Hume TADA (1B / 3B-ml) | Open-sourced March 2026. Built for long-form narration: ~700s audio per context window, prosody consistency across long passages, zero content hallucinations on 1,000+ test samples. MIT code, Llama 3.2 Community License weights. Voice via reference-audio cloning; no OpenAI-compatible server exists yet, so bigger integration lift than Chatterbox. | Sample via HF Space `HumeAI/tada` (needs HF token; demo requests 120s ZeroGPU per call). TADA-1B fits an RTX 3060. |
 | Chatterbox Multilingual | MIT licensed, 500M params, 23+ languages and cloning. | Only test if multilingual or cloning quality matters more than speed. |
 | KokoClone / Kokoro voice-conversion experiments | Potential route to cheap voice cloning while keeping Kokoro speed. | Watch, but do not productionize until stability and license posture are clear. |
+
+## Tracked But Not Pursued (2026-07 review)
+
+| Model | Verdict |
+|-------|---------|
+| Voxtral TTS (Mistral, Mar 2026) | Open weights are CC BY-NC 4.0 (fine for personal use) but 4B params; API is USD16/1M chars (~GBP7/novel) — over budget. Track only. |
+| MisoTTS 8B (Miso Labs, Jun 2026) | Expressive but conversational-agent-focused and too heavy for the RTX 3060 budget pattern. |
+| IndexTTS-2, CosyVoice2 | Recur in 2026 rankings; audition only if Chatterbox disappoints. |
+
+## Sample Test 2026-07-02
+
+Method: same 589-char fiction passage (stress-tests pronunciation: "Worcester", "Gloucester", "epitome", "1987"; flow: long comma-laden sentences; robotic delivery: dialogue vs narration) generated through Kokoro `bm_fable`/`bf_emma` and EdgeTTS `en-GB-RyanNeural` on the zorin stack, and through Chatterbox Turbo via the free HF Space `ResembleAI/chatterbox-turbo-demo` driven with `gradio_client` (300-char chunks, fixed seed, default US reference voice). Total cost GBP0.
+
+Result: Dave judged Turbo good; next step is a real-book proof on a known-problem passage before any deployment work. Notes: Turbo needs a ~10s British reference clip to become the house narrator; output carries Resemble's inaudible Perth watermark; Vast.ai balance was USD0 at test time, so GPU deploys need a top-up first (Turbo also runs on CPU).
 
 ## Practical Recommendation
 
@@ -57,8 +72,8 @@ Default path:
 1. Use Kokoro CPU for one-off conversions when time does not matter.
 2. Use Kokoro GPU autoscaling for batches; this is the best cost/speed point.
 3. Keep EdgeTTS as a free fallback for books where a Microsoft neural voice sounds better.
-4. Trial Lemonfox next because its economics fit the GBP3/book target and its OpenAI-compatible API should be a small proxy addition.
-5. Build a Chatterbox Turbo proof-of-concept only if quality testing shows a clear upgrade over Kokoro for plain narration.
+4. Progress the Chatterbox Turbo track: real-book passage test, then a British reference voice, then deploy devnen/Chatterbox-TTS-Server beside Kokoro (same OpenAI API shape).
+5. Trial Lemonfox only if Chatterbox Turbo disappoints; its economics fit the GBP3/book target and its OpenAI-compatible API should be a small proxy addition.
 
 Avoid:
 
@@ -69,6 +84,10 @@ Avoid:
 
 - Kokoro: https://github.com/hexgrad/kokoro
 - Chatterbox: https://github.com/resemble-ai/chatterbox
+- Chatterbox Turbo: https://www.resemble.ai/chatterbox-turbo/
+- Chatterbox TTS Server (OpenAI-compatible, audiobook chunking): https://github.com/devnen/Chatterbox-TTS-Server
+- Hume TADA: https://www.hume.ai/blog/opensource-tada and https://github.com/HumeAI/tada
+- Voxtral TTS: https://mistral.ai/news/voxtral-tts/
 - Lemonfox TTS pricing: https://www.lemonfox.ai/text-to-speech-api
 - OpenAI TTS pricing: https://developers.openai.com/api/docs/models/tts-1
 - Deepgram Aura-2 pricing: https://deepgram.com/product/text-to-speech

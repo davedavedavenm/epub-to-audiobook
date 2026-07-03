@@ -61,10 +61,10 @@
 ### v1.3 - Low-Cost Quality TTS
 - [x] **Budget rule documented** - Keep normal conversions under GBP3/book, preferably much less. See [LOW-COST-TTS.md](LOW-COST-TTS.md).
 - [x] **Polly de-prioritized** - Good-quality Polly long-form is too expensive for this project and should not be used as a default path.
-- [ ] **Lemonfox trial** - Test the OpenAI/ElevenLabs-compatible API because its advertised pricing fits the budget.
-- [ ] **Chatterbox Turbo proof-of-concept** - Test local zero-shot voice cloning and narration quality against Kokoro on representative chapters.
-- [ ] **Kokoro latest audit** - Confirm the deployed Kokoro-FastAPI image is using the best current Kokoro model/voice set.
-- [ ] **Next-gen open-weight tracking** - Monitor Kokoro variants, Chatterbox, F5-TTS, KokoClone, and similar models that could improve quality without per-character billing.
+- [x] **Chatterbox Turbo proof-of-concept (stage 1)** - Sampled 2026-07-02 via free HF Space against Kokoro Fable/Emma and EdgeTTS Ryan on a stress-test passage; judged a clear improvement. Next: real-book passage test, British reference voice, deploy devnen/Chatterbox-TTS-Server (OpenAI-compatible) beside Kokoro. See [LOW-COST-TTS.md](LOW-COST-TTS.md).
+- [ ] **Lemonfox trial** - Only if Chatterbox Turbo disappoints; its advertised pricing fits the budget.
+- [ ] **Kokoro latest audit** - Confirm the deployed Kokoro-FastAPI image is using the best current Kokoro model/voice set. (No new Kokoro model since v1.0, Jan 2025.)
+- [ ] **Next-gen open-weight tracking** - Monitor Chatterbox, Hume TADA, Voxtral, IndexTTS-2, CosyVoice2, and similar models that could improve quality without per-character billing.
 
 ### Future Considerations
 - [ ] Background music/ambient sound mixing
