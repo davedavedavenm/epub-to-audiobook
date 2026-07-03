@@ -30,3 +30,9 @@ _tmp_*
 
 # Playwright CLI logs/snapshots
 .playwright-cli/
+
+# local runtime artifacts
+jobs.db
+*_tts.epub
+ssh-keys/
+__pycache__/
