@@ -2,6 +2,23 @@
 
 Self-hosted ebook-to-audiobook conversion app with Docker services, TTS engines, queue processing, Audiobookshelf sync, and optional Telegram/WhatsApp notifications.
 
+## Current Direction & Doc Map (2026-07)
+
+Read these before changing anything TTS- or text-related:
+
+| Doc | What it holds |
+|-----|---------------|
+| [PREPROCESSING.md](PREPROCESSING.md) | **Mandatory** text pipeline (5 stages; 1–3 implemented in `webapp/tts_preprocess.py`, 4–5 designed). Why upstream `--remove_endnotes` must never return. |
+| [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off status + Dave's listening verdicts, cost model, canonical test passage, UK reference voices. |
+| [ROADMAP.md](ROADMAP.md) | Live feature status; v1.5 = preprocessing-first direction. |
+| [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern (Kokoro today; template for next-gen engines). |
+| `archive/plans/` | Historical planning docs — superseded, do not follow. |
+
+Key facts an agent must know:
+- Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
+- The deployed stack lives on zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook`, deploys **from git only** (reset to master 2026-07-03 after years of live-patch drift — never patch live files).
+- Engine candidates: Chatterbox Turbo (local install proven; deploy via devnen/Chatterbox-TTS-Server) and Hume TADA (most natural, needs server wrapper + GPU benchmark). UK human reference voices only — see LOW-COST-TTS.md.
+
 ## Scope
 
 - App code, scripts, tests, Docker Compose, and deployment docs for this repo.

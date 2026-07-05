@@ -59,11 +59,87 @@ These are the most relevant low/no-cost options because they avoid per-character
 | MisoTTS 8B (Miso Labs, Jun 2026) | Expressive but conversational-agent-focused and too heavy for the RTX 3060 budget pattern. |
 | IndexTTS-2, CosyVoice2 | Recur in 2026 rankings; audition only if Chatterbox disappoints. |
 
+## Cost Model For The Next-Gen Engines (2026-07-04)
+
+Assumptions: typical novel = 100k words ≈ 600k chars ≈ **11 hours of audio**
+at ~150 wpm. GBP figures at USD1 ≈ GBP0.75. "RTF" = generation speed relative
+to realtime (2x slower means 1 min of audio takes 2 min to make).
+
+**Measured baseline:** Chatterbox Turbo on Dave's Windows box (AMD Ryzen,
+CPU-only, no GPU) generated 15–18s chunks in 25–55s → **~2.5x slower than
+realtime, measured 2026-07-03**. All other rows are derived or published
+figures, marked accordingly.
+
+| Path | Speed (11h book) | Cost/book | Confidence | Notes |
+|------|------------------|-----------|------------|-------|
+| Kokoro @ Vast RTX 3060 | ~20 min | ~GBP0.01 | Measured (GPU-PLAYBOOK) | Current quality baseline |
+| **Turbo @ Vast RTX 3060 ($0.05–0.06/hr)** | ~3–4h GPU | **~GBP0.15–0.20** | Derived: published "up to 6x RT", assumed 3x on 3060 | Best value; batch several books per session like the Kokoro playbook |
+| Turbo @ Vast RTX 4090 ($0.30–0.40/hr) | ~1–1.5h | ~GBP0.30–0.45 | Derived | Pay for wall-clock speed, still trivial money |
+| Turbo @ Windows box (CPU) | ~27h | ~GBP0.30 electricity | **Measured** | Free-ish but more than overnight; fallback only |
+| Turbo @ zorin NUC (CPU) | ~2–3 days | — | Estimated | Not viable, and it is the prod server |
+| TADA @ Vast RTX 3060 | ~3–7h (est) | ~GBP0.15–0.35 | **Unbenchmarked estimate** | RTF 0.09 on H100 published; must benchmark on 3060 AND build a server wrapper before trusting |
+| LLM normalization (Stage 5) | minutes | GBP0 | Z AI / Gemini flash free tiers | 150–200 requests/book |
+
+Bottom line: **a GBP5–10 Vast top-up converts roughly 25–50 books with
+Turbo on the RTX 3060 pattern.** The same GPU rig runs TADA too, so the
+top-up is not wasted whichever engine wins.
+
+Consistency on Vast: interruptible instances can be reclaimed mid-book. The
+repo already carries the mitigations built for Kokoro GPU runs (onstart
+watchdog template, per-chapter retry, missing-chapter recovery). For
+guaranteed uninterrupted runs, rent on-demand instead of interruptible at
+roughly 2x the hourly rate — still pennies per book.
+
+Deploy path when an engine is chosen: devnen/Chatterbox-TTS-Server as a
+compose service or Vast template (OpenAI-compatible `/v1/audio/speech`, same
+shape as Kokoro-FastAPI), reference voices from `data/voice_refs/`.
+
 ## Sample Test 2026-07-02
 
 Method: same 589-char fiction passage (stress-tests pronunciation: "Worcester", "Gloucester", "epitome", "1987"; flow: long comma-laden sentences; robotic delivery: dialogue vs narration) generated through Kokoro `bm_fable`/`bf_emma` and EdgeTTS `en-GB-RyanNeural` on the zorin stack, and through Chatterbox Turbo via the free HF Space `ResembleAI/chatterbox-turbo-demo` driven with `gradio_client` (300-char chunks, fixed seed, default US reference voice). Total cost GBP0.
 
 Result: Dave judged Turbo good; next step is a real-book proof on a known-problem passage before any deployment work. Notes: Turbo needs a ~10s British reference clip to become the house narrator; output carries Resemble's inaudible Perth watermark; Vast.ai balance was USD0 at test time, so GPU deploys need a top-up first (Turbo also runs on CPU).
+
+## Bake-Off Status (updated 2026-07-04)
+
+Real-book tests on *Abundance* passages, all engines fed identical
+preprocessed text. Dave's listening verdicts:
+
+- **Hard rules:** UK voices only (male + female needed). Never clone a
+  synthetic voice (cloning EdgeTTS output produced robotic speech — the
+  cloner reproduces the reference's prosody). Human reference clips only.
+- **Turbo + LibriVox UK references** (Andy Minter male / Ruth Golding female,
+  both public domain): clearly better than EdgeTTS Ryan; residual complaint
+  is occasional pronunciation trips and slightly robotic pacing. Turbo
+  degrades past ~300 chars per generation — always chunk (the devnen server
+  does this automatically).
+- **TADA + preset voice**: the most natural prosody of anything tested, and
+  it spontaneously gives quoted dialogue a different voice (emergent
+  speech-language-model behavior; Dave likes it). Artifacts: pacing drift
+  within long passes, occasional background noise, and the preset voices are
+  American. Next test: TADA with the same LibriVox UK references, shorter
+  passes.
+- **Kokoro**: retired from quality contention; stays as the cheap bulk
+  fallback.
+
+### Canonical test passage
+
+All future engine/voice comparisons use one fixed passage so results are
+comparable: the solar-energy section of *Abundance* ch.2 (Hannah Ritchie
+quote through "half the price of coal") — chosen by Dave for its endnote
+markers, percentages, decades, names (BloombergNEF, Jenny Chase), nested
+quotes, and paper-title mouthful. Regenerate it with:
+
+    python scripts/extract_test_passage.py <abundance.epub> canonical_passage.txt
+
+(The text itself is a copyrighted excerpt and is not committed; a preprocessed
+copy lives in `data/voice_refs/canonical_passage.txt` on the zorin stack.)
+
+Reference voice clips (LibriVox, public domain): `data/voice_refs/` on the
+zorin stack — `uk_male_minter_ref.wav`, `uk_female_golding_ref.wav`
+(sources: archive.org `prisoner_of_zenda_librivox` ch.2, Andy Minter;
+`mental_efficiency_rg_librivox` ch.2, Ruth Golding; 18s cuts at 120s offset,
+24kHz mono).
 
 ## Practical Recommendation
 

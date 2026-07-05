@@ -92,6 +92,13 @@ check failures append to the book's profile; affected chunks re-render.
 rules, including the regressions that motivated this pipeline (decimals,
 alphanumerics, curly-quote endnotes). Run: `python -m pytest tests/`.
 
+For listening tests, always use the **canonical test passage** (the
+*Abundance* solar-energy section — see LOW-COST-TTS.md "Canonical test
+passage" for why it was chosen and how to regenerate it with
+`scripts/extract_test_passage.py`). Verified 2026-07-04: the pipeline strips
+all five of its endnote markers structurally while leaving "2.6 percent",
+"140 years", and the quoted material intact.
+
 ## Invariants
 
 - The pipeline must never make text *worse*: every destructive rule needs a
