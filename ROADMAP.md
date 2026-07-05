@@ -66,9 +66,10 @@ problems were text defects, not voice defects. Full design: [PREPROCESSING.md](P
 - [ ] **Stage 4: Per-book narration profile** - one LLM pass over sampled excerpts produces a stored, reviewable profile (domain, entity lexicon, structural fingerprint, number style) that steers all other stages.
 - [ ] **Stage 5: LLM chunk normalization** - flash-tier LLM pass per ~4k-char chunk with profile in system prompt, length/content guardrails, free-tier throttling.
 
-### v1.6 - Next-Gen Engine + UI Upgrade (planned, blocked on engine decision)
+### v1.6 - Next-Gen Engine + UI Upgrade
 Implementation plan: [PLAN-ENGINE-UI.md](PLAN-ENGINE-UI.md). Bake-off status and verdicts: [LOW-COST-TTS.md](LOW-COST-TTS.md).
-- [ ] **Phase A: Chatterbox Turbo engine** - compose service (devnen server, UK LibriVox voices from `data/voice_refs/`), app.py plumbing at all three `tts_engine` sites, UI engine/voice entries, ETA model, Vast template, smoke checks.
+- [x] **Phase 0: UI parity** (2026-07-04) - upload voice picker, library voice-blend/per-book-regex, queue pause/retry-all/cancel/log viewer, preprocessing PRE badge, global pronunciation dictionary editor, honest Polly/Inworld labels.
+- [ ] **Phase A: Chatterbox Turbo engine** - compose service (devnen server, UK LibriVox voices from `data/voice_refs/`), app.py plumbing at all three `tts_engine` sites, UI engine/voice entries, ETA model, Vast template, smoke checks. (Blocked on engine decision.)
 - [ ] **Phase B: TADA engine** - only if TADA wins; requires OpenAI-compatible wrapper + RTX 3060 benchmark first.
 - [ ] **Phase C: Preprocessing UI** - per-job "preprocessed" badge, narration profile review panel (Stage 4), voice audition helper.
 

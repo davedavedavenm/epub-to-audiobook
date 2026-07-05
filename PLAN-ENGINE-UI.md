@@ -52,6 +52,11 @@ narrator. Phase 0 is valuable regardless of any engine decision.
 
 ## Phase 0 — UI parity & hygiene (unblocked, engine-independent)
 
+**STATUS: DONE 2026-07-04** (commit `9c59912`, deployed to zorin, verified:
+UI renders, pronunciations endpoint round-trips, queue status live; PRE
+badge appears on the next converted book). Tasks kept below as the record
+of what was built.
+
 Each task: change → acceptance criteria (AC).
 
 **0.1 Upload tab voice picker.** In index.html, add Narrator select (reuse
