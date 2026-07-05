@@ -546,6 +546,12 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
+        # Add preprocess_summary column (migration — UI preprocessing badge)
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN preprocess_summary TEXT")
+        except sqlite3.OperationalError:
+            pass
+
         # Add tts_engine column if it doesn't exist (migration)
         try:
             conn.execute('ALTER TABLE jobs ADD COLUMN tts_engine TEXT DEFAULT "kokoro"')
@@ -681,8 +687,8 @@ def save_job(job: dict):
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
-             tts_speed, newline_mode, title_mode, custom_regex)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -724,7 +730,8 @@ def save_job(job: dict):
             job.get('tts_speed', DEFAULT_TTS_SPEED),
             job.get('newline_mode', 'double'),
             job.get('title_mode', 'auto'),
-            job.get('custom_regex')
+            job.get('custom_regex'),
+            job.get('preprocess_summary')
         ))
         conn.commit()
 
@@ -2955,13 +2962,18 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 app.logger.warning(f"Lexicon generation failed: {e}")
                 
             preprocessed_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
-            preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon)
+            _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
             epub_path = preprocessed_path
-            append_job_log(job_id, "Text preprocessed (numbers, abbreviations normalized for TTS)")
+            summary = f"sanitized + normalized, {files_changed} files changed"
+            if lexicon:
+                summary += f", lexicon {len(lexicon)} terms"
+            update_job(job_id, preprocess_summary=summary)
+            append_job_log(job_id, f"Text preprocessed ({summary})")
         except Exception as e:
             app.logger.warning(f"TTS preprocessing failed, using original: {e}")
+            update_job(job_id, preprocess_summary=f"failed, original text used: {str(e)[:120]}")
             append_job_log(job_id, f"TTS preprocessing skipped: {e}")
 
         # Calculate timeout and initial ETA using learning algorithm
@@ -3417,6 +3429,34 @@ def api_settings():
             settings[key] = ""
             
     return jsonify(settings)
+
+@app.route('/api/settings/pronunciations', methods=['GET', 'POST'])
+def pronunciations_settings():
+    """Read/write global pronunciation rules (regex `search==replace`, one per line).
+
+    Applied to every job via the converter's --search_and_replace_file.
+    """
+    conf_path = UPLOAD_DIR / 'global_pronunciations.conf'
+    if request.method == 'GET':
+        try:
+            text = conf_path.read_text(encoding='utf-8') if conf_path.exists() else ''
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        return jsonify({'rules': text})
+
+    data = request.get_json(silent=True) or {}
+    rules = data.get('rules', '')
+    bad = [ln for ln in rules.splitlines()
+           if ln.strip() and not ln.strip().startswith('#') and '==' not in ln]
+    if bad:
+        return jsonify({'error': f"Each rule needs search==replace. Bad lines: {bad[:3]}"}), 400
+    try:
+        conf_path.write_text(rules, encoding='utf-8')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    return jsonify({'status': 'saved',
+                    'lines': len([ln for ln in rules.splitlines() if ln.strip()])})
+
 
 @app.route('/api/settings/test_abs', methods=['POST'])
 def test_abs_connection():
@@ -4490,24 +4530,27 @@ def estimate_cost_api():
 def convert_from_library():
     """Start conversion of a book from the library."""
     try:
-        import json, sys
+        import json
         raw_data = request.get_data()
-        print(f"DEBUG RAW: {raw_data}", file=sys.stderr)
-        
+
         try:
             data = json.loads(raw_data.decode('utf-8'))
         except:
             data = request.form.to_dict() or {}
-            
-        print(f"DEBUG PARSED: {data}", file=sys.stderr)
-        
+
         file_path_str = data.get('path', '')
         if not file_path_str:
             return jsonify({'error': 'No path provided', 'received': data}), 400
-            
+
         file_path = Path(file_path_str)
         voice = data.get('voice', DEFAULT_VOICE)
-        
+        voice2 = (data.get('voice2') or '').strip() or None
+        custom_regex = (data.get('custom_regex') or '').strip() or None
+        newline_mode = data.get('newline_mode', 'double')
+        title_mode = data.get('title_mode', 'auto')
+        if voice2 and voice2 not in VOICES:
+            return jsonify({'error': 'Invalid secondary voice selected'}), 400
+
         def safe_int(v): 
             try: return int(v) if v and str(v).strip() else None
             except: return None
@@ -4556,6 +4599,11 @@ def convert_from_library():
             'voice_name': VOICES.get(voice, {}).get('name', voice),
             'tts_engine': tts_engine,
             'tts_speed': tts_speed,
+            'voice2': voice2,
+            'voice2_name': VOICES.get(voice2, {}).get('name') if voice2 else None,
+            'custom_regex': custom_regex,
+            'newline_mode': newline_mode,
+            'title_mode': title_mode,
             'status': 'queued',
             'is_pdf': file_ext == '.pdf',
             'start_chapter': start_chapter,

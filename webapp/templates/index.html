@@ -161,6 +161,10 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     <div id="file-name-display" style="margin-top: 24px; font-weight: 700; color: var(--accent);"></div>
                 </div>
                 <input type="file" id="file-input" class="hidden" onchange="handleFile(event)">
+                <div class="setup-grid" style="grid-template-columns: 2fr 1fr; margin-bottom: 24px;">
+                    <div class="setup-field"><label class="setup-label">Narrator</label><select id="upload-voice" class="input-control"></select></div>
+                    <div class="setup-field"><label class="setup-label">Speed</label><input id="upload-speed" type="number" step="0.1" value="1.0" class="input-control"></div>
+                </div>
                 <button id="convert-btn" class="btn btn-primary" style="width: 100%; height: 88px; font-size: 1.4rem;" disabled onclick="startProduction()">Create Audiobook</button>
             </div>
         </div>
@@ -237,9 +241,20 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top:0; font-family:'Lora';">Amazon Polly Voices (Optional)</h3>
+                        <h3 style="margin-top:0; font-family:'Lora';">Pronunciation Dictionary (All Books)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
-                            The studio comes with excellent free voices (Kokoro and Piper). If you also want to use Amazon's premium Polly voices, enter your AWS credentials here. You must have an AWS account with 'polly:SynthesizeSpeech' permissions.
+                            Regex rules applied to <strong>every</strong> conversion, one per line as <code>search==replace</code>.
+                            Lines starting with # are comments. Per-book rules live in each book's "Advanced" panel in the Library.
+                        </p>
+                        <textarea id="pronunciation-rules" class="input-control" rows="6" placeholder="Hermione==her-MY-oh-nee&#10;\bBART\b==bart"></textarea>
+                        <button class="btn" style="margin-top:12px;" onclick="savePronunciations(this)">Save Dictionary</button>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top:0; font-family:'Lora';">Amazon Polly Voices (Legacy — not recommended)</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            ⚠️ <strong>Proven too expensive for full audiobooks</strong> (see LOW-COST-TTS.md); kept only for compatibility.
+                            The studio's free voices (Kokoro, EdgeTTS, Piper) are the recommended path. You must have an AWS account with 'polly:SynthesizeSpeech' permissions.
                         </p>
                         <div style="display:grid; gap:16px;">
                             <div>
@@ -273,8 +288,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top:0; font-family:'Lora';">Inworld TTS 1.5 — Premium Voices (Optional)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
-                            Unlock the #1-ranked AI voice engine (Artificial Analysis leaderboard). Breathtakingly expressive, emotionally nuanced narration.
-                            Pay-as-you-go: ~<strong>£2–£5 per novel</strong>, no subscription required.
+                            Expressive paid engine. Pay-as-you-go: ~<strong>£2–£5 per novel</strong> —
+                            ⚠️ at or above the project's £3/book budget rule (LOW-COST-TTS.md), so treat as premium/experimental only.
                             <a href="https://inworld.ai/tts-api" target="_blank" style="color:var(--accent);">Get your API key at inworld.ai →</a>
                         </p>
                         <div style="display:flex; gap:16px; align-items:flex-end;">
@@ -364,6 +379,25 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
             const el = document.getElementById('set-' + key);
             if(el) el.value = val;
         });
+        try {
+            const p = await fetch('/api/settings/pronunciations');
+            const pdata = await p.json();
+            const ta = document.getElementById('pronunciation-rules');
+            if(ta) ta.value = pdata.rules || '';
+        } catch(e) {}
+    }
+
+    async function savePronunciations(btn) {
+        const original = btn.textContent;
+        btn.textContent = 'Saving...'; btn.disabled = true;
+        const rules = document.getElementById('pronunciation-rules').value;
+        const resp = await fetch('/api/settings/pronunciations', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ rules })
+        });
+        const data = await resp.json();
+        btn.textContent = resp.ok ? `✅ Saved (${data.lines} rules)` : '❌ ' + (data.error || 'Failed');
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3000);
     }
 
     async function saveSettings() {
@@ -418,16 +452,22 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         }
     }
 
+    function buildVoiceOptions(selectedId) {
+        const engines = [...new Set(Object.values(voices).map(v => v.engine))];
+        return engines.map(engine => {
+            const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
+            return `<optgroup label="${engine.toUpperCase()} ENGINE">${engineVoices.map(([id, v]) => `<option value="${id}" ${id === selectedId ? 'selected' : ''}>${v.name} (${v.accent})</option>`).join('')}</optgroup>`;
+        }).join('');
+    }
+
     function renderLibrary() {
         const grid = document.getElementById('library-grid');
         const query = (document.getElementById('library-search')?.value || '').toLowerCase();
         const filtered = libraryBooks.filter(b => b.title.toLowerCase().includes(query));
-        
-        const engines = [...new Set(Object.values(voices).map(v => v.engine))];
-        const voiceOptions = engines.map(engine => {
-            const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
-            return `<optgroup label="${engine.toUpperCase()} ENGINE">${engineVoices.map(([id, v]) => `<option value="${id}" ${id === 'en-GB-RyanNeural' ? 'selected' : ''}>${v.name} (${v.accent})</option>`).join('')}</optgroup>`;
-        }).join('');
+
+        const voiceOptions = buildVoiceOptions('en-GB-RyanNeural');
+        const blendOptions = Object.entries(voices).filter(([id, v]) => v.engine === 'kokoro')
+            .map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('');
 
         grid.innerHTML = filtered.map(b => {
             const bookId = btoa(b.path).replace(/[^a-z0-9]/gi, '');
@@ -449,11 +489,24 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     </div>
                     <div id="workspace-${bookId}" class="production-workspace">
                         <div class="setup-grid">
-                            <div class="setup-field"><label class="setup-label">Narrator</label><select id="voice-${bookId}" class="input-control">${voiceOptions}</select></div> 
+                            <div class="setup-field"><label class="setup-label">Narrator</label><select id="voice-${bookId}" class="input-control">${voiceOptions}</select></div>
                             <div class="setup-field"><label class="setup-label">Start</label><select id="start-${bookId}" class="input-control"></select></div>
                             <div class="setup-field"><label class="setup-label">End</label><select id="end-${bookId}" class="input-control"></select></div>
                             <div class="setup-field"><label class="setup-label">Speed</label><input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control"></div>
                         </div>
+                        <details style="margin-bottom: 24px;">
+                            <summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Advanced (voice blend &amp; pronunciation)</summary>
+                            <div class="setup-grid" style="grid-template-columns: 1fr 2fr; margin-top:16px;">
+                                <div class="setup-field">
+                                    <label class="setup-label">Blend Voice (Kokoro only)</label>
+                                    <select id="voice2-${bookId}" class="input-control"><option value="">None</option>${blendOptions}</select>
+                                </div>
+                                <div class="setup-field">
+                                    <label class="setup-label">Pronunciation fixes (regex search==replace, one per line — this book only)</label>
+                                    <textarea id="regex-${bookId}" class="input-control" rows="2" placeholder="Vartabedian==var-tuh-BEH-dee-un"></textarea>
+                                </div>
+                            </div>
+                        </details>
                         <button class="btn btn-primary" style="width:100%; height: 64px;" data-path="${escapeHtml(b.path)}" onclick="convertWithSettings('${bookId}', this)">Create Audiobook</button>
                     </div>
                 </div>
@@ -494,7 +547,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
 
     async function startProduction() {
         const formData = new FormData();
-        formData.append('file', selectedFile); formData.append('voice', 'en-GB-RyanNeural');
+        formData.append('file', selectedFile);
+        formData.append('voice', document.getElementById('upload-voice').value);
+        formData.append('tts_speed', document.getElementById('upload-speed').value || '1.0');
         await fetch('/api/convert', { method: 'POST', body: formData }); switchTab('queue');
     }
 
@@ -504,7 +559,9 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         const start = document.getElementById('start-' + bookId).value;
         const end = document.getElementById('end-' + bookId).value;
         const speed = document.getElementById('speed-' + bookId).value;
-        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed }) });
+        const voice2 = document.getElementById('voice2-' + bookId)?.value || '';
+        const customRegex = document.getElementById('regex-' + bookId)?.value || '';
+        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex }) });
         const data = await resp.json();
         if(data.status === 'success') {
             const oldText = el.textContent;
@@ -572,9 +629,55 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
         }
     }
 
+    function preBadge(j) {
+        if(!j.preprocess_summary) return '';
+        const failed = j.preprocess_summary.startsWith('failed');
+        return `<span title="${escapeHtml(j.preprocess_summary)}" style="background:${failed ? 'var(--error)' : 'var(--success)'}; color:#fff; font-size:0.65rem; font-weight:900; padding:3px 10px; border-radius:12px; letter-spacing:0.05em; cursor:help;">PRE ${failed ? '!' : '✓'}</span>`;
+    }
+
+    const openLogs = new Set();  // survives the 5s queue re-render
+
+    async function toggleLogs(jobId) {
+        if(openLogs.has(jobId)) { openLogs.delete(jobId); document.getElementById('logs-' + jobId)?.classList.add('hidden'); return; }
+        openLogs.add(jobId);
+        await fillLogsPane(jobId);
+    }
+
+    async function fillLogsPane(jobId) {
+        const pane = document.getElementById('logs-' + jobId);
+        if(!pane) return;
+        pane.classList.remove('hidden');
+        if(!pane.textContent) pane.textContent = 'Loading log...';
+        try {
+            const resp = await fetch(`/api/jobs/${jobId}/logs?tail=40&include_container=0`);
+            const data = await resp.json();
+            pane.textContent = data.logs || '(log empty)';
+            pane.scrollTop = pane.scrollHeight;
+        } catch(e) { pane.textContent = 'Could not load log.'; }
+    }
+
+    async function toggleQueuePause() {
+        await fetch('/api/queue/pause', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}' });
+        loadJobs();
+    }
+
+    async function retryAllFailed() {
+        const resp = await fetch('/api/queue/retry-failed', { method: 'POST' });
+        const data = await resp.json();
+        alert(`Requeued ${(data.queued_ids || []).length} failed job(s)`);
+        loadJobs();
+    }
+
+    async function cancelJob(jobId) {
+        if(!confirm('Cancel this conversion? Partial chapters are kept for resume.')) return;
+        await fetch(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
+        setTimeout(loadJobs, 500);
+    }
+
     async function loadJobs() {
-        const resp = await fetch('/api/jobs');
+        const [resp, statusResp] = await Promise.all([fetch('/api/jobs'), fetch('/api/queue/status')]);
         const jobs = await resp.json();
+        const qstatus = await statusResp.json();
         const active = jobs.filter(j => ['queued', 'converting', 'recovering', 'failed', 'converting PDF', 'converting to audio'].some(s => j.status.includes(s)));
         const badge = document.getElementById('queue-badge');
         if(badge) {
@@ -583,13 +686,26 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
             else badge.classList.add('hidden');
         }
         const queueContent = document.getElementById('queue-content');
-        if(queueContent && active.length > 0) {
-            queueContent.innerHTML = active.map(j => `
+        if(!queueContent) return;
+        const anyFailed = active.some(j => j.status === 'failed');
+        const controls = `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:24px 48px;">
+                <div style="font-weight:700; color:var(--text-secondary);">
+                    ${qstatus.paused ? '⏸️ Queue is PAUSED — running jobs finish, nothing new starts.' : `▶️ Queue running — ${qstatus.queued_count} waiting`}
+                </div>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn" onclick="toggleQueuePause()">${qstatus.paused ? '▶️ Resume queue' : '⏸️ Pause queue'}</button>
+                    ${anyFailed ? '<button class="btn" onclick="retryAllFailed()">🔁 Retry all failed</button>' : ''}
+                </div>
+            </div>`;
+        if(active.length > 0) {
+            queueContent.innerHTML = controls + active.map(j => `
                 <div class="card" style="${j.status === 'failed' ? 'border-color: var(--error);' : ''}">
                     <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
                         <div>
-                            <div style="text-transform:uppercase; font-size:0.85rem; font-weight:900; color:${j.status === 'failed' ? 'var(--error)' : 'var(--accent)'}; display:flex; align-items:center; gap:6px;">
+                            <div style="text-transform:uppercase; font-size:0.85rem; font-weight:900; color:${j.status === 'failed' ? 'var(--error)' : 'var(--accent)'}; display:flex; align-items:center; gap:10px;">
                                 ${j.status === 'failed' ? '<span style="font-size: 1.4rem;">⚠️</span> FAILED' : j.status}
+                                ${preBadge(j)}
                             </div>
                             <div class="library-item-title" style="margin-top:8px;">${escapeHtml(j.book_name)}</div>
                             ${j.status === 'failed' && j.error ? `<div style="color:var(--error); font-size:0.85rem; margin-top:4px; max-width:80%;">${escapeHtml(j.error)}</div>` : ''}
@@ -601,11 +717,16 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     </div>
                     <div class="progress-bar"><div class="progress-fill" style="width: ${j.progress_percent}%; ${j.status === 'failed' ? 'background: var(--error);' : ''}"></div></div>
                     <div class="job-detail-row">
-                        <div class="job-detail-item">Narrator <b>${j.voice_name || j.voice}</b></div>
+                        <div class="job-detail-item">Narrator <b>${j.voice_name || j.voice}${j.voice2 ? ' + ' + (j.voice2_name || j.voice2) : ''}</b></div>
                         <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
                         <div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>
                         <div class="job-detail-item">Range <b>${j.start_chapter || 1} - ${j.end_chapter || 'End'}</b></div>
                     </div>
+                    <div style="display:flex; gap:12px; margin-top:20px;">
+                        <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="toggleLogs('${j.id}', this)">📜 Log</button>
+                        ${j.status !== 'failed' ? `<button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="cancelJob('${j.id}')">✋ Cancel</button>` : ''}
+                    </div>
+                    <pre id="logs-${j.id}" class="hidden" style="margin-top:16px; background:var(--bg-element); border-radius:12px; padding:16px; font-size:0.75rem; max-height:220px; overflow:auto; white-space:pre-wrap;"></pre>
                     ${j.status === 'failed' ? `
                     <div style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">
                         <div class="setup-field" style="margin-bottom:16px;">
@@ -622,15 +743,17 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
                     </div>` : ''}
                 </div>
             `).join('');
-        } else if(queueContent) {
-            queueContent.innerHTML = '<div class="card" style="text-align:center; padding:100px;">Current tasks is clear.</div>';
+        } else {
+            queueContent.innerHTML = controls + '<div class="card" style="text-align:center; padding:100px;">Queue is clear.</div>';
         }
+        // restore any log panes the user had open before this re-render
+        openLogs.forEach(id => fillLogsPane(id));
     }
 
     async function loadHistory() {
         const resp = await fetch('/api/history');
         const jobs = await resp.json();
-        document.getElementById('history-content').innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:'Lora'; font-size:1.2rem; font-weight:700;">✅ ${escapeHtml(j.book_name)}</div></div><div style="display:flex; gap:12px;"><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button></div></div>`).join('') || '<div class="card">History is empty.</div>';
+        document.getElementById('history-content').innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:'Lora'; font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:10px;">✅ ${escapeHtml(j.book_name)} ${preBadge(j)}</div></div><div style="display:flex; gap:12px;"><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button></div></div>`).join('') || '<div class="card">History is empty.</div>';
     }
 
     async function loadGpuStatus() {
@@ -713,6 +836,8 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-primary); color: 
     window.onload = () => {
         const theme = localStorage.getItem('audiobook-theme') || 'light'; setTheme(theme);
         const tab = localStorage.getItem('audiobook-tab') || 'library'; switchTab(tab);
+        const uploadVoice = document.getElementById('upload-voice');
+        if(uploadVoice) uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural');
         setInterval(loadJobs, 5000); setInterval(loadGpuStatus, 10000);
     };
 </script></body></html>

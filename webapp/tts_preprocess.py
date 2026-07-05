@@ -379,13 +379,13 @@ def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
 
 
 
-def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None, lexicon: dict = None) -> Path:
+def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None, lexicon: dict = None) -> tuple[Path, int]:
     """Preprocess an EPUB file: normalize text for better TTS pronunciation.
 
     Modifies HTML content inside the EPUB. If output_path is None,
     creates a preprocessed copy alongside the original with _tts suffix.
 
-    Returns the path to the preprocessed EPUB.
+    Returns (path to the preprocessed EPUB, number of HTML files changed).
     """
     epub_path = Path(epub_path)
     if output_path is None:
@@ -443,7 +443,7 @@ def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None
     finally:
         tmp_path.unlink(missing_ok=True)
 
-    return output_path
+    return output_path, changes_made
 
 
 if __name__ == '__main__':
