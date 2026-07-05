@@ -23,10 +23,10 @@
 - Optional LLM-assisted metadata and pronunciation lexicon generation
 
 ### UI Features
-- **Tab Navigation** - Convert, Queue, Library, Ops, History tabs
-- **Design Modes** - Studio, Editorial, Technical, Minimal
-- **4 Themes** - Light, Dark, Midnight, Forest
-- Responsive design for mobile
+- **Tab Navigation** - Library, Upload, Queue, Voices, History, Settings
+- **Themes** - Light and Dark
+- **Voice previews** from the Voices tab; GPU autoscale status in sidebar
+- Known UI-vs-backend gaps tracked in [PLAN-ENGINE-UI.md](PLAN-ENGINE-UI.md) Phase 0
 
 ### Notifications
 - Telegram notifications on job completion

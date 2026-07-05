@@ -48,10 +48,11 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
 - **Progress Tracking** - Real-time progress with ETA
 
 ### UI Features
-- **Tab Navigation** - Convert, Queue, Library, Ops, History tabs
-- **Design Modes** - Studio, Editorial, Technical, Minimal
-- **4 Themes** - Light, Dark, Midnight, Forest
-- **Responsive** - Works on desktop and mobile
+- **Tab Navigation** - Library, Upload, Queue, Voices, History, Settings
+- **Themes** - Light and Dark
+- **Voice previews** - Listen to any voice from the Voices tab
+- **GPU status indicator** - Vast.ai autoscale state in the sidebar
+- Known gaps between UI and backend are tracked in [PLAN-ENGINE-UI.md](PLAN-ENGINE-UI.md) Phase 0
 
 ### Integration
 - **Audiobookshelf Sync** - Auto-sync completed books to ABS library
