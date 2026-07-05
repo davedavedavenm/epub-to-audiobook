@@ -12,6 +12,7 @@ Read these before changing anything TTS- or text-related:
 | [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off status + Dave's listening verdicts, cost model, canonical test passage, UK reference voices. |
 | [ROADMAP.md](ROADMAP.md) | Live feature status; v1.5 = preprocessing-first direction. |
 | [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern (Kokoro today; template for next-gen engines). |
+| [PLAN-ENGINE-UI.md](PLAN-ENGINE-UI.md) | **Live plan**: adding the winning engine (Chatterbox Turbo or TADA) to compose/app/UI, plus preprocessing UI (badges, narration profile panel). |
 | `archive/plans/` | Historical planning docs — superseded, do not follow. |
 
 Key facts an agent must know:
