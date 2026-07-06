@@ -24,7 +24,7 @@ GIT_SHA="$(git rev-parse --short HEAD)"
 BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 APP_GIT_SHA="${GIT_SHA}" APP_BUILD_TIME="${BUILD_TIME}" APP_VERSION="${TAG}" \
-  docker compose --profile piper --profile chatterbox up -d --build --remove-orphans
+  docker compose --profile piper --profile chatterbox --profile tada up -d --build --remove-orphans
 
 # Build the optional verifier image so the webapp can run it on demand (no services started).
 docker compose build audio-verify || true
