@@ -1,12 +1,17 @@
 # EPUB to Audiobook - Roadmap
 
-## Current Features (v1.3.x)
+## Current Features (v2.0.x)
+
+> Canonical current-state doc is [STATUS.md](STATUS.md); forward plan is
+> [PLAN-V2-COMPLETE.md](PLAN-V2-COMPLETE.md). This file is feature history.
 
 ### TTS Engines
-- **Kokoro TTS** - High-quality neural TTS with 22 voices (British, American, European, Italian)
-- **Piper TTS** - Lightweight TTS with 7 high-quality voices (for low-resource systems)
+- **Kokoro TTS** - High-quality neural TTS with 20+ voices (British, American, European)
+- **Chatterbox Turbo** - voice-cloned British narrators (Arthur/Edmund/Harriet/Beatrice), local CPU/GPU
+- **Hume TADA** - most-natural voice-cloned engine (same British narrators)
+- **Piper TTS** - Lightweight TTS for low-resource systems
 - **EdgeTTS** - Free Microsoft neural voices through `tts-proxy`
-- **AWS Polly** - Legacy paid fallback through `tts-proxy`; avoid for normal audiobook use because good-quality long-form output is too expensive
+- **AWS Polly** - Legacy paid fallback; avoid (too expensive for long-form)
 - **Inworld TTS 1.5** - Experimental premium fallback through `tts-proxy`
 
 ### Core Features
