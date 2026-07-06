@@ -12,6 +12,9 @@ A self-hosted web application for converting ebooks to audiobooks using AI text-
 - **Kokoro TTS** - default local engine; good quality, very low runtime cost, CPU or Vast.ai GPU
   - British, American, European, and multilingual voice packs
   - Voice mixing support (blend two voices)
+- **Chatterbox Turbo** - highest-quality local engine; voice-cloned British
+  narrators (Arthur/Harriet) from public-domain LibriVox readers. Runs on CPU
+  (a few hours per novel) or GPU. Enable with the `chatterbox` compose profile.
 - **Piper TTS** - lightweight local fallback for low-resource systems
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **AWS Polly** - legacy paid fallback via `tts-proxy`; not recommended for normal audiobook use because good-quality long-form output is too expensive
@@ -63,24 +66,46 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
 - **LLM Metadata & Pronunciation Help** - Optional OpenAI-compatible LLM settings for metadata and pronunciation lexicons
 - **Download as ZIP** - Download complete audiobooks
 
-## Quick Start
+## Quick Start (self-hosted — works on any machine, incl. for friends)
+
+Everything runs in Docker on **local CPU by default** — no GPU and no cloud
+account required. A friend can clone and run it as-is.
 
 ```bash
-# Clone the repository
+# 1. Clone
 git clone https://github.com/davedavedavenm/epub-to-audiobook.git
 cd epub-to-audiobook
 
-# Start with Kokoro only
-docker compose up -d
+# 2. Configure (optional — defaults work out of the box)
+cp .env.example .env    # edit only if you want ABS sync, notifications, etc.
 
-# Or start with both Kokoro and Piper
-docker compose --profile piper up -d
+# 3. Start. Pick the voice engines you want via profiles:
+docker compose up -d                                   # Kokoro only (fast, light)
+docker compose --profile piper up -d                   # + Piper (low-resource fallback)
+docker compose --profile chatterbox up -d              # + Chatterbox Turbo (best UK voices)
+docker compose --profile piper --profile chatterbox up -d   # everything
 
-# Access the UI
+# 4. Open the UI
 open http://localhost:8881
 ```
 
-Note: The compose stack now includes a dedicated `worker` service for queue processing.
+**Voice engines (all local/free):**
+- **Kokoro** — fast, good quality, the default.
+- **EdgeTTS** — free Microsoft neural voices (needs internet).
+- **Chatterbox Turbo** — highest-quality, voice-cloned British narrators
+  (Arthur/Harriet, from public-domain LibriVox readers). First start downloads
+  a ~700 MB model; generation is CPU (slower but free — a novel takes a few
+  hours, ideal to leave running). Enable with the `chatterbox` profile.
+- **Piper** — lightweight fallback for weak hardware.
+
+**Cost & privacy:** the default path spends nothing and sends your books to no
+one. Optional **Cloud GPU** rendering (Vast.ai) is **off by default** and must
+be turned on explicitly in Settings — see [GPU-SAFETY.md](GPU-SAFETY.md). Leave
+it off and everything stays local and free.
+
+Note: The compose stack includes a dedicated `worker` service for queue
+processing. First run of Kokoro/Chatterbox downloads their models (cached in a
+Docker volume, so only once).
 
 ## Production Deployment
 

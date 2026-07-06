@@ -45,6 +45,28 @@ services:
     ports:
       - "8882:8882"
 
+  # Chatterbox Turbo — high-quality voice-cloning TTS with UK narrator voices.
+  # CPU by default (works everywhere). Start with: docker compose --profile chatterbox up
+  chatterbox-tts:
+    build:
+      context: ./chatterbox
+    container_name: chatterbox-tts
+    ports:
+      - "8004:8004"
+    restart: unless-stopped
+    environment:
+      - CHATTERBOX_CHUNK_CHARS=${CHATTERBOX_CHUNK_CHARS:-280}
+    volumes:
+      - chatterbox-cache:/data/hf
+    profiles:
+      - chatterbox
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
@@ -80,6 +102,7 @@ services:
       # If set (e.g. http://tts-proxy:8882), conversion containers will send TTS requests via the proxy
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
       - PIPER_URL=http://piper-tts:8000/v1
+      - CHATTERBOX_URL=${CHATTERBOX_URL:-http://chatterbox-tts:8004/v1}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/data/uploads}
       - OUTPUT_DIR=/data/audiobooks
@@ -108,7 +131,7 @@ services:
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - QUEUE_RUNNER_ENABLED=0
       # GPU status display (webapp reads worker's status file, these are fallback)
-      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-true}
+      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
       - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
       - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
     volumes:
@@ -143,6 +166,7 @@ services:
       - KOKORO_URL=${KOKORO_URL:-http://kokoro-tts:8880/v1}
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
       - PIPER_URL=http://piper-tts:8000/v1
+      - CHATTERBOX_URL=${CHATTERBOX_URL:-http://chatterbox-tts:8004/v1}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/data/uploads}
       - OUTPUT_DIR=/data/audiobooks
@@ -171,7 +195,7 @@ services:
       - QUEUE_RUNNER_ENABLED=1
       - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-1}
       # GPU auto-scaling (auto-provisions Vast.ai GPU when 3+ books queued)
-      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-true}
+      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
       - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
       - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
       - GPU_IDLE_TIMEOUT=${GPU_IDLE_TIMEOUT:-10}
@@ -210,3 +234,4 @@ services:
 volumes:
   kokoro-cache:
   piper-data:
+  chatterbox-cache:

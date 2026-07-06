@@ -132,7 +132,26 @@ Vast balance. Commit lands with this plan update.
   `gpu_render_enabled()` before creating an instance (belt-and-braces at
   endpoint AND scale_up call site).
 
-## Phase A — Chatterbox Turbo engine (after Phase 0; ~one session)
+## Phase A — Chatterbox Turbo engine (BUILT 2026-07-06)
+
+Implemented as a self-contained containerised engine:
+- `chatterbox/` — minimal OpenAI-compatible FastAPI server (`server.py`)
+  wrapping ChatterboxTurboTTS; `Dockerfile` (CPU, python3.11-slim, ffmpeg);
+  `voices/` with baked-in UK narrator refs (uk_male_minter, uk_female_golding).
+  Chunks input <280 chars; GET /v1/audio/voices + POST /v1/audio/speech.
+- compose: `chatterbox-tts` service on port 8004, `chatterbox` profile,
+  `chatterbox-cache` volume for the HF model cache; `CHATTERBOX_URL` added to
+  webapp+worker; **AUTOSCALE_ENABLED default flipped true→false** (safety).
+- app.py: `CHATTERBOX_URL` const, VOICES entries (engine `chatterbox`, voice
+  id == wav stem), engine branches at all three sites (convert_book,
+  build_retry_cmd_from_job, voice preview) — routed DIRECT (not via the
+  Kokoro-oriented tts-proxy).
+- README: sharing/quick-start rewritten around profiles + local-default.
+Remaining: end-to-end container build + a real conversion on zorin (model
+download ~700MB on first run); ETA-model entry for chatterbox; optional
+transcript-capture via proxy.
+
+### (historical) original Phase A plan
 
 1. **Compose service** `chatterbox-tts`: build from
    https://github.com/devnen/Chatterbox-TTS-Server (no published image;

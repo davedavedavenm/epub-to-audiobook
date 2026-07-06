@@ -1,0 +1,8 @@
+chatterbox-tts
+fastapi>=0.110
+uvicorn>=0.27
+soundfile>=0.12
+numpy
+# perth watermarker (a chatterbox dep) imports pkg_resources — removed in
+# setuptools>=81, so pin below that.
+setuptools<81

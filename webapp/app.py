@@ -40,6 +40,7 @@ app = Flask(__name__)
 # between CPU and GPU endpoints at runtime. Do NOT cache this value.
 KOKORO_URL = os.environ.get('KOKORO_URL', 'http://localhost:8880/v1')
 PIPER_URL = os.environ.get('PIPER_URL', 'http://piper-tts:8000/v1')
+CHATTERBOX_URL = os.environ.get('CHATTERBOX_URL', 'http://chatterbox-tts:8004/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
@@ -474,6 +475,11 @@ VOICES = {
     'inworld_Dominus': {'name': 'Dominus', 'accent': 'Character', 'gender': 'Male', 'engine': 'inworld'},
     'inworld_Hades': {'name': 'Hades', 'accent': 'Character', 'gender': 'Male', 'engine': 'inworld'},
     'inworld_Darlene': {'name': 'Darlene', 'accent': 'American Southern', 'gender': 'Female', 'engine': 'inworld'},
+
+    # ============ CHATTERBOX TURBO (LOCAL, VOICE-CLONED UK NARRATORS) ============
+    # voice id MUST equal the wav file stem in chatterbox/voices/
+    'uk_male_minter': {'name': 'Arthur (UK, human-cloned)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
+    'uk_female_golding': {'name': 'Harriet (UK, human-cloned)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
 }
 
 PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."
@@ -2066,6 +2072,21 @@ def get_voice_preview(voice_id: str) -> Path:
             ]
             app.logger.info(f"Generating EdgeTTS preview: {' '.join(cmd)}")
             subprocess.run(cmd, capture_output=True, check=True, timeout=30)
+        elif engine == 'chatterbox':
+            # Chatterbox Turbo preview (direct to the local service)
+            response = requests.post(
+                f"{CHATTERBOX_URL}/audio/speech",
+                json={
+                    "model": "tts-1",
+                    "input": PREVIEW_TEXT,
+                    "voice": voice_id,
+                    "response_format": "mp3"
+                },
+                timeout=180
+            )
+            response.raise_for_status()
+            with open(preview_path, 'wb') as f:
+                f.write(response.content)
         else:
             # Use Kokoro TTS
             response = requests.post(
@@ -2335,6 +2356,9 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         tts_model = 'tts-1'
     elif tts_engine == 'polly':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+        tts_model = 'tts-1'
+    elif tts_engine == 'chatterbox':
+        tts_base_url = CHATTERBOX_URL
         tts_model = 'tts-1'
     else:
         tts_base_url = KOKORO_URL
@@ -3039,6 +3063,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # AWS Polly via tts-proxy
             # We force it through proxy because the upstream tool doesn't support Polly natively
             tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+            tts_model = 'tts-1'
+        elif tts_engine == 'chatterbox':
+            # Chatterbox Turbo (local voice-cloned UK narrators). Direct — the
+            # tts-proxy is Kokoro-oriented and would misroute this upstream.
+            tts_base_url = CHATTERBOX_URL
             tts_model = 'tts-1'
         else:
             # Kokoro (default)
