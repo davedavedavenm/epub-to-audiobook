@@ -154,14 +154,53 @@ green.
 Gate: rent one RTX 3060 on Vast, run TADA-1B on ~10 min of canonical-passage
 text, record RTF into LOW-COST-TTS.md. Proceed only if RTF < 1 (faster than
 realtime).
+
+### Verified local-run recipe (proven on Windows CPU 2026-07-06)
+
+TADA-1B runs locally with no GPU — these facts are load-bearing for the
+wrapper:
+- Install: `pip install hume-tada soundfile faster-whisper`. Python 3.11.
+- **Gated-tokenizer workaround (REQUIRED):** TADA calls
+  `AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B")` (aligner.py:83,
+  tada.py:184), and Meta's repo is license-gated → 403. The weights
+  themselves (`HumeAI/tada-1b`, `HumeAI/tada-codec`) are NOT gated. Redirect
+  the tokenizer to a byte-identical ungated mirror before importing tada:
+  monkeypatch `transformers.AutoTokenizer.from_pretrained` to swap
+  `meta-llama/Llama-3.2-1B` → `unsloth/Llama-3.2-1B`. (Same tokenizer, so
+  zero quality/clone impact.)
+- Load: `Encoder.from_pretrained("HumeAI/tada-codec", subfolder="encoder")`
+  + `TadaForCausalLM.from_pretrained("HumeAI/tada-1b", dtype=torch.float32)`
+  on CPU (bf16 is unreliable on CPU; use float32). Load ~10s once cached.
+- **Audio loading:** torchaudio 2.12 needs `torchcodec` (awkward on Windows).
+  Sidestep with `soundfile.read(..., dtype='float32')` → `[channels,
+  samples]` tensor.
+- Reference cloning needs the reference clip's TRANSCRIPT: transcribe the
+  `voice_refs/*.wav` with faster-whisper (tiny/int8, CPU) once, cache to
+  JSON. Pass `encoder(audio, text=[transcript], sample_rate=sr)`.
+- `generate(prompt=..., text=...)` returns `GenerationOutput`; audio is
+  `out.audio[0]` — a 1-D float32 torch tensor at 24 kHz.
+- Speed: ~1 short sentence / 30s on CPU (AMD Ryzen). Fine for overnight batch
+  or samples; a Vast NVIDIA GPU is the real throughput path. The Windows AMD
+  780M iGPU gives no usable acceleration (no ROCm on Windows; DirectML flaky).
+- Tuning knobs (all in `InferenceOptions`, passed to `generate`): shorter
+  passes (~600 chars) reduce the slow→fast pacing drift; `num_flow_matching_
+  steps`, `num_acoustic_candidates`+`scorer`, and `noise_temperature` address
+  the occasional background-noise artifact. Sample scripts left in the
+  session scratchpad (`tada_local_full.py`).
+
+### Wrapper build
+
 1. Build `tada-server/` FastAPI wrapper: OpenAI-compatible
    `POST /v1/audio/speech {model, input, voice, response_format}` →
-   sentence-split input to ~880-char passes (pacing drifts on longer passes —
-   verified by ear 2026-07-03), reference wav per voice name from
-   `voice_refs/`, concat, return MP3. `GET /v1/audio/voices` lists wav stems.
+   sentence-split input to ~600-char passes, reference wav+transcript per
+   voice name from `voice_refs/`, concat, return MP3. `GET /v1/audio/voices`
+   lists wav stems. Bake the tokenizer redirect + faster-whisper transcript
+   caching into startup. GPU when available, CPU fallback.
 2. Then repeat Phase A steps 2–6 with `engine: 'tada'`, `TADA_URL`, port 8005.
 Note TADA traits for the voice cards: most natural prosody; emergent
-character voices on quoted dialogue (Dave likes this); Llama 3.2 license.
+character voices on quoted dialogue (Dave likes this); Llama 3.2 license on
+the tokenizer only (weights are separate). Known artifacts to warn about:
+pacing drift on long passes, occasional background noise — both tunable.
 
 ## Phase C — GPU autoscale for new engines
 
