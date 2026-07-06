@@ -1,0 +1,80 @@
+name: Convert book (free)
+
+# Free audiobook conversion on a GitHub-hosted runner (16 GB RAM — enough for
+# TADA, which the NUC can't fit). The engine runs as a service container from
+# the CI-built GHCR image; output MP3s are uploaded as a downloadable artifact.
+#
+# Trigger from the Actions tab (Run workflow) with:
+#   epub_url : http(s) URL to an EPUB (public-domain, or your own via a
+#              Cloudflare R2 / temporary signed URL — keeps private books private)
+#   engine   : chatterbox | tada
+#   voice    : e.g. uk_male_minter  (chatterbox)  /  uk_male_minter_tada  (tada)
+#   start/end: chapter range (skips short front-matter automatically)
+
+on:
+  workflow_dispatch:
+    inputs:
+      epub_url:
+        description: EPUB URL (public-domain or signed)
+        required: true
+      engine:
+        description: chatterbox or tada
+        required: true
+        default: chatterbox
+      voice:
+        description: voice id
+        required: true
+        default: uk_male_minter
+      start:
+        description: first chapter
+        required: false
+        default: '1'
+      end:
+        description: last chapter (0 = all)
+        required: false
+        default: '2'
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350   # under the 6h cap
+    services:
+      engine:
+        image: ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-${{ inputs.engine }}:latest
+        ports:
+          - 8000:${{ inputs.engine == 'tada' && '8005' || '8004' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install converter deps
+        run: pip install requests beautifulsoup4 lxml num2words
+
+      - name: Wait for engine health
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost:8000/health; then echo; echo "engine up"; exit 0; fi
+            echo "waiting for engine ($i)"; sleep 15
+          done
+          echo "engine never became healthy"; exit 1
+
+      - name: Convert
+        run: |
+          CHUNK=$([ "${{ inputs.engine }}" = "tada" ] && echo 600 || echo 280)
+          python scripts/convert_book.py \
+            --epub "${{ inputs.epub_url }}" \
+            --engine-url http://localhost:8000/v1 \
+            --voice "${{ inputs.voice }}" \
+            --out ./audiobook \
+            --start ${{ inputs.start }} --end ${{ inputs.end }} \
+            --chunk-chars $CHUNK
+
+      - name: Upload audiobook
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiobook-${{ inputs.engine }}-${{ inputs.voice }}
+          path: audiobook/*.mp3
+          if-no-files-found: error
