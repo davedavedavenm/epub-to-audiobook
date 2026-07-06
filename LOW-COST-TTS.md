@@ -103,6 +103,28 @@ Deploy path when an engine is chosen: devnen/Chatterbox-TTS-Server as a
 compose service or Vast template (OpenAI-compatible `/v1/audio/speech`, same
 shape as Kokoro-FastAPI), reference voices from `data/voice_refs/`.
 
+
+## GPU benchmark attempt 2026-07-06 — FAILED, lesson learned
+
+Tried to measure real Turbo/TADA speed on a Vast RTX 3090 by pip-installing on
+a bare `pytorch/pytorch` instance. It FAILED and produced no number:
+- pip install of chatterbox-tts pulled ~3GB (torch 2.6 + CUDA wheels + spaCy)
+  and took ~80 min on that instance's slow PyPI throughput.
+- Then a transformers/chatterbox version conflict ("Could not import
+  LlamaModel") broke the import on the bare image.
+- ~$0.21 and ~1.5h wasted; no measured RTF.
+
+**Lesson (actionable):** the GPU path MUST use the **pre-built engine Docker
+images** we already have (`chatterbox/`, `tada/`) — deps baked in, load in
+seconds, no pip/version roulette. Ad-hoc pip-install on a bare instance is too
+slow and too fragile. The automated GPU-render path (PLAN.md §3) should:
+push the chatterbox/tada images to a registry (or `docker save`/load), run the
+container on the Vast instance, tunnel it back to the worker like the Kokoro
+GPU playbook. Benchmark AFTER that, not before.
+
+So: **GPU speed for Turbo/TADA is still UNMEASURED.** Do not quote a per-book
+GPU time until it is measured via the containerised path.
+
 ## Sample Test 2026-07-02
 
 Method: same 589-char fiction passage (stress-tests pronunciation: "Worcester", "Gloucester", "epitome", "1987"; flow: long comma-laden sentences; robotic delivery: dialogue vs narration) generated through Kokoro `bm_fable`/`bf_emma` and EdgeTTS `en-GB-RyanNeural` on the zorin stack, and through Chatterbox Turbo via the free HF Space `ResembleAI/chatterbox-turbo-demo` driven with `gradio_client` (300-char chunks, fixed seed, default US reference voice). Total cost GBP0.
