@@ -65,20 +65,29 @@ Assumptions: typical novel = 100k words ≈ 600k chars ≈ **11 hours of audio**
 at ~150 wpm. GBP figures at USD1 ≈ GBP0.75. "RTF" = generation speed relative
 to realtime (2x slower means 1 min of audio takes 2 min to make).
 
-**Measured baseline:** Chatterbox Turbo on Dave's Windows box (AMD Ryzen,
-CPU-only, no GPU) generated 15–18s chunks in 25–55s → **~2.5x slower than
-realtime, measured 2026-07-03**. All other rows are derived or published
-figures, marked accordingly.
+**Measured CPU baselines (Dave's Windows box, AMD Ryzen, no usable GPU),
+canonical passage 2026-07-06:**
+- **Turbo RTF ~1.3** (442s compute → 343s audio; both UK voices agree).
+- **TADA-1B RTF ~2.4** (82s → 35s audio). TADA is ~2x slower — 1B vs Turbo's
+  350M + 1-step decoder.
+Earlier "Turbo ~2.5x" figure superseded by this cleaner same-passage run.
+GPU rows are derived/published, marked accordingly.
 
 | Path | Speed (11h book) | Cost/book | Confidence | Notes |
 |------|------------------|-----------|------------|-------|
 | Kokoro @ Vast RTX 3060 | ~20 min | ~GBP0.01 | Measured (GPU-PLAYBOOK) | Current quality baseline |
-| **Turbo @ Vast RTX 3060 ($0.05–0.06/hr)** | ~3–4h GPU | **~GBP0.15–0.20** | Derived: published "up to 6x RT", assumed 3x on 3060 | Best value; batch several books per session like the Kokoro playbook |
-| Turbo @ Vast RTX 4090 ($0.30–0.40/hr) | ~1–1.5h | ~GBP0.30–0.45 | Derived | Pay for wall-clock speed, still trivial money |
-| Turbo @ Windows box (CPU) | ~27h | ~GBP0.30 electricity | **Measured** | Free-ish but more than overnight; fallback only |
-| Turbo @ zorin NUC (CPU) | ~2–3 days | — | Estimated | Not viable, and it is the prod server |
-| TADA @ Vast RTX 3060 | ~3–7h (est) | ~GBP0.15–0.35 | **Unbenchmarked estimate** | RTF 0.09 on H100 published; must benchmark on 3060 AND build a server wrapper before trusting |
+| **Turbo @ Vast RTX 3060 ($0.05–0.06/hr)** | ~2–5h GPU | **~GBP0.11–0.20** | Derived: published "up to 6x RT" | Best value; batch several books per session |
+| Turbo @ Vast RTX 4090 ($0.30–0.40/hr) | ~1–1.5h | ~GBP0.30–0.45 | Derived | Pay for wall-clock speed |
+| Turbo @ Windows box (CPU) | ~14h | ~GBP0.15 electricity | **Measured RTF 1.3** | Overnight-doable, free |
+| TADA @ Windows box (CPU) | ~26h | ~GBP0.30 electricity | **Measured RTF 2.4** | Over a day; start-and-check-tomorrow |
+| TADA @ Vast RTX 3060 | ~3.5–9h (est) | ~GBP0.20–0.45 | **Unbenchmarked estimate** | Published RTF 0.09 on H100; MUST benchmark on 3060 + build wrapper before trusting |
+| zorin NUC (CPU, either) | slower than Windows box | — | Estimated | Not viable + it is the prod server |
 | LLM normalization (Stage 5) | minutes | GBP0 | Z AI / Gemini flash free tiers | 150–200 requests/book |
+
+**Homelab check:** no NVIDIA GPU on any fleet device (docker-vm, n8n-vm,
+Proxmox, Pis, Hetzner/Oracle VPS — all CPU-only; small VPSes can't even load
+the model). The Windows box is the best local option for both engines. AMD
+780M iGPU gives no usable acceleration on Windows (no ROCm; DirectML flaky).
 
 Bottom line: **a GBP5–10 Vast top-up converts roughly 25–50 books with
 Turbo on the RTX 3060 pattern.** The same GPU rig runs TADA too, so the
