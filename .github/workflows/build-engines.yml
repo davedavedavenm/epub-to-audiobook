@@ -1,0 +1,52 @@
+name: Build engine images
+
+# Builds the Chatterbox Turbo and TADA engine containers ONCE in CI and pushes
+# them to GitHub Container Registry (GHCR). A Vast.ai GPU (or any host) then
+# just PULLS a ready image in seconds — no slow pip-install per session.
+#
+# Images published (public):
+#   ghcr.io/davedavedavenm/epub-to-audiobook-chatterbox:latest
+#   ghcr.io/davedavedavenm/epub-to-audiobook-tada:latest
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'chatterbox/**'
+      - 'tada/**'
+      - '.github/workflows/build-engines.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        engine: [chatterbox, tada]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Free up disk (engine images are large)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android || true
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.engine }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-${{ matrix.engine }}:latest
+          # keep it simple/reliable; single-arch amd64 (Vast GPUs are x86_64)
+          platforms: linux/amd64

@@ -1,5 +1,29 @@
 # Kokoro GPU on Vast.ai — Playbook
 
+## Next-gen engines (Chatterbox / TADA) — one-command GPU runbook
+
+**Do NOT pip-install engines on a bare instance** (the 2026-07-06 attempt wasted
+~80 min + $ and failed on a dep conflict). Instead the engine images are built
+ONCE in GitHub CI (`.github/workflows/build-engines.yml`) and pushed to GHCR;
+Vast just pulls a ready image.
+
+```bash
+# rent a GPU, pull the pre-built engine image, run it, tunnel it to the worker:
+scripts/vast-gpu.sh up chatterbox      # or: up tada
+# -> prints the CHATTERBOX_URL/TADA_URL line to set, then:
+#    docker compose up -d worker webapp
+# batch a WHOLE book (or several) — never a single chapter — then:
+scripts/vast-gpu.sh down               # DESTROYS the instance + kills the tunnel
+```
+
+Status: **runbook + CI written, not yet validated with a paid run.** First real
+`up` will confirm the GHCR pull + tunnel path and finally MEASURE Turbo/TADA GPU
+speed (currently unmeasured — see LOW-COST-TTS.md). Batch full books to amortize
+the one-time model download.
+
+---
+
+
 ## Overview
 
 Run Kokoro TTS on a rented cloud GPU (RTX 3060, ~$0.05/hr) for **15x faster** audiobook conversion.
