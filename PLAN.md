@@ -78,6 +78,25 @@ Make "render on GPU" a real, safe, one-click path for Turbo AND TADA.
   onstart-watchdog template; document hashes in GPU-PLAYBOOK.md).
 - Everything stays OFF by default (GPU-SAFETY.md).
 
+
+## 3a. GPU economics — BATCH, and MEASURE (added 2026-07-06)
+
+Honest correction: prior "~20 min/book on GPU" figures were ESTIMATES, never
+measured. TADA/Turbo speed on a Vast RTX 3060/3090 must be benchmarked before
+any number is trusted.
+
+Because a Vast instance bills per hour AND has ~15 min one-time setup +
+model-download overhead, the unit of work is a **batch, not a chapter**:
+- Spin up once → convert an entire book (all chapters), or several books in a
+  queue → destroy. Setup cost amortizes to near-zero per book.
+- Never spin up a GPU for a single chapter.
+- Local option for free/no-rush: run on the fastest LOCAL machine (Dave's
+  Windows box is ~2x the NUC), overnight. The NUC alone is too slow for full
+  books (~13h/chapter measured 2026-07-06).
+
+Benchmark task (do first): one Vast session, Turbo + TADA, convert a real
+multi-chapter book, record actual chars/sec and $/book into LOW-COST-TTS.md.
+
 ## 4. Full-length reliability
 
 - Run a real full book on Turbo (and TADA) end-to-end; watch NUC memory,
