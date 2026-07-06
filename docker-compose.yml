@@ -48,6 +48,7 @@ services:
   # Chatterbox Turbo — high-quality voice-cloning TTS with UK narrator voices.
   # CPU by default (works everywhere). Start with: docker compose --profile chatterbox up
   chatterbox-tts:
+    image: ghcr.io/davedavedavenm/epub-to-audiobook-chatterbox:latest
     build:
       context: ./chatterbox
     container_name: chatterbox-tts
