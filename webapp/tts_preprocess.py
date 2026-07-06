@@ -90,6 +90,12 @@ def _year_to_words(year_str: str) -> str:
     try:
         year = int(year_str)
         if 1000 <= year <= 2099:
+            # 2000-2009 read as "two thousand [n]" (natural for audiobooks);
+            # "twenty hundred" / "twenty oh one" are wrong/awkward.
+            if 2000 <= year <= 2009:
+                if year == 2000:
+                    return "two thousand"
+                return f"two thousand {_number_to_words(year % 100)}"
             if year % 100 == 0:
                 return f"{_number_to_words(year // 100)} hundred"
             else:

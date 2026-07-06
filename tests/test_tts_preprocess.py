@@ -117,3 +117,13 @@ def test_pipeline_endnote_and_numbers():
     out = tp.normalize_text_for_tts('It cost $2.58 billion.36 By 2023, some 50% agreed.')
     assert '36' not in out
     assert 'fifty percent' in out
+
+
+def test_year_2000s_natural():
+    # regression: 2000 was read "twenty hundred", 2001 "twenty oh one"
+    assert tp._year_to_words('2000') == 'two thousand'
+    assert tp._year_to_words('2001') == 'two thousand one'
+    assert tp._year_to_words('2009') == 'two thousand nine'
+    # 2010+ and 19xx keep the "twenty ten" / "nineteen ..." style
+    assert 'twenty' in tp._year_to_words('2019')
+    assert 'nineteen' in tp._year_to_words('1994')
