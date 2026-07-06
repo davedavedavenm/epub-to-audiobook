@@ -68,6 +68,30 @@ services:
       retries: 5
       start_period: 180s
 
+  # Hume TADA — most natural voice-cloning engine (British narrators).
+  # CPU by default. Start with: docker compose --profile tada up
+  tada-tts:
+    image: ghcr.io/davedavedavenm/epub-to-audiobook-tada:latest
+    build:
+      context: ./tada
+    container_name: tada-tts
+    ports:
+      - "8005:8005"
+    restart: unless-stopped
+    environment:
+      - TADA_CHUNK_CHARS=${TADA_CHUNK_CHARS:-600}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - tada-cache:/data/hf
+    profiles:
+      - tada
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
