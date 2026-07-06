@@ -4,13 +4,23 @@
 "verified" it was actually run; "unverified" means the code exists but hasn't
 been proven end-to-end.
 
-## TL;DR
+## TL;DR (2026-07-06, verified)
 
-Turbo (Chatterbox) is a working, containerised, local-default engine with UK
-voices, and a real conversion has been proven end-to-end including ABS sync.
-The system is usable for full-book testing on Turbo **now**. It is not yet
-"flawless" — full-length reliability, TADA integration, and several polish
-items remain (below).
+**Chatterbox Turbo is FULLY working locally, end-to-end, verified** — real
+conversions completed with multiple UK voices (Arthur, Edmund), all 4 voices
+load, full pipeline (queue -> preprocess/QA -> convert -> ABS sync, no
+overwrite). This is a complete, usable local audiobook system today.
+
+**TADA is built + containerised + CI-published + healthy, but does NOT run
+practically on the NUC**: loading the 1B model needs ~6.5GB and the 15GB NUC
+(already ~8.7GB used by Kokoro+Chatterbox+worker) restarted it mid-load. A
+memory-lean fix (low_cpu_mem_usage) is deploying; even if it loads, NUC CPU
+generation is impractically slow. **TADA's real home is a GPU (one-command
+runbook: scripts/vast-gpu.sh) or a machine with more free RAM.**
+
+**Engine images build in CI (GHCR) and are pulled, not built** — no more slow
+manual builds. Vast GPU is a one-command runbook (unvalidated with a paid run).
+
 
 ## Done & VERIFIED (actually run)
 
