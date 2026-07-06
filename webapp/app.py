@@ -3383,7 +3383,9 @@ def api_settings():
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
         'AUTOSCALE_ENABLED', 'AUTOSCALE_THRESHOLD', 'AUTOSCALE_COST_CAP',
-        'LLM_API_BASE_URL', 'LLM_MODEL_NAME'
+        'LLM_API_BASE_URL', 'LLM_MODEL_NAME',
+        # Master gate for paid Vast.ai cloud GPU. Default OFF = local render.
+        'GPU_RENDER_ENABLED',
     ]
 
     if request.method == 'POST':
@@ -3607,9 +3609,23 @@ def gpu_status():
     })
 
 
+def gpu_render_enabled() -> bool:
+    """Master safety gate for paid Vast.ai GPU use. Default OFF (local render).
+
+    Anything that could spin up a billed cloud GPU MUST check this first.
+    See GPU-SAFETY.md — this protects the Vast.ai balance from accidental /
+    automated scale-ups.
+    """
+    return str(get_setting('GPU_RENDER_ENABLED', '0')).lower() in ('1', 'true', 'yes', 'on')
+
+
 @app.route('/api/gpu/scale-up', methods=['POST'])
 def gpu_scale_up():
-    """Manually trigger GPU scale-up."""
+    """Manually trigger GPU scale-up (gated: default local, never auto-enable)."""
+    if not gpu_render_enabled():
+        return jsonify({'error': 'Cloud GPU rendering is OFF (default). It rents a '
+                        'paid Vast.ai instance. Turn it on in Settings → Render Location '
+                        'only when you intend to spend credit.'}), 403
     if not _gpu_manager:
         return jsonify({'error': 'GPU manager not available'}), 503
     if _gpu_manager.state == 'active':

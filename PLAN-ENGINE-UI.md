@@ -118,6 +118,20 @@ Verification for the whole phase: `python -m pytest tests/`,
 `scripts/smoke-check.sh http://localhost:8881`, convert one short epub end
 to end.
 
+## Phase 0.5 — Render-location safety toggle (DONE 2026-07-06)
+
+Local-vs-cloud-GPU toggle, default LOCAL, gated so agents can't drain the
+Vast balance. Commit lands with this plan update.
+- Backend: `GPU_RENDER_ENABLED` setting (default `0`), `gpu_render_enabled()`
+  helper, `/api/gpu/scale-up` returns 403 unless enabled. Added to
+  `config_keys` so it persists/loads.
+- UI: Settings → *Render Location* select (💻 Local default / ☁️ Cloud GPU),
+  confirm() prompt on switching to paid, warning label.
+- Docs: [GPU-SAFETY.md](GPU-SAFETY.md) (hard rules), AGENTS.md core rule #5.
+- Remaining for future engines: every new bill-capable path must call
+  `gpu_render_enabled()` before creating an instance (belt-and-braces at
+  endpoint AND scale_up call site).
+
 ## Phase A — Chatterbox Turbo engine (after Phase 0; ~one session)
 
 1. **Compose service** `chatterbox-tts`: build from

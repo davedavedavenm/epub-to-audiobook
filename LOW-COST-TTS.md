@@ -131,6 +131,32 @@ preprocessed text. Dave's listening verdicts:
 - **Kokoro**: retired from quality contention; stays as the cheap bulk
   fallback.
 
+### TADA detailed verdict (2026-07-06, canonical passage, local CPU + GPU max-quality)
+
+Both TADA UK voices (Minter/Golding) judged "incredibly strong with a few
+minor issues." Female (Golding) more emotive; both a little robotic in places.
+Open issues to fix before/at integration:
+
+- **Pronunciation:** "US Energy Information" read as the word "us" not letters
+  "U-S". Fix via pronunciation lexicon rule (`US==U S` scoped, or LLM
+  profile) — a TEXT fix, not a voice fix. Do NOT hold against the engine.
+- **First word "Environmental" mangled** on every take — likely a
+  cold-start/first-token artifact. Mitigation to try: lead-in padding (a
+  short neutral clause or silence token before the real first word), or
+  regenerate the opening chunk.
+- **Pacing too fast / "no breath taken."** Needs a slower/again-breathing
+  setting — try lower `speed_up_factor`, or insert sentence pauses in
+  preprocessing.
+- **Quote character-voices did NOT reliably emerge** even in long passes; at
+  the end one attempt sounded "bizarre — like a recording in a public place,
+  couldn't hear the voice." So the emergent dialogue-voice is unstable when
+  cloning a fixed reference — treat it as a bonus, not a feature to rely on.
+- Max-quality GPU knobs (30 flow steps + best-of-3 candidates) helped
+  cleanliness but did not fix the above; these are mostly text/pacing issues.
+
+Turbo remains the lighter, more predictable option; TADA the more natural but
+quirkier one. Decision still open pending fixes to the above.
+
 ### Canonical test passage
 
 All future engine/voice comparisons use one fixed passage so results are

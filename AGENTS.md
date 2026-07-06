@@ -11,6 +11,7 @@ Read these before changing anything TTS- or text-related:
 | [PREPROCESSING.md](PREPROCESSING.md) | **Mandatory** text pipeline (5 stages; 1–3 implemented in `webapp/tts_preprocess.py`, 4–5 designed). Why upstream `--remove_endnotes` must never return. |
 | [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off status + Dave's listening verdicts, cost model, canonical test passage, UK reference voices. |
 | [ROADMAP.md](ROADMAP.md) | Live feature status; v1.5 = preprocessing-first direction. |
+| [GPU-SAFETY.md](GPU-SAFETY.md) | **READ FIRST for any GPU work.** Default-local rules; how to not drain the Vast balance. |
 | [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern (Kokoro today; template for next-gen engines). |
 | [PLAN-ENGINE-UI.md](PLAN-ENGINE-UI.md) | **Live plan**: adding the winning engine (Chatterbox Turbo or TADA) to compose/app/UI, plus preprocessing UI (badges, narration profile panel). |
 | `archive/plans/` | Historical planning docs — superseded, do not follow. |
@@ -41,6 +42,10 @@ Key facts an agent must know:
 2. Preserve Docker Compose service boundaries; do not remove worker/queue services without proving queue behavior.
 3. Treat TTS model assets and generated audiobooks as large runtime artifacts, not source.
 4. Stage only intentional files; never `git add -A`.
+5. **GPU/Vast.ai costs real money — default is LOCAL. Never spin up a Vast
+   instance or enable `GPU_RENDER_ENABLED` without an explicit user request
+   for the current task, and always destroy instances you create in the same
+   session. Read [GPU-SAFETY.md](GPU-SAFETY.md) before ANY GPU action.**
 
 ## Verification
 
