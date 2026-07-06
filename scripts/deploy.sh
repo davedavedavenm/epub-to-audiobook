@@ -3,7 +3,7 @@ set -euo pipefail
 
 TAG="${1:-v1.3.0}"
 REPO_URL="${2:-https://github.com/davedavedavenm/epub-to-audiobook.git}"
-STACK_PATH="${3:-/home/dave/ai/lab/stacks/epub-to-audiobook}"
+STACK_PATH="${3:-/opt/epub-to-audiobook}"
 
 echo "Deploying ${TAG} to ${STACK_PATH}"
 mkdir -p "${STACK_PATH}"

@@ -113,8 +113,8 @@ Use a single canonical stack path and deploy from a Git tag:
 
 ```bash
 # On the target host
-git clone https://github.com/davedavedavenm/epub-to-audiobook.git /home/dave/ai/lab/stacks/epub-to-audiobook
-cd /home/dave/ai/lab/stacks/epub-to-audiobook
+git clone https://github.com/davedavedavenm/epub-to-audiobook.git /opt/epub-to-audiobook
+cd /opt/epub-to-audiobook
 cp .env.example .env
 
 # Deploy v1.3.0 (includes build metadata)

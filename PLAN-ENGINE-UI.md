@@ -263,7 +263,7 @@ PREPROCESSING.md Stage 4. Do not start before Phases 0+A are deployed.
 - app.py is fragile (long history of indentation breakage): after every edit
   run `python -m py_compile webapp/app.py`.
 - Deploy = push to master, then on zorin
-  `cd /home/dave/ai/lab/stacks/epub-to-audiobook && git pull && docker
+  `cd /opt/epub-to-audiobook && git pull && docker
   compose --profile piper up -d --build`, then
   `bash scripts/smoke-check.sh http://localhost:8881`.
 - The canonical listening test for any voice/engine change:

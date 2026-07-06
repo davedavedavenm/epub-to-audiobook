@@ -198,7 +198,7 @@ the worker container, because containers reach the tunnel via the Docker gateway
 (172.19.0.1). Options:
 
 **Option A: Host helper script (Recommended)**
-- Place a `gpu-tunnel.sh` on zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook/scripts/`
+- Place a `gpu-tunnel.sh` on zorin at `/opt/epub-to-audiobook/scripts/`
 - Worker calls it via `docker exec` on the host (using docker.sock) or via SSH to localhost
 - Script handles: create tunnel, kill tunnel, health check
 - Pro: Simple, proven pattern (we did this manually already)

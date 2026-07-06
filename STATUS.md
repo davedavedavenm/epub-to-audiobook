@@ -56,9 +56,9 @@ Priority order:
 2. **Deploy flag fix** — the deploy uses `--profile piper`; Chatterbox needs
    `--profile piper --profile chatterbox` or it won't restart after a
    redeploy. Update `scripts/deploy.sh` and docs.
-3. **Public-repo hygiene** — repo is PUBLIC and contains the homelab private
-   IP (192.168.1.113), internal paths (`/home/dave/ai/lab/...`), git email.
-   Decide: scrub these (parameterize) or make the repo private.
+3. **Public-repo hygiene** — DONE 2026-07-06: deleted dead archive/root-scripts,
+   parameterized the homelab IP (`DOCKER_VM_IP` env) / stack path
+   (`/opt/epub-to-audiobook`) / git email across tracked files. Repo stays public.
 4. **TADA as an app engine (Phase B)** — currently standalone scripts only.
    Needs the OpenAI-compatible wrapper container + engine wiring, and a
    production-ready first-word fix (the "lead-in" trick currently *speaks* the

@@ -82,7 +82,7 @@ HOST_DATA_DIR = f"{HOST_STACK_DIR}/data"
 
 # Audiobookshelf integration - copy completed books here
 AUDIOBOOKSHELF_DIR = os.environ.get('AUDIOBOOKSHELF_DIR', '')
-AUDIOBOOKSHELF_HOST = os.environ.get('AUDIOBOOKSHELF_HOST', '192.168.1.113')
+AUDIOBOOKSHELF_HOST = os.environ.get('AUDIOBOOKSHELF_HOST', 'audiobookshelf-host')
 AUDIOBOOKSHELF_USER = os.environ.get('AUDIOBOOKSHELF_USER', 'dave')
 AUDIOBOOKSHELF_PORT = os.environ.get('AUDIOBOOKSHELF_PORT', '')
 
@@ -109,7 +109,7 @@ RETRY_BACKOFF_BASE = 30  # seconds (30, 60, 120 for attempts 1, 2, 3)
 
 # Audiobookshelf API for triggering rescans after sync
 ABS_API_TOKEN = os.environ.get('ABS_API_TOKEN', '')
-ABS_API_URL = os.environ.get('ABS_API_URL', 'http://192.168.1.113:13378')
+ABS_API_URL = os.environ.get('ABS_API_URL', 'http://audiobookshelf-host:13378')
 
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

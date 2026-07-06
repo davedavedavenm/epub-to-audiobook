@@ -81,7 +81,7 @@ curl -s http://localhost:8890/v1/audio/voices | head -3
 ### 4. Point your stack at the GPU
 
 ```bash
-cd /home/dave/ai/lab/stacks/epub-to-audiobook
+cd /opt/epub-to-audiobook
 
 # Set GPU mode in .env:
 #   KOKORO_URL=http://172.19.0.1:8890/v1
@@ -181,7 +181,7 @@ With 3 concurrent jobs: ~1-1.5 hours wall time.
 | Vast.ai API key | `~/.config/vastai/vast_api_key` on zorin |
 | SSH key | `~/.ssh/vastai_ed25519` on zorin |
 | Vastai CLI | `python3 /tmp/vast.py` (no pip on zorin) |
-| Stack path | `/home/dave/ai/lab/stacks/epub-to-audiobook/` on zorin |
+| Stack path | `/opt/epub-to-audiobook/` on zorin |
 | EPUB library | `/mnt/openbooks/` on zorin |
 | ABS audiobooks | `/opt/stacks/audiobookshelf/audiobooks/` on docker-vm |
 | Kokoro port (GPU) | 8880 (on instance), tunneled to 8890 (on zorin) |

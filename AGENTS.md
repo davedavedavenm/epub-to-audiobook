@@ -19,7 +19,7 @@ Read these before changing anything TTS- or text-related:
 
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
-- The deployed stack lives on zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook`, deploys **from git only** (reset to master 2026-07-03 after years of live-patch drift — never patch live files).
+- The deployed stack lives on zorin at `/opt/epub-to-audiobook`, deploys **from git only** (reset to master 2026-07-03 after years of live-patch drift — never patch live files).
 - Engine candidates: Chatterbox Turbo (local install proven; deploy via devnen/Chatterbox-TTS-Server) and Hume TADA (most natural, needs server wrapper + GPU benchmark). UK human reference voices only — see LOW-COST-TTS.md.
 
 ## Scope

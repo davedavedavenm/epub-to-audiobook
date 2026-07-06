@@ -37,8 +37,8 @@ services:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - INWORLD_API_KEY=${INWORLD_API_KEY:-}
     volumes:
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/transcripts:/data/transcripts
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data:/data
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/transcripts:/data/transcripts
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
     depends_on:
       kokoro-tts:
         condition: service_started
@@ -92,7 +92,7 @@ services:
         APP_BUILD_TIME: ${APP_BUILD_TIME:-unknown}
     container_name: epub-to-audiobook-ui
     extra_hosts:
-      - "docker-vm:192.168.1.113"
+      - "docker-vm:${DOCKER_VM_IP:-127.0.0.1}"
     ports:
       - "8881:8881"
     restart: unless-stopped
@@ -111,9 +111,9 @@ services:
       - APP_VERSION=${APP_VERSION:-dev}
       - APP_GIT_SHA=${APP_GIT_SHA:-unknown}
       - APP_BUILD_TIME=${APP_BUILD_TIME:-unknown}
-      - STACK_PATH=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
+      - STACK_PATH=${STACK_PATH:-/opt/epub-to-audiobook}
       # IMPORTANT: This must match the absolute path used in volumes below
-      - HOST_STACK_DIR=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
+      - HOST_STACK_DIR=${STACK_PATH:-/opt/epub-to-audiobook}
       - AUDIOBOOKSHELF_DIR=${AUDIOBOOKSHELF_DIR:-/opt/stacks/audiobookshelf/audiobooks}
       - AUDIOBOOKSHELF_HOST=${AUDIOBOOKSHELF_HOST:-docker-vm}
       - AUDIOBOOKSHELF_USER=${AUDIOBOOKSHELF_USER:-dave}
@@ -136,14 +136,14 @@ services:
       - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
     volumes:
       # Use ABSOLUTE paths so it works regardless of where docker compose is run from
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/audiobooks:/data/audiobooks
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/previews:/data/previews
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data:/data
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/uploads:/data/uploads
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/previews:/data/previews
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
       - /var/run/docker.sock:/var/run/docker.sock
       # SSH key for rsync to docker-vm
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       # OpenBooks library for browsing available EPUBs
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
     depends_on:
@@ -159,7 +159,7 @@ services:
         APP_BUILD_TIME: ${APP_BUILD_TIME:-unknown}
     container_name: epub-to-audiobook-worker
     extra_hosts:
-      - "docker-vm:192.168.1.113"
+      - "docker-vm:${DOCKER_VM_IP:-127.0.0.1}"
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
@@ -175,8 +175,8 @@ services:
       - APP_VERSION=${APP_VERSION:-dev}
       - APP_GIT_SHA=${APP_GIT_SHA:-unknown}
       - APP_BUILD_TIME=${APP_BUILD_TIME:-unknown}
-      - STACK_PATH=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
-      - HOST_STACK_DIR=${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}
+      - STACK_PATH=${STACK_PATH:-/opt/epub-to-audiobook}
+      - HOST_STACK_DIR=${STACK_PATH:-/opt/epub-to-audiobook}
       - AUDIOBOOKSHELF_DIR=${AUDIOBOOKSHELF_DIR:-/opt/stacks/audiobookshelf/audiobooks}
       - AUDIOBOOKSHELF_HOST=${AUDIOBOOKSHELF_HOST:-docker-vm}
       - AUDIOBOOKSHELF_USER=${AUDIOBOOKSHELF_USER:-dave}
@@ -205,13 +205,13 @@ services:
       - HOST_VASTAI_SSH_KEY=/home/dave/.ssh/vastai_ed25519
       - VASTAI_API_KEY_FILE=/root/.config/vastai/vast_api_key
     volumes:
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/uploads:/data/uploads
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/audiobooks:/data/audiobooks
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data/previews:/data/previews
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/data:/data
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/uploads:/data/uploads
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/previews:/data/previews
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
-      - ${STACK_PATH:-/home/dave/ai/lab/stacks/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
       # Vast.ai GPU access (for auto-scaling)
       # Use explicit /home/dave paths — $HOME resolves to /root under sudo docker compose
