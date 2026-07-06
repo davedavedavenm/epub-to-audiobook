@@ -48,7 +48,7 @@ text — see [PREPROCESSING.md](PREPROCESSING.md):
   (e.g. "US" → "U S", unusual names, misread numbers). Not hardcoded — adapts
   per book. Plus global and per-job regex rules.
 - **Planned (QA Layer 2)** - Whisper ASR verification of the generated audio
-  against the source text to auto-catch mispronunciations. See PLAN-V2-COMPLETE.md.
+  against the source text to auto-catch mispronunciations. See PLAN.md.
 
 The upstream converter's `--remove_endnotes` flag is deliberately not used: it
 corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
@@ -187,8 +187,8 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 - [PREPROCESSING.md](PREPROCESSING.md) — the text pipeline
 - [LOW-COST-TTS.md](LOW-COST-TTS.md) — engine bake-off & costs
 - [GPU-SAFETY.md](GPU-SAFETY.md) — cloud GPU rules
-- [PLAN-V2-COMPLETE.md](PLAN-V2-COMPLETE.md) — roadmap (adaptive QA, GPU, UI)
-- [ROADMAP.md](ROADMAP.md) — feature history
+- [PLAN.md](PLAN.md) — roadmap (adaptive QA, GPU, UI)
+- [STATUS.md](STATUS.md) — feature history
 
 ## Credits
 

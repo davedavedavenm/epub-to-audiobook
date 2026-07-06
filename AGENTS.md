@@ -11,22 +11,21 @@ Read these before changing anything TTS- or text-related:
 | [GETTING-STARTED.md](GETTING-STARTED.md) | New-user walkthrough: install, convert, connect an LLM, voices, ABS. |
 | [STATUS.md](STATUS.md) | **Current state & remaining tasks — read first.** What's verified vs unverified vs not-done. |
 | [PREPROCESSING.md](PREPROCESSING.md) | **Mandatory** text pipeline (5 stages; 1–3 implemented in `webapp/tts_preprocess.py`, 4–5 designed). Why upstream `--remove_endnotes` must never return. |
-| [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off status + Dave's listening verdicts, cost model, canonical test passage, UK reference voices. |
-| [ROADMAP.md](ROADMAP.md) | Live feature status; v1.5 = preprocessing-first direction. |
+| [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off, listening verdicts, cost model, UK reference voices. |
+| [PLAN.md](PLAN.md) | **Forward plan**: adaptive QA system, TADA/GPU completion, UI. |
 | [GPU-SAFETY.md](GPU-SAFETY.md) | **READ FIRST for any GPU work.** Default-local rules; how to not drain the Vast balance. |
-| [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern (Kokoro today; template for next-gen engines). |
-| [PLAN-ENGINE-UI.md](PLAN-ENGINE-UI.md) | **Live plan**: adding the winning engine (Chatterbox Turbo or TADA) to compose/app/UI, plus preprocessing UI (badges, narration profile panel). |
-| `archive/plans/` | Historical planning docs — superseded, do not follow. |
+| [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern + operational steps. |
+| `archive/` | Historical plans, infra notes, roadmap — superseded, do not follow. |
 
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
-- The deployed stack lives on zorin at `/opt/epub-to-audiobook`, deploys **from git only** (reset to master 2026-07-03 after years of live-patch drift — never patch live files).
-- Engine candidates: Chatterbox Turbo (local install proven; deploy via devnen/Chatterbox-TTS-Server) and Hume TADA (most natural, needs server wrapper + GPU benchmark). UK human reference voices only — see LOW-COST-TTS.md.
+- The deployed stack lives on zorin at `/opt/epub-to-audiobook`, deploys **from git only** (never patch live files). Deploy with `--profile piper --profile chatterbox --profile tada`.
+- Two custom engines are BUILT and containerised: `chatterbox/` (Turbo) and `tada/` (TADA), both OpenAI-compatible, UK human-cloned voices baked in. Adding an engine = VOICES entries + a branch at the three `tts_engine ==` sites in app.py.
 
 ## Scope
 
 - App code, scripts, tests, Docker Compose, and deployment docs for this repo.
-- Target stack paths and host-specific deployment details are documented in `README.md`, `INFRASTRUCTURE.md`, `GPU-PLAYBOOK.md`, and related plan files.
+- Target stack paths and host-specific deployment details are documented in `README.md`, `GPU-PLAYBOOK.md`, and `archive/INFRASTRUCTURE.md`.
 - Do not expose or commit `.env`, `.secrets/`, SSH keys, generated audio, job databases, or local screenshots unless explicitly requested and reviewed.
 
 ## MCPProxy / Tool Surfaces

@@ -56,7 +56,7 @@ click re-render, (d) feedback/preset store.
 
 Bring TADA to parity with Turbo as a selectable engine.
 - **`tada/` container**: OpenAI-compatible FastAPI server wrapping TADA-1B
-  (recipe proven — see PLAN-ENGINE-UI.md Phase B: tokenizer redirect to
+  (recipe proven — see PLAN.md Phase B: tokenizer redirect to
   ungated mirror, float32/bf16, soundfile, transcript-cached refs). CPU
   default; CUDA when present. Port 8005. UK voices baked in.
 - **Production first-word fix**: prepend a lead-in that is TRIMMED from the

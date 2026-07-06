@@ -89,7 +89,7 @@ Priority order:
 
 ## Big-picture plan
 
-See **PLAN-V2-COMPLETE.md** for the path to flawless: the 3-layer **adaptive
+See **PLAN.md** for the path to flawless: the 3-layer **adaptive
 QA system** (LLM pre-flight profile + ASR post-flight verify + feedback loop)
 that catches per-book issues without hardcoding — this is the answer to
 "how do we catch bugs like the year one automatically". Also: one-click Vast
@@ -98,6 +98,6 @@ GPU for both engines, full-length reliability, and the UI revamp.
 ## Doc map
 
 README.md (setup/sharing) · PREPROCESSING.md (text pipeline) ·
-LOW-COST-TTS.md (engine bake-off + costs) · PLAN-ENGINE-UI.md (build plan) ·
-GPU-SAFETY.md (GPU rules) · ROADMAP.md (feature status) · AGENTS.md (agent
+LOW-COST-TTS.md (engine bake-off + costs) · PLAN.md (build plan) ·
+GPU-SAFETY.md (GPU rules) · STATUS.md (feature status) · AGENTS.md (agent
 guide). This file (STATUS.md) is the current-state index.

@@ -27,7 +27,7 @@ balance in minutes by leaving an instance running.**
 ## What "local" means here
 
 - Chatterbox Turbo and Hume TADA both run on local CPU (see
-  PLAN-ENGINE-UI.md). Slower (~14h and ~26h per book respectively), but the
+  PLAN.md). Slower (~14h and ~26h per book respectively), but the
   user has stated **time does not matter; quality and not wasting money
   do.** Overnight local batches are the expected default path.
 - Cloud GPU is an opt-in accelerator for when the user *chooses* to trade a
@@ -38,7 +38,7 @@ balance in minutes by leaving an instance running.**
 1. `python vast.py show user` — confirm balance and that spending is intended.
 2. Search cheap reliable offers; create from a `pytorch/pytorch` image.
    Key format: the copied key is prefixed `arc_` — strip it to the 64-hex.
-3. Do the work (see PLAN-ENGINE-UI.md Phase B for the TADA recipe).
+3. Do the work (see PLAN.md Phase B for the TADA recipe).
 4. **Download results, then immediately `destroy instance <id>` and verify 0
    instances remain.**
 5. Report actual spend (`show user` before/after).

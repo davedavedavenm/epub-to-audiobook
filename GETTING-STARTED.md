@@ -76,7 +76,7 @@ and **per-book** rules in each book's Advanced panel.
 
 > Roadmap: an **adaptive QA system** (LLM pre-flight review + Whisper
 > post-flight verification) that automatically catches and fixes per-book
-> pronunciation issues is planned — see PLAN-V2-COMPLETE.md §1.
+> pronunciation issues is planned — see PLAN.md §1.
 
 ## 5. Voices
 
