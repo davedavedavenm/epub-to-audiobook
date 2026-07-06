@@ -481,9 +481,13 @@ VOICES = {
     # voice id MUST equal the wav file stem in chatterbox/voices/
     'uk_male_minter': {'name': 'Arthur (UK, human-cloned)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'uk_female_golding': {'name': 'Harriet (UK, human-cloned)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
+    'uk_male_yearsley': {'name': 'Edmund (UK, human-cloned)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
+    'uk_female_samuel': {'name': 'Beatrice (UK, human-cloned)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
     # ============ TADA (LOCAL/GPU, MOST NATURAL) ============
     'uk_male_minter_tada': {'name': 'Arthur — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
     'uk_female_golding_tada': {'name': 'Harriet — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
+    'uk_male_yearsley_tada': {'name': 'Edmund — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
+    'uk_female_samuel_tada': {'name': 'Beatrice — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
 }
 
 PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."

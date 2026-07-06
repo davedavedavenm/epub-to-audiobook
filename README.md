@@ -2,7 +2,9 @@
 
 **Version:** 1.3.x (repo)
 
-A self-hosted web application for converting ebooks to audiobooks using AI text-to-speech. Features a modern tab-based UI with voice previews, library browsing, job management, and Audiobookshelf integration.
+A self-hosted web application for converting **any** ebook (EPUB, PDF, MOBI, and more) into an audiobook using AI text-to-speech, entirely on your own machine. Modern tab-based UI with voice previews, library browsing, job management, and Audiobookshelf integration.
+
+> **New here? Start with the [full walkthrough → GETTING-STARTED.md](GETTING-STARTED.md)** — install, convert your first book, connect an AI for smarter pronunciation, add your own voices, and set up Audiobookshelf.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
