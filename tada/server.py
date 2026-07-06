@@ -67,7 +67,14 @@ def _get_model():
         from tada.modules.tada import TadaForCausalLM
         log.info("loading TADA-1B on %s (%s) ...", DEVICE, DTYPE)
         _enc = Encoder.from_pretrained("HumeAI/tada-codec", subfolder="encoder").to(DEVICE)
-        _model = TadaForCausalLM.from_pretrained("HumeAI/tada-1b", dtype=DTYPE).to(DEVICE)
+        # low_cpu_mem_usage avoids the ~2x peak-RAM spike during load (loads
+        # weights incrementally) — needed to fit on memory-limited hosts.
+        try:
+            _model = TadaForCausalLM.from_pretrained(
+                "HumeAI/tada-1b", dtype=DTYPE, low_cpu_mem_usage=True).to(DEVICE)
+        except TypeError:
+            _model = TadaForCausalLM.from_pretrained("HumeAI/tada-1b", dtype=DTYPE).to(DEVICE)
+        log.info("TADA-1B loaded.")
     return _enc, _model
 
 
