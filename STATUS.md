@@ -59,10 +59,10 @@ Priority order:
 3. **Public-repo hygiene** — DONE 2026-07-06: deleted dead archive/root-scripts,
    parameterized the homelab IP (`DOCKER_VM_IP` env) / stack path
    (`/opt/epub-to-audiobook`) / git email across tracked files. Repo stays public.
-4. **TADA as an app engine (Phase B)** — currently standalone scripts only.
-   Needs the OpenAI-compatible wrapper container + engine wiring, and a
-   production-ready first-word fix (the "lead-in" trick currently *speaks* the
-   filler word — must trim it). Recipe in PLAN-ENGINE-UI.md Phase B.
+4. **TADA first-word polish** — TADA is now integrated as an engine
+   (`tada/` container, Arthur/Harriet — TADA voices in the UI). Remaining: the
+   production first-word fix (trim a lead-in rather than speak it) and a full
+   listening pass. Container build + end-to-end verification in progress.
 5. **Pronunciation seed rules** — e.g. "US" reads as the word "us". The UI
    supports per-book + global regex, but no default dictionary is shipped.
 6. **Render toggle scope** — the Local/Cloud-GPU toggle currently only gates
@@ -86,6 +86,14 @@ Priority order:
   chapter MP3s).
 - **Front-matter detection**: auto-skip copyright/title pages so "chapter 1"
   isn't the copyright page.
+
+## Big-picture plan
+
+See **PLAN-V2-COMPLETE.md** for the path to flawless: the 3-layer **adaptive
+QA system** (LLM pre-flight profile + ASR post-flight verify + feedback loop)
+that catches per-book issues without hardcoding — this is the answer to
+"how do we catch bugs like the year one automatically". Also: one-click Vast
+GPU for both engines, full-length reliability, and the UI revamp.
 
 ## Doc map
 
