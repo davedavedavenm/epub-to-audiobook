@@ -566,6 +566,12 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
+        # Add narration_profile column (migration — QA Layer 1 per-book profile)
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN narration_profile TEXT")
+        except sqlite3.OperationalError:
+            pass
+
         # Add tts_engine column if it doesn't exist (migration)
         try:
             conn.execute('ALTER TABLE jobs ADD COLUMN tts_engine TEXT DEFAULT "kokoro"')
@@ -701,8 +707,8 @@ def save_job(job: dict):
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
-             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -745,7 +751,8 @@ def save_job(job: dict):
             job.get('newline_mode', 'double'),
             job.get('title_mode', 'auto'),
             job.get('custom_regex'),
-            job.get('preprocess_summary')
+            job.get('preprocess_summary'),
+            job.get('narration_profile')
         ))
         conn.commit()
 
@@ -2985,18 +2992,30 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
         # Preprocess EPUB for better TTS pronunciation (numbers, abbreviations, etc.)
         try:
-            from llm_metadata import generate_lexicon
+            from llm_metadata import generate_lexicon, generate_narration_profile
             from tts_preprocess import preprocess_epub
-            
-            # Generate custom lexicon if LLM is configured
+
+            # QA Layer 1 (pre-flight): adaptive per-book narration profile +
+            # legacy name lexicon. Both merge into one lexicon of replacements.
             lexicon = {}
+            profile = {}
             try:
-                lexicon = generate_lexicon(epub_path)
-                if lexicon:
-                    append_job_log(job_id, f"Generated custom pronunciation lexicon ({len(lexicon)} terms)")
+                profile = generate_narration_profile(epub_path) or {}
+                if profile.get('rules'):
+                    lexicon.update(profile['rules'])
+                    append_job_log(job_id, f"Narration profile: domain='{profile.get('domain')}', {len(profile['rules'])} rules")
+            except Exception as e:
+                app.logger.warning(f"Narration profile failed: {e}")
+            try:
+                names = generate_lexicon(epub_path)
+                if names:
+                    # profile rules win on conflict
+                    for k, v in names.items():
+                        lexicon.setdefault(k, v)
+                    append_job_log(job_id, f"Name lexicon: {len(names)} terms")
             except Exception as e:
                 app.logger.warning(f"Lexicon generation failed: {e}")
-                
+
             preprocessed_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
             _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon)
             # Use preprocessed version for conversion, keep original for reference
@@ -3004,8 +3023,14 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             epub_path = preprocessed_path
             summary = f"sanitized + normalized, {files_changed} files changed"
             if lexicon:
-                summary += f", lexicon {len(lexicon)} terms"
+                summary += f", {len(lexicon)} pronunciation rules"
+            if profile.get('domain'):
+                summary += f" (domain: {profile['domain']})"
             update_job(job_id, preprocess_summary=summary)
+            try:
+                update_job(job_id, narration_profile=json.dumps(profile)[:4000])
+            except Exception:
+                pass
             append_job_log(job_id, f"Text preprocessed ({summary})")
         except Exception as e:
             app.logger.warning(f"TTS preprocessing failed, using original: {e}")

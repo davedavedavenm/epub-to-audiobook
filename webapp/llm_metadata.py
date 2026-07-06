@@ -135,6 +135,98 @@ Here is the book sample:
         return {}
 
 
+def _call_llm_json(prompt: str, settings: dict, temperature: float = 0.1):
+    """POST a prompt expecting a strict-JSON reply; returns parsed obj or None."""
+    headers = {"Authorization": f"Bearer {settings['LLM_API_KEY']}",
+               "Content-Type": "application/json"}
+    payload = {
+        "model": settings['LLM_MODEL_NAME'],
+        "messages": [
+            {"role": "system", "content": "You output strictly valid JSON with no markdown wrapping."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": temperature,
+    }
+    endpoint = f"{settings['LLM_API_BASE_URL'].rstrip('/')}/chat/completions"
+    resp = requests.post(endpoint, headers=headers, json=payload, timeout=90)
+    resp.raise_for_status()
+    content = resp.json()['choices'][0]['message']['content'].strip()
+    for fence in ("```json", "```"):
+        if content.startswith(fence):
+            content = content[len(fence):]
+    if content.endswith("```"):
+        content = content[:-3]
+    return json.loads(content.strip())
+
+
+# Sample the book more widely than just the opening — pull excerpts across the
+# spine so the profile reflects the whole book, not only chapter 1.
+def extract_spread_sample(epub_path: Path, max_chars=24000) -> str:
+    try:
+        full = extract_sample_text(epub_path, max_chars=200000)
+    except Exception:
+        return extract_sample_text(epub_path, max_chars=max_chars)
+    if len(full) <= max_chars:
+        return full
+    # take 4 evenly spaced windows
+    n = 4
+    win = max_chars // n
+    step = (len(full) - win) // (n - 1)
+    return "\n\n[...]\n\n".join(full[i * step:i * step + win] for i in range(n))
+
+
+def generate_narration_profile(epub_path: Path) -> dict:
+    """QA Layer 1 (pre-flight): analyse the book and return an adaptive
+    narration profile — NOT hardcoded, generated per book by the LLM.
+
+    Returns {"domain": str, "rules": {search: replace}, "notes": [str]}.
+    `rules` are whole-word replacements merged into the TTS lexicon so the
+    engine says things correctly (e.g. "US" -> "U S", odd names phonetically,
+    ambiguous numbers spelled out). Degrades to {} if no LLM configured.
+    """
+    settings = _get_llm_settings()
+    if not settings['LLM_API_KEY']:
+        logging.info("LLM_API_KEY not set. Skipping narration profile.")
+        return {}
+    sample = extract_spread_sample(epub_path)
+    if not sample:
+        return {}
+
+    prompt = f"""You are a text-to-speech narration engineer preparing a book for audiobook conversion.
+Read the sample and find every token a TTS engine is likely to MISREAD, then give the spoken form.
+
+Cover ALL of these categories:
+- Acronyms/initialisms read letter-by-letter (US -> "U S", UK -> "U K", CEO -> "C E O", IPO -> "I P O", FBI -> "F B I"). Only letters that are genuinely spelled out; leave true words (NASA, NATO) alone.
+- Unusual proper nouns / surnames / place names needing phonetic spelling ("Vartabedian" -> "var-tuh-BEH-dee-un").
+- Foreign or invented words.
+- Numbers/dates/units that would be misread in context.
+
+Return ONLY a JSON object:
+{{"domain": "<one short phrase, e.g. 'US politics nonfiction'>",
+  "rules": {{"<original text>": "<spoken replacement>"}},
+  "notes": ["<short note>"]}}
+Keep rules high-precision (only clear wins). Empty rules {{}} if none.
+
+BOOK SAMPLE:
+{sample}
+"""
+    try:
+        obj = _call_llm_json(prompt, settings, temperature=0.1)
+        rules = obj.get('rules', {}) if isinstance(obj, dict) else {}
+        # sanitize: keep only str->str, drop empties
+        rules = {str(k): str(v) for k, v in rules.items() if k and v and str(k) != str(v)}
+        profile = {
+            'domain': (obj.get('domain') if isinstance(obj, dict) else '') or 'general',
+            'rules': rules,
+            'notes': obj.get('notes', []) if isinstance(obj, dict) else [],
+        }
+        logging.info(f"Narration profile: domain={profile['domain']} rules={len(rules)}")
+        return profile
+    except Exception as e:
+        logging.error(f"Narration profile generation failed: {e}")
+        return {}
+
+
 def generate_lexicon(epub_path: Path) -> dict:
     """Use configured LLM to generate a pronunciation lexicon for complex names in the EPUB."""
     settings = _get_llm_settings()
