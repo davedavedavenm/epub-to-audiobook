@@ -3456,7 +3456,7 @@ def check_engines_health(max_age=20):
         'kokoro': f"{KOKORO_URL.rstrip('/')}/audio/voices",
         'chatterbox': f"{CHATTERBOX_URL.rstrip('/')}/audio/voices",
         'tada': f"{TADA_URL.rstrip('/')}/audio/voices",
-        'piper': f"{PIPER_URL.rstrip('/')}/audio/voices",
+        'piper': f"{PIPER_URL.rstrip('/')}/models",  # openedai-speech has no /audio/voices
     }
     out = {}
     for eng, url in probes.items():
