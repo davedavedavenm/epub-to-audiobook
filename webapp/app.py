@@ -1609,6 +1609,15 @@ def handle_job_failure(job_id, error_type, error_msg):
         delay = RETRY_BACKOFF_BASE * (2 ** retry_count)  # 30s, 60s, 120s
         new_rank = next_queue_rank()
 
+        # CRITICAL: clear container_name, otherwise convert_book's
+        # duplicate-start guard sees the stale container reference and aborts
+        # every retry (bug found 2026-07-07 — job d67c50ac failed 3/3 retries
+        # without ever running). Also remove any stale container so the name
+        # can't collide when the retry launches.
+        stale = job.get('container_name')
+        if stale and re.match(r'^[a-zA-Z0-9_.-]+$', stale):
+            subprocess.run(['docker', 'rm', '-f', stale], capture_output=True)
+
         with get_db() as conn:
             conn.execute('''
                 UPDATE jobs
@@ -1619,6 +1628,7 @@ def handle_job_failure(job_id, error_type, error_msg):
                     progress_percent = 0,
                     current_chapter = NULL,
                     current_chapter_name = NULL,
+                    container_name = NULL,
                     queue_rank = ?
                 WHERE id = ?
             ''', (new_rank, job_id))
@@ -3826,7 +3836,7 @@ def resume_job(job_id):
     if has_partial:
         threading.Thread(target=_do_recovery, args=(job_id,), daemon=True).start()
     else:
-        threading.Thread(target=start_next_queued_job, daemon=True).start()
+        threading.Thread(target=maybe_start_next_queued_job, daemon=True).start()
 
     return jsonify({
         'status': 'success', 
@@ -4698,7 +4708,7 @@ def convert_from_library():
             'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0
         })
 
-        threading.Thread(target=start_next_queued_job, daemon=True).start()
+        threading.Thread(target=maybe_start_next_queued_job, daemon=True).start()
         return jsonify({'status': 'success', 'job_id': job_id})
 
     except Exception as e:
