@@ -112,7 +112,11 @@ def _startup():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "device": DEVICE, "voices": list(_voice_paths)}
+    return {"status": "ok", "device": DEVICE,
+            "cuda_available": torch.cuda.is_available(),
+            "torch": torch.__version__,
+            "torch_cuda": getattr(torch.version, "cuda", None),
+            "voices": list(_voice_paths)}
 
 
 @app.get("/v1/audio/voices")
