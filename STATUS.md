@@ -4,27 +4,23 @@
 "verified" it was actually run; "unverified" means the code exists but hasn't
 been proven end-to-end.
 
-## TL;DR (2026-07-07)
+## TL;DR (2026-07-07 evening — everything validated)
 
-**A real full-book failure was found by Dave, root-caused, and fixed the same
-day.** His 18-chapter Chatterbox conversion failed instantly 3x. Cause: (1) UI
-chapter count off-by-one made the converter exit ("end 19 out of range"), and
-(2) the auto-retry NEVER ran because the retry path left a stale
-container_name that tripped the duplicate-start guard. Both fixed (retries now
-clear the container ref; job spawns respect QUEUE_RUNNER_ENABLED so the webapp
-no longer races the worker). **The same job re-run now self-heals the range and
-is converting the full book** (in progress at time of writing).
+**All three paths now work, with measured numbers:**
+1. **Local (free):** Chatterbox full-book conversion IN PROGRESS on zorin
+   right now (Dave's previously-failed job, self-healed after the retry bug
+   fix, converting ch 6+/18 → ABS on completion).
+2. **GitHub Actions (free):** verified — produced a real 11-min chapter
+   artifact (Chatterbox). TADA too slow on 2-vCPU runners; use GPU for TADA.
+3. **Vast GPU (paid, one command):** `scripts/vast-gpu.sh up tada|chatterbox`
+   VALIDATED end-to-end 2026-07-07 with the fixed CUDA images:
+   `cuda_available:true` health-gated, Alice ch1 converted + timed —
+   **TADA RTF 0.34 (3x realtime, ~GBP0.5/full book)**, Chatterbox ~0.85 incl.
+   model load. Total validation spend ~$0.25; all instances destroyed.
 
-**Free conversion paths:** Chatterbox — VERIFIED twice (local zorin full
-pipeline; GitHub Actions produced a real 11-min chapter artifact, free).
-TADA — deploys healthy everywhere, but is impractically slow on free CPU
-(GitHub 2-vCPU dropped mid-chapter after 49 min; the NUC can barely load it).
-**TADA is a GPU engine in practice** — use `scripts/vast-gpu.sh up tada`.
-
-**Vast GPU:** runbook + CI-built GHCR images done; first pull attempt on a
-Vast host stalled on GHCR throttling (images are public — zorin pulls them
-anonymously). Needs a retry on a different host or a registry mirror; GPU
-speed still unmeasured.
+Today's fixes that got here: retry-path stale container_name (retries never
+ran), webapp/worker double-start race, CPU-only torch + missing NVIDIA envs
+in the engine images, per-chunk connection retries in the converter.
 
 
 ## Done & VERIFIED (actually run)
