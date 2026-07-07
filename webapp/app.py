@@ -3442,6 +3442,49 @@ def index():
     return render_template('index.html', voices=VOICES, engines=TTS_ENGINES)
 
 
+
+_ENGINE_HEALTH_CACHE = {'ts': 0, 'data': {}}
+
+def check_engines_health(max_age=20):
+    """Probe each engine's availability (cached ~20s). Used to lock the UI
+    and to refuse queueing jobs against a dead engine."""
+    import time as _t
+    now = _t.time()
+    if now - _ENGINE_HEALTH_CACHE['ts'] < max_age and _ENGINE_HEALTH_CACHE['data']:
+        return _ENGINE_HEALTH_CACHE['data']
+    probes = {
+        'kokoro': f"{KOKORO_URL.rstrip('/')}/audio/voices",
+        'chatterbox': f"{CHATTERBOX_URL.rstrip('/')}/audio/voices",
+        'tada': f"{TADA_URL.rstrip('/')}/audio/voices",
+        'piper': f"{PIPER_URL.rstrip('/')}/audio/voices",
+    }
+    out = {}
+    for eng, url in probes.items():
+        try:
+            r = requests.get(url, timeout=3)
+            out[eng] = r.status_code == 200
+        except Exception:
+            out[eng] = False
+    # proxy-backed engines: up if the proxy answers at all
+    proxy = os.environ.get('TTS_PROXY_URL', '') or 'http://tts-proxy:8882'
+    try:
+        requests.get(f"{proxy.rstrip('/')}/healthz", timeout=3)
+        proxy_up = True
+    except Exception:
+        proxy_up = False
+    out['edge'] = proxy_up
+    out['polly'] = proxy_up and bool(get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID'))
+    out['inworld'] = proxy_up and bool(get_setting('INWORLD_API_KEY') or os.environ.get('INWORLD_API_KEY'))
+    _ENGINE_HEALTH_CACHE['ts'] = now
+    _ENGINE_HEALTH_CACHE['data'] = out
+    return out
+
+
+@app.route('/api/engines/health')
+def engines_health():
+    return jsonify(check_engines_health())
+
+
 @app.route('/api/voices')
 def list_voices():
     """Return available voices grouped by engine."""
@@ -4685,6 +4728,10 @@ def convert_from_library():
 
         output_dirname = f"{safe_name}_{job_id}"
         tts_engine = VOICES.get(voice, {}).get('engine', 'kokoro')
+        health = check_engines_health()
+        if health.get(tts_engine) is False:
+            return jsonify({'error': f'The {tts_engine} engine is offline — its service is not running. '
+                            f'Start it (e.g. docker compose --profile {tts_engine} up -d) or pick a voice from another engine.'}), 409
 
         save_job({
             'id': job_id,

@@ -361,6 +361,11 @@ select.input-control { cursor: pointer; }
 <script src="/static/llm_ui.js"></script>
 <script>
     const voices = {{ voices | tojson }};
+    let engineHealth = {};   // engine -> bool (true=up); empty until loaded
+    async function loadEngineHealth() {
+        try { engineHealth = await (await fetch('/api/engines/health')).json(); } catch(e) {}
+    }
+    function engineUp(e) { return engineHealth[e] !== false; }
     let libraryBooks = [];
     let selectedFile = null;
     let currentPreviewPath = null;
@@ -490,8 +495,10 @@ select.input-control { cursor: pointer; }
     function buildVoiceOptions(selectedId) {
         const engines = [...new Set(Object.values(voices).map(v => v.engine))];
         return engines.map(engine => {
+            const up = engineUp(engine);
             const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
-            return `<optgroup label="${engine.toUpperCase()} ENGINE">${engineVoices.map(([id, v]) => `<option value="${id}" ${id === selectedId ? 'selected' : ''}>${v.name} (${v.accent})</option>`).join('')}</optgroup>`;
+            const label = engine.toUpperCase() + (up ? ' ENGINE' : ' ENGINE — OFFLINE');
+            return `<optgroup label="${label}">${engineVoices.map(([id, v]) => `<option value="${id}" ${up ? '' : 'disabled'} ${id === selectedId && up ? 'selected' : ''}>${v.name} (${v.accent})${up ? '' : ' — offline'}</option>`).join('')}</optgroup>`;
         }).join('');
     }
 
@@ -620,9 +627,10 @@ select.input-control { cursor: pointer; }
         const engines = [...new Set(Object.values(voices).map(v => v.engine))];
         container.innerHTML = engines.map(engine => {
             const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
+            const up = engineUp(engine);
             return `
-                <div class="engine-section">
-                    <div class="engine-header">${engine.toUpperCase()} ENGINE</div>
+                <div class="engine-section" style="${up ? '' : 'opacity:0.45;'}">
+                    <div class="engine-header">${engine.toUpperCase()} ENGINE ${up ? '' : '<span style="color:var(--error); font-size:0.8rem;">● OFFLINE — service not running</span>'}</div>
                     <div class="voices-grid">
                         ${engineVoices.map(([id, v]) => `
                             <div class="voice-card">
@@ -868,8 +876,9 @@ select.input-control { cursor: pointer; }
 
     function escapeHtml(str) { if(!str) return ''; const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
 
-    window.onload = () => {
+    window.onload = async () => {
         const theme = localStorage.getItem('audiobook-theme') || 'light'; setTheme(theme);
+        await loadEngineHealth(); setInterval(loadEngineHealth, 30000);
         const tab = localStorage.getItem('audiobook-tab') || 'library'; switchTab(tab);
         const uploadVoice = document.getElementById('upload-voice');
         if(uploadVoice) uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural');
