@@ -70,13 +70,24 @@ def chunk(text, n):
 
 
 def synth(engine_url, voice, text, chunk_chars):
+    import time
     parts = []
     for c in chunk(text, chunk_chars):
-        r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
-                          json={"model": "tts-1", "input": c, "voice": voice,
-                                "response_format": "mp3"}, timeout=1800)
-        r.raise_for_status()
-        parts.append(r.content)
+        # per-chunk retry: long CPU generations can drop the connection
+        for attempt in range(3):
+            try:
+                r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
+                                  json={"model": "tts-1", "input": c, "voice": voice,
+                                        "response_format": "mp3"},
+                                  timeout=(15, 3600))
+                r.raise_for_status()
+                parts.append(r.content)
+                break
+            except (requests.ConnectionError, requests.Timeout) as e:
+                if attempt == 2:
+                    raise
+                print(f"  chunk retry {attempt+1}/2 after error: {str(e)[:80]}", flush=True)
+                time.sleep(10 * (attempt + 1))
     return b''.join(parts)   # mp3 frames concatenate fine for playback
 
 
