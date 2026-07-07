@@ -55,6 +55,10 @@ services:
     ports:
       - "8004:8004"
     restart: unless-stopped
+    # Cap memory so a runaway generation restarts THIS container cleanly
+    # instead of the kernel OOM-killing arbitrary processes (2026-07-07).
+    mem_limit: 6g
+    memswap_limit: 6g
     environment:
       - CHATTERBOX_CHUNK_CHARS=${CHATTERBOX_CHUNK_CHARS:-280}
     volumes:
@@ -78,6 +82,8 @@ services:
     ports:
       - "8005:8005"
     restart: unless-stopped
+    mem_limit: 10g
+    memswap_limit: 10g
     environment:
       - TADA_CHUNK_CHARS=${TADA_CHUNK_CHARS:-600}
       - HF_TOKEN=${HF_TOKEN:-}

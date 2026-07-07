@@ -16,6 +16,8 @@ import re
 import glob
 import json
 import logging
+import gc
+import threading
 import subprocess
 
 import numpy as np
@@ -44,6 +46,11 @@ DTYPE = torch.bfloat16 if DEVICE == "cuda" else torch.float32
 SR = 24000
 
 app = FastAPI()
+
+# One generation at a time: concurrent requests from FastAPI's threadpool
+# pile up on CPU (client timeouts leave abandoned generations running),
+# ballooning memory until the kernel OOM-kills the server (incident 2026-07-07).
+_GEN_LOCK = threading.Lock()
 _enc = None
 _model = None
 _voice_paths = {}
@@ -142,14 +149,18 @@ def speech(req: SpeechReq):
     prompt = enc(aud, text=[_voice_transcript(ref_name)], sample_rate=sr)
 
     pieces = []
-    for chunk in _chunk(req.input):
-        out = model.generate(prompt=prompt, text=chunk)
-        w = out.audio
-        while isinstance(w, (list, tuple)):
-            w = w[0]
-        if hasattr(w, "detach"):
-            w = w.detach().cpu().float().numpy()
-        pieces.append(np.asarray(w, dtype="float32").reshape(-1))
+    with _GEN_LOCK:
+        with torch.inference_mode():
+            for chunk in _chunk(req.input):
+                out = model.generate(prompt=prompt, text=chunk)
+                w = out.audio
+                while isinstance(w, (list, tuple)):
+                    w = w[0]
+                if hasattr(w, "detach"):
+                    w = w.detach().cpu().float().numpy()
+                pieces.append(np.asarray(w, dtype="float32").reshape(-1))
+                del out
+        gc.collect()
     audio = np.concatenate(pieces) if pieces else np.zeros(1, dtype="float32")
 
     buf = io.BytesIO()

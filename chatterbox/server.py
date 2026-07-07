@@ -16,6 +16,8 @@ import os
 import re
 import glob
 import logging
+import gc
+import threading
 
 import numpy as np
 import soundfile as sf
@@ -34,6 +36,11 @@ CHUNK_CHARS = int(os.environ.get("CHATTERBOX_CHUNK_CHARS", "280"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 app = FastAPI()
+
+# One generation at a time: concurrent requests from FastAPI's threadpool
+# pile up on CPU (client timeouts leave abandoned generations running),
+# ballooning memory until the kernel OOM-kills the server (incident 2026-07-07).
+_GEN_LOCK = threading.Lock()
 _model = None
 _voice_paths = {}
 
@@ -111,10 +118,14 @@ def speech(req: SpeechReq):
 
     model = _get_model()
     pieces = []
-    for chunk in _chunk(req.input):
-        wav = model.generate(chunk, audio_prompt_path=ref)
-        arr = wav.detach().cpu().numpy().astype("float32").reshape(-1)
-        pieces.append(arr)
+    with _GEN_LOCK:
+        with torch.inference_mode():
+            for chunk in _chunk(req.input):
+                wav = model.generate(chunk, audio_prompt_path=ref)
+                arr = wav.detach().cpu().numpy().astype("float32").reshape(-1)
+                pieces.append(arr)
+                del wav
+        gc.collect()
     audio = np.concatenate(pieces) if pieces else np.zeros(1, dtype="float32")
 
     fmt = (req.response_format or "mp3").lower()

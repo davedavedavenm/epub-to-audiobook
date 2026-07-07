@@ -3069,6 +3069,14 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 update_job(job_id, start_chapter=start_chapter, end_chapter=end_chapter)
         except: pass
 
+        # SLOW_ENGINE_MIN_TIMEOUT: chatterbox/tada on CPU run near realtime;
+        # polluted ETA metrics produced absurd timeouts (375m for a ~14h book,
+        # incident 2026-07-07). Floor the timeout at char_count/4 chars-per-sec.
+        if tts_engine in ('chatterbox', 'tada'):
+            floor_seconds = int(char_count / 4.0)
+            if timeout_seconds < floor_seconds:
+                timeout_seconds = floor_seconds
+                append_job_log(job_id, f"Timeout floored to {timeout_seconds//60}m for slow engine {tts_engine}")
         update_job(job_id, char_count=char_count, timeout_minutes=timeout_seconds // 60, eta_minutes=initial_eta)
         app.logger.info(f"Book has ~{char_count:,} chars, ETA {initial_eta} min, timeout {timeout_seconds // 60} min")
         append_job_log(job_id, f"Estimated chars={char_count}, ETA={initial_eta}m, timeout={timeout_seconds // 60}m")
@@ -3365,7 +3373,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # Record conversion metrics for ETA learning
             job = get_job(job_id)
             if job:
-                record_conversion_metrics(job)
+                # partial-range jobs pollute chars/sec (char_count covers the
+                # whole book) — only learn from full-book conversions
+                full = (not job.get('start_chapter') or job['start_chapter'] == 1) and                        (not job.get('end_chapter') or job.get('end_chapter') == job.get('total_chapters'))
+                if full:
+                    record_conversion_metrics(job)
 
             # Send Telegram notification if requested
             if job and job.get('notify_telegram'):
