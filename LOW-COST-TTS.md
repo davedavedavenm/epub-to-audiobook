@@ -104,6 +104,29 @@ compose service or Vast template (OpenAI-compatible `/v1/audio/speech`, same
 shape as Kokoro-FastAPI), reference voices from `data/voice_refs/`.
 
 
+
+## GPU MEASURED 2026-07-07 — the runbook works, real numbers at last
+
+Validated end-to-end on a Vast RTX 3090 ($0.248/hr, Czechia) using the
+CI-built GHCR images via `scripts/vast-gpu.sh` architecture (onstart + direct
+ports + CUDA health gate). Alice ch.1 (2,187 words ≈ 11-12 min audio),
+converted with `scripts/convert_book.py` over the public endpoint:
+
+| Engine | Compute time | RTF | 11h-book estimate | Cost/book @ $0.126-0.25/hr |
+|--------|-------------|-----|--------------------|------------------------------|
+| **TADA (GPU)** | **3m59s** | **0.34** | ~3.7h | ~$0.47-0.93 (~GBP0.35-0.70) |
+| **Chatterbox (GPU)** | 9m33s (incl. first-request model load) | ~0.85 | ~6-9h warm, less in practice | ~$0.75-2.2 — needs a warm-run measurement |
+
+Notes: TADA is FASTER than Chatterbox on GPU (bf16 1B batch-friendly vs
+Turbo's chunked pipeline); Chatterbox's number includes one-time model load so
+its warm RTF is better than shown. Total validation spend: ~$0.25.
+Fix history that made this work: images were CPU-only torch + missing NVIDIA
+envs (both fixed in CI images); slim images have no sshd (runbook uses direct
+ports); GHCR pulls can stall on slow Vast hosts (pick inet_down>3000).
+
+**Bottom line: TADA's practical home is GPU (~GBP0.5/book, 3x realtime);
+Chatterbox works well everywhere (local CPU overnight = free, GPU = fast).**
+
 ## GPU benchmark attempt 2026-07-06 — FAILED, lesson learned
 
 Tried to measure real Turbo/TADA speed on a Vast RTX 3090 by pip-installing on
