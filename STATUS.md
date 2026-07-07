@@ -4,22 +4,27 @@
 "verified" it was actually run; "unverified" means the code exists but hasn't
 been proven end-to-end.
 
-## TL;DR (2026-07-06, verified)
+## TL;DR (2026-07-07)
 
-**Chatterbox Turbo is FULLY working locally, end-to-end, verified** — real
-conversions completed with multiple UK voices (Arthur, Edmund), all 4 voices
-load, full pipeline (queue -> preprocess/QA -> convert -> ABS sync, no
-overwrite). This is a complete, usable local audiobook system today.
+**A real full-book failure was found by Dave, root-caused, and fixed the same
+day.** His 18-chapter Chatterbox conversion failed instantly 3x. Cause: (1) UI
+chapter count off-by-one made the converter exit ("end 19 out of range"), and
+(2) the auto-retry NEVER ran because the retry path left a stale
+container_name that tripped the duplicate-start guard. Both fixed (retries now
+clear the container ref; job spawns respect QUEUE_RUNNER_ENABLED so the webapp
+no longer races the worker). **The same job re-run now self-heals the range and
+is converting the full book** (in progress at time of writing).
 
-**TADA is built + containerised + CI-published + healthy, but does NOT run
-practically on the NUC**: loading the 1B model needs ~6.5GB and the 15GB NUC
-(already ~8.7GB used by Kokoro+Chatterbox+worker) restarted it mid-load. A
-memory-lean fix (low_cpu_mem_usage) is deploying; even if it loads, NUC CPU
-generation is impractically slow. **TADA's real home is a GPU (one-command
-runbook: scripts/vast-gpu.sh) or a machine with more free RAM.**
+**Free conversion paths:** Chatterbox — VERIFIED twice (local zorin full
+pipeline; GitHub Actions produced a real 11-min chapter artifact, free).
+TADA — deploys healthy everywhere, but is impractically slow on free CPU
+(GitHub 2-vCPU dropped mid-chapter after 49 min; the NUC can barely load it).
+**TADA is a GPU engine in practice** — use `scripts/vast-gpu.sh up tada`.
 
-**Engine images build in CI (GHCR) and are pulled, not built** — no more slow
-manual builds. Vast GPU is a one-command runbook (unvalidated with a paid run).
+**Vast GPU:** runbook + CI-built GHCR images done; first pull attempt on a
+Vast host stalled on GHCR throttling (images are public — zorin pulls them
+anonymously). Needs a retry on a different host or a registry mirror; GPU
+speed still unmeasured.
 
 
 ## Done & VERIFIED (actually run)
