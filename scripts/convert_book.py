@@ -120,6 +120,10 @@ def main():
         idx += 1
         if idx < a.start or (a.end and idx > a.end):
             continue
+        fn_existing = out / f"{idx:03d}.mp3"
+        if fn_existing.exists() and fn_existing.stat().st_size > 10240:
+            print(f"[chapter {idx}] already done — skipping (resume)", flush=True)
+            continue
         print(f"[chapter {idx}] {len(text.split())} words -> synthesizing", flush=True)
         audio = synth(a.engine_url, a.voice, text, a.chunk_chars)
         fn = out / f"{idx:03d}.mp3"

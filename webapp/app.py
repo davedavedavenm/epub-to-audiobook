@@ -1324,7 +1324,8 @@ def cleanup_orphan_jobs():
                     SET status = 'queued',
                         retry_count = ?,
                         error = ?,
-                        completed_at = NULL
+                        completed_at = NULL,
+                        container_name = NULL
                     WHERE id = ?
                 ''', (retry_count + 1, 'Recovered after webapp restart. Re-queued to resume.', job_id))
                 orphan_count += 1
@@ -4162,6 +4163,7 @@ def queue_retry_failed():
                     progress_percent=NULL,
                     eta_minutes=NULL,
                     file_count=NULL,
+                    container_name=NULL,
                     retry_count=?,
                     queue_rank=?
                 WHERE id=?
