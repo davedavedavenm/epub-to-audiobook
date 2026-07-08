@@ -1,7 +1,11 @@
-# Data directories (contain user files)
+# Data directories (contain user files / runtime state — not source)
 data/uploads/
 data/audiobooks/
 data/previews/
+data/library/
+data/logs/
+data/toc_cache/
+data/transcripts/
 data/*.db
 
 # SSH keys and secrets (sensitive)

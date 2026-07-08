@@ -1,114 +1,90 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-06.** Honest single source of truth. If it says
-"verified" it was actually run; "unverified" means the code exists but hasn't
-been proven end-to-end.
+**Last updated: 2026-07-08.** Honest single source of truth. "Verified" = it
+was actually run; "unverified" = the code exists but hasn't been proven
+end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
+this file is the narrative index, the issues are the live backlog.
 
-## TL;DR (2026-07-07 evening — everything validated)
+## TL;DR (2026-07-08)
 
-**All three paths now work, with measured numbers:**
-1. **Local (free):** Chatterbox full-book conversion IN PROGRESS on zorin
-   right now (Dave's previously-failed job, self-healed after the retry bug
-   fix, converting ch 6+/18 → ABS on completion).
-2. **GitHub Actions (free):** verified — produced a real 11-min chapter
-   artifact (Chatterbox). TADA too slow on 2-vCPU runners; use GPU for TADA.
-3. **Vast GPU (paid, one command):** `scripts/vast-gpu.sh up tada|chatterbox`
-   VALIDATED end-to-end 2026-07-07 with the fixed CUDA images:
-   `cuda_available:true` health-gated, Alice ch1 converted + timed —
-   **TADA RTF 0.34 (3x realtime, ~GBP0.5/full book)**, Chatterbox ~0.85 incl.
-   model load. Total validation spend ~$0.25; all instances destroyed.
+The engines and pipeline work; the current frontier is **audio quality** and
+making the **self-correcting loop automatic in the UI**.
 
-Today's fixes that got here: retry-path stale container_name (retries never
-ran), webapp/worker double-start race, CPU-only torch + missing NVIDIA envs
-in the engine images, per-chunk connection retries in the converter.
-
+- **Preprocessing** is robust and layered: structural sanitize → minimal
+  deterministic normalization (MODERN-ENGINE CONTRACT: modern engines keep raw
+  numbers/years) → per-book LLM narration profile (fiction/non-fiction aware) →
+  seed-rule floor. Provider fallback chain; never collapses to nothing.
+- **Engines**: Kokoro, Chatterbox Turbo, Hume TADA-1B, Piper — OpenAI-compatible.
+  TADA/Chatterbox GPU images pull a pinned **cu126** torch stack (fixes the
+  silent-CPU drift; `cuda_available:true` verified on Vast RTX 3090).
+- **GPU strategy**: Kaggle-first (free, ~30 GPU-hrs/wk, now phone-verified) +
+  Vast burst (~$1/book). Runbooks: `scripts/kaggle/`, `scripts/vast-gpu.sh`.
+- **QA Layer 2 (ASR self-check)** exists and is **proven locally on zorin**:
+  it caught a real audio bug (see below). Not yet automatic in the UI.
+- **Output**: one canonical location `data/audiobooks/<book>/`; AudioBookShelf
+  is the unified library. `scripts/sample.sh` for fast local few-page tests.
 
 ## Done & VERIFIED (actually run)
 
-- **Mandatory preprocessing pipeline** (structural sanitizer + normalization
-  + pronunciation). Fixes endnotes, unicode, numbers/years/currency. Live in
-  prod. Tests in `tests/test_tts_preprocess.py` (21 pass). See PREPROCESSING.md.
-  - Recent fix: years 2000–2009 now read "two thousand [n]" (was "twenty
-    hundred" / "twenty oh one").
-- **Chatterbox Turbo engine** — `chatterbox/` container (CPU, OpenAI-compatible
-  server, UK voices baked in). Builds and runs on zorin.
-  - **End-to-end conversion VERIFIED**: a real 1-chapter job (engine
-    `chatterbox`, voice Arthur) completed 100% and produced a valid MP3.
-- **ABS sync VERIFIED**: completed jobs rsync to Audiobookshelf on `docker-vm`
-  at `/opt/stacks/audiobookshelf/audiobooks/<book>_<jobid>/`.
-  - **Does NOT overwrite existing audiobooks** — each conversion goes to a
-    unique `_<jobid>` folder, and rsync runs without `--delete`. Converting
-    the same book twice creates two ABS folders (duplicate, not replacement).
-- **Web UI updated** for: Upload voice picker, library voice-blend + per-book
-  pronunciation regex, queue pause/cancel/retry-all/log viewer, preprocessing
-  PRE badge, global pronunciation dictionary, Render Location toggle, honest
-  Polly/Inworld labels, Arthur/Harriet voices. (Confirmed present in deployed
-  UI.)
-- **GPU safety**: `GPU_RENDER_ENABLED` defaults off, `/api/gpu/scale-up` 403s
-  by default, `AUTOSCALE_ENABLED` compose default flipped to false. See
-  GPU-SAFETY.md.
+- **Preprocessing pipeline** — MODERN-ENGINE CONTRACT codified + regression-
+  guarded (modern engines don't respell numbers/years/decades — that caused the
+  "1970…6" pause artifact). Fiction/non-fiction classification steers
+  pronunciation. 53 tests pass. See PREPROCESSING.md.
+- **Fallback chains** — LLM provider chain (primary→fallback→seed floor);
+  conversion engine failover helper (voice-preserving). Backend automatic;
+  UI toggle pending (#11).
+- **GPU images** — cu126 torch pin verified live on Vast (`torch 2.8.0+cu126,
+  cuda_available:true`) after the cu130 silent-CPU incident (2026-07-08d).
+- **Clean audio concat** — `convert_book.py` now joins at WAV sample level
+  (stdlib) then encodes one clean MP3; the old MP3-byte join left corrupt frame
+  boundaries. The web-UI path (upstream p0n1 tool) was already clean
+  (ffprobe-verified). Unit-tested.
+- **QA Layer 2 proven on zorin** — local Whisper transcribed real pipeline
+  audio, aligned to source, and **caught the corrupt-concat bug** (a 27-min
+  chapter decoded to 19 words) plus a false-positive in its own normaliser
+  (ordinal word/digit), which was then fixed.
+- **Canonical output + sample harness** — `data/audiobooks/<book>/`,
+  `scripts/sample.sh`. README "Where do I find my audiobooks?".
 
-## Done but UNVERIFIED end-to-end (works in theory / at unit level)
+## Done but UNVERIFIED (needs an ear / a real run)
 
-- **Full-length novel on Turbo** — only 1 chapter tested. Multi-hour runs,
-  NUC memory footprint (Chatterbox + Kokoro + worker in RAM), watchdog over
-  long jobs: not yet proven. **This is what your full-book test will surface.**
-- **Chatterbox voice preview in the UI** — first click triggers a ~2 min model
-  load; the request may appear to hang / the preview UX is untested.
-- **Chatterbox crash-recovery / chapter-retry path** — code branch added but
-  not exercised by an actual mid-job failure.
+- **Post-fix audio quality** — the clean-concat + LLM-profile + (planned)
+  denoise combination has not yet been heard on a completed render (the Vast
+  attempt OOM-died, #9). Validation planned on free Kaggle (#12).
+- **Background hiss** — TADA vocoder artifact, NOT addressed by any fix yet
+  (#8: denoise step + TADA/Chatterbox A/B).
 
-## NOT done (remaining tasks)
+## Open work → GitHub issues
 
-Priority order:
+| Issue | What |
+|---|---|
+| [#7](../../issues/7) | QA Layer 2: auto-apply high-confidence fixes + auto re-render flagged spans |
+| [#8](../../issues/8) | Eliminate TADA background hiss (denoise + engine A/B) |
+| [#9](../../issues/9) | bug: Vast engine has no memory cap — OOM mid-render |
+| [#10](../../issues/10) | Wire QA Layer 2 into the web UI (auto-run + report surface) |
+| [#11](../../issues/11) | Engine failover toggle in the UI |
+| [#12](../../issues/12) | Validation: clean-audio A/B on free Kaggle |
+| [#13](../../issues/13) | Finish Inside Apple audiobook (CPU vs GPU re-render) |
 
-1. **Pre-warm the Chatterbox model on container start** — avoid the ~2 min
-   first-request stall (load model in a startup hook, not lazily).
-2. **Deploy flag fix** — the deploy uses `--profile piper`; Chatterbox needs
-   `--profile piper --profile chatterbox` or it won't restart after a
-   redeploy. Update `scripts/deploy.sh` and docs.
-3. **Public-repo hygiene** — DONE 2026-07-06: deleted dead archive/root-scripts,
-   parameterized the homelab IP (`DOCKER_VM_IP` env) / stack path
-   (`/opt/epub-to-audiobook`) / git email across tracked files. Repo stays public.
-4. **TADA first-word polish** — TADA is now integrated as an engine
-   (`tada/` container, Arthur/Harriet — TADA voices in the UI). Remaining: the
-   production first-word fix (trim a lead-in rather than speak it) and a full
-   listening pass. Container build + end-to-end verification in progress.
-5. **Pronunciation seed rules** — e.g. "US" reads as the word "us". The UI
-   supports per-book + global regex, but no default dictionary is shipped.
-6. **Render toggle scope** — the Local/Cloud-GPU toggle currently only gates
-   the Kokoro autoscaler. It does not yet move Chatterbox/TADA compute to a
-   GPU (those have no GPU-integration path in-app yet). Wire this when Phase
-   B/C land.
-7. **ETA/watchdog tuning for Chatterbox** — default rate (~10 chars/s)
-   happens to match Chatterbox CPU and errs safe, but a measured entry would
-   be cleaner (and correct on GPU).
+## Robustness backlog (not blocking, no issue yet)
 
-## Robustness improvements worth making (not blocking)
-
-- **Duplicate-book guard**: warn/skip when a book already has an ABS folder,
-  to avoid accidental duplicates.
-- **Health gating**: the webapp could refuse to queue a Chatterbox job if
-  `chatterbox-tts` isn't healthy, with a clear message (currently the job
-  would start and stall).
-- **`.env.example` coverage**: ensure every new env (`CHATTERBOX_URL`,
-  `GPU_RENDER_ENABLED`, `AUTOSCALE_ENABLED`) is documented there for friends.
-- **M4B output + chapter metadata** for nicer ABS playback (currently per-
-  chapter MP3s).
-- **Front-matter detection**: auto-skip copyright/title pages so "chapter 1"
-  isn't the copyright page.
+- Pre-warm engine models on container start (avoid ~2 min first-request stall).
+- M4B output + chapter metadata for nicer ABS playback.
+- Front-matter detection (so "chapter 1" isn't the copyright page).
+- Duplicate-book guard (warn when a book already has an ABS folder).
 
 ## Big-picture plan
 
-See **PLAN.md** for the path to flawless: the 3-layer **adaptive
-QA system** (LLM pre-flight profile + ASR post-flight verify + feedback loop)
-that catches per-book issues without hardcoding — this is the answer to
-"how do we catch bugs like the year one automatically". Also: one-click Vast
-GPU for both engines, full-length reliability, and the UI revamp.
+See **PLAN.md** and the action plan in this session. The north star is the
+3-layer **adaptive QA system** (LLM pre-flight profile + ASR post-flight verify
++ feedback loop) so per-book issues are caught automatically — Layers 1 and 2
+now exist; closing the loop (auto-fix + re-render, in the UI) is the remaining
+work (#7, #10).
 
 ## Doc map
 
-README.md (setup/sharing) · PREPROCESSING.md (text pipeline) ·
-LOW-COST-TTS.md (engine bake-off + costs) · PLAN.md (build plan) ·
-GPU-SAFETY.md (GPU rules) · STATUS.md (feature status) · AGENTS.md (agent
-guide). This file (STATUS.md) is the current-state index.
+README.md (setup/sharing) · PREPROCESSING.md (text pipeline + QA layers) ·
+LOW-COST-TTS.md (engine bake-off + GPU strategy) · PLAN.md (build plan) ·
+GPU-SAFETY.md / GPU-PLAYBOOK.md (GPU rules + runbook) · OPERATIONS.md
+(incident log + standing rules) · AGENTS.md (agent guide). This file is the
+current-state index.
