@@ -67,6 +67,22 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
   (chapters 1-5 already done) after the fixed image is pulled.
 
 
+### 2026-07-08b — "endnote numbers read aloud" was actually year-spelling (Apple in China)
+- **Symptom (Dave)**: "from its founding in 1970......6", "returned in 1990...7"
+  — sounded like endnote citation numbers being spoken.
+- **Diagnosis**: NOT endnotes (this book's refs are empty `<span id="ennoteN"/>`
+  anchors, correctly stripped). The years 1976 and 1997 were spelled out as
+  "nineteen seventy-SIX" / "nineteen ninety-SEVEN"; TADA pauses before the
+  final digit, so "six"/"seven" sounded detached — heard as "1970...6".
+- **Fix**: number/year/large-number spelling is now SKIPPED for modern
+  voice-clone engines (chatterbox/tada) via `normalize_text_for_tts(...,
+  modern=True)`, plumbed through preprocess_epub + app + convert_book. Modern
+  models read "1976" natively and correctly. Legacy engines (Kokoro/Piper)
+  unchanged. Regression-guarded.
+- Lesson: several normalization "helpers" tuned for dumb engines actively
+  HURT modern models (this + the em-dash→comma fix). Modern path should be
+  minimal-normalization.
+
 ### 2026-07-08 — Duplicate recovery threads across processes (job ebe7c78d)
 - **Symptom**: resume + worker startup each launched a chapter-recovery pass
   4 s apart (both logged "Retrying 9 missing").

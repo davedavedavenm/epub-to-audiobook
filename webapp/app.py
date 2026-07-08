@@ -3068,7 +3068,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 app.logger.warning(f"Lexicon generation failed: {e}")
 
             preprocessed_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
-            _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon)
+            _modern = tts_engine in ('chatterbox', 'tada')
+            _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon, modern=_modern)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
             epub_path = preprocessed_path

@@ -113,3 +113,17 @@ def test_dashes_not_forced_to_commas():
 
 def test_tada_first_word_leadin_trim():
     assert '_trim_leadin' in TADA_SERVER and 'LEADIN' in TADA_SERVER,         "TADA first-word lead-in trim removed — cold-start garble returns"
+
+
+def test_modern_engines_keep_raw_years():
+    """Spelling '1976'->'nineteen seventy-six' made TADA pause before the last
+    digit, so years sounded like endnote numbers ('1976' heard as '1970...6').
+    Modern engines must keep raw years/numbers (incident 2026-07-08)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('tp2', ROOT / 'webapp' / 'tts_preprocess.py')
+    tp = importlib.util.module_from_spec(spec); spec.loader.exec_module(tp)
+    out = tp.normalize_text_for_tts("founded in 1976, returned in 1997.", modern=True)
+    assert '1976' in out and '1997' in out and 'seventy-six' not in out,         "modern engine year-spelling regressed — re-opens 2026-07-08 '1970...6' artifact"
+    # legacy path still spells (unchanged for Kokoro/Piper)
+    leg = tp.normalize_text_for_tts("founded in 1976.", modern=False)
+    assert 'seventy-six' in leg, "legacy year spelling broken"

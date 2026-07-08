@@ -195,7 +195,7 @@ def normalize_unicode_for_tts(text: str) -> str:
     return text
 
 
-def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
+def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False) -> str:
     """Apply all TTS normalization rules to a text string."""
 
     # === Unicode cleanup (before anything else looks at the text) ===
@@ -260,8 +260,13 @@ def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
         text = re.sub(pattern, replacement, text)
 
     # === Years: 1962 -> nineteen sixty-two ===
-    # Must come before general number handling
-    text = re.sub(r'\b(1[0-9]{3}|20[0-9]{2})\b', lambda m: _year_to_words(m.group(0)), text)
+    # Must come before general number handling.
+    # SKIP for modern voice-clone engines (chatterbox/tada): they read years
+    # natively and correctly, whereas spelling "1976" as "nineteen seventy-six"
+    # makes them PAUSE before the final digit — so "six"/"seven" sound like a
+    # detached endnote number ("1976" heard as "1970...6"). Incident 2026-07-08.
+    if not modern:
+        text = re.sub(r'\b(1[0-9]{3}|20[0-9]{2})\b', lambda m: _year_to_words(m.group(0)), text)
 
     # === Currency (before general number handling) ===
     def replace_currency(m):
@@ -350,8 +355,11 @@ def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
         except ValueError:
             return m.group(0)
 
-    # Numbers with comma separators (at least one comma)
-    text = re.sub(r'\b\d{1,3}(?:,\d{3})+\b', replace_comma_number, text)
+    # Numbers with comma separators (at least one comma).
+    # Modern engines read "2,905" natively; spelling it "two thousand, nine
+    # hundred and five" adds comma-pauses that sound wrong. Skip for modern.
+    if not modern:
+        text = re.sub(r'\b\d{1,3}(?:,\d{3})+\b', replace_comma_number, text)
 
     # === Standalone large numbers without commas (4+ digits) ===
     def replace_large_number(m):
@@ -366,7 +374,8 @@ def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
         except ValueError:
             return m.group(0)
 
-    text = re.sub(r'\b\d{4,}\b', replace_large_number, text)
+    if not modern:
+        text = re.sub(r'\b\d{4,}\b', replace_large_number, text)
 
     # === Ellipsis normalization ===
     # Multiple dots that aren't proper ellipsis
@@ -389,7 +398,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
 
 
 
-def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None, lexicon: dict = None) -> tuple[Path, int]:
+def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None, lexicon: dict = None, modern: bool = False) -> tuple[Path, int]:
     """Preprocess an EPUB file: normalize text for better TTS pronunciation.
 
     Modifies HTML content inside the EPUB. If output_path is None,
@@ -435,7 +444,7 @@ def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None
                             # Layer 2: normalize text content, not HTML tags/attributes
                             # Simple approach: normalize text between > and <
                             def normalize_segment(m):
-                                return normalize_text_for_tts(m.group(0), lexicon=lexicon)
+                                return normalize_text_for_tts(m.group(0), lexicon=lexicon, modern=modern)
 
                             normalized = re.sub(
                                 r'(?<=>)[^<]+(?=<)',

@@ -33,6 +33,7 @@ SEED_PRONUNCIATION = {
     "Foxconn": "FOX-con", "Shenzhen": "SHUN-jen", "Guangzhou": "GWANG-joe",
 }
 _LEXICON = {}
+_MODERN = True   # this script only drives the modern engines
 
 def build_lexicon(epub_path):
     lex = dict(SEED_PRONUNCIATION)
@@ -81,7 +82,7 @@ def spine_docs(z):
 def chapter_text(z, name):
     p = _P(); p.feed(sanitize_html(z.read(name).decode('utf-8', 'ignore')))
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
-    text = normalize_text_for_tts(text)
+    text = normalize_text_for_tts(text, modern=_MODERN)
     if _LEXICON:
         text = apply_lexicon(text, _LEXICON)
     return text
@@ -135,6 +136,10 @@ def main():
     ap.add_argument('--min-words', type=int, default=120,
                     help='skip chapters shorter than this (front-matter)')
     a = ap.parse_args()
+    # modern voice-clone engines read numbers/years natively; skip spelling.
+    modern = ('_tada' in a.voice) or (a.voice.startswith('uk_') and '_tada' not in a.voice) or a.chunk_chars >= 280
+    global _MODERN
+    _MODERN = modern
 
     epub = a.epub
     if epub.startswith('http'):
