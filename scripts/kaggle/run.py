@@ -18,6 +18,15 @@ END    = 2
 
 WORK, REPO_DIR, OUT = "/kaggle/working", "/kaggle/working/repo", "/kaggle/working/out"
 
+# Kaggle images ship TensorFlow; transformers (pulled by hume-tada) eagerly
+# imports it, and Kaggle's TF/protobuf are mismatched → "cannot import name
+# 'runtime_version' from google.protobuf" kills the server (run failed
+# 2026-07-08). Tell transformers this is a torch-only environment so it never
+# touches TF. USE_TF=0 propagates to the server subprocess via os.environ.
+os.environ["USE_TF"] = "0"
+os.environ["USE_TENSORFLOW"] = "0"
+os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
+
 
 def sh(cmd, **kw):
     print("+", " ".join(cmd) if isinstance(cmd, list) else cmd, flush=True)
@@ -25,6 +34,10 @@ def sh(cmd, **kw):
 
 
 # 1. deps — Kaggle's torch is already CUDA-enabled; do NOT reinstall it.
+#    Also remove the preinstalled TensorFlow so transformers can't import it
+#    even if USE_TF is ignored (belt-and-suspenders; non-fatal if absent).
+subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y",
+                "tensorflow", "tensorflow-cpu", "keras"], check=False)
 sh([sys.executable, "-m", "pip", "install", "-q",
     "hume-tada", "fastapi", "uvicorn", "soundfile", "num2words",
     "beautifulsoup4", "lxml", "requests", "faster-whisper"])
