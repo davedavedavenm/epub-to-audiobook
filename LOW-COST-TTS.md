@@ -108,11 +108,23 @@ shape as Kokoro-FastAPI), reference voices from `data/voice_refs/`.
 
 ## FREE and CHEAP GPU for TADA (2026-07-08 — answering "prices are fucked")
 
+**Default strategy: Kaggle-first, Vast-burst** (chosen 2026-07-08). Free Kaggle
+covers normal volume; Vast (~$1/book) only when the weekly quota is spent. No
+owned hardware unless volume grows — a used 3060 desktop only pays off past
+~hundreds of books.
+
 **FREE — Kaggle Notebooks** is the real free-and-fast TADA path:
 - 30 GPU-hours/week, Tesla T4 (16 GB — fits TADA), sessions up to 9 h with
   **background execution** (close the tab, it keeps running).
 - A full book (~4 h on RTX 3090) runs comfortably inside one free session.
-- Colab free tier is similar (T4, ~30 h/wk) but flakier / shorter idle timeout.
+- **GOTCHA (blocked us 2026-07-08):** kernels get NO internet until the account
+  is **phone-verified** (kaggle.com/settings) — pip/git/HF all fail with DNS
+  errors regardless of `enable_internet: true`. One-time. Now verified.
+- Committed runbook: `scripts/kaggle/` (kernel + dataset metadata + README).
+  Auth uses the newer self-contained `KGAT_` token via `~/.kaggle/access_token`
+  (no username). On Windows the CLI needs the temp upload dir pre-created.
+- Colab free tier is similar (T4, ~30 h/wk) but flakier / shorter idle timeout;
+  Lightning AI (~15 GPU-hrs/mo credits) and Paperspace free tier are overflow.
 - HuggingFace Spaces ZeroGPU: free but small daily quota (used early on).
 
 **CHEAP — Vast.ai consumer GPUs** (the "under $0.10/hr" tier, not the H100s):
