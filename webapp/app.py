@@ -3070,7 +3070,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 app.logger.warning(f"Lexicon generation failed: {e}")
 
             preprocessed_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
-            _modern = tts_engine in ('chatterbox', 'tada')
+            # tts_engine isn't assigned until later in this function; read the
+            # engine from the job here so modern-contract preprocessing actually
+            # applies (bug caught running the real worker path 2026-07-08).
+            _pjob = get_job(job_id)
+            _pengine = (_pjob.get('tts_engine') if _pjob else None) or 'kokoro'
+            _modern = _pengine in ('chatterbox', 'tada')
             _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon, modern=_modern)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"

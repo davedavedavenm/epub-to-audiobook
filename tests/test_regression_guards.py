@@ -139,6 +139,17 @@ def test_qa_layer2_wired():
     assert '--qa' in cb, "convert_book lost the --qa hook — QA Layer 2 unreachable (#7)"
 
 
+def test_preprocess_reads_engine_from_job_not_unset_local():
+    """convert_book's preprocessing runs BEFORE the local `tts_engine` is
+    assigned; it must read the engine from the job. Referencing the not-yet-set
+    local threw at runtime and silently fell back to raw text — none of the
+    modern-contract preprocessing applied (caught on the real worker path,
+    2026-07-08)."""
+    assert '_modern = tts_engine in' not in APP, \
+        "preprocess block references tts_engine before it is assigned (use-before-assign regression)"
+    assert 'modern=_modern' in APP, "modern-contract preprocessing no longer wired into convert_book"
+
+
 def test_preprocessing_llm_provider_chain():
     """#6: the narration profile must degrade through providers to a seed floor,
     never straight to {} (which drops all pronunciation help)."""
