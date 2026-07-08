@@ -135,6 +135,59 @@ Here is the book sample:
         return {}
 
 
+# Deterministic floor: known-hard names every book of this kind trips on.
+# Merged into every profile so the pipeline never regresses below this even
+# when no LLM is available (mirrors convert_book.SEED_PRONUNCIATION).
+SEED_RULES = {
+    "Cupertino": "Coo-per-TEE-no", "Beijing": "Bay-JING", "McDonald's": "Mick-DON-uld-z",
+    "Huawei": "HWAH-way", "Xiaomi": "SHOW-mee", "Nguyen": "Nwin", "Qualcomm": "KWAL-com",
+    "Foxconn": "FOX-con", "Shenzhen": "SHUN-jen", "Guangzhou": "GWANG-joe",
+}
+
+
+def _seed_profile(reason: str) -> dict:
+    return {'domain': 'general', 'form': 'nonfiction', 'is_fiction': False,
+            'rules': dict(SEED_RULES), 'notes': [f'seed-only ({reason})']}
+
+
+def _fallback_settings():
+    """Optional secondary LLM provider (env LLM_FALLBACK_API_BASE_URL /
+    LLM_FALLBACK_API_KEY / LLM_FALLBACK_MODEL_NAME). Used only when the primary
+    errors. Returns None if not configured. Env-only by design — the backup
+    should not depend on the same DB the primary reads."""
+    key = os.environ.get('LLM_FALLBACK_API_KEY')
+    if not key:
+        return None
+    return {
+        'LLM_API_BASE_URL': os.environ.get('LLM_FALLBACK_API_BASE_URL', 'https://api.openai.com/v1'),
+        'LLM_API_KEY': key,
+        'LLM_MODEL_NAME': os.environ.get('LLM_FALLBACK_MODEL_NAME', 'gpt-4o-mini'),
+    }
+
+
+def _call_llm_json_chain(prompt: str, temperature: float = 0.1):
+    """Try the primary LLM provider, then the optional fallback, each with a
+    retry. Returns (parsed_obj, tier) or (None, None) if all fail. This is the
+    'nothing silently gives up' path — the caller then degrades to seed rules."""
+    attempts = []
+    primary = _get_llm_settings()
+    if primary.get('LLM_API_KEY'):
+        attempts.append(('primary', primary))
+    fb = _fallback_settings()
+    if fb:
+        attempts.append(('fallback', fb))
+    for tier, s in attempts:
+        for retry in range(2):
+            try:
+                obj = _call_llm_json(prompt, s, temperature=temperature)
+                if retry or tier != 'primary':
+                    logging.info(f"LLM narration profile served by {tier} (retry {retry}).")
+                return obj, tier
+            except Exception as e:
+                logging.warning(f"LLM {tier} attempt {retry + 1} failed: {e}")
+    return None, None
+
+
 def _call_llm_json(prompt: str, settings: dict, temperature: float = 0.1):
     """POST a prompt expecting a strict-JSON reply; returns parsed obj or None."""
     headers = {"Authorization": f"Bearer {settings['LLM_API_KEY']}",
@@ -185,12 +238,12 @@ def generate_narration_profile(epub_path: Path) -> dict:
     ambiguous numbers spelled out). Degrades to {} if no LLM configured.
     """
     settings = _get_llm_settings()
-    if not settings['LLM_API_KEY']:
-        logging.info("LLM_API_KEY not set. Skipping narration profile.")
-        return {}
+    if not settings['LLM_API_KEY'] and not _fallback_settings():
+        logging.info("No LLM configured. Using seed narration profile floor.")
+        return _seed_profile('no LLM configured')
     sample = extract_spread_sample(epub_path)
     if not sample:
-        return {}
+        return _seed_profile('no sample text extracted')
 
     prompt = f"""You are a text-to-speech narration engineer preparing a book for audiobook conversion.
 Read the sample and (a) classify the book, then (b) find every token a TTS engine is likely to MISREAD.
@@ -221,11 +274,18 @@ Keep rules high-precision (only clear wins). Empty rules {{}} if none.
 BOOK SAMPLE:
 {sample}
 """
+    obj, tier = _call_llm_json_chain(prompt, temperature=0.1)
+    if obj is None:
+        logging.warning("All LLM providers failed for narration profile — using seed rules.")
+        return _seed_profile('LLM providers failed')
     try:
-        obj = _call_llm_json(prompt, settings, temperature=0.1)
         rules = obj.get('rules', {}) if isinstance(obj, dict) else {}
         # sanitize: keep only str->str, drop empties
         rules = {str(k): str(v) for k, v in rules.items() if k and v and str(k) != str(v)}
+        # merge the deterministic floor so the profile never regresses below the
+        # known-hard names (LLM rules win on conflict).
+        for k, v in SEED_RULES.items():
+            rules.setdefault(k, v)
         form = (obj.get('form') if isinstance(obj, dict) else '') or ''
         form = str(form).strip().lower()
         is_fiction = form.startswith('fic')
@@ -235,12 +295,13 @@ BOOK SAMPLE:
             'is_fiction': is_fiction,
             'rules': rules,
             'notes': obj.get('notes', []) if isinstance(obj, dict) else [],
+            'provider_tier': tier,
         }
-        logging.info(f"Narration profile: form={profile['form']} domain={profile['domain']} rules={len(rules)}")
+        logging.info(f"Narration profile: form={profile['form']} domain={profile['domain']} rules={len(rules)} via {tier}")
         return profile
     except Exception as e:
-        logging.error(f"Narration profile generation failed: {e}")
-        return {}
+        logging.error(f"Narration profile parse failed: {e}")
+        return _seed_profile('LLM parse failed')
 
 
 def generate_lexicon(epub_path: Path) -> dict:

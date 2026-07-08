@@ -3536,6 +3536,45 @@ def check_engines_health(max_age=20):
     return out
 
 
+# Ordered preference for conversion failover: the human-cloned clone engines
+# first (best quality), then the always-local guaranteed-completes engines so a
+# book NEVER strands just because a GPU engine is down.
+_ENGINE_FALLBACK_ORDER = ['tada', 'chatterbox', 'kokoro', 'piper']
+
+
+def _voice_for_engine(voice, target_engine):
+    """Map a voice to the closest voice on target_engine. Human-cloned voices
+    exist on BOTH tada and chatterbox under parallel ids (uk_male_minter and
+    uk_male_minter_tada), so a tada<->chatterbox failover keeps the same
+    'character'. Otherwise fall back to that engine's first registered voice."""
+    base = voice[:-5] if voice.endswith('_tada') else voice
+    cand = (base + '_tada') if target_engine == 'tada' else base
+    if cand in VOICES and VOICES[cand].get('engine') == target_engine:
+        return cand
+    for v, meta in VOICES.items():
+        if meta.get('engine') == target_engine:
+            return v
+    return voice
+
+
+def pick_engine_with_fallback(preferred_engine, preferred_voice, allow_fallback=True):
+    """Return (engine, voice, note). Preferred engine unchanged if healthy.
+    Else, if allow_fallback, the next healthy engine in _ENGINE_FALLBACK_ORDER
+    with a voice remapped to it; `note` records the substitution for the job
+    log. If nothing healthy or fallback disallowed, returns preferred unchanged
+    and the caller decides whether to reject."""
+    health = check_engines_health()
+    if health.get(preferred_engine):
+        return preferred_engine, preferred_voice, None
+    if not allow_fallback:
+        return preferred_engine, preferred_voice, None
+    for eng in _ENGINE_FALLBACK_ORDER:
+        if eng != preferred_engine and health.get(eng):
+            v = _voice_for_engine(preferred_voice, eng)
+            return eng, v, f"{preferred_engine} offline — fell back to {eng} (voice {v})"
+    return preferred_engine, preferred_voice, None
+
+
 @app.route('/api/engines/health')
 def engines_health():
     return jsonify(check_engines_health())
@@ -4785,10 +4824,23 @@ def convert_from_library():
 
         output_dirname = f"{safe_name}_{job_id}"
         tts_engine = VOICES.get(voice, {}).get('engine', 'kokoro')
+        engine_fallback_note = None
         health = check_engines_health()
         if health.get(tts_engine) is False:
-            return jsonify({'error': f'The {tts_engine} engine is offline — its service is not running. '
-                            f'Start it (e.g. docker compose --profile {tts_engine} up -d) or pick a voice from another engine.'}), 409
+            # Opt-in failover: if the caller allows it, substitute the next
+            # healthy engine (voice remapped) so the book still runs. Default
+            # (no flag) keeps the strict reject so we never silently swap voices.
+            if data.get('allow_engine_fallback'):
+                new_eng, new_voice, engine_fallback_note = pick_engine_with_fallback(tts_engine, voice)
+                if engine_fallback_note:
+                    tts_engine, voice = new_eng, new_voice
+                else:
+                    return jsonify({'error': f'The {tts_engine} engine is offline and no fallback engine is healthy. '
+                                    f'Start an engine (e.g. docker compose --profile {tts_engine} up -d).'}), 409
+            else:
+                return jsonify({'error': f'The {tts_engine} engine is offline — its service is not running. '
+                                f'Start it (e.g. docker compose --profile {tts_engine} up -d), pick a voice from another engine, '
+                                f'or resend with allow_engine_fallback to auto-substitute a healthy engine.'}), 409
 
         save_job({
             'id': job_id,
@@ -4811,9 +4863,12 @@ def convert_from_library():
             'notify_telegram': 1 if data.get('notify_telegram') else 0,
             'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0
         })
+        if engine_fallback_note:
+            append_job_log(job_id, f"Engine fallback: {engine_fallback_note}")
 
         threading.Thread(target=maybe_start_next_queued_job, daemon=True).start()
-        return jsonify({'status': 'success', 'job_id': job_id})
+        return jsonify({'status': 'success', 'job_id': job_id,
+                        'engine_fallback': engine_fallback_note})
 
     except Exception as e:
         import traceback

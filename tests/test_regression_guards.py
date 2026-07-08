@@ -139,6 +139,22 @@ def test_qa_layer2_wired():
     assert '--qa' in cb, "convert_book lost the --qa hook — QA Layer 2 unreachable (#7)"
 
 
+def test_preprocessing_llm_provider_chain():
+    """#6: the narration profile must degrade through providers to a seed floor,
+    never straight to {} (which drops all pronunciation help)."""
+    lm = (ROOT / 'webapp' / 'llm_metadata.py').read_text(encoding='utf-8')
+    assert '_call_llm_json_chain' in lm and '_fallback_settings' in lm, "LLM provider chain removed (#6)"
+    assert 'SEED_RULES' in lm and '_seed_profile' in lm, "seed-rule floor removed (#6)"
+
+
+def test_conversion_engine_failover_wired():
+    """#6: a dead engine must be able to fail over to a healthy one instead of
+    always hard-stranding a book."""
+    assert 'pick_engine_with_fallback' in APP and '_ENGINE_FALLBACK_ORDER' in APP, \
+        "conversion engine failover helper removed (#6)"
+    assert 'allow_engine_fallback' in APP, "engine failover not wired into the queue gate (#6)"
+
+
 def _load_tp():
     import importlib.util
     spec = importlib.util.spec_from_file_location('tp2', ROOT / 'webapp' / 'tts_preprocess.py')
