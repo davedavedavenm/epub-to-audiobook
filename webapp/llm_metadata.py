@@ -193,17 +193,27 @@ def generate_narration_profile(epub_path: Path) -> dict:
         return {}
 
     prompt = f"""You are a text-to-speech narration engineer preparing a book for audiobook conversion.
-Read the sample and find every token a TTS engine is likely to MISREAD, then give the spoken form.
+Read the sample and (a) classify the book, then (b) find every token a TTS engine is likely to MISREAD.
 
-Cover ALL of these categories:
+First decide "form": is this FICTION (novel/short stories — narrative prose with characters and dialogue)
+or NON-FICTION (history, business, biography, science, self-help — expository prose)?
+This changes what to hunt for:
+- FICTION: prioritise CHARACTER names, invented/fantasy names, foreign place names, and words in
+  dialogue. Dialogue-heavy prose leans on quotation marks and dashes for pacing — flag anything that
+  would break that flow. Numbers are rare; don't invent number rules.
+- NON-FICTION: prioritise ACRONYMS/initialisms, COMPANY/BRAND names, place names, technical terms,
+  and genuinely ambiguous figures/units. These books are dense with them.
+
+Cover ALL of these categories (weighted by the form above):
 - Acronyms/initialisms read letter-by-letter (US -> "U S", UK -> "U K", CEO -> "C E O", IPO -> "I P O", FBI -> "F B I"). Only letters that are genuinely spelled out; leave true words (NASA, NATO) alone.
 - Proper nouns, surnames, place names, and BRAND/COMPANY names needing phonetic spelling — INCLUDING well-known ones a TTS still fumbles: e.g. "Cupertino" -> "Coo-per-TEE-no", "Beijing" -> "Bay-JING", "McDonald's" -> "Mick-DON-uld-z", "Nguyen" -> "Nwin", "Huawei" -> "HWAH-way", "Xiaomi" -> "SHOW-mee". Be generous: any name a general audiobook narrator might mispronounce.
 - Foreign or invented words.
-- Numbers/dates/units that would be misread in context.
+- Numbers/dates/units that would be misread ONLY where context makes them ambiguous (a modern engine reads plain years and numbers correctly on its own — do NOT add rules just to spell numbers out).
 Err toward INCLUDING a name rather than skipping it.
 
 Return ONLY a JSON object:
-{{"domain": "<one short phrase, e.g. 'US politics nonfiction'>",
+{{"form": "fiction" | "nonfiction",
+  "domain": "<one short phrase, e.g. 'US politics nonfiction' or 'epic fantasy'>",
   "rules": {{"<original text>": "<spoken replacement>"}},
   "notes": ["<short note>"]}}
 Keep rules high-precision (only clear wins). Empty rules {{}} if none.
@@ -216,12 +226,17 @@ BOOK SAMPLE:
         rules = obj.get('rules', {}) if isinstance(obj, dict) else {}
         # sanitize: keep only str->str, drop empties
         rules = {str(k): str(v) for k, v in rules.items() if k and v and str(k) != str(v)}
+        form = (obj.get('form') if isinstance(obj, dict) else '') or ''
+        form = str(form).strip().lower()
+        is_fiction = form.startswith('fic')
         profile = {
             'domain': (obj.get('domain') if isinstance(obj, dict) else '') or 'general',
+            'form': 'fiction' if is_fiction else 'nonfiction',
+            'is_fiction': is_fiction,
             'rules': rules,
             'notes': obj.get('notes', []) if isinstance(obj, dict) else [],
         }
-        logging.info(f"Narration profile: domain={profile['domain']} rules={len(rules)}")
+        logging.info(f"Narration profile: form={profile['form']} domain={profile['domain']} rules={len(rules)}")
         return profile
     except Exception as e:
         logging.error(f"Narration profile generation failed: {e}")

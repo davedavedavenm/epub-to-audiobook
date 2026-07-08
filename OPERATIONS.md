@@ -82,6 +82,26 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 - Lesson: several normalization "helpers" tuned for dumb engines actively
   HURT modern models (this + the em-dash→comma fix). Modern path should be
   minimal-normalization.
+- **Codified 2026-07-08 (stop finding these one at a time)**: the
+  MODERN-ENGINE CONTRACT is now documented at the top of
+  `webapp/tts_preprocess.py` and enforced by
+  `test_modern_contract_skips_all_plain_number_spelling`. Rule: for
+  `modern=True`, SKIP every transform that respells a plain number / year /
+  decade / large integer (engine reads them right); KEEP symbol/abbrev
+  expansion ($, %, U.S., 1st); anything genuinely ambiguous for one book is
+  caught adaptively by the per-book LLM narration profile, NOT by adding
+  another regex. Decades (`1990s`) were brought under the guard at the same
+  time. Any new numeric transform must go under the single `if not modern:`
+  block by default.
+
+### 2026-07-08c — Preprocessing now classifies fiction vs non-fiction
+- The narration profile (`generate_narration_profile`) returns
+  `form`/`is_fiction` and steers what it hunts for: fiction → character/place/
+  invented names and dialogue flow (dashes, quotes); non-fiction → acronyms,
+  company/brand names, ambiguous figures. Surfaced in the job log and the
+  standalone converter, persisted in `narration_profile`.
+- Honest limit: with a single-voice engine this does NOT do per-character
+  voices. It biases pronunciation-rule search and pacing handling only.
 
 ### 2026-07-08 — Duplicate recovery threads across processes (job ebe7c78d)
 - **Symptom**: resume + worker startup each launched a chapter-recovery pass

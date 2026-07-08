@@ -3052,6 +3052,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             profile = {}
             try:
                 profile = generate_narration_profile(epub_path) or {}
+                if profile.get('form'):
+                    append_job_log(job_id, f"Book classified as {profile['form']} (domain: {profile.get('domain')})")
                 if profile.get('rules'):
                     lexicon.update(profile['rules'])
                     append_job_log(job_id, f"Narration profile: domain='{profile.get('domain')}', {len(profile['rules'])} rules")

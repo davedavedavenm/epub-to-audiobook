@@ -42,6 +42,8 @@ def build_lexicon(epub_path):
         prof = generate_narration_profile(Path(epub_path)) or {}
         lex.update(prof.get('rules', {}))
         lex.update(generate_lexicon(Path(epub_path)) or {})
+        if prof.get('form'):
+            print(f"book form: {prof['form']} (domain: {prof.get('domain')})", flush=True)
         print(f"pronunciation rules: {len(lex)} ({'LLM+seed' if prof.get('rules') else 'seed only — set LLM_API_KEY for adaptive'})", flush=True)
     except Exception as e:
         print(f"pronunciation: seed dict only ({e})", flush=True)

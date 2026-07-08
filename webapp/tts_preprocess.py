@@ -24,6 +24,30 @@ Because this runs here, the upstream converter's --remove_endnotes flag must
 NOT be used: its regex strips digits after any letter/period, which corrupts
 decimals ("$2.58" -> "$2.") and alphanumerics ("B12" -> "B"), while missing
 markers after curly quotes ('consultant."35').
+
+--------------------------------------------------------------------------
+MODERN-ENGINE CONTRACT (chatterbox / tada), passed as `modern=True`
+--------------------------------------------------------------------------
+Modern neural voice-clone engines have their own text frontends (TADA is
+Llama-based) that read plain numbers, years, decades, and dates CORRECTLY.
+Spelling them out is a hack for dumb engines (Kokoro/Piper) that actively
+HURTS the good ones: "1976" -> "nineteen seventy-six" makes the model pause
+before the final digit, so "six" sounds like a detached endnote number
+("1976" heard as "1970...6"). Three separate incidents came from this class
+of over-normalization (dash->comma, comma-number spelling, year spelling).
+
+The rule, so we STOP finding these one at a time:
+  * modern=True  -> SKIP every transform that respells a *plain* number,
+                    year, decade, or large integer. The engine does it right.
+  * modern=True  -> KEEP transforms that expand a SYMBOL or ABBREVIATION into
+                    words ($ -> dollars, % -> percent, U.S. -> U S, 1st ->
+                    first). These guard against a model reading the glyph
+                    literally, and don't create the mid-number pause artifact.
+  * modern=True  -> KEEP all structural cleanup (endnotes, unicode, dashes).
+Anything genuinely ambiguous for a specific book is caught adaptively by the
+per-book LLM narration profile (llm_metadata.generate_narration_profile),
+NOT by adding another regex here. Every plain-number spelling transform below
+is grouped under a single `if not modern:` guard for exactly this reason.
 """
 import re
 import zipfile
@@ -315,6 +339,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     text = re.sub(r'\b(\d+)(?:st|nd|rd|th)\b', replace_ordinal, text)
 
     # === Decades: 1990s, 1800s ===
+    # Plain date number -> skip for modern (see MODERN-ENGINE CONTRACT).
     def replace_decade(m):
         year_str = m.group(1)
         year = int(year_str)
@@ -329,7 +354,8 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             return _number_to_words(year) + 's'
         return m.group(0)
 
-    text = re.sub(r'\b(\d{4})s\b', replace_decade, text)
+    if not modern:
+        text = re.sub(r'\b(\d{4})s\b', replace_decade, text)
 
     # === Chapter/Part/Volume headings ===
     def replace_heading_number(m):

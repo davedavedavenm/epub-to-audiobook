@@ -115,15 +115,41 @@ def test_tada_first_word_leadin_trim():
     assert '_trim_leadin' in TADA_SERVER and 'LEADIN' in TADA_SERVER,         "TADA first-word lead-in trim removed — cold-start garble returns"
 
 
+def _load_tp():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('tp2', ROOT / 'webapp' / 'tts_preprocess.py')
+    tp = importlib.util.module_from_spec(spec); spec.loader.exec_module(tp)
+    return tp
+
+
 def test_modern_engines_keep_raw_years():
     """Spelling '1976'->'nineteen seventy-six' made TADA pause before the last
     digit, so years sounded like endnote numbers ('1976' heard as '1970...6').
     Modern engines must keep raw years/numbers (incident 2026-07-08)."""
-    import importlib.util
-    spec = importlib.util.spec_from_file_location('tp2', ROOT / 'webapp' / 'tts_preprocess.py')
-    tp = importlib.util.module_from_spec(spec); spec.loader.exec_module(tp)
+    tp = _load_tp()
     out = tp.normalize_text_for_tts("founded in 1976, returned in 1997.", modern=True)
     assert '1976' in out and '1997' in out and 'seventy-six' not in out,         "modern engine year-spelling regressed — re-opens 2026-07-08 '1970...6' artifact"
     # legacy path still spells (unchanged for Kokoro/Piper)
     leg = tp.normalize_text_for_tts("founded in 1976.", modern=False)
     assert 'seventy-six' in leg, "legacy year spelling broken"
+
+
+def test_modern_contract_skips_all_plain_number_spelling():
+    """MODERN-ENGINE CONTRACT: modern engines read plain numbers/years/decades/
+    large integers natively. Every plain-number spelling transform must sit
+    under the single `if not modern:` guard so we stop discovering these one
+    incident at a time (2026-07-08). Symbol/abbrev expansion still applies."""
+    tp = _load_tp()
+    cases = {
+        "It was the 1990s.":        ('1990s', 'nineties'),   # decade
+        "a crowd of 2,905 people":  ('2,905', 'nine hundred'),  # comma-number
+        "the figure hit 45000":     ('45000', 'forty-five thousand'),  # large int
+    }
+    for text, (keep, must_not) in cases.items():
+        out = tp.normalize_text_for_tts(text, modern=True)
+        assert keep in out and must_not not in out, (
+            f"modern engine spelled a plain number ({text!r} -> {out!r}) — "
+            "re-opens the mid-number pause artifact class (2026-07-08)")
+    # symbol/abbrev expansion is intentionally KEPT for modern engines
+    sym = tp.normalize_text_for_tts("about 50% agreed and Dr. Lee left", modern=True)
+    assert 'percent' in sym and 'Doctor' in sym, "modern engine dropped symbol/abbrev expansion"
