@@ -66,6 +66,19 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 - **Status**: fixes committed; engine images rebuild in CI; the job resumes
   (chapters 1-5 already done) after the fixed image is pulled.
 
+
+### 2026-07-08 — Duplicate recovery threads across processes (job ebe7c78d)
+- **Symptom**: resume + worker startup each launched a chapter-recovery pass
+  4 s apart (both logged "Retrying 9 missing").
+- **Root cause**: the duplicate-recovery guard was an in-memory dict; the
+  resume API runs in the webapp process and orphan cleanup in the worker —
+  separate processes, so the guard could not see the other thread.
+- **Fix**: cross-process recovery lock in the DB (app_settings key
+  `recovery_lock_<job>`, 3 h staleness takeover). Regression-guarded.
+- **Note**: mostly benign in practice (retry containers docker-rm each other
+  and chapter completion is file-presence based) but wasted compute and
+  confused logs.
+
 ### 2026-07-06/07 — GPU images silently ran on CPU
 - CPU-only torch + missing NVIDIA envs; no sshd in slim images; GHCR pulls
   stall on slow Vast hosts. All fixed; validated with measured RTFs (TADA

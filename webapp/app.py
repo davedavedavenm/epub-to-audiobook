@@ -2442,11 +2442,40 @@ def recover_partial_conversion(job_id: str):
         return
     _recovery_in_progress[_recovery_thread_key] = True
 
+    # CROSS-PROCESS lock via DB: webapp (resume API) and worker (orphan
+    # cleanup/watchdog) are separate processes — an in-memory dict cannot stop
+    # them racing (observed 2026-07-08: two recovery threads 4s apart). The DB
+    # lock has a 3h staleness takeover so a crashed owner never wedges a job.
+    lock_key = f'recovery_lock_{job_id}'
+    now_iso = datetime.now().isoformat()
+    try:
+        with get_db() as conn:
+            row = conn.execute('SELECT value FROM app_settings WHERE key = ?', (lock_key,)).fetchone()
+            if row and row['value']:
+                try:
+                    age = (datetime.now() - datetime.fromisoformat(row['value'])).total_seconds()
+                except Exception:
+                    age = 999999
+                if age < 3 * 3600:
+                    app.logger.info(f"Recovery {job_id}: another process holds the recovery lock ({int(age)}s old), skipping")
+                    _recovery_in_progress.pop(_recovery_thread_key, None)
+                    return
+            conn.execute('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)', (lock_key, now_iso))
+            conn.commit()
+    except Exception as e:
+        app.logger.warning(f"Recovery {job_id}: lock acquisition issue ({e}), proceeding cautiously")
+
     try:
         _recover_partial_inner(job_id, _recovery_thread_key)
     finally:
         _recovery_in_progress.pop(_recovery_thread_key, None)
         _recovery_in_progress.pop(job_id, None)
+        try:
+            with get_db() as conn:
+                conn.execute('DELETE FROM app_settings WHERE key = ?', (lock_key,))
+                conn.commit()
+        except Exception:
+            pass
 
 
 def _recover_partial_inner(job_id: str, _recovery_thread_key: str):

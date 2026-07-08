@@ -90,3 +90,11 @@ def test_engine_offline_queue_gate():
 def test_gpu_render_gate_default_off():
     assert "gpu_render_enabled" in APP and "GPU_RENDER_ENABLED', '0'" in APP.replace('"', "'"), \
         "GPU render gate weakened — paid GPU no longer default-off"
+
+
+# --- incident 2026-07-08: cross-process recovery race ---
+
+def test_recovery_has_cross_process_lock():
+    """Resume API (webapp) and orphan cleanup (worker) raced two recovery
+    threads; in-memory guards cannot work across processes."""
+    assert 'recovery_lock_' in APP,         "cross-process recovery DB lock removed — re-opens 2026-07-08 recovery race"
