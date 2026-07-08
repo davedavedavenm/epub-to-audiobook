@@ -164,10 +164,48 @@ of the free path; the GPU runbook does the same book in ~4 h for ~GBP0.5.
   stall on slow Vast hosts. All fixed; validated with measured RTFs (TADA
   0.34, Chatterbox ~0.85 on RTX 3090). See LOW-COST-TTS.md.
 
+### 2026-07-08e — real-worker-path deploy surfaced a cluster of latent bugs
+Running conversions only through hand-driven scripts hid several bugs; deploying
+the day's code to the live worker and submitting a real webapp job exposed them.
+The lesson (now a standing rule): **prove fixes through the real worker path.**
+- **MP3 concat corruption** (`convert_book.py`): joined per-chunk MP3 *bytes*,
+  leaving corrupt frame headers at each boundary. Players tolerate it; strict
+  decoders (ffmpeg/PyAV, audiobook-player seek/duration) hit "Header missing"
+  and stop after chunk 1 (a 27-min chapter ASR-decoded to 19 words). Fixed:
+  concat at WAV sample level via stdlib `wave`, then one clean MP3 encode.
+  The web-UI path (upstream p0n1 tool) re-encodes and was already clean.
+- **Preprocessing use-before-assign** (webapp `convert_book`): the preprocess
+  block referenced the local `tts_engine` ~25 lines before it was assigned, so
+  on EVERY real conversion it threw and silently fell back to raw text — none
+  of the modern-contract/pronunciation/endnote work applied. Invisible until
+  the worker (running 14-hour-old code) was redeployed. Fixed: read the engine
+  from the job. Regression-guarded.
+- **Recovery resurrects cancelled jobs** (#14): startup orphan-recovery flipped
+  a cancelled job back to `converting`, jamming the single MAX_CONCURRENT slot.
+  Recovery must exclude terminal states. Open.
+- **ABS sync silently broken** (#15): worker's `AUDIOBOOKSHELF_HOST=docker-vm`
+  doesn't resolve (ABS is at 192.168.1.113:13378) and the API token had expired
+  2026-06-07 — so conversions weren't reaching AudioBookShelf (jobs showed
+  `synced_to_abs=0` with no alert). Token + ABS_API_URL restored in settings;
+  host env + rsync SSH key + a restart still needed. Open.
+- **Free Kaggle TADA broke on a Kaggle-image clash**: `transformers` (via
+  hume-tada) eagerly imported Kaggle's preinstalled TensorFlow, whose protobuf
+  was mismatched. Fixed: `USE_TF=0` + uninstall tensorflow in the kernel.
+- **No LLM configured on zorin**: `generate_narration_profile` logs "All LLM
+  providers failed — using seed rules", so production pronunciation is
+  seed-dict-only. The seed floor covers the known-hard names; full adaptive
+  pronunciation + fiction/non-fiction need an `LLM_API_KEY` set in the webapp.
+
 ## Standing rules for claims
 
 A path may be called "working" in STATUS.md only with evidence: a completed
 real conversion (job id / artifact / measurement) recorded alongside it.
+
+**Prove fixes through the REAL worker path, not scripts.** Standalone scripts
+and hand-driven GPU rigs hid a cluster of bugs (2026-07-08e). A fix isn't
+proven until it has run through the webapp/worker the user actually uses — and
+that requires the change to be DEPLOYED (the worker runs the built image, not
+the working tree; `git pull` alone does nothing until the worker is rebuilt).
 
 **Canonical output location** (so "where do I look?" is never re-litigated):
 finished audio ALWAYS lands in `data/audiobooks/<book>/` on the machine that

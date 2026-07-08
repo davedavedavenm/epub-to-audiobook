@@ -23,6 +23,13 @@ making the **self-correcting loop automatic in the UI**.
   it caught a real audio bug (see below). Not yet automatic in the UI.
 - **Output**: one canonical location `data/audiobooks/<book>/`; AudioBookShelf
   is the unified library. `scripts/sample.sh` for fast local few-page tests.
+- **Deployed to the live worker 2026-07-08** (it had been running 14-hour-old
+  code — the fixes weren't actually running). Running today's code through a
+  real webapp job surfaced and fixed a cluster of latent bugs (2026-07-08e).
+- **Production caveats to know**: (1) no `LLM_API_KEY` on zorin → pronunciation
+  is seed-dict-only (seed floor covers the known-hard names); (2) ABS sync host
+  still needs fixing (#15); (3) fast + quality TADA via the UI needs GPU
+  auto-provision (zorin is CPU-only) — the main remaining architecture piece.
 
 ## Done & VERIFIED (actually run)
 
@@ -48,23 +55,34 @@ making the **self-correcting loop automatic in the UI**.
 
 ## Done but UNVERIFIED (needs an ear / a real run)
 
-- **Post-fix audio quality** — the clean-concat + LLM-profile + (planned)
-  denoise combination has not yet been heard on a completed render (the Vast
-  attempt OOM-died, #9). Validation planned on free Kaggle (#12).
-- **Background hiss** — TADA vocoder artifact, NOT addressed by any fix yet
-  (#8: denoise step + TADA/Chatterbox A/B).
+- **Post-fix audio quality** — clean-concat + `--denoise` (afftdn) is built;
+  a free-Kaggle render (kernel v3, TF-conflict fixed) is validating it (#12).
+  Not yet heard on a completed render (Vast attempt OOM-died #9; earlier Kaggle
+  runs hit env conflicts, now fixed).
+- **Background hiss** — TADA vocoder artifact. `--denoise` now attacks it but
+  the TADA-vs-Chatterbox A/B and default policy are open (#8).
+- **Real UI-path audio** — a real Chatterbox webapp job (`f6f87e36`) is
+  rendering on zorin CPU with the fixes applied; slow (CPU), gradeable output
+  pending.
 
 ## Open work → GitHub issues
+
+Milestone: **Audio quality + closed-loop QA**.
 
 | Issue | What |
 |---|---|
 | [#7](../../issues/7) | QA Layer 2: auto-apply high-confidence fixes + auto re-render flagged spans |
-| [#8](../../issues/8) | Eliminate TADA background hiss (denoise + engine A/B) |
+| [#8](../../issues/8) | Eliminate TADA background hiss (denoise default policy + engine A/B) |
 | [#9](../../issues/9) | bug: Vast engine has no memory cap — OOM mid-render |
 | [#10](../../issues/10) | Wire QA Layer 2 into the web UI (auto-run + report surface) |
 | [#11](../../issues/11) | Engine failover toggle in the UI |
 | [#12](../../issues/12) | Validation: clean-audio A/B on free Kaggle |
 | [#13](../../issues/13) | Finish Inside Apple audiobook (CPU vs GPU re-render) |
+| [#14](../../issues/14) | bug: startup recovery resurrects cancelled jobs, blocks queue |
+| [#15](../../issues/15) | bug: ABS sync broken (docker-vm unresolvable + token) — partially fixed |
+
+Not yet an issue but the biggest lever: **GPU auto-provision for TADA/Chatterbox
+from the UI** so quality engines don't run on CPU (the "one-click" goal).
 
 ## Robustness backlog (not blocking, no issue yet)
 
