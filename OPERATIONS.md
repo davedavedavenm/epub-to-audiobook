@@ -75,9 +75,20 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
   separate processes, so the guard could not see the other thread.
 - **Fix**: cross-process recovery lock in the DB (app_settings key
   `recovery_lock_<job>`, 3 h staleness takeover). Regression-guarded.
-- **Note**: mostly benign in practice (retry containers docker-rm each other
-  and chapter completion is file-presence based) but wasted compute and
-  confused logs.
+- **Correction (same morning)**: NOT benign — the racing threads killed each
+  other's retry containers, producing spurious 16-second "Chapter FAILED
+  after 3 retries" verdicts while the real generation was still running.
+  Lock deployed 2026-07-08 06:05 and verified live ("another process holds
+  the recovery lock, skipping").
+- **Also fixed**: the UI froze at the pre-crash percentage during recovery
+  (looked stuck all night while 4 chapters actually completed — file
+  timestamps 21:06/23:49/03:03/06:09). Recovery now updates
+  progress_percent/current_chapter as chapters land.
+
+**Speed reality for this class of book**: Inside Apple's chapters are 45-80
+MINUTES of audio each; the NUC generates ~one chapter per ~3 h. A ~13 h
+audiobook = roughly a day and a half of NUC compute. That is the honest price
+of the free path; the GPU runbook does the same book in ~4 h for ~GBP0.5.
 
 ### 2026-07-06/07 — GPU images silently ran on CPU
 - CPU-only torch + missing NVIDIA envs; no sshd in slim images; GHCR pulls
