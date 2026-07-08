@@ -2326,6 +2326,17 @@ def retry_missing_chapters(
             if ch_files and all(f.stat().st_size > 1024 for f in ch_files):
                 app.logger.info(f"Chapter {ch} recovered on attempt {attempt}")
                 append_job_log(job_id, f"Chapter {ch} recovered on attempt {attempt}")
+                # keep the UI honest during recovery (it froze at the
+                # pre-crash percentage otherwise — incident 2026-07-08)
+                try:
+                    done = len(list(output_path.glob('*.mp3')))
+                    job_now = get_job(job_id)
+                    total = (job_now or {}).get('total_chapters') or 0
+                    if total:
+                        update_job(job_id, progress_percent=int(done * 100 / total),
+                                   current_chapter=ch)
+                except Exception:
+                    pass
                 success = True
                 break
             else:
