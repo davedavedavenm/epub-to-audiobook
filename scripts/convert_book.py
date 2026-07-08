@@ -138,6 +138,9 @@ def main():
     ap.add_argument('--chunk-chars', type=int, default=280)
     ap.add_argument('--min-words', type=int, default=120,
                     help='skip chapters shorter than this (front-matter)')
+    ap.add_argument('--qa', action='store_true',
+                    help='QA Layer 2: ASR-verify each chapter locally (needs faster-whisper)')
+    ap.add_argument('--qa-model', default='base', help='whisper model size for --qa (tiny/base/small)')
     a = ap.parse_args()
     # modern voice-clone engines read numbers/years natively; skip spelling.
     modern = ('_tada' in a.voice) or (a.voice.startswith('uk_') and '_tada' not in a.voice) or a.chunk_chars >= 280
@@ -163,6 +166,7 @@ def main():
     z = zipfile.ZipFile(epub)
     docs = spine_docs(z)
     idx = 0
+    qa_reports = []
     for name in docs:
         text = chapter_text(z, name)
         if len(text.split()) < a.min_words:
@@ -170,15 +174,40 @@ def main():
         idx += 1
         if idx < a.start or (a.end and idx > a.end):
             continue
-        fn_existing = out / f"{idx:03d}.mp3"
-        if fn_existing.exists() and fn_existing.stat().st_size > 10240:
-            print(f"[chapter {idx}] already done — skipping (resume)", flush=True)
-            continue
-        print(f"[chapter {idx}] {len(text.split())} words -> synthesizing", flush=True)
-        audio = synth(a.engine_url, a.voice, text, a.chunk_chars)
         fn = out / f"{idx:03d}.mp3"
-        fn.write_bytes(audio)
-        print(f"[chapter {idx}] wrote {fn} ({len(audio)} bytes)", flush=True)
+        if fn.exists() and fn.stat().st_size > 10240:
+            print(f"[chapter {idx}] already done — skipping (resume)", flush=True)
+        else:
+            print(f"[chapter {idx}] {len(text.split())} words -> synthesizing", flush=True)
+            audio = synth(a.engine_url, a.voice, text, a.chunk_chars)
+            fn.write_bytes(audio)
+            print(f"[chapter {idx}] wrote {fn} ({len(audio)} bytes)", flush=True)
+        # QA Layer 2 (opt-in): ASR-verify what we just rendered against source.
+        if a.qa:
+            try:
+                from qa_asr import verify_chapter
+                rep = verify_chapter(fn, text, model_size=a.qa_model)
+                qa_reports.append({'chapter': idx,
+                                   'wer': rep['wer'], 'flagged': rep['flagged'],
+                                   'n_source': rep['n_source'], 'n_heard': rep['n_heard'],
+                                   'divergences': rep['divergences'][:30],
+                                   'lexicon_suggestions': rep['lexicon_suggestions']})
+                print(f"[chapter {idx}] QA {'FLAGGED' if rep['flagged'] else 'ok'} "
+                      f"WER={rep['wer']} divergences={len(rep['divergences'])}", flush=True)
+            except Exception as e:
+                print(f"[chapter {idx}] QA skipped ({str(e)[:120]})", flush=True)
+    if a.qa and qa_reports:
+        agg = {}
+        for r in qa_reports:
+            agg.update(r.get('lexicon_suggestions') or {})
+        report = {'book': str(a.epub), 'voice': a.voice,
+                  'flagged_chapters': [r['chapter'] for r in qa_reports if r['flagged']],
+                  'chapters': qa_reports, 'lexicon_suggestions': agg}
+        (out / 'qa_report.json').write_text(__import__('json').dumps(report, indent=2), encoding='utf-8')
+        print(f"QA report -> {out/'qa_report.json'} "
+              f"(flagged {len(report['flagged_chapters'])}/{len(qa_reports)} chapters)", flush=True)
+        if agg:
+            print(f"QA lexicon suggestions (add to a book lexicon): {agg}", flush=True)
     print("DONE", flush=True)
 
 

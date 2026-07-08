@@ -60,9 +60,14 @@ Regex/num2words rules applied to text segments:
 - `data/uploads/global_pronunciations.conf` + per-job custom regex are passed
   to the converter via `--search_and_replace_file`.
 
-### Stage 4 — Per-book narration profile (planned, next)
+### Stage 4 — Per-book narration profile (implemented)
 
-The "knows what to do per book" layer. One LLM pass over sampled excerpts
+The "knows what to do per book" layer (`webapp/llm_metadata.py:
+generate_narration_profile`). It classifies the book **form** (fiction vs
+non-fiction) — steering what to hunt for (fiction → character/place/invented
+names + dialogue flow; non-fiction → acronyms, companies, ambiguous figures) —
+and returns a lexicon merged into Stage 3. Degrades to a seed dict if no LLM is
+configured. One LLM pass over sampled excerpts
 (metadata, TOC, and the highest-difficulty passages by digit/acronym density)
 produces a stored, user-reviewable JSON profile:
 
@@ -85,6 +90,20 @@ the system prompt. Guardrails: output must be within ±15% length and lose no
 sentences, otherwise the original chunk is used. Runs as a queue stage before
 TTS, so rate-limit throttling doesn't matter. Feedback loop: ASR fidelity
 check failures append to the book's profile; affected chunks re-render.
+
+### Stage 6 — ASR verification (QA Layer 2, implemented core)
+
+The self-correcting / "learning" layer (`webapp/qa_asr.py`). After a chapter
+renders, a LOCAL Whisper (faster-whisper, CPU — `pip install faster-whisper`)
+transcribes the audio; `diff_report()` aligns it to the source text and scores
+divergence (WER + per-span drops/subs/extras). Reliably catches dropped
+words/sentences, gross misreads, and numbers that lost a piece ("1976" heard as
+"nineteen seventy"); it does **not** judge fine prosody/pronunciation (ASR
+normalises those). High-confidence 1:1 misreads become lexicon *suggestions*
+(`suggest_lexicon`); everything is written to `qa_report.json` in the book's
+output dir. Opt-in today via `convert_book.py --qa`; the roadmap is auto-adding
+high-confidence fixes to the profile and re-rendering only the flagged spans
+(closing the loop so bugs are caught by the system, not by ear).
 
 ## Testing
 

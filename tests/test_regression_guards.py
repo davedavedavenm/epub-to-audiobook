@@ -130,6 +130,15 @@ def test_tada_first_word_leadin_trim():
     assert '_trim_leadin' in TADA_SERVER and 'LEADIN' in TADA_SERVER,         "TADA first-word lead-in trim removed — cold-start garble returns"
 
 
+def test_qa_layer2_wired():
+    """QA Layer 2 (ASR verification — the self-correcting loop) must stay
+    reachable: the diff core exists and convert_book exposes --qa."""
+    qa = (ROOT / 'webapp' / 'qa_asr.py').read_text(encoding='utf-8')
+    assert 'def diff_report' in qa and 'def verify_chapter' in qa, "QA Layer 2 core removed (#7)"
+    cb = (ROOT / 'scripts' / 'convert_book.py').read_text(encoding='utf-8')
+    assert '--qa' in cb, "convert_book lost the --qa hook — QA Layer 2 unreachable (#7)"
+
+
 def _load_tp():
     import importlib.util
     spec = importlib.util.spec_from_file_location('tp2', ROOT / 'webapp' / 'tts_preprocess.py')
