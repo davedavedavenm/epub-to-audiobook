@@ -11,10 +11,14 @@ Usage:
       --voice uk_male_minter_tada --out ./audiobook [--start 1 --end 3]
 """
 import argparse
+import io
 import os
 import re
 import sys
+import wave
+import shutil
 import zipfile
+import subprocess
 import urllib.request
 from pathlib import Path
 from html.parser import HTMLParser
@@ -104,7 +108,46 @@ def chunk(text, n):
     return out or [text]
 
 
+def _concat_wav(chunks):
+    """Concatenate WAV byte-chunks at the SAMPLE level via stdlib wave — one
+    clean, fully-decodable stream. Concatenating encoded MP3 bytes instead
+    leaves corrupt frame headers at every join: players tolerate them but
+    strict decoders (ffmpeg/PyAV, and audiobook players' seek/duration) hit
+    "Header missing / Invalid data" and stop early (found proving QA #7 —
+    a 27-min chapter decoded to 19 words). WAV concat avoids that entirely."""
+    frames, params = [], None
+    for b in chunks:
+        w = wave.open(io.BytesIO(b), 'rb')
+        if params is None:
+            params = w.getparams()
+        frames.append(w.readframes(w.getnframes()))
+        w.close()
+    if params is None:
+        return b''
+    out = io.BytesIO()
+    ww = wave.open(out, 'wb')
+    ww.setparams(params)
+    for f in frames:
+        ww.writeframes(f)
+    ww.close()
+    return out.getvalue()
+
+
+def _to_mp3(wav_bytes):
+    """Encode a clean WAV to MP3 with one ffmpeg pass (single stream, correct
+    framing). Returns None if ffmpeg isn't on PATH — caller keeps the WAV."""
+    ff = shutil.which('ffmpeg')
+    if not ff:
+        return None
+    p = subprocess.run([ff, '-v', 'error', '-i', 'pipe:0', '-f', 'mp3', '-b:a', '128k', 'pipe:1'],
+                       input=wav_bytes, capture_output=True)
+    return p.stdout if p.returncode == 0 and p.stdout else None
+
+
 def synth(engine_url, voice, text, chunk_chars):
+    """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
+    chunks join losslessly at the sample level) and returns WAV bytes; the
+    caller encodes one MP3 from that."""
     import time
     parts = []
     for c in chunk(text, chunk_chars):
@@ -113,7 +156,7 @@ def synth(engine_url, voice, text, chunk_chars):
             try:
                 r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
                                   json={"model": "tts-1", "input": c, "voice": voice,
-                                        "response_format": "mp3"},
+                                        "response_format": "wav"},
                                   timeout=(15, 3600))
                 r.raise_for_status()
                 parts.append(r.content)
@@ -123,7 +166,7 @@ def synth(engine_url, voice, text, chunk_chars):
                     raise
                 print(f"  chunk retry {attempt+1}/2 after error: {str(e)[:80]}", flush=True)
                 time.sleep(10 * (attempt + 1))
-    return b''.join(parts)   # mp3 frames concatenate fine for playback
+    return _concat_wav(parts)
 
 
 def main():
@@ -174,14 +217,27 @@ def main():
         idx += 1
         if idx < a.start or (a.end and idx > a.end):
             continue
-        fn = out / f"{idx:03d}.mp3"
-        if fn.exists() and fn.stat().st_size > 10240:
+        # resume: accept a prior .mp3 OR .wav for this chapter
+        fn = None
+        for ext in ('mp3', 'wav'):
+            p = out / f"{idx:03d}.{ext}"
+            if p.exists() and p.stat().st_size > 10240:
+                fn = p
+                break
+        if fn:
             print(f"[chapter {idx}] already done — skipping (resume)", flush=True)
         else:
             print(f"[chapter {idx}] {len(text.split())} words -> synthesizing", flush=True)
-            audio = synth(a.engine_url, a.voice, text, a.chunk_chars)
-            fn.write_bytes(audio)
-            print(f"[chapter {idx}] wrote {fn} ({len(audio)} bytes)", flush=True)
+            wav = synth(a.engine_url, a.voice, text, a.chunk_chars)
+            mp3 = _to_mp3(wav)
+            if mp3:
+                fn = out / f"{idx:03d}.mp3"
+                fn.write_bytes(mp3)
+            else:
+                fn = out / f"{idx:03d}.wav"
+                fn.write_bytes(wav)
+                print(f"[chapter {idx}] ffmpeg not found — wrote clean WAV instead of MP3", flush=True)
+            print(f"[chapter {idx}] wrote {fn} ({fn.stat().st_size} bytes)", flush=True)
         # QA Layer 2 (opt-in): ASR-verify what we just rendered against source.
         if a.qa:
             try:
