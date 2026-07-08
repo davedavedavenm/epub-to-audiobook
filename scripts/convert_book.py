@@ -133,14 +133,19 @@ def _concat_wav(chunks):
     return out.getvalue()
 
 
-def _to_mp3(wav_bytes):
+def _to_mp3(wav_bytes, denoise=False):
     """Encode a clean WAV to MP3 with one ffmpeg pass (single stream, correct
-    framing). Returns None if ffmpeg isn't on PATH — caller keeps the WAV."""
+    framing). With denoise=True, applies afftdn (adaptive FFT denoiser) to
+    knock down steady neural-vocoder hiss (TADA) without gutting speech — see
+    issue #8. Returns None if ffmpeg isn't on PATH — caller keeps the WAV."""
     ff = shutil.which('ffmpeg')
     if not ff:
         return None
-    p = subprocess.run([ff, '-v', 'error', '-i', 'pipe:0', '-f', 'mp3', '-b:a', '128k', 'pipe:1'],
-                       input=wav_bytes, capture_output=True)
+    cmd = [ff, '-v', 'error', '-i', 'pipe:0']
+    if denoise:
+        cmd += ['-af', 'afftdn=nf=-25']
+    cmd += ['-f', 'mp3', '-b:a', '128k', 'pipe:1']
+    p = subprocess.run(cmd, input=wav_bytes, capture_output=True)
     return p.stdout if p.returncode == 0 and p.stdout else None
 
 
@@ -181,6 +186,8 @@ def main():
     ap.add_argument('--chunk-chars', type=int, default=280)
     ap.add_argument('--min-words', type=int, default=120,
                     help='skip chapters shorter than this (front-matter)')
+    ap.add_argument('--denoise', action='store_true',
+                    help='apply afftdn denoise on encode (knocks down TADA hiss, issue #8)')
     ap.add_argument('--qa', action='store_true',
                     help='QA Layer 2: ASR-verify each chapter locally (needs faster-whisper)')
     ap.add_argument('--qa-model', default='base', help='whisper model size for --qa (tiny/base/small)')
@@ -229,7 +236,7 @@ def main():
         else:
             print(f"[chapter {idx}] {len(text.split())} words -> synthesizing", flush=True)
             wav = synth(a.engine_url, a.voice, text, a.chunk_chars)
-            mp3 = _to_mp3(wav)
+            mp3 = _to_mp3(wav, denoise=a.denoise)
             if mp3:
                 fn = out / f"{idx:03d}.mp3"
                 fn.write_bytes(mp3)

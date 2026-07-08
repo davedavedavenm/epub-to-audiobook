@@ -27,7 +27,7 @@ def sh(cmd, **kw):
 # 1. deps — Kaggle's torch is already CUDA-enabled; do NOT reinstall it.
 sh([sys.executable, "-m", "pip", "install", "-q",
     "hume-tada", "fastapi", "uvicorn", "soundfile", "num2words",
-    "beautifulsoup4", "lxml", "requests"])
+    "beautifulsoup4", "lxml", "requests", "faster-whisper"])
 
 # 2. repo (server.py, convert_book.py, voice refs, fixed preprocessing)
 if not os.path.isdir(REPO_DIR):
@@ -73,16 +73,19 @@ for i in range(60):
         print(f"waiting[{i}]", str(e)[:70], flush=True)
 assert healthy, "server never became healthy"
 
-# 5. convert (real preprocessing + server-side lead-in trim). No LLM key here,
-#    so pronunciation uses the seed dict (Cupertino/Beijing/McDonald's/etc).
+# 5. convert with the FULL post-fix pipeline: clean WAV concat, --denoise
+#    (afftdn, knocks down TADA hiss), and --qa (local Whisper ASR verification
+#    → qa_report.json). No LLM key here, so pronunciation uses the seed dict
+#    (Cupertino/Beijing/McDonald's/etc) — enough to validate the reported names.
 t0 = time.time()
 sh([sys.executable, f"{REPO_DIR}/scripts/convert_book.py",
     "--epub", EPUB, "--engine-url", "http://127.0.0.1:8005/v1",
-    "--voice", VOICE, "--out", OUT, "--start", str(START), "--end", str(END)])
+    "--voice", VOICE, "--out", OUT, "--start", str(START), "--end", str(END),
+    "--denoise", "--qa", "--qa-model", "base"])
 print(f"conversion wall time: {time.time()-t0:.0f}s", flush=True)
 
-# 6. surface outputs in /kaggle/working (kernel output root)
-for f in sorted(glob.glob(f"{OUT}/*.mp3")):
+# 6. surface outputs + QA report in /kaggle/working (kernel output root)
+for f in sorted(glob.glob(f"{OUT}/*.mp3")) + sorted(glob.glob(f"{OUT}/*.json")):
     dst = os.path.join(WORK, os.path.basename(f))
     shutil.copy(f, dst)
     print("OUTPUT:", os.path.basename(f), os.path.getsize(f), "bytes", flush=True)
