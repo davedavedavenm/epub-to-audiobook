@@ -168,3 +168,10 @@ of the free path; the GPU runbook does the same book in ~4 h for ~GBP0.5.
 
 A path may be called "working" in STATUS.md only with evidence: a completed
 real conversion (job id / artifact / measurement) recorded alongside it.
+
+**Canonical output location** (so "where do I look?" is never re-litigated):
+finished audio ALWAYS lands in `data/audiobooks/<book>/` on the machine that
+ran the conversion — webapp jobs, standalone `convert_book.py`, and the
+`scripts/sample.sh` harness (samples go to `data/audiobooks/_samples/`).
+AudioBookShelf is the unified listening library the webapp syncs to. Do NOT
+add new ad-hoc output dirs.

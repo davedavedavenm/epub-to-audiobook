@@ -110,6 +110,27 @@ be enabled in Settings — see [GPU-SAFETY.md](GPU-SAFETY.md).
 First run of each engine downloads its model once (Kokoro ~, Chatterbox
 ~700 MB, TADA ~5 GB), cached in a Docker volume.
 
+## Where do I find my audiobooks?
+
+**One rule: finished audio always lands in `data/audiobooks/` on the machine that ran the conversion**, one folder per book.
+
+- **Web UI jobs** → `data/audiobooks/<book title>_<jobid>/` (one `.mp3` per chapter), then auto-synced to your **AudioBookShelf** library if configured — that library is the unified place to *listen*, regardless of which machine rendered.
+- **Standalone / Kaggle / Vast runs** (`scripts/convert_book.py`) → the same `data/audiobooks/<book>/` convention by default (override with `--out`). Kaggle kernels write to `/kaggle/working`; pull them with `kaggle kernels output`.
+- **Quick samples** (`scripts/sample.sh`) → `data/audiobooks/_samples/<book>/` so test snippets never clutter the real library.
+
+If a run finished but you can't find it, check `data/audiobooks/` on the host that did the work first, then AudioBookShelf.
+
+## Iterating on quality (sampling a few pages)
+
+To hear how a book will sound without a full run:
+
+```bash
+# Auto-uses a healthy LOCAL engine; else pass a Kaggle/Vast --engine-url
+scripts/sample.sh --book "data/library/Some Book.epub" --start 1 --end 2
+```
+
+Samples land in `data/audiobooks/_samples/<book>/` and never touch the real library or the job queue. This is the fast local feedback loop for tuning preprocessing/voices.
+
 ## Production Deployment
 
 ```bash

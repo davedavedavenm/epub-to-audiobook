@@ -131,7 +131,8 @@ def main():
     ap.add_argument('--epub', required=True, help='path or http(s) URL')
     ap.add_argument('--engine-url', required=True)
     ap.add_argument('--voice', required=True)
-    ap.add_argument('--out', default='./audiobook')
+    ap.add_argument('--out', default=None,
+                    help='output dir (default: <repo>/data/audiobooks/<book>, the canonical location)')
     ap.add_argument('--start', type=int, default=1)
     ap.add_argument('--end', type=int, default=0)
     ap.add_argument('--chunk-chars', type=int, default=280)
@@ -148,7 +149,15 @@ def main():
         dst = '/tmp/book.epub'
         urllib.request.urlretrieve(epub, dst); epub = dst
 
-    out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    # Canonical output: <repo>/data/audiobooks/<book>/ (see README "Where do I
+    # find my audiobooks?"). Keeps every conversion path in one known place.
+    if a.out:
+        out = Path(a.out)
+    else:
+        book_label = Path(a.epub.split('?')[0]).stem or 'book'
+        out = Path(__file__).resolve().parents[1] / 'data' / 'audiobooks' / book_label
+    out.mkdir(parents=True, exist_ok=True)
+    print(f"output dir: {out}", flush=True)
     global _LEXICON
     _LEXICON = build_lexicon(epub)
     z = zipfile.ZipFile(epub)
