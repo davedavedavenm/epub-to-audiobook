@@ -41,6 +41,9 @@ log = logging.getLogger("qa-asr")
 
 # tokens that are "content words" worth flagging when dropped/changed
 _WORD_RE = re.compile(r"[a-z0-9']+")
+# ordinal written as a digit ("14th", "1st", "21st") — Whisper often emits these
+# where the audio said the word ("fourteenth"), so canonicalise both to words.
+_ORD_RE = re.compile(r"^(\d+)(?:st|nd|rd|th)$")
 
 
 def _expand_number(tok: str) -> list[str]:
@@ -75,8 +78,15 @@ def normalize_words(text: str) -> list[str]:
     text = (text or "").lower().replace('&', ' and ')
     out: list[str] = []
     for tok in _WORD_RE.findall(text):
+        m = _ORD_RE.match(tok)
         if tok.isdigit():
             out.extend(_expand_number(tok))
+        elif m and _HAS_N2W:
+            try:
+                words = num2words(int(m.group(1)), to='ordinal').lower().replace('-', ' ')
+                out.extend(_WORD_RE.findall(words))
+            except Exception:
+                out.append(tok)
         else:
             out.append(tok)
     return out

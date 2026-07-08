@@ -27,6 +27,15 @@ def test_digits_vs_spoken_year_do_not_diverge():
     assert r['wer'] == 0.0, f"year formatting produced false divergences: {r['divergences']}"
 
 
+def test_ordinal_word_vs_digit_not_a_divergence():
+    """Whisper writes 'the 14th century' where the audio said 'fourteenth' —
+    that must NOT flag (found while proving #7 on real zorin audio)."""
+    q = _load()
+    r = q.diff_report("by the fourteenth century, certainly by the fifteenth.",
+                      "by the 14th century, certainly by the 15th.")
+    assert r['wer'] == 0.0, f"ordinal word/digit produced false divergences: {r['divergences']}"
+
+
 def test_dropped_number_piece_is_caught():
     """The '1976 heard as nineteen seventy' bug (final digit dropped) must
     surface as a divergence — this is the class QA Layer 2 exists to catch."""
