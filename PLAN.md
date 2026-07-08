@@ -97,6 +97,34 @@ model-download overhead, the unit of work is a **batch, not a chapter**:
 Benchmark task (do first): one Vast session, Turbo + TADA, convert a real
 multi-chapter book, record actual chars/sec and $/book into LOW-COST-TTS.md.
 
+
+## TADA long-term plan (zorin-first — owner decision 2026-07-08)
+
+Constraint: the Windows box is OUT of the architecture (owner decision);
+zorin does as much as possible. TADA cannot run on the NUC as-is (15 GB RAM,
+model load OOMs — incident-verified). Therefore:
+
+1. **Default engine on zorin stays Chatterbox** — free, app-managed,
+   auto-resuming, proven on full books.
+2. **TADA = GPU on demand, driven FROM zorin**: `scripts/vast-gpu.sh up tada`
+   (runs on zorin), set the printed `TADA_URL` in `.env`, restart worker —
+   the UI's TADA voices light up automatically (health-gated), books queue
+   through the normal app with all its recovery machinery. ~GBP0.5 and ~4 h
+   per book. `down` when finished.
+3. **Optional one-off to make TADA free-and-local forever**: the NUC8i7BEH
+   officially supports 32 GB SODIMM (~GBP40-60). With 32 GB, tada-tts runs
+   as a normal zorin compose service (image + mem caps already exist) and
+   TADA becomes a first-class free engine, app-managed like Chatterbox.
+   Owner's call — hardware purchase.
+4. Full one-click integration (GPU_RENDER_ENABLED auto-provisioning TADA via
+   the generalized gpu_manager) remains §3 of this plan — the manual runbook
+   is the validated interim.
+
+Auto-resume truths (asked 2026-07-08): app-managed jobs on zorin survive
+restarts (orphan recovery + cross-process lock — incident-tested). Anything
+run as an ad-hoc script on a workstation does NOT — which is why script-based
+conversion off-zorin is now out of scope.
+
 ## 4. Full-length reliability
 
 - Run a real full book on Turbo (and TADA) end-to-end; watch NUC memory,
