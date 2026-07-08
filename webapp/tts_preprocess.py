@@ -374,12 +374,16 @@ def normalize_text_for_tts(text: str, lexicon: dict = None) -> str:
 
 
     # === Pacing and Punctuation (Enhance Flow) ===
-    # Convert em-dashes and en-dashes to commas for better breath pauses
-    text = re.sub(r'\s*[—–]\s*', ', ', text)
-    text = re.sub(r'\s*--\s*', ', ', text)
-    
-    # Standardize ellipses and add space for a breath
-    text = re.sub(r'\.{2,}', '... ', text)
+    # Keep em/en dashes AS dashes. Modern voice-clone models (TADA, Chatterbox)
+    # render "—" as a natural clause break; the old "convert every dash to a
+    # comma" hack (for dumb engines) produced constant unnatural pauses on
+    # dash-heavy prose like Apple in China (incident 2026-07-08). Normalize the
+    # spacing only.
+    text = re.sub(r'\s*[—–]\s*', ' — ', text)
+    text = re.sub(r'\s*--\s*', ' — ', text)
+
+    # Standardize ellipses (real pause) without forcing spaces mid-word.
+    text = re.sub(r'\.{2,}', '… ', text)
 
     return text
 

@@ -98,3 +98,18 @@ def test_recovery_has_cross_process_lock():
     """Resume API (webapp) and orphan cleanup (worker) raced two recovery
     threads; in-memory guards cannot work across processes."""
     assert 'recovery_lock_' in APP,         "cross-process recovery DB lock removed — re-opens 2026-07-08 recovery race"
+
+
+# --- audio quality fixes 2026-07-08 ---
+
+def test_dashes_not_forced_to_commas():
+    """Dash-heavy prose produced constant pauses when every dash became a comma."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('tp', ROOT / 'webapp' / 'tts_preprocess.py')
+    tp = importlib.util.module_from_spec(spec); spec.loader.exec_module(tp)
+    out = tp.normalize_text_for_tts("Apple — the company — grew.")
+    assert ', the company ,' not in out, "em-dash still forced to comma (pause regression 2026-07-08)"
+
+
+def test_tada_first_word_leadin_trim():
+    assert '_trim_leadin' in TADA_SERVER and 'LEADIN' in TADA_SERVER,         "TADA first-word lead-in trim removed — cold-start garble returns"

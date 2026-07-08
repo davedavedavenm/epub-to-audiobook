@@ -23,6 +23,35 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
 from tts_preprocess import sanitize_html, normalize_text_for_tts  # noqa: E402
 import requests  # noqa: E402
 
+# Optional adaptive pronunciation (QA Layer 1) — same as the app. Needs an LLM
+# configured (LLM_API_KEY env). Without it, falls back to a small seed dict so
+# common place/brand names still get help. This closes the gap where standalone
+# script conversions (e.g. Apple in China) skipped pronunciation entirely.
+SEED_PRONUNCIATION = {
+    "Cupertino": "Coo-per-TEE-no", "Beijing": "Bay-JING", "McDonald's": "Mick-DON-uld-z",
+    "Huawei": "HWAH-way", "Xiaomi": "SHOW-mee", "Nguyen": "Nwin", "Qualcomm": "KWAL-com",
+    "Foxconn": "FOX-con", "Shenzhen": "SHUN-jen", "Guangzhou": "GWANG-joe",
+}
+_LEXICON = {}
+
+def build_lexicon(epub_path):
+    lex = dict(SEED_PRONUNCIATION)
+    try:
+        from llm_metadata import generate_narration_profile, generate_lexicon
+        prof = generate_narration_profile(Path(epub_path)) or {}
+        lex.update(prof.get('rules', {}))
+        lex.update(generate_lexicon(Path(epub_path)) or {})
+        print(f"pronunciation rules: {len(lex)} ({'LLM+seed' if prof.get('rules') else 'seed only — set LLM_API_KEY for adaptive'})", flush=True)
+    except Exception as e:
+        print(f"pronunciation: seed dict only ({e})", flush=True)
+    return lex
+
+
+def apply_lexicon(text, lex):
+    for word in sorted(lex, key=len, reverse=True):
+        text = re.sub(r'\b' + re.escape(word) + r'\b', lex[word], text, flags=re.IGNORECASE)
+    return text
+
 
 class _P(HTMLParser):
     def __init__(self):
@@ -52,7 +81,10 @@ def spine_docs(z):
 def chapter_text(z, name):
     p = _P(); p.feed(sanitize_html(z.read(name).decode('utf-8', 'ignore')))
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
-    return normalize_text_for_tts(text)
+    text = normalize_text_for_tts(text)
+    if _LEXICON:
+        text = apply_lexicon(text, _LEXICON)
+    return text
 
 
 def chunk(text, n):
@@ -110,6 +142,8 @@ def main():
         urllib.request.urlretrieve(epub, dst); epub = dst
 
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    global _LEXICON
+    _LEXICON = build_lexicon(epub)
     z = zipfile.ZipFile(epub)
     docs = spine_docs(z)
     idx = 0

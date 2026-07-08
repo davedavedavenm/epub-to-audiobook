@@ -105,6 +105,50 @@ def _voice_transcript(name):
     return _transcripts.get(name, "")
 
 
+# Throwaway lead-in absorbing the first-word cold-start; trimmed off after.
+LEADIN = os.environ.get("TADA_LEADIN", "Right. ")
+LEADIN_ENABLED = os.environ.get("TADA_TRIM_LEADIN", "1") not in ("0", "false", "no")
+if not LEADIN_ENABLED:
+    LEADIN = ""
+
+
+def _trim_leadin(arr, sr=SR):
+    """Cut the lead-in phrase off the front of an utterance: skip the lead-in
+    speech, find the first silence gap, and start the real audio after it.
+    Safe fallback: if no clear gap is found, trim a fixed conservative amount
+    rather than leaving the spoken lead-in in."""
+    try:
+        n = arr.shape[0]
+        if n < int(0.3 * sr):
+            return arr
+        win = max(1, int(0.02 * sr))          # 20 ms frames
+        peak = float(np.max(np.abs(arr))) or 1.0
+        thresh = 0.06 * peak
+        start = int(0.18 * sr)                 # lead-in speech is ~>=0.18s
+        limit = int(1.2 * sr)                  # only search the first ~1.2s
+        i = start
+        gap = 0
+        need = int(0.05 * sr)                  # 50 ms of quiet = the gap
+        while i < min(limit, n):
+            frame = arr[i:i + win]
+            if float(np.max(np.abs(frame))) < thresh:
+                gap += win
+                if gap >= need:
+                    # real speech resumes after this silence
+                    cut = i + win
+                    # advance past any trailing quiet
+                    while cut < n and float(np.max(np.abs(arr[cut:cut + win]))) < thresh:
+                        cut += win
+                    return arr[cut:] if cut < n else arr
+            else:
+                gap = 0
+            i += win
+        # fallback: no gap found — trim a fixed ~0.45s (typical lead-in length)
+        return arr[int(0.45 * sr):]
+    except Exception:
+        return arr
+
+
 class SpeechReq(BaseModel):
     model: str = "tts-1"
     input: str
@@ -151,14 +195,22 @@ def speech(req: SpeechReq):
     pieces = []
     with _GEN_LOCK:
         with torch.inference_mode():
-            for chunk in _chunk(req.input):
-                out = model.generate(prompt=prompt, text=chunk)
+            chunks = _chunk(req.input)
+            for i, chunk in enumerate(chunks):
+                # First-word garble fix: TADA cold-starts badly on the opening
+                # word of a generation. Prepend a throwaway lead-in that absorbs
+                # the cold-start, then trim it back off at the first silence gap.
+                lead = LEADIN if i == 0 else ""
+                out = model.generate(prompt=prompt, text=lead + chunk)
                 w = out.audio
                 while isinstance(w, (list, tuple)):
                     w = w[0]
                 if hasattr(w, "detach"):
                     w = w.detach().cpu().float().numpy()
-                pieces.append(np.asarray(w, dtype="float32").reshape(-1))
+                arr = np.asarray(w, dtype="float32").reshape(-1)
+                if lead:
+                    arr = _trim_leadin(arr)
+                pieces.append(arr)
                 del out
         gc.collect()
     audio = np.concatenate(pieces) if pieces else np.zeros(1, dtype="float32")

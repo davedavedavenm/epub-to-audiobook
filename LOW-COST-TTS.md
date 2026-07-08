@@ -105,6 +105,37 @@ shape as Kokoro-FastAPI), reference voices from `data/voice_refs/`.
 
 
 
+
+## FREE and CHEAP GPU for TADA (2026-07-08 — answering "prices are fucked")
+
+**FREE — Kaggle Notebooks** is the real free-and-fast TADA path:
+- 30 GPU-hours/week, Tesla T4 (16 GB — fits TADA), sessions up to 9 h with
+  **background execution** (close the tab, it keeps running).
+- A full book (~4 h on RTX 3090) runs comfortably inside one free session.
+- Colab free tier is similar (T4, ~30 h/wk) but flakier / shorter idle timeout.
+- HuggingFace Spaces ZeroGPU: free but small daily quota (used early on).
+
+**CHEAP — Vast.ai consumer GPUs** (the "under $0.10/hr" tier, not the H100s):
+- **RTX 3060 (12 GB) ~$0.05-0.10/hr** — TADA-1B fits fine; a ~5 h book ≈ **$0.25-0.50**.
+- RTX 3090 ~$0.20-0.25/hr (what we measured: TADA RTF 0.34).
+- RunPod community RTX 4090 from ~$0.34/hr if you want "just works".
+Use `scripts/vast-gpu.sh up tada <offer_id>` — pass a 3060 offer id to go cheapest.
+
+Bottom line: TADA is NOT stuck behind expensive GPUs. Kaggle = free; Vast 3060
+= pennies. The NUC RAM upgrade (32 GB) additionally makes TADA free-and-local.
+
+## Audio-quality fixes 2026-07-08 (from Apple in China listen-through)
+- **Weird mid-sentence pauses**: em/en-dashes were force-converted to commas
+  (a hack for dumb engines). Now kept as dashes — modern models render them
+  naturally. Fixed in tts_preprocess.
+- **First words garbled**: TADA cold-start. Server now prepends a throwaway
+  lead-in and trims it at the first silence gap (`TADA_TRIM_LEADIN`, default
+  on). NEEDS a listen-validation on the next TADA run.
+- **Mispronounced Cupertino/Beijing/McDonald's**: the STANDALONE SCRIPT skipped
+  the LLM pronunciation layer entirely. Now it runs the narration profile +
+  a seed dictionary of common place/brand names. The APP path already had the
+  LLM profile; its prompt is strengthened to catch well-known-but-fumbled names.
+
 ## GPU MEASURED 2026-07-07 — the runbook works, real numbers at last
 
 Validated end-to-end on a Vast RTX 3090 ($0.248/hr, Czechia) using the
