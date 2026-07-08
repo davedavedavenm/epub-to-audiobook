@@ -73,6 +73,21 @@ def test_engine_images_gpu_capable():
         assert 'download.pytorch.org/whl/cu' in df, f"{eng} image lost explicit CUDA torch"
 
 
+def test_tada_torch_stack_pinned():
+    """Incident 2026-07-08d: tada's `torch --index-url cu124` was UNPINNED, so
+    the hume-tada install (torch>=2.7 + unpinned torchaudio/torchvision)
+    re-resolved the whole stack from PyPI to the cu130 build, which needs an
+    R580+ driver and silently ran CPU on GPU hosts. The torch stack must be
+    version-pinned AND include pinned torchaudio+torchvision from the CUDA
+    index, so the requirements install can't drag the default build back in."""
+    df = (ROOT / 'tada' / 'Dockerfile').read_text(encoding='utf-8')
+    assert re.search(r'torch==\d', df), "tada torch is not version-pinned — cu130 drift returns (2026-07-08d)"
+    assert re.search(r'torchaudio==\d', df) and re.search(r'torchvision==\d', df), \
+        "tada must pin torchaudio+torchvision too, else requirements re-pulls the cu130 stack (2026-07-08d)"
+    # cu130 needs R580+ (rare); the pin must target an older, broadly-supported CUDA
+    assert '/whl/cu130' not in df, "tada pinned to cu130 — needs R580+ driver, silent-CPU on most hosts"
+
+
 def test_health_reports_cuda():
     for name, src in [('chatterbox', CB_SERVER), ('tada', TADA_SERVER)]:
         assert 'cuda_available' in src, f"{name} /health no longer reports CUDA — GPU issues undiagnosable"

@@ -103,6 +103,39 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 - Honest limit: with a single-voice engine this does NOT do per-character
   voices. It biases pronunciation-rule search and pacing handling only.
 
+### 2026-07-08d — TADA image silently ran on CPU (unpinned torch → cu130)
+- **Symptom**: fresh Vast TADA instance came up healthy but `/health` showed
+  `device:cpu, cuda_available:false` with `torch 2.12.1+cu130`.
+- **Root cause**: `tada/Dockerfile` installed `torch --index-url cu124`
+  UNPINNED, then `pip install -r requirements.txt`. hume-tada requires
+  torch>=2.7 (cu124's max is 2.6.0) and pulls torchaudio/torchvision unpinned,
+  so the requirements step re-resolved the whole stack from PyPI to the default
+  cu130 build (torch 2.12). cu130 needs an R580+ driver; most GPU hosts have
+  older drivers, so torch fell back to CPU. Chatterbox was unaffected because
+  chatterbox-tts pins torch==2.6.0, matching its preinstalled cu124 build.
+- **Fix**: pin the FULL cu126 stack (`torch==2.8.0 torchvision==0.23.0
+  torchaudio==2.8.0 --index-url .../cu126`) BEFORE the requirements install so
+  hume-tada finds everything satisfied and touches nothing. cu126 needs only
+  R560+ (broad host coverage) and satisfies torch>=2.7. Regression-guarded
+  (`test_tada_torch_stack_pinned`). `scripts/vast-gpu.sh` offer filter now
+  requires `cuda_max_good>=12.6`.
+- **What caught it**: the `/health` cuda_available gate — the standing rule to
+  refuse CPU runs. Interim workaround for the run: used a CUDA-13 host so the
+  still-deployed cu130 image worked; the cu126 image rebuilds via CI.
+- Lesson: an unpinned `pip install torch` is a landmine — a transitive dep with
+  a torch floor silently re-pulls the default (newest-CUDA) build. Pin the
+  whole torch stack, always.
+
+### 2026-07-08 — Kaggle free-GPU path blocked on phone verification
+- Kaggle kernels get NO internet ("Temporary failure in name resolution",
+  pip/git/HF all fail) until the account is **phone-verified**
+  (kaggle.com/settings), regardless of `enable_internet:true` in
+  kernel-metadata.json. One-time, needs Dave's phone.
+- The kernel + epub dataset are pushed and ready
+  (`davedavedavedavenm/apple-china-tada-ch1-2`); re-run free once verified.
+  Alternative if verification isn't possible: attach the ~5GB TADA models +
+  hume-tada wheel as offline Kaggle datasets so the kernel needs no internet.
+
 ### 2026-07-08 — Duplicate recovery threads across processes (job ebe7c78d)
 - **Symptom**: resume + worker startup each launched a chapter-recovery pass
   4 s apart (both logged "Retrying 9 missing").

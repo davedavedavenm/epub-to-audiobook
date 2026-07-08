@@ -28,9 +28,13 @@ engine_port() { case "$1" in chatterbox) echo 8004;; tada) echo 8005;; *) echo "
 cmd_up() {
   local engine="$1"; local port; port=$(engine_port "$engine")
   local image="ghcr.io/${OWNER}/epub-to-audiobook-${engine}:latest"
-  echo ">> selecting GPU offer (RTX 3090, fast net — GHCR pulls can stall on slow hosts)"
+  # cuda_max_good>=12.6: the engine images ship a cu126 torch stack; a host
+  # whose driver tops out below CUDA 12.6 makes torch fall back to CPU silently
+  # (incident 2026-07-08d). inet_down>5000: the multi-GB GHCR pull stalls for
+  # 10+ min on slow hosts (seen 2026-07-08) — pick well-connected ones.
+  echo ">> selecting GPU offer (RTX 3090, CUDA>=12.6, fast net for GHCR pull)"
   local offer
-  offer="${2:-$($VAST search offers "gpu_name=RTX_3090 num_gpus=1 disk_space>=45 reliability>0.99 inet_down>3000 rentable=true" --order dph --raw | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["id"])')}"
+  offer="${2:-$($VAST search offers "gpu_name=RTX_3090 num_gpus=1 disk_space>=45 reliability>0.99 inet_down>5000 cuda_max_good>=12.6 rentable=true" --order dph --raw | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["id"])')}"
   echo ">> offer $offer — creating instance with $image"
 
   local iid

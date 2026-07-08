@@ -1,0 +1,13 @@
+{
+  "id": "davedavedavedavenm/apple-china-tada-ch1-2",
+  "title": "apple-china-tada-ch1-2",
+  "code_file": "run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["davedavedavedavenm/apple-in-china-epub"],
+  "competition_sources": [],
+  "kernel_sources": []
+}
