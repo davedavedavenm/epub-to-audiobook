@@ -230,12 +230,20 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     text = _ENDNOTE_AFTER_QUOTE_RE.sub('', text)
     text = _ENDNOTE_BRACKETED_RE.sub('', text)
 
-    # === Apply Custom LLM Lexicon Replacements ===
-    if lexicon:
+    # === Apply Custom Lexicon Replacements (phonetic respellings) ===
+    # SKIP for modern voice-clone engines. They read real words (Beijing,
+    # Cupertino, iPhones) correctly on their own; feeding them a human
+    # pronunciation guide like "Coo-per-TEE-no" / "Bay-JING" makes them read the
+    # hyphens as pauses and the syllables literally — "coo per tee no",
+    # "bay...zhing" (Dave, 2026-07-09). Same class as the year-spelling and
+    # dash-comma hacks: helpers for dumb engines HURT modern models. Genuine
+    # misreads on a modern engine are handled by the QA loop (targeted, natural
+    # spellings), NOT by blanket respelling here. MODERN-ENGINE CONTRACT.
+    if lexicon and not modern:
         # Sort keys by length descending so longer phrases are matched first
         for word in sorted(lexicon.keys(), key=len, reverse=True):
             phonetic = lexicon[word]
-            # Use regex with word boundaries to avoid replacing parts of other words, 
+            # Use regex with word boundaries to avoid replacing parts of other words,
             # while allowing case-insensitive matching.
             pattern = r'\b' + re.escape(word) + r'\b'
             text = re.sub(pattern, phonetic, text, flags=re.IGNORECASE)

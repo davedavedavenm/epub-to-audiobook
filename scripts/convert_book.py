@@ -92,7 +92,10 @@ def chapter_text(z, name):
     p = _P(); p.feed(sanitize_html(z.read(name).decode('utf-8', 'ignore')))
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
     text = normalize_text_for_tts(text, modern=_MODERN)
-    if _LEXICON:
+    # Modern engines read real words natively; phonetic respellings ("Bay-JING")
+    # make them worse (heard "bay...zhing"). Skip the lexicon for modern — the
+    # QA loop handles genuine misreads with targeted natural spellings instead.
+    if _LEXICON and not _MODERN:
         text = apply_lexicon(text, _LEXICON)
     return text
 

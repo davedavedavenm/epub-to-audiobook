@@ -212,3 +212,18 @@ def test_modern_contract_skips_all_plain_number_spelling():
     # symbol/abbrev expansion is intentionally KEPT for modern engines
     sym = tp.normalize_text_for_tts("about 50% agreed and Dr. Lee left", modern=True)
     assert 'percent' in sym and 'Doctor' in sym, "modern engine dropped symbol/abbrev expansion"
+
+
+def test_modern_skips_phonetic_lexicon():
+    """Modern engines read Beijing/Cupertino natively; the phonetic respelling
+    lexicon ("Bay-JING","Coo-per-TEE-no") makes them read broken syllables
+    ("bay...zhing"). Modern must SKIP the lexicon (Dave, 2026-07-09)."""
+    tp = _load_tp()
+    lex = {"Beijing": "Bay-JING", "Cupertino": "Coo-per-TEE-no", "iPhones": "eye-phones"}
+    out = tp.normalize_text_for_tts("Broken iPhones in Beijing near Cupertino.", lexicon=lex, modern=True)
+    assert 'Bay-JING' not in out and 'Coo-per-TEE-no' not in out and 'eye-phones' not in out, \
+        "modern engine applied phonetic respelling — re-opens the 'bay...zhing' breakage"
+    assert 'Beijing' in out and 'Cupertino' in out and 'iPhones' in out
+    # legacy engines (Kokoro/Piper) still get the respelling — they need it
+    leg = tp.normalize_text_for_tts("We flew to Beijing.", lexicon=lex, modern=False)
+    assert 'Bay-JING' in leg, "legacy lexicon respelling broken"
