@@ -35,6 +35,9 @@ SEED_PRONUNCIATION = {
     "Cupertino": "Coo-per-TEE-no", "Beijing": "Bay-JING", "McDonald's": "Mick-DON-uld-z",
     "Huawei": "HWAH-way", "Xiaomi": "SHOW-mee", "Nguyen": "Nwin", "Qualcomm": "KWAL-com",
     "Foxconn": "FOX-con", "Shenzhen": "SHUN-jen", "Guangzhou": "GWANG-joe",
+    # TADA tokenizer quirks caught by ear/QA (2026-07-08): "iPhones" -> "if owns"
+    "iPhone": "eye-phone", "iPhones": "eye-phones", "iPad": "eye-pad", "iPods": "eye-pods",
+    "iPod": "eye-pod", "iOS": "eye-O-S",
 }
 _LEXICON = {}
 _MODERN = True   # this script only drives the modern engines
@@ -143,8 +146,12 @@ def _to_mp3(wav_bytes, denoise=False):
         return None
     cmd = [ff, '-v', 'error', '-i', 'pipe:0']
     if denoise:
-        cmd += ['-af', 'afftdn=nf=-25']
-    cmd += ['-f', 'mp3', '-b:a', '128k', 'pipe:1']
+        # GENTLE: only shave the quiet hiss floor. The previous aggressive
+        # setting (nf=-25) stripped highs and made TADA sound like a phone call
+        # (Dave, 2026-07-08). nr=6/nf=-45 removes steady hiss without dulling
+        # speech. Tune via issue #8.
+        cmd += ['-af', 'afftdn=nr=6:nf=-45']
+    cmd += ['-f', 'mp3', '-b:a', '192k', 'pipe:1']
     p = subprocess.run(cmd, input=wav_bytes, capture_output=True)
     return p.stdout if p.returncode == 0 and p.stdout else None
 

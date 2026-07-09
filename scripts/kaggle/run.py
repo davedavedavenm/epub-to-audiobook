@@ -99,15 +99,15 @@ for i in range(60):
         print(f"waiting[{i}]", str(e)[:70], flush=True)
 assert healthy, "server never became healthy"
 
-# 5. convert with the FULL post-fix pipeline: clean WAV concat, --denoise
-#    (afftdn, knocks down TADA hiss), and --qa (local Whisper ASR verification
-#    → qa_report.json). No LLM key here, so pronunciation uses the seed dict
-#    (Cupertino/Beijing/McDonald's/etc) — enough to validate the reported names.
+# 5. convert: clean WAV concat + --qa. NO --denoise (the aggressive setting
+#    muffled TADA into "phone call" quality — this raw pass lets Dave judge
+#    TADA's real fidelity). --chunk-chars 600 = fewer prosody resets = smoother
+#    pacing (was 280, too small). Seed pronunciation (incl. iPhone fix).
 t0 = time.time()
 sh([sys.executable, f"{REPO_DIR}/scripts/convert_book.py",
     "--epub", EPUB, "--engine-url", "http://127.0.0.1:8005/v1",
     "--voice", VOICE, "--out", OUT, "--start", str(START), "--end", str(END),
-    "--denoise", "--qa", "--qa-model", "base"])
+    "--chunk-chars", "600", "--qa", "--qa-model", "base"])
 print(f"conversion wall time: {time.time()-t0:.0f}s", flush=True)
 
 # 6. surface outputs + QA report in /kaggle/working (kernel output root)

@@ -142,6 +142,9 @@ SEED_RULES = {
     "Cupertino": "Coo-per-TEE-no", "Beijing": "Bay-JING", "McDonald's": "Mick-DON-uld-z",
     "Huawei": "HWAH-way", "Xiaomi": "SHOW-mee", "Nguyen": "Nwin", "Qualcomm": "KWAL-com",
     "Foxconn": "FOX-con", "Shenzhen": "SHUN-jen", "Guangzhou": "GWANG-joe",
+    # TADA tokenizer quirks caught by ear/QA (2026-07-08): "iPhones" -> "if owns"
+    "iPhone": "eye-phone", "iPhones": "eye-phones", "iPad": "eye-pad",
+    "iPods": "eye-pods", "iPod": "eye-pod", "iOS": "eye-O-S",
 }
 
 
