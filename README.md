@@ -204,12 +204,14 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 ## Documentation
 
 - [GETTING-STARTED.md](GETTING-STARTED.md) — new-user walkthrough
-- [STATUS.md](STATUS.md) — current state & remaining tasks
-- [PREPROCESSING.md](PREPROCESSING.md) — the text pipeline
-- [LOW-COST-TTS.md](LOW-COST-TTS.md) — engine bake-off & costs
-- [GPU-SAFETY.md](GPU-SAFETY.md) — cloud GPU rules
+- [STATUS.md](STATUS.md) — current state, caveats & open issues
+- [PREPROCESSING.md](PREPROCESSING.md) — the text pipeline & QA layers
+- [OPERATIONS.md](OPERATIONS.md) — runbook & incident log
+- [LOW-COST-TTS.md](LOW-COST-TTS.md) — engine bake-off, costs & GPU strategy
+- [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) — one-command Vast GPU runbook
+- [GPU-SAFETY.md](GPU-SAFETY.md) — cloud GPU cost-safety rules
 - [PLAN.md](PLAN.md) — roadmap (adaptive QA, GPU, UI)
-- [STATUS.md](STATUS.md) — feature history
+- [AGENTS.md](AGENTS.md) — guide for AI agents working in this repo
 
 ## Credits
 
