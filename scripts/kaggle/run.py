@@ -59,12 +59,16 @@ print("epub:", EPUB, flush=True)
 # 4. start the real TADA server (lazy model load on first request)
 env = dict(os.environ)
 env["VOICES_DIR"] = f"{REPO_DIR}/tada/voices"
-env["HF_HOME"] = f"{WORK}/hf"
+# HF cache OUTSIDE /kaggle/working — the ~5GB model must NOT land in the kernel
+# output (it bloats + truncates the real outputs and hides server.log; that's
+# why v2/v3 output was just the hf cache with no mp3s/log).
+env["HF_HOME"] = "/tmp/hf"
 env["TADA_TRIM_LEADIN"] = "1"      # first-word cold-start fix on
+LOG = f"{WORK}/server.log"
 srv = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "server:app", "--host", "127.0.0.1", "--port", "8005"],
     cwd=f"{REPO_DIR}/tada", env=env,
-    stdout=open(f"{WORK}/server.log", "w"), stderr=subprocess.STDOUT)
+    stdout=open(LOG, "w"), stderr=subprocess.STDOUT)
 
 import requests
 healthy = False
