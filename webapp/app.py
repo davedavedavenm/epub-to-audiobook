@@ -1837,6 +1837,21 @@ def resume_inflight_jobs():
             monitor_thread.start()
             resumed += 1
             app.logger.info(f"Resumed monitoring for job {job_id} ({container_name})")
+        else:
+            # 'converting' but the container is gone (crashed/removed on
+            # restart, or a cancel/monitor race re-set the status). Do NOT leave
+            # it stuck 'converting' — that holds the single MAX_CONCURRENT slot
+            # forever and blocks the queue (#14). Fail it so the slot frees and
+            # it doesn't silently auto-rerun; the user can retry explicitly.
+            with get_db() as c2:
+                c2.execute(
+                    "UPDATE jobs SET status='failed', container_name=NULL, "
+                    "error='container missing after worker restart (recovered)' "
+                    "WHERE id=? AND status IN "
+                    "('converting','converting PDF','converting to audio')",
+                    (job_id,))
+            app.logger.warning(
+                f"Job {job_id} was '{current_status}' but its container is gone — marked failed to free the queue")
 
     if resumed:
         app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")

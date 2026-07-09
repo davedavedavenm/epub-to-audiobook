@@ -158,6 +158,14 @@ def test_preprocessing_llm_provider_chain():
     assert 'SEED_RULES' in lm and '_seed_profile' in lm, "seed-rule floor removed (#6)"
 
 
+def test_recovery_frees_slot_when_container_missing():
+    """#14: a 'converting' job whose container is gone after a restart must be
+    failed (freeing the single MAX_CONCURRENT slot), not left stuck holding the
+    queue. resume_inflight_jobs must have the else-branch that fails it."""
+    assert "container missing after worker restart" in APP, \
+        "recovery no longer fails zombie jobs — queue-jam regression (#14)"
+
+
 def test_conversion_engine_failover_wired():
     """#6: a dead engine must be able to fail over to a healthy one instead of
     always hard-stranding a book."""
