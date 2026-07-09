@@ -640,7 +640,7 @@ def main():
     ap.add_argument('--send-test', action='store_true',
                     help='Send a single test notification via enabled channels and exit (no DB changes).')
     ap.add_argument('--test-text', default='Wanted monitor test: notifications enabled (1 message).')
-    ap.add_argument('--library-api', default='')  # e.g. http://192.168.1.88:8881/api/library
+    ap.add_argument('--library-api', default='')  # e.g. http://your-library-host:8881/api/library
     ap.add_argument('--force', action='store_true', help='Ignore scheduling and check unfound items now (testing/manual)')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--request-openbooks', action='store_true', help='Trigger OpenBooks requests for unfound items (rate-limited).')

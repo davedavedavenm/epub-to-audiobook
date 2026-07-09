@@ -27,7 +27,7 @@ python3 wanted_monitor.py --process-openbooks-queue --max-queue-sends 2 --bridge
 # Check LazyLibrarian wanted items, enqueue up to 2 new requests, and notify per-title
 # only when the item is actually downloaded by the pipeline.
 python3 wanted_monitor.py \
-  --library-api http://192.168.1.88:8881/api/library \
+  --library-api http://your-library-host:8881/api/library \
   --limit 10 \
   --notify-telegram --notify-whatsapp \
   --notification-mode per-title \

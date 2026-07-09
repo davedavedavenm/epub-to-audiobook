@@ -184,7 +184,7 @@ The lesson (now a standing rule): **prove fixes through the real worker path.**
   a cancelled job back to `converting`, jamming the single MAX_CONCURRENT slot.
   Recovery must exclude terminal states. Open.
 - **ABS sync silently broken** (#15): worker's `AUDIOBOOKSHELF_HOST=docker-vm`
-  doesn't resolve (ABS is at 192.168.1.113:13378) and the API token had expired
+  doesn't resolve (ABS must be reached by its LAN IP, not the `docker-vm` alias) and the API token had expired
   2026-06-07 — so conversions weren't reaching AudioBookShelf (jobs showed
   `synced_to_abs=0` with no alert). Token + ABS_API_URL restored in settings;
   host env + rsync SSH key + a restart still needed. Open.
