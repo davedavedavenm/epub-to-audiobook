@@ -38,6 +38,15 @@ def sh(cmd, **kw):
 #    even if USE_TF is ignored (belt-and-suspenders; non-fatal if absent).
 subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y",
                 "tensorflow", "tensorflow-cpu", "keras"], check=False)
+# Pin a matched CUDA torch stack that supports Kaggle's T4 (sm_75) FIRST.
+# hume-tada pulls torch/torchaudio versions that mismatched Kaggle's preinstalled
+# torch, so torchaudio's CUDA ops had no kernel for the T4 ("no kernel image
+# available for execution on the device", cudaErrorNoKernelImageForDevice — v4).
+# cu126 torch 2.8.0 ships sm_75 kernels and matches its torchaudio (same pin as
+# the Docker image). Installed before hume-tada so it finds them satisfied.
+subprocess.run([sys.executable, "-m", "pip", "install", "-q",
+                "torch==2.8.0", "torchvision==0.23.0", "torchaudio==2.8.0",
+                "--index-url", "https://download.pytorch.org/whl/cu126"], check=False)
 sh([sys.executable, "-m", "pip", "install", "-q",
     "hume-tada", "fastapi", "uvicorn", "soundfile", "num2words",
     "beautifulsoup4", "lxml", "requests", "faster-whisper"])
