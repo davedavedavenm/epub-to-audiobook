@@ -36,18 +36,21 @@ before the final digit, so "six" sounds like a detached endnote number
 ("1976" heard as "1970...6"). Three separate incidents came from this class
 of over-normalization (dash->comma, comma-number spelling, year spelling).
 
-The rule, so we STOP finding these one at a time:
-  * modern=True  -> SKIP every transform that respells a *plain* number,
-                    year, decade, or large integer. The engine does it right.
-  * modern=True  -> KEEP transforms that expand a SYMBOL or ABBREVIATION into
-                    words ($ -> dollars, % -> percent, U.S. -> U S, 1st ->
-                    first). These guard against a model reading the glyph
-                    literally, and don't create the mid-number pause artifact.
-  * modern=True  -> KEEP all structural cleanup (endnotes, unicode, dashes).
-Anything genuinely ambiguous for a specific book is caught adaptively by the
-per-book LLM narration profile (llm_metadata.generate_narration_profile),
-NOT by adding another regex here. Every plain-number spelling transform below
-is grouped under a single `if not modern:` guard for exactly this reason.
+The rule (revised 2026-07-09 to MINIMAL-for-modern after three separate
+"helper hurts the modern engine" bugs — year-spelling, dash->comma, and
+phonetic respellings like "Coo-per-TEE-no" heard as broken syllables):
+  * modern=True  -> get ONLY: structural cleanup (endnotes, unicode), acronym
+                    letter-spacing (U.S. -> U S, so it says the letters), and
+                    dash/ellipsis spacing.
+  * modern=True  -> SKIP everything else: number/year/decade/large-int
+                    spelling, currency/%/ordinal/heading expansion, word-abbrev
+                    expansion (Dr./St./No./p.), and the phonetic-respelling
+                    lexicon. Modern LLM-based engines read real text natively;
+                    every one of these blanket transforms has either been
+                    redundant or actively wrong on them.
+Genuine per-book misreads on a modern engine are caught by the QA loop
+(ASR verification -> targeted natural spellings), NOT by adding another regex
+here. Each skipped transform below sits under `if not modern:`.
 """
 import re
 import zipfile
@@ -249,28 +252,8 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             text = re.sub(pattern, phonetic, text, flags=re.IGNORECASE)
 
     # === Abbreviations (must come before period-related rules) ===
-    abbreviations = {
-        r'\bDr\.': 'Doctor',
-        r'\bMr\.': 'Mister',
-        r'\bMrs\.': 'Missus',
-        r'\bMs\.': 'Ms',
-        r'\bProf\.': 'Professor',
-        r'\bSt\.': 'Saint',
-        r'\bGen\.': 'General',
-        r'\bSgt\.': 'Sergeant',
-        r'\bCpl\.': 'Corporal',
-        r'\bLt\.': 'Lieutenant',
-        r'\bCol\.': 'Colonel',
-        r'\bCapt\.': 'Captain',
-        r'\bGov\.': 'Governor',
-        r'\bSen\.': 'Senator',
-        r'\bRep\.': 'Representative',
-        r'\bvs\.': 'versus',
-        r'\bVs\.': 'Versus',
-        r'\bet al\.': 'et alia',
-        r'\betc\.': 'etcetera',
-        r'\bi\.e\.': 'that is',
-        r'\be\.g\.': 'for example',
+    # Acronyms read letter-by-letter — helps EVERY engine (else "U.S." -> "us").
+    acronym_abbrev = {
         r'\bU\.S\.A\.': 'U S A',
         r'\bU\.S\.': 'U S',
         r'\bU\.K\.': 'U K',
@@ -279,17 +262,30 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
         r'\bD\.C\.': 'D C',
         r'\bB\.C\.': 'B C',
         r'\bA\.D\.': 'A D',
-        r'\bNo\.': 'Number',
-        r'\bno\.': 'number',
-        r'\bVol\.': 'Volume',
-        r'\bvol\.': 'volume',
-        r'\bFig\.': 'Figure',
-        r'\bfig\.': 'figure',
-        r'\bpp\.': 'pages',
-        r'\bp\.': 'page',
     }
-    for pattern, replacement in abbreviations.items():
+    for pattern, replacement in acronym_abbrev.items():
         text = re.sub(pattern, replacement, text)
+
+    # Word-expansion abbreviations: SKIP for modern engines. They read "Dr.",
+    # "e.g." natively, and blind expansion MISFIRES on real prose ("Main St."
+    # -> "Main Saint", "No." -> "Number", "p." -> "page"). MODERN-ENGINE
+    # CONTRACT: minimal normalization for modern; genuine misreads go to the QA
+    # loop, not a blanket dictionary (proactive audit 2026-07-09).
+    if not modern:
+        word_abbrev = {
+            r'\bDr\.': 'Doctor', r'\bMr\.': 'Mister', r'\bMrs\.': 'Missus',
+            r'\bMs\.': 'Ms', r'\bProf\.': 'Professor', r'\bSt\.': 'Saint',
+            r'\bGen\.': 'General', r'\bSgt\.': 'Sergeant', r'\bCpl\.': 'Corporal',
+            r'\bLt\.': 'Lieutenant', r'\bCol\.': 'Colonel', r'\bCapt\.': 'Captain',
+            r'\bGov\.': 'Governor', r'\bSen\.': 'Senator', r'\bRep\.': 'Representative',
+            r'\bvs\.': 'versus', r'\bVs\.': 'Versus', r'\bet al\.': 'et alia',
+            r'\betc\.': 'etcetera', r'\bi\.e\.': 'that is', r'\be\.g\.': 'for example',
+            r'\bNo\.': 'Number', r'\bno\.': 'number', r'\bVol\.': 'Volume',
+            r'\bvol\.': 'volume', r'\bFig\.': 'Figure', r'\bfig\.': 'figure',
+            r'\bpp\.': 'pages', r'\bp\.': 'page',
+        }
+        for pattern, replacement in word_abbrev.items():
+            text = re.sub(pattern, replacement, text)
 
     # === Years: 1962 -> nineteen sixty-two ===
     # Must come before general number handling.
@@ -321,8 +317,10 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             return f"{words} {scale} {unit}"
         return f"{words} {unit}"
 
-    text = re.sub(r'([$£€])(\d[\d,]*\.?\d*)(\s+(?:thousand|million|billion|trillion)\b)?',
-                  replace_currency, text)
+    # Modern engines read "$50" / "£33 billion" natively; skip (MODERN CONTRACT).
+    if not modern:
+        text = re.sub(r'([$£€])(\d[\d,]*\.?\d*)(\s+(?:thousand|million|billion|trillion)\b)?',
+                      replace_currency, text)
 
     # === Percentages ===
     def replace_percent(m):
@@ -335,7 +333,8 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
         except ValueError:
             return m.group(0)
 
-    text = re.sub(r'(\d[\d,]*\.?\d*)%', replace_percent, text)
+    if not modern:  # modern reads "50%" natively (MODERN CONTRACT)
+        text = re.sub(r'(\d[\d,]*\.?\d*)%', replace_percent, text)
 
     # === Ordinals: 1st, 2nd, 3rd, 4th, 21st, etc. ===
     def replace_ordinal(m):
@@ -344,7 +343,8 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             return m.group(0)  # Don't convert huge ordinals
         return _ordinal_to_words(n)
 
-    text = re.sub(r'\b(\d+)(?:st|nd|rd|th)\b', replace_ordinal, text)
+    if not modern:  # modern reads "1st"/"21st" natively (MODERN CONTRACT)
+        text = re.sub(r'\b(\d+)(?:st|nd|rd|th)\b', replace_ordinal, text)
 
     # === Decades: 1990s, 1800s ===
     # Plain date number -> skip for modern (see MODERN-ENGINE CONTRACT).
@@ -373,9 +373,10 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             return m.group(0)
         return f"{label} {_number_to_words(n).title()}"
 
-    text = re.sub(
-        r'\b(Chapter|CHAPTER|Part|PART|Book|BOOK|Volume|VOLUME|Section|SECTION|Act|ACT|Scene|SCENE)\s+(\d+)\b',
-        replace_heading_number, text)
+    if not modern:  # modern reads "Chapter 3" natively (MODERN CONTRACT)
+        text = re.sub(
+            r'\b(Chapter|CHAPTER|Part|PART|Book|BOOK|Volume|VOLUME|Section|SECTION|Act|ACT|Scene|SCENE)\s+(\d+)\b',
+            replace_heading_number, text)
 
     # === Large numbers with commas: 1,000,000 -> one million ===
     # Must come after currency/percent handling

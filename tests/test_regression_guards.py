@@ -209,9 +209,17 @@ def test_modern_contract_skips_all_plain_number_spelling():
         assert keep in out and must_not not in out, (
             f"modern engine spelled a plain number ({text!r} -> {out!r}) — "
             "re-opens the mid-number pause artifact class (2026-07-08)")
-    # symbol/abbrev expansion is intentionally KEPT for modern engines
-    sym = tp.normalize_text_for_tts("about 50% agreed and Dr. Lee left", modern=True)
-    assert 'percent' in sym and 'Doctor' in sym, "modern engine dropped symbol/abbrev expansion"
+    # Revised 2026-07-09 (minimal-for-modern): modern KEEPS only acronym
+    # letter-spacing (U.S.->U S, which genuinely helps) but SKIPS %/$/1st and
+    # word-abbrev expansion — it reads those natively, and blind expansion
+    # misfired ("Main St."->"Main Saint", "Coo-per-TEE-no").
+    sym = tp.normalize_text_for_tts("the U.S. had 50% and Dr. Lee left on 1st", modern=True)
+    assert 'U S' in sym, "modern dropped acronym letter-spacing (U.S.->U S helps)"
+    assert 'percent' not in sym and 'Doctor' not in sym and 'first' not in sym, \
+        "modern still expanding %/Dr./ordinals — should read them natively (minimal contract)"
+    # legacy engines still get the full expansion
+    leg = tp.normalize_text_for_tts("about 50% and Dr. Lee", modern=False)
+    assert 'percent' in leg and 'Doctor' in leg, "legacy expansion broken"
 
 
 def test_modern_skips_phonetic_lexicon():
