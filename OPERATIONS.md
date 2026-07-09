@@ -191,10 +191,12 @@ The lesson (now a standing rule): **prove fixes through the real worker path.**
 - **Free Kaggle TADA broke on a Kaggle-image clash**: `transformers` (via
   hume-tada) eagerly imported Kaggle's preinstalled TensorFlow, whose protobuf
   was mismatched. Fixed: `USE_TF=0` + uninstall tensorflow in the kernel.
-- **No LLM configured on zorin**: `generate_narration_profile` logs "All LLM
-  providers failed — using seed rules", so production pronunciation is
-  seed-dict-only. The seed floor covers the known-hard names; full adaptive
-  pronunciation + fiction/non-fiction need an `LLM_API_KEY` set in the webapp.
+- **LLM configured 2026-07-08**: initially there was no LLM key on zorin so
+  `generate_narration_profile` fell back to seed rules. Now Groq
+  (`llama-3.3-70b-versatile`, OpenAI-compatible at api.groq.com/openai/v1) is
+  stored in app_settings and verified live — production conversions get full
+  adaptive pronunciation + fiction/non-fiction. The seed floor remains the
+  offline fallback.
 
 ## Standing rules for claims
 

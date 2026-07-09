@@ -26,10 +26,12 @@ making the **self-correcting loop automatic in the UI**.
 - **Deployed to the live worker 2026-07-08** (it had been running 14-hour-old
   code — the fixes weren't actually running). Running today's code through a
   real webapp job surfaced and fixed a cluster of latent bugs (2026-07-08e).
-- **Production caveats to know**: (1) no `LLM_API_KEY` on zorin → pronunciation
-  is seed-dict-only (seed floor covers the known-hard names); (2) ABS sync host
-  still needs fixing (#15); (3) fast + quality TADA via the UI needs GPU
-  auto-provision (zorin is CPU-only) — the main remaining architecture piece.
+- **LLM now configured** (2026-07-08): Groq (`llama-3.3-70b-versatile`) is set
+  in webapp settings and verified live — real conversions now get full adaptive
+  pronunciation + fiction/non-fiction, not seed-only.
+- **Production caveats to know**: (1) ABS sync host still needs fixing (#15);
+  (2) fast + quality TADA via the UI needs GPU auto-provision (zorin is
+  CPU-only) — the main remaining architecture piece.
 
 ## Done & VERIFIED (actually run)
 
