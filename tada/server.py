@@ -213,6 +213,10 @@ def _get_native_prompt(enc, model):
     # generation (verified against tada/modules/tada.py:1207 + _generate sig).
     from tada.modules.encoder import EncoderOutput
     empty = EncoderOutput(**{f: None for f in EncoderOutput.__dataclass_fields__})
+    # generate() prepends the prompt transcript: prompt.text[0] + text, sliced
+    # by prompt.text_tokens_len — an empty prompt needs "" / 0 there (v10 fail).
+    empty.text = [""]
+    empty.text_tokens_len = [0]
     out = model.generate(prompt=empty, text=NATIVE_CAL_TEXT)
     w = out.audio
     while isinstance(w, (list, tuple)):
