@@ -4774,8 +4774,9 @@ def list_library():
                     'progress': job_info['progress']
                 })
 
-    # Sort by title
-    books.sort(key=lambda x: x['title'].lower())
+    # Most recently added/modified first, so freshly-grabbed books surface at
+    # the top (was alphabetical, which buried new arrivals).
+    books.sort(key=lambda x: x.get('modified_ts', 0), reverse=True)
     return jsonify(books)
 
 
