@@ -88,6 +88,21 @@ def test_tada_torch_stack_pinned():
     assert '/whl/cu130' not in df, "tada pinned to cu130 — needs R580+ driver, silent-CPU on most hosts"
 
 
+def test_chatterbox_kaggle_kernel_pins_cuda_torch():
+    """The Chatterbox GPU kernel must install a CUDA-pinned torch BEFORE
+    chatterbox-tts, or the pip resolver can pull a CPU/mismatched wheel and the
+    kernel silently runs on CPU (the TADA silent-CPU class, 2026-07-08d). It
+    must also keep the CUDA-availability gate that refuses a CPU run, and pin
+    setuptools<81 (perth watermarker imports the removed pkg_resources)."""
+    k = (ROOT / 'scripts' / 'kaggle' / 'run_chatterbox.py').read_text(encoding='utf-8')
+    assert re.search(r'torch==\d.*cu\d', k, re.S), "chatterbox kernel torch not CUDA-pinned — silent-CPU risk"
+    ti = k.find('torch==')
+    ci = k.find('chatterbox-tts')
+    assert 0 < ti < ci, "CUDA torch must be installed BEFORE chatterbox-tts, else it re-resolves"
+    assert 'refusing CPU run' in k or 'cuda_available' in k, "kernel dropped the GPU gate — could run CPU unnoticed"
+    assert 'setuptools<81' in k, "perth watermarker needs setuptools<81 (pkg_resources removed in 81+)"
+
+
 def test_health_reports_cuda():
     for name, src in [('chatterbox', CB_SERVER), ('tada', TADA_SERVER)]:
         assert 'cuda_available' in src, f"{name} /health no longer reports CUDA — GPU issues undiagnosable"
