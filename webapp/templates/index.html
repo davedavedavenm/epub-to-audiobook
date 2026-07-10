@@ -249,6 +249,12 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .rt-opt.cloud.on .rt-t, .rt-opt.cloud.on .rt-s{ color:var(--cloud-ink); }
 .rt-badge{ position:absolute; top:-8px; right:10px; font-family:var(--mono); font-size:.55rem;
   letter-spacing:.1em; text-transform:uppercase; background:var(--cloud); color:#fff; padding:2px 7px; border-radius:20px; }
+.rt-note{ margin-top:10px; font-size:.8rem; line-height:1.4; min-height:1.2em; }
+.rt-note .ok{ color:var(--cloud-ink); }
+.rt-note .warn{ color:var(--accent-ink); }
+.rt-note .muted{ color:var(--ink-3); }
+[data-theme="dark"] .rt-note .ok, :root:not([data-theme="light"]) .rt-note .ok{ color:var(--cloud); }
+[data-theme="dark"] .rt-note .warn{ color:var(--accent); }
 .tab-panel.active{ animation:fadeIn .4s ease; }
 </style>
 </head><body>
@@ -634,6 +640,8 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const active = ws.classList.toggle('active');
         if(active) {
             syncSpeedField('voice-' + bookId, 'speed-' + bookId);
+            if (!kaggleQuota) loadKaggleQuota().then(() => renderTargetNote(bookId, document.getElementById('rt-' + bookId)?.value || 'local'));
+            renderTargetNote(bookId, 'local');
             const startSel = document.getElementById('start-' + bookId);
             const endSel = document.getElementById('end-' + bookId);
             startSel.innerHTML = '<option>Loading chapters...</option>';
@@ -706,8 +714,8 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         grid.innerHTML = filtered.map(b => {
             const bookId = btoa(b.path).replace(/[^a-z0-9]/gi, '');
             let statusBadge = '';
-            if(b.status === 'completed') statusBadge = '<span class="li-tag done">In library</span>';
-            else if(b.status === 'converting') statusBadge = `<span class="li-tag render">${b.progress}%</span>`;
+            if(b.status === 'completed') statusBadge = '<span class="li-tag done">✓ Audiobook ready</span>';
+            else if(b.status === 'converting') statusBadge = `<span class="li-tag render">● Converting ${b.progress}%</span>`;
             const cleanTitle = escapeHtml(b.title.replace(/_/g,' ').replace(/\s+/g,' ').trim());
             return `
                 <div class="library-item">
@@ -743,6 +751,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                                     <div class="rt-t">Vast GPU</div><div class="rt-s">paid · fastest</div>
                                 </div>
                             </div>
+                            <div class="rt-note" id="rt-note-${bookId}"></div>
                             <input type="hidden" id="rt-${bookId}" value="local">
                         </div>
                         <details style="margin-bottom: 24px;">
@@ -804,11 +813,36 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         await fetch('/api/convert', { method: 'POST', body: formData }); switchTab('queue');
     }
 
+    let kaggleQuota = null;
+    async function loadKaggleQuota() {
+        try { kaggleQuota = await (await fetch('/api/kaggle/quota')).json(); } catch(e) {}
+    }
+    function renderTargetNote(bookId, target) {
+        const note = document.getElementById('rt-note-' + bookId);
+        if (!note) return;
+        if (target === 'kaggle') {
+            const q = kaggleQuota;
+            if (!q || !q.configured) {
+                note.innerHTML = '<span class="warn">⚠ Kaggle isn\'t set up yet — add your free token in <b>Settings → Free Cloud GPU</b> first.</span>';
+            } else if (q.left <= 0) {
+                note.innerHTML = `<span class="warn">⚠ You've used your free ${q.weekly} GPU-hrs this week. It resets weekly — this render may not run until then.</span>`;
+            } else if (q.left < 5) {
+                note.innerHTML = `<span class="warn">⚠ Only ${q.left} free GPU-hrs left this week (of ${q.weekly}). A full book can use ~4h — it may not finish.</span>`;
+            } else {
+                note.innerHTML = `<span class="ok">${q.left} of ${q.weekly} free GPU-hrs left this week. A book uses ~2–4h. Nothing is charged.</span>`;
+            }
+        } else if (target === 'vast') {
+            note.innerHTML = '<span class="warn">Vast.ai is <b>paid</b> (a few pence/book, billed by the hour). Enable it in Settings first.</span>';
+        } else {
+            note.innerHTML = '<span class="muted">Renders on this computer. Free, but a full book can take hours.</span>';
+        }
+    }
     function pickRender(bookId, el) {
         el.parentElement.querySelectorAll('.rt-opt').forEach(o => o.classList.remove('on'));
         el.classList.add('on');
         const hid = document.getElementById('rt-' + bookId);
         if (hid) hid.value = el.getAttribute('data-rt');
+        renderTargetNote(bookId, el.getAttribute('data-rt'));
     }
 
     async function convertWithSettings(bookId, el) {
@@ -820,6 +854,11 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const voice2 = document.getElementById('voice2-' + bookId)?.value || '';
         const customRegex = document.getElementById('regex-' + bookId)?.value || '';
         const renderTarget = document.getElementById('rt-' + bookId)?.value || 'local';
+        if (renderTarget === 'kaggle') {
+            const q = kaggleQuota;
+            if (!q || !q.configured) { alert('Kaggle isn\'t set up yet. Add your free token in Settings → Free Cloud GPU, then try again.'); return; }
+            if (q.left <= 0 && !confirm(`You've used your free ${q.weekly} Kaggle GPU-hrs this week (resets weekly). Queue anyway?`)) return;
+        }
         const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget }) });
         const data = await resp.json();
         if(data.status === 'success') {
@@ -1119,5 +1158,6 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const uploadVoice = document.getElementById('upload-voice');
         if(uploadVoice) { uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural'); syncSpeedField('upload-voice','upload-speed'); }
         setInterval(loadJobs, 5000); setInterval(loadGpuStatus, 10000);
+        loadKaggleQuota();
     };
 </script></body></html>

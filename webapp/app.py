@@ -3802,6 +3802,20 @@ def pronunciations_settings():
                     'lines': len([ln for ln in rules.splitlines() if ln.strip()])})
 
 
+@app.route('/api/kaggle/quota')
+def kaggle_quota():
+    """Free Kaggle GPU-hours used/left this week, for the UI to signpost."""
+    try:
+        import kaggle_render as KR
+        used = KR.gpu_hours_used()
+        configured = bool(get_setting('KAGGLE_API_TOKEN')) or KR.kaggle_ready()
+        return jsonify({'weekly': KR.WEEKLY_GPU_HOURS, 'used': used,
+                        'left': round(max(0.0, KR.WEEKLY_GPU_HOURS - used), 1),
+                        'configured': configured})
+    except Exception as e:
+        return jsonify({'weekly': 30, 'used': 0, 'left': 30, 'configured': False, 'error': str(e)})
+
+
 @app.route('/api/settings/test_kaggle', methods=['POST'])
 def test_kaggle_connection():
     """Verify Kaggle credentials by making a real authenticated API call."""

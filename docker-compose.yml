@@ -162,6 +162,10 @@ services:
       - ABS_API_TOKEN=${ABS_API_TOKEN:-}
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - QUEUE_RUNNER_ENABLED=0
+      # Kaggle: webapp reads the shared quota state + creds for the settings test
+      - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN:-}
+      - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
+      - KAGGLE_RENDER_STATE=/data/kaggle_render_state.json
       # GPU status display (webapp reads worker's status file, these are fallback)
       - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
       - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
@@ -241,6 +245,8 @@ services:
       - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN:-}
       - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
       - KAGGLE_KERNELS_DIR=/app/kaggle_kernels
+      # Shared GPU-hours state (webapp reads for the quota readout, worker writes)
+      - KAGGLE_RENDER_STATE=/data/kaggle_render_state.json
     volumes:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/uploads:/data/uploads
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
