@@ -1,130 +1,142 @@
-# Getting Started — Full Walkthrough
+# Getting Started 🎧
 
-A step-by-step guide for a brand-new user. This app turns **any** ebook
-(EPUB, PDF, MOBI, and more) into an audiobook, entirely on your own machine.
-Nothing here is specific to any one book — the whole pipeline is general.
+Welcome! This app turns any ebook into an audiobook you can listen to — read
+aloud by a natural-sounding voice, right on your own computer. No subscriptions,
+nothing sent to the cloud, and it's free to run.
 
-## 1. What you need
+This guide assumes **zero** technical background. If you can copy and paste a few
+lines, you can do this. It takes about 15 minutes, most of which is waiting.
 
-- A computer with **Docker** and **Docker Compose** installed (Windows, Mac,
-  or Linux). That's it — no GPU, no accounts, no API keys required to start.
-- ~10 GB free disk (for TTS models, downloaded once on first run).
+---
 
-## 2. Install & first run
+## Step 1 — Install Docker (one-time, ~5 min)
+
+Docker is a free program that runs the app for you so you don't have to install
+lots of fiddly things by hand.
+
+- **Windows or Mac:** download **Docker Desktop** from
+  [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop),
+  run the installer, and open it once so it's running (you'll see a little whale
+  icon).
+- **Linux:** install Docker Engine + the Compose plugin from
+  [docs.docker.com/engine/install](https://docs.docker.com/engine/install/).
+
+That's the only thing you need to install. No GPU, no accounts, no API keys.
+
+---
+
+## Step 2 — Download and start the app (~5 min the first time)
+
+Open a terminal (on Windows, open **PowerShell**; on Mac, open **Terminal**) and
+paste these lines one at a time:
 
 ```bash
 git clone https://github.com/davedavedavenm/epub-to-audiobook.git
 cd epub-to-audiobook
-cp .env.example .env        # optional — defaults work as-is
-
-# Start. Choose which voice engines to enable via "profiles":
-docker compose up -d                                          # Kokoro (fast, default)
-docker compose --profile chatterbox up -d                    # + Chatterbox Turbo (best UK voices)
-docker compose --profile tada up -d                          # + TADA (most natural)
-docker compose --profile chatterbox --profile tada --profile piper up -d   # everything
+docker compose up -d
 ```
 
-Open **http://localhost:8881**. First start downloads each enabled engine's
-model once (cached in a Docker volume afterwards).
+The last line starts everything. **The first run downloads the voice model
+(a few minutes)** — after that it's instant. When it finishes, open your web
+browser and go to:
 
-## 3. Convert your first book
+### 👉 http://localhost:8881
 
-Two ways in the UI:
-- **Library tab** — browse an ebook folder (set `LIBRARY_DIR` in `.env`) and
-  click **Narrate this Book**.
-- **Upload tab** — drop an EPUB/PDF/etc. from your computer.
+You should see the **Audiobook Studio** — a clean library screen. That's it,
+you're running.
 
-Then for any book:
-1. **Pick a Narrator** (voice). Voices are grouped by engine — see §5.
-2. Optionally set a **chapter range** (skip the copyright/title front-matter;
-   start at the real Chapter 1).
-3. Optionally open **Advanced** for a voice blend (Kokoro) or per-book
-   pronunciation fixes (see §4).
-4. Click **Create Audiobook**. Watch it in the **Queue** tab (progress, live
-   log, cancel). Finished books appear in **History** (download) and, if
-   configured, sync to Audiobookshelf (§6).
+> **Want the very best voices?** The default voice (Kokoro) is fast and good.
+> For the premium British narrators (Arthur, Beatrice…), start the app with
+> `docker compose --profile chatterbox up -d` instead. It downloads a bit more
+> the first time. You can always change your mind later.
 
-Every conversion automatically runs the **text preprocessing pipeline** first
-(strips footnote/endnote markers, normalizes numbers/years/currency/units,
-cleans unicode) — this is on for every book, no setup needed. Details in
-PREPROCESSING.md.
+---
 
-## 4. Connect an AI (LLM) for smarter preprocessing — optional but recommended
+## Step 3 — Make your first audiobook (3 clicks)
 
-An optional LLM makes pronunciation and metadata smarter **per book** (e.g.
-working out that "US" is "U-S" not "us", or how to say an unusual name). It is
-**not required** — the deterministic pipeline works without it — but it lifts
-quality on tricky books.
+1. **Add a book.** Click **Upload** in the sidebar and drop in an `.epub` file
+   (or `.pdf`, `.mobi`). It appears in your Library.
+2. **Pick a voice.** Find the book in the Library, click **Narrate**, and choose
+   a narrator from the dropdown. Hit **Preview** on any voice to hear a sample
+   first.
+3. **Press go.** Click **Narrate this book**. The job moves to the **Queue** tab
+   where you can watch its progress.
 
-**Any OpenAI-compatible provider works, including free ones:**
+When it's done, your audiobook lands in the `data/audiobooks/` folder inside the
+app, one MP3 per chapter. Copy them to your phone, or connect
+[Audiobookshelf](#optional-listen-anywhere) to stream them anywhere.
 
-1. In the UI go to **Settings → LLM Integration**.
-2. Pick a **Provider**:
-   - **Z AI (Zhipu)** — has a free flash tier. Good default.
-   - **Groq** — generous free tier, very fast.
-   - **Google Gemini** / **OpenAI** / **DeepSeek** / **xAI** — paid or
-     free-tier depending on your account.
-   - **Custom** — any OpenAI-compatible base URL.
-3. Paste your **API key**, pick a **model** (a cheap "flash"/"mini" model is
-   ideal), and click **Test LLM** to confirm it connects.
-4. Save. From then on, conversions use it to auto-generate per-book
-   pronunciation help.
+That's the whole thing. Everything below is optional.
 
-You can also maintain a **global pronunciation dictionary** (Settings →
-Pronunciation Dictionary) with `search==replace` rules applied to every book,
-and **per-book** rules in each book's Advanced panel.
+---
 
-> Roadmap: an **adaptive QA system** (LLM pre-flight review + Whisper
-> post-flight verification) that automatically catches and fixes per-book
-> pronunciation issues is planned — see PLAN.md §1.
+## How long does it take?
 
-## 5. Voices
+Making an audiobook is real work for your computer — it's generating speech
+second by second. A full novel on a normal computer (no graphics card) can take
+a few hours. That's normal. A couple of ways to speed it up:
 
-**Built-in, all local & free:**
-- **Kokoro** — 20+ voices (British, American, European). Fast, the default.
-- **Chatterbox Turbo** — voice-cloned **British human narrators**: Arthur,
-  Edmund (male), Harriet, Beatrice (female). Highest quality; CPU-friendly.
-- **TADA** — the same British narrators, "most natural" variant (Arthur —
-  TADA, etc.). Slower but the most expressive.
-- **EdgeTTS** — free Microsoft neural voices (needs internet).
-- **Piper** — lightweight fallback.
+- **Have a gaming GPU?** It'll be much faster automatically.
+- **No GPU?** You can send the job to a **free cloud GPU (Kaggle)** — pick it as
+  the render target when you start a book. Same result, just faster, still free.
 
-Preview any voice in the **Voices** tab before converting.
+---
 
-**Add your own voice (any narrator you like):** the Chatterbox/TADA voices are
-cloned from short (~15 s) reference clips of real narrators. To add one, drop
-a `yourvoice.wav` (24 kHz mono) into `chatterbox/voices/` (and
-`tada/voices/yourvoice_tada.wav` for TADA), rebuild that engine's container,
-and it appears as a selectable voice. Public-domain LibriVox recordings are a
-great, legal source.
+## Optional: smarter pronunciation
 
-## 6. Audiobookshelf sync — optional
+If you connect a free AI provider (like Groq or Google Gemini), the app will
+read each book first and figure out how to say tricky names and places correctly
+— all automatically. It's not required; the app works fine without it. See the
+**Settings** tab to add a key if you want this.
 
-To auto-send finished audiobooks to your Audiobookshelf server:
-- Settings → **Audiobookshelf Sync**: set the server URL + API token, or
-- set `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` in `.env` for rsync-based
-  file sync.
+## Optional: listen anywhere
 
-Each conversion lands in its **own folder** (named with a unique job id) — it
-**never overwrites** an existing audiobook.
+[Audiobookshelf](https://www.audiobookshelf.org/) is a free app that streams
+your audiobooks to your phone with bookmarks and playback speed. If you run it,
+add its address in **Settings → Audiobookshelf** and finished books sync to it
+automatically.
 
-## 7. Cloud GPU (optional, OFF by default)
+---
 
-Everything runs on local CPU by default (a novel takes a few hours — leave it
-running). If you want speed, you can enable **Cloud GPU** rendering (Vast.ai)
-in Settings → Render Location. It is **off by default and costs money** — read
-GPU-SAFETY.md first. You never need it; it's purely an accelerator.
+## Choosing a voice (when you're ready to fuss)
 
-## 8. Notifications — optional
+Voices are grouped by **engine**. You don't have to care about this to start —
+but when you want the best result:
 
-Settings supports Telegram and WhatsApp completion alerts. All optional.
+- **Kokoro** — the default. Fast, clear, low effort. Great for a first run.
+- **Chatterbox Turbo** — voice-cloned British narrators (Arthur, Edmund,
+  Harriet, Beatrice). Excellent for long books; runs on CPU or GPU. Enable with
+  the `chatterbox` profile.
+- **Hume TADA** — the most expressive/natural on easy text, but a research
+  model with rough edges on dense non-fiction. Enable with the `tada` profile.
 
-## Troubleshooting
+Which sounds best depends on the book and your hardware — trust your ears, and
+use **Preview** to compare. (More detail in [ENGINES.md](ENGINES.md).)
 
-- **A voice won't preview / first conversion is slow** — the engine loads its
-  model on first use (~1–2 min). Subsequent uses are fast.
-- **Chapter 1 is the copyright page** — set a chapter range to start at the
-  real first chapter.
-- **Chatterbox/TADA voices missing** — start with that engine's profile
-  (`--profile chatterbox` / `--profile tada`).
-- More detail and current status: STATUS.md.
+---
+
+## If something goes wrong
+
+- **The page won't open at localhost:8881** — make sure Docker Desktop is
+  actually running (the whale icon), then run `docker compose up -d` again.
+- **A voice says "offline"** — that engine isn't started. Start it with its
+  profile, e.g. `docker compose --profile chatterbox up -d`.
+- **A conversion failed** — open the job's **Log** in the Queue tab; it usually
+  says exactly what happened. Press **Resume** to retry just the missing
+  chapters.
+- **Still stuck?** Open an issue on the
+  [GitHub repo](https://github.com/davedavedavenm/epub-to-audiobook/issues) with
+  the log text — that's the fastest way to get help.
+
+---
+
+## Where things live (for the curious)
+
+| Thing | Where |
+|-------|-------|
+| The web app | http://localhost:8881 |
+| Your finished audiobooks | `data/audiobooks/<book name>/` |
+| Books you've uploaded | `data/uploads/` |
+| Settings + API keys | the **Settings** tab (stored in `.env`) |
+
+Enjoy your audiobooks. 🎧

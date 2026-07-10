@@ -4,8 +4,9 @@
 
 A self-hosted web application for converting **any** ebook (EPUB, PDF, MOBI,
 and more) into an audiobook using AI text-to-speech, entirely on your own
-machine. Editorial "Narration Press" UI with voice previews, library browsing,
-job management, adaptive text preprocessing, and Audiobookshelf integration.
+machine. A clean "Studio Console" web UI with book-cover library, voice
+previews, per-book render targets (local or free cloud GPU), job management,
+adaptive text preprocessing, and Audiobookshelf integration.
 
 > **New here? Start with the [full walkthrough → GETTING-STARTED.md](GETTING-STARTED.md)** — install, convert your first book, connect an AI for smarter pronunciation, add your own voices, and set up Audiobookshelf.
 
@@ -68,7 +69,10 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
 - **Progress Tracking** - Real-time progress with ETA and per-job logs
 
 ### UI
-- **Editorial "Narration Press" design** - Fraunces + Hanken Grotesk, warm
+- **"Studio Console" design** - cool ink neutrals, one signal-coral accent,
+  mono for data, on-air motif, real book covers; light + dark. (Legacy note:
+  the earlier warm "Narration Press" theme was replaced 2026-07-10.)
+- **_legacy_** - Fraunces + Hanken Grotesk, warm
   paper/ink/oxblood palette, light & dark themes
 - **Tabs** - Library, Upload, Queue, Voices, History, Settings
 - **Queue controls** - pause/resume, cancel, retry-all-failed, live log viewer
