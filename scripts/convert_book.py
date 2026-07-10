@@ -93,10 +93,15 @@ def chapter_text(z, name):
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
     text = normalize_text_for_tts(text, modern=_MODERN)
     # Modern engines read real words natively; phonetic respellings ("Bay-JING")
-    # make them worse (heard "bay...zhing"). Skip the lexicon for modern — the
-    # QA loop handles genuine misreads with targeted natural spellings instead.
-    if _LEXICON and not _MODERN:
-        text = apply_lexicon(text, _LEXICON)
+    # make them worse (heard "bay...zhing"). For modern, keep ONLY acronym
+    # letter-spacing rules ("CEO" -> "C E O" — heard "see you" otherwise);
+    # other misreads go to the QA loop with targeted natural spellings.
+    if _LEXICON:
+        from tts_preprocess import _is_letter_spacing
+        lex = _LEXICON if not _MODERN else {
+            k: v for k, v in _LEXICON.items() if _is_letter_spacing(k, v)}
+        if lex:
+            text = apply_lexicon(text, lex)
     return text
 
 

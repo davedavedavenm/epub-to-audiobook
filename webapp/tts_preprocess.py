@@ -222,6 +222,15 @@ def normalize_unicode_for_tts(text: str) -> str:
     return text
 
 
+def _is_letter_spacing(word: str, repl: str) -> bool:
+    """True if `repl` is just `word`'s letters spaced out (an acronym reading:
+    "CEO" -> "C E O", "U.S." -> "U S"). The only lexicon class safe for modern
+    engines — plain words, no phonetic respelling."""
+    w = re.sub(r'[^A-Za-z]', '', word).upper()
+    r = re.sub(r'[^A-Za-z]', '', repl).upper()
+    return bool(w) and w == r and ' ' in repl.strip()
+
+
 def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False) -> str:
     """Apply all TTS normalization rules to a text string."""
 
@@ -242,14 +251,22 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     # dash-comma hacks: helpers for dumb engines HURT modern models. Genuine
     # misreads on a modern engine are handled by the QA loop (targeted, natural
     # spellings), NOT by blanket respelling here. MODERN-ENGINE CONTRACT.
-    if lexicon and not modern:
+    # EXCEPTION for modern: acronym LETTER-SPACING rules ("CEO" -> "C E O") are
+    # allowed — the replacement is plain words, not a respelling, and modern
+    # engines DO misread undotted initialisms ("CEO" heard as "see you",
+    # Dave 2026-07-10). This is the one lexicon class that helps every engine.
+    if lexicon:
+        active = lexicon if not modern else {
+            k: v for k, v in lexicon.items() if _is_letter_spacing(k, v)}
         # Sort keys by length descending so longer phrases are matched first
-        for word in sorted(lexicon.keys(), key=len, reverse=True):
-            phonetic = lexicon[word]
-            # Use regex with word boundaries to avoid replacing parts of other words,
-            # while allowing case-insensitive matching.
+        for word in sorted(active.keys(), key=len, reverse=True):
+            phonetic = active[word]
+            # Word boundaries avoid replacing parts of other words; keep
+            # case-SENSITIVE for letter-spacing rules on modern (must not turn
+            # the word "ceo…"-like lowercase text into letters).
+            flags = 0 if modern else re.IGNORECASE
             pattern = r'\b' + re.escape(word) + r'\b'
-            text = re.sub(pattern, phonetic, text, flags=re.IGNORECASE)
+            text = re.sub(pattern, phonetic, text, flags=flags)
 
     # === Abbreviations (must come before period-related rules) ===
     # Acronyms read letter-by-letter — helps EVERY engine (else "U.S." -> "us").

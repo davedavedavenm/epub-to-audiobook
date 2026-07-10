@@ -222,6 +222,17 @@ def test_modern_contract_skips_all_plain_number_spelling():
     assert 'percent' in leg and 'Doctor' in leg, "legacy expansion broken"
 
 
+def test_modern_keeps_acronym_letter_spacing_only():
+    """Modern engines misread undotted initialisms ("CEO" heard as "see you",
+    2026-07-10) — acronym LETTER-SPACING lexicon rules are the one class that
+    must still apply for modern. Phonetic respellings stay banned."""
+    tp = _load_tp()
+    lex = {"CEO": "C E O", "IPO": "I P O", "Beijing": "Bay-JING"}
+    out = tp.normalize_text_for_tts("The CEO priced the IPO in Beijing.", lexicon=lex, modern=True)
+    assert 'C E O' in out and 'I P O' in out, "acronym letter-spacing dropped for modern ('see you' regression)"
+    assert 'Bay-JING' not in out and 'Beijing' in out, "phonetic respelling leaked into modern"
+
+
 def test_modern_skips_phonetic_lexicon():
     """Modern engines read Beijing/Cupertino natively; the phonetic respelling
     lexicon ("Bay-JING","Coo-per-TEE-no") makes them read broken syllables
