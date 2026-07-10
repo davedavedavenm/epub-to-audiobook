@@ -208,10 +208,12 @@ def _get_native_prompt(enc, model):
         log.info("native voice: loaded cached calibration ref")
         return _native_prompt
     log.info("native voice: generating unconditioned calibration passage...")
-    try:
-        out = model.generate(text=NATIVE_CAL_TEXT)
-    except TypeError:
-        out = model.generate(prompt=None, text=NATIVE_CAL_TEXT)
+    # generate() requires a prompt DATACLASS but its fields may each be None —
+    # _generate() then zero-inits acoustic features, i.e. true unconditioned
+    # generation (verified against tada/modules/tada.py:1207 + _generate sig).
+    from tada.modules.encoder import EncoderOutput
+    empty = EncoderOutput(**{f: None for f in EncoderOutput.__dataclass_fields__})
+    out = model.generate(prompt=empty, text=NATIVE_CAL_TEXT)
     w = out.audio
     while isinstance(w, (list, tuple)):
         w = w[0]
