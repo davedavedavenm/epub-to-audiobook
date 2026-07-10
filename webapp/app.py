@@ -3029,6 +3029,16 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
 
     job = get_job(job_id) or {}
     engine = job.get('tts_engine', 'kokoro')
+    # Prefer credentials entered in the UI (persisted in app_settings, shared
+    # across webapp/worker via the DB) over any baked-in .env values.
+    for k in ('KAGGLE_API_TOKEN', 'KAGGLE_USERNAME'):
+        v = get_setting(k)
+        if v:
+            os.environ[k] = v
+    # The one "token" field may hold a newer KGAT access-token OR a classic
+    # kaggle.json key — set both env styles so either authenticates.
+    if os.environ.get('KAGGLE_API_TOKEN'):
+        os.environ.setdefault('KAGGLE_KEY', os.environ['KAGGLE_API_TOKEN'])
     if not KR.kaggle_ready():
         update_job(job_id, status='failed',
                    error='Kaggle not configured on this host (no credentials). Add a Kaggle token to enable cloud GPU render.',
@@ -3708,7 +3718,7 @@ def api_settings():
         'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID',
         'LLM_API_KEY', 'TELEGRAM_BOT_TOKEN',
         'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY',
-        'INWORLD_API_KEY'
+        'INWORLD_API_KEY', 'KAGGLE_API_TOKEN'
     ]
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
@@ -3716,6 +3726,8 @@ def api_settings():
         'LLM_API_BASE_URL', 'LLM_MODEL_NAME',
         # Master gate for paid Vast.ai cloud GPU. Default OFF = local render.
         'GPU_RENDER_ENABLED',
+        # Free Kaggle GPU render — username pairs with KAGGLE_API_TOKEN above.
+        'KAGGLE_USERNAME',
     ]
 
     if request.method == 'POST':
@@ -3788,6 +3800,28 @@ def pronunciations_settings():
         return jsonify({'error': str(e)}), 500
     return jsonify({'status': 'saved',
                     'lines': len([ln for ln in rules.splitlines() if ln.strip()])})
+
+
+@app.route('/api/settings/test_kaggle', methods=['POST'])
+def test_kaggle_connection():
+    """Verify Kaggle credentials by making a real authenticated API call."""
+    try:
+        data = request.json or {}
+        token = data.get('token') or get_setting('KAGGLE_API_TOKEN') or os.environ.get('KAGGLE_API_TOKEN')
+        user = data.get('username') or get_setting('KAGGLE_USERNAME') or os.environ.get('KAGGLE_USERNAME')
+        if not token or not user:
+            return jsonify({'error': 'Enter both your Kaggle username and API token first.'}), 400
+        if '...' in token:  # masked value from the UI; use the stored one
+            token = get_setting('KAGGLE_API_TOKEN') or os.environ.get('KAGGLE_API_TOKEN')
+        env = dict(os.environ, KAGGLE_API_TOKEN=token, KAGGLE_KEY=token, KAGGLE_USERNAME=user)
+        r = subprocess.run(['python', '-m', 'kaggle', 'datasets', 'list', '-m'],
+                           capture_output=True, text=True, timeout=30, env=env)
+        if r.returncode == 0:
+            return jsonify({'status': 'success', 'message': f'Connected to Kaggle as {user}!'})
+        msg = (r.stderr or r.stdout or 'unknown error').strip().splitlines()[-1][:160]
+        return jsonify({'error': f'Kaggle auth failed: {msg}'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/settings/test_abs', methods=['POST'])

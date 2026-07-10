@@ -328,6 +328,36 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top:0;">Free Cloud GPU — Kaggle</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            Render any book on a <strong>free Kaggle GPU</strong> (much faster than your
+                            own machine) by choosing <strong>Render on → Kaggle GPU</strong> when you
+                            start a book. You get ~30 free GPU-hours a week. Your token is stored
+                            securely on this server and never leaves it.
+                            <br><br>
+                            <strong>How to get your token (2 minutes, free):</strong>
+                            1) Sign up at <strong>kaggle.com</strong> and verify your phone
+                            (Settings → Phone Verification — required for GPU internet).
+                            2) Go to <strong>kaggle.com → your avatar → Settings → API →
+                            Create New Token</strong>. 3) Open the downloaded <code>kaggle.json</code>
+                            and copy the <code>username</code> and <code>key</code> below.
+                        </p>
+                        <div style="display:flex; gap:16px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Kaggle Username</label>
+                                <input type="text" id="set-KAGGLE_USERNAME" class="input-control" style="margin-top:8px;" placeholder="your-kaggle-username">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
+                            <div style="flex:1;">
+                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Token (the "key" from kaggle.json)</label>
+                                <input type="password" id="set-KAGGLE_API_TOKEN" class="input-control" style="margin-top:8px;" placeholder="Paste your Kaggle API key">
+                            </div>
+                            <button class="btn" style="height:48px;" onclick="testSetting('kaggle', this)">Test Connection</button>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top:0; font-family:'Lora';">Audiobookshelf Sync</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Automatically send finished audiobooks directly to your Audiobookshelf server. 
@@ -1042,6 +1072,9 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             } else if(type === 'inworld') {
                 endpoint = '/api/settings/test_inworld';
                 payload = { api_key: document.getElementById('set-INWORLD_API_KEY').value };
+            } else if(type === 'kaggle') {
+                endpoint = '/api/settings/test_kaggle';
+                payload = { username: document.getElementById('set-KAGGLE_USERNAME').value, token: document.getElementById('set-KAGGLE_API_TOKEN').value };
             }
             const resp = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const data = await resp.json();
