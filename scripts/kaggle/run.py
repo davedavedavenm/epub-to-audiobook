@@ -11,7 +11,7 @@ import os, sys, time, json, glob, shutil, subprocess
 # ---- knobs -----------------------------------------------------------------
 REPO   = "https://github.com/davedavedavenm/epub-to-audiobook.git"
 BRANCH = "master"
-VOICE  = "native"     # EXPERIMENT (#21): TADA native-voice bootstrap — model picks its own voice
+VOICE  = "native_v8"  # EXPERIMENT (#21): model's own voice, harvested from v8 (Dave: "impeccable")
 START  = 1
 END    = 2
 # ---------------------------------------------------------------------------
