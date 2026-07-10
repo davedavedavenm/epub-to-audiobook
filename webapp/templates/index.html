@@ -278,8 +278,15 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     <div class="content-body">
         <div class="tab-panel active" id="tab-library">
             <div class="card">
-                <input type="text" id="library-search" class="input-control" style="width: 100%; padding: 20px; margin-bottom: 40px; font-size: 1.1rem; border-radius: 16px; border: 2px solid var(--border);"
-                       placeholder="Search your collection..." oninput="renderLibrary()">
+                <div style="display:flex; gap:12px; align-items:center; margin-bottom:24px;">
+                    <input type="text" id="library-search" class="input-control" style="flex:1;"
+                           placeholder="Search your collection..." oninput="renderLibrary()">
+                    <select id="library-sort" class="input-control" style="max-width:200px;" onchange="renderLibrary()">
+                        <option value="recent">Recently added</option>
+                        <option value="title">Title (A–Z)</option>
+                        <option value="status">Status</option>
+                    </select>
+                </div>
                 <div id="library-grid" class="library-grid"></div>
             </div>
         </div>
@@ -681,7 +688,16 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     function renderLibrary() {
         const grid = document.getElementById('library-grid');
         const query = (document.getElementById('library-search')?.value || '').toLowerCase();
+        const sortKey = document.getElementById('library-sort')?.value || 'recent';
         const filtered = libraryBooks.filter(b => b.title.toLowerCase().includes(query));
+        if (sortKey === 'title') {
+            filtered.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+        } else if (sortKey === 'status') {
+            const rank = s => (s === 'converting' ? 0 : s === 'completed' ? 1 : 2);
+            filtered.sort((a, b) => rank(a.status) - rank(b.status) || (b.modified_ts || 0) - (a.modified_ts || 0));
+        } else {
+            filtered.sort((a, b) => (b.modified_ts || 0) - (a.modified_ts || 0));
+        }
 
         const voiceOptions = buildVoiceOptions('en-GB-RyanNeural');
         const blendOptions = Object.entries(voices).filter(([id, v]) => v.engine === 'kokoro')
