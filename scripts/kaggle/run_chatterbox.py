@@ -19,6 +19,15 @@ END    = 0                    # 0 = to end of book
 
 WORK, REPO_DIR, OUT = "/kaggle/working", "/kaggle/working/repo", "/kaggle/working/out"
 
+# Kaggle ships TensorFlow; transformers (pulled by chatterbox-tts) lazy-imports
+# it and Kaggle's TF/protobuf are mismatched, so `from transformers import
+# LlamaModel` raises "Could not import module 'LlamaModel'" and the server dies
+# (kernel v1, 2026-07-10). Tell transformers this is torch-only so it never
+# touches TF. Propagates to the server subprocess via os.environ.
+os.environ["USE_TF"] = "0"
+os.environ["USE_TENSORFLOW"] = "0"
+os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
+
 
 def sh(cmd, **kw):
     print("+", " ".join(cmd) if isinstance(cmd, list) else cmd, flush=True)
@@ -30,6 +39,10 @@ def sh(cmd, **kw):
 #    doesn't re-resolve to a CPU/wrong-CUDA wheel (the class of bug that made
 #    TADA silently run on CPU). setuptools<81: perth watermarker imports the
 #    removed pkg_resources.
+# Remove Kaggle's preinstalled TensorFlow so transformers can't import it even
+# if USE_TF is ignored (belt-and-suspenders; non-fatal if absent).
+subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y",
+                "tensorflow", "tensorflow-cpu", "keras"], check=False)
 subprocess.run([sys.executable, "-m", "pip", "install", "-q",
                 "torch==2.6.0", "torchaudio==2.6.0",
                 "--index-url", "https://download.pytorch.org/whl/cu124"], check=False)
