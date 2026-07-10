@@ -237,6 +237,10 @@ services:
       - VASTAI_SSH_KEY=/root/.ssh/vastai_ed25519
       - HOST_VASTAI_SSH_KEY=/home/dave/.ssh/vastai_ed25519
       - VASTAI_API_KEY_FILE=/root/.config/vastai/vast_api_key
+      # Free Kaggle GPU render (per-book "Render on: Kaggle GPU")
+      - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN:-}
+      - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
+      - KAGGLE_KERNELS_DIR=/app/kaggle_kernels
     volumes:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/uploads:/data/uploads
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
@@ -246,6 +250,8 @@ services:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
       - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
+      # Kaggle GPU render: kernel templates (credentials come from env)
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/scripts/kaggle:/app/kaggle_kernels:ro
       # Vast.ai GPU access (for auto-scaling)
       # Use explicit /home/dave paths — $HOME resolves to /root under sudo docker compose
       - /home/dave/.ssh/vastai_ed25519:/root/.ssh/vastai_ed25519:ro

@@ -234,8 +234,21 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .toc-item.active{ background:var(--accent); border-color:var(--accent); }
 
 /* render-target selector (studio cards) */
-.rt-opt{ border-radius:var(--radius-md)!important; }
-.rt-opt:hover{ border-color:var(--ink-3)!important; }
+.render-pick{ margin-bottom:22px; }
+.rt-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+@media(max-width:560px){ .rt-row{ grid-template-columns:1fr; } }
+.rt-opt{ position:relative; border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:13px 14px; cursor:pointer; background:var(--paper-raised); transition:border-color .15s, background .15s; }
+.rt-opt:hover{ border-color:var(--ink-3); }
+.rt-t{ font-weight:600; font-size:.95rem; }
+.rt-s{ font-family:var(--mono); font-size:.66rem; color:var(--ink-3); margin-top:6px; letter-spacing:.04em; }
+.rt-opt.on{ border-color:var(--accent); background:var(--accent-tint); }
+.rt-opt.on .rt-t{ color:var(--accent-ink); }
+.rt-opt.on .rt-s{ color:var(--accent-ink); }
+.rt-opt.cloud.on{ border-color:var(--cloud); background:var(--cloud-tint); }
+.rt-opt.cloud.on .rt-t, .rt-opt.cloud.on .rt-s{ color:var(--cloud-ink); }
+.rt-badge{ position:absolute; top:-8px; right:10px; font-family:var(--mono); font-size:.55rem;
+  letter-spacing:.1em; text-transform:uppercase; background:var(--cloud); color:#fff; padding:2px 7px; border-radius:20px; }
 .tab-panel.active{ animation:fadeIn .4s ease; }
 </style>
 </head><body>
@@ -670,6 +683,22 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             <div class="setup-field"><label class="setup-label">End</label><select id="end-${bookId}" class="input-control"></select></div>
                             <div class="setup-field"><label class="setup-label">Speed</label><input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control"></div>
                         </div>
+                        <div class="render-pick">
+                            <label class="setup-label" style="display:block; margin-bottom:9px;">Render on</label>
+                            <div class="rt-row">
+                                <div class="rt-opt on" data-rt="local" onclick="pickRender('${bookId}',this)">
+                                    <div class="rt-t">This machine</div><div class="rt-s">free · cpu · slow</div>
+                                </div>
+                                <div class="rt-opt cloud" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
+                                    <span class="rt-badge">Recommended</span>
+                                    <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · gpu · fast</div>
+                                </div>
+                                <div class="rt-opt" data-rt="vast" onclick="pickRender('${bookId}',this)">
+                                    <div class="rt-t">Vast GPU</div><div class="rt-s">paid · fastest</div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="rt-${bookId}" value="local">
+                        </div>
                         <details style="margin-bottom: 24px;">
                             <summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Advanced (voice blend &amp; pronunciation)</summary>
                             <div class="setup-grid" style="grid-template-columns: 1fr 2fr; margin-top:16px;">
@@ -729,6 +758,13 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         await fetch('/api/convert', { method: 'POST', body: formData }); switchTab('queue');
     }
 
+    function pickRender(bookId, el) {
+        el.parentElement.querySelectorAll('.rt-opt').forEach(o => o.classList.remove('on'));
+        el.classList.add('on');
+        const hid = document.getElementById('rt-' + bookId);
+        if (hid) hid.value = el.getAttribute('data-rt');
+    }
+
     async function convertWithSettings(bookId, el) {
         const path = el.getAttribute('data-path');
         const voice = document.getElementById('voice-' + bookId).value;
@@ -737,7 +773,8 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const speed = document.getElementById('speed-' + bookId).value;
         const voice2 = document.getElementById('voice2-' + bookId)?.value || '';
         const customRegex = document.getElementById('regex-' + bookId)?.value || '';
-        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex }) });
+        const renderTarget = document.getElementById('rt-' + bookId)?.value || 'local';
+        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget }) });
         const data = await resp.json();
         if(data.status === 'success') {
             const oldText = el.textContent;

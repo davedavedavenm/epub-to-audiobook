@@ -60,6 +60,7 @@ def kaggle_ready():
     """True if the CLI is importable and credentials are present."""
     cfg_dir = os.environ.get("KAGGLE_CONFIG_DIR", os.path.expanduser("~/.kaggle"))
     has_creds = (os.environ.get("KAGGLE_KEY") and os.environ.get("KAGGLE_USERNAME")) or \
+        os.environ.get("KAGGLE_API_TOKEN") or \
         os.path.exists(os.path.join(cfg_dir, "kaggle.json")) or \
         os.path.exists(os.path.join(cfg_dir, "access_token"))
     if not has_creds:

@@ -538,7 +538,8 @@ def init_db():
                 job_log_path TEXT,
                 newline_mode TEXT DEFAULT 'double',
                 title_mode TEXT DEFAULT 'auto',
-                custom_regex TEXT
+                custom_regex TEXT,
+                render_target TEXT DEFAULT 'local'
             )
         ''')
 
@@ -555,6 +556,10 @@ def init_db():
             pass
 
         # Add custom_regex column (migration)
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN render_target TEXT DEFAULT 'local'")
+        except sqlite3.OperationalError:
+            pass
         try:
             conn.execute("ALTER TABLE jobs ADD COLUMN custom_regex TEXT")
         except sqlite3.OperationalError:
@@ -707,8 +712,8 @@ def save_job(job: dict):
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
-             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -752,7 +757,8 @@ def save_job(job: dict):
             job.get('title_mode', 'auto'),
             job.get('custom_regex'),
             job.get('preprocess_summary'),
-            job.get('narration_profile')
+            job.get('narration_profile'),
+            job.get('render_target', 'local')
         ))
         conn.commit()
 
@@ -771,7 +777,7 @@ def get_all_jobs() -> list:
             SELECT * FROM jobs
             ORDER BY
                 CASE
-                    WHEN status IN ('converting', 'converting PDF', 'converting to audio') THEN 0
+                    WHEN status IN ('converting', 'converting PDF', 'converting to audio') OR status LIKE '%Kaggle%' THEN 0
                     WHEN status = 'queued' THEN 1
                     ELSE 2
                 END,
@@ -1359,6 +1365,7 @@ def running_job_count():
         result = conn.execute('''
             SELECT COUNT(*) FROM jobs
             WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
+               OR status LIKE '%Kaggle%'
         ''').fetchone()
         return result[0]
 
@@ -3006,6 +3013,86 @@ def monitor_conversion(job_id: str, container_name: str):
 
 # ============ Conversion Function ============
 
+KAGGLE_KERNELS_DIR = os.environ.get('KAGGLE_KERNELS_DIR', '/app/kaggle_kernels')
+
+
+def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, voice: str):
+    """Render a book on a free Kaggle GPU (chatterbox/tada), then run the same
+    completion path as a local conversion (verify, ABS sync, notify)."""
+    try:
+        import kaggle_render as KR
+    except Exception as e:
+        update_job(job_id, status='failed', error=f'Kaggle render unavailable: {e}',
+                   completed_at=datetime.now().isoformat())
+        maybe_start_next_queued_job()
+        return
+
+    job = get_job(job_id) or {}
+    engine = job.get('tts_engine', 'kokoro')
+    if not KR.kaggle_ready():
+        update_job(job_id, status='failed',
+                   error='Kaggle not configured on this host (no credentials). Add a Kaggle token to enable cloud GPU render.',
+                   completed_at=datetime.now().isoformat())
+        append_job_log(job_id, "Kaggle render aborted: no credentials")
+        maybe_start_next_queued_job()
+        return
+    if engine not in ('chatterbox', 'tada'):
+        update_job(job_id, status='failed',
+                   error=f'{engine} cannot render on Kaggle GPU (chatterbox/tada only).',
+                   completed_at=datetime.now().isoformat())
+        maybe_start_next_queued_job()
+        return
+
+    epub_path = UPLOAD_DIR / input_filename
+    output_path = OUTPUT_DIR / output_dirname
+    output_path.mkdir(parents=True, exist_ok=True)
+    start = job.get('start_chapter') or 1
+    end = job.get('end_chapter') or 0
+    update_job(job_id, status='rendering on Kaggle GPU', progress_percent=1)
+    append_job_log(job_id, f"Kaggle GPU render start (engine={engine}, voice={voice})")
+
+    # Honest coarse progress: Kaggle exposes only queued/running/complete, so we
+    # estimate from elapsed vs a rough projection (full book ~5h) and snap to the
+    # real chapter count on completion. Labeled as an estimate in the status.
+    def on_status(st, mins):
+        pct = min(95, max(2, int(mins / (5 * 60) * 100)))  # ~5h projection
+        label = {'queued': 'queued on Kaggle', 'running': 'rendering on Kaggle GPU'}.get(st, 'rendering on Kaggle GPU')
+        update_job(job_id, status=label, progress_percent=pct, eta_minutes=max(0, 5 * 60 - mins))
+
+    ok, msg = KR.render_on_kaggle(
+        str(epub_path), voice, engine, start, end, str(output_path),
+        KAGGLE_KERNELS_DIR, log=lambda m: append_job_log(job_id, m), on_status=on_status)
+
+    if not ok:
+        update_job(job_id, status='failed', error=f'Kaggle render failed: {msg}',
+                   completed_at=datetime.now().isoformat())
+        append_job_log(job_id, f"Kaggle render failed: {msg}")
+        maybe_start_next_queued_job()
+        return
+
+    # Same completion tail as the local path.
+    removed = cleanup_small_files(output_path, MIN_CHAPTER_SIZE_KB)
+    output_files = list(output_path.glob('*.mp3'))
+    is_ok, verify_msg = verify_book_complete(
+        job_id, output_path, job.get('total_chapters'),
+        start_chapter=job.get('start_chapter'), end_chapter=job.get('end_chapter'),
+        cleaned_up_count=removed)
+    if not is_ok:
+        update_job(job_id, status='failed', error=f'Verification failed: {verify_msg}',
+                   completed_at=datetime.now().isoformat())
+        maybe_start_next_queued_job()
+        return
+    synced = copy_to_audiobookshelf(output_path, job.get('book_name'), job_id=job_id)
+    update_job(job_id, status='completed', file_count=len(output_files),
+               progress_percent=100, synced_to_abs=synced,
+               completed_at=datetime.now().isoformat())
+    append_job_log(job_id, f"Kaggle render complete: {len(output_files)} chapters ({msg})")
+    job = get_job(job_id)
+    if job and job.get('notify_telegram'):
+        send_telegram_notification(job, success=True)
+    maybe_start_next_queued_job()
+
+
 def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: str, is_pdf: bool = False):
     """Run book conversion via Docker in background."""
     # Guard: if this job is already being converted (e.g. another process claimed it),
@@ -3018,6 +3105,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             return
         update_job(job_id, status='converting', started_at=datetime.now().isoformat())
     append_job_log(job_id, f"Conversion start (input={input_filename}, output={output_dirname})")
+
+    # Cloud GPU render path: delegate to Kaggle instead of a local container.
+    _rt_job = get_job(job_id)
+    if _rt_job and (_rt_job.get('render_target') or 'local') == 'kaggle':
+        return convert_book_kaggle(job_id, input_filename, output_dirname, voice)
 
     host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
     host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
@@ -4958,7 +5050,8 @@ def convert_from_library():
             'start_chapter': start_chapter,
             'end_chapter': end_chapter,
             'notify_telegram': 1 if data.get('notify_telegram') else 0,
-            'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0
+            'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0,
+            'render_target': (data.get('render_target') or 'local').lower()
         })
         if engine_fallback_note:
             append_job_log(job_id, f"Engine fallback: {engine_fallback_note}")
