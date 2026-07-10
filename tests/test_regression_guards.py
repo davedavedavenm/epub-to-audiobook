@@ -96,9 +96,16 @@ def test_chatterbox_kaggle_kernel_pins_cuda_torch():
     setuptools<81 (perth watermarker imports the removed pkg_resources)."""
     k = (ROOT / 'scripts' / 'kaggle' / 'run_chatterbox.py').read_text(encoding='utf-8')
     assert re.search(r'torch==\d.*cu\d', k, re.S), "chatterbox kernel torch not CUDA-pinned — silent-CPU risk"
-    ti = k.find('torch==')
-    ci = k.find('chatterbox-tts')
-    assert 0 < ti < ci, "CUDA torch must be installed BEFORE chatterbox-tts, else it re-resolves"
+    # Order the actual pip-install INVOCATIONS (ignore prose in comments): the
+    # CUDA torch install must precede the chatterbox-tts install so pip finds
+    # torch satisfied and doesn't re-resolve to a CPU/mismatched wheel.
+    lines = k.splitlines()
+    torch_line = next((i for i, l in enumerate(lines)
+                       if 'pip' in l and '"torch==' in l or ('torch==' in l and 'index-url' in l)), None)
+    cbx_line = next((i for i, l in enumerate(lines)
+                     if '"chatterbox-tts"' in l), None)
+    assert torch_line is not None and cbx_line is not None, "couldn't locate the pip install lines"
+    assert torch_line < cbx_line, "CUDA torch must be installed BEFORE chatterbox-tts, else it re-resolves"
     assert 'refusing CPU run' in k or 'cuda_available' in k, "kernel dropped the GPU gate — could run CPU unnoticed"
     assert 'setuptools<81' in k, "perth watermarker needs setuptools<81 (pkg_resources removed in 81+)"
 
