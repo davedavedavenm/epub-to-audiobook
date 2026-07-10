@@ -99,11 +99,9 @@ def test_chatterbox_kaggle_kernel_pins_cuda_torch():
     # Order the actual pip-install INVOCATIONS (ignore prose in comments): the
     # CUDA torch install must precede the chatterbox-tts install so pip finds
     # torch satisfied and doesn't re-resolve to a CPU/mismatched wheel.
-    lines = k.splitlines()
-    torch_line = next((i for i, l in enumerate(lines)
-                       if 'pip' in l and '"torch==' in l or ('torch==' in l and 'index-url' in l)), None)
-    cbx_line = next((i for i, l in enumerate(lines)
-                     if '"chatterbox-tts"' in l), None)
+    code_lines = [l for l in k.splitlines() if not l.lstrip().startswith('#')]
+    torch_line = next((i for i, l in enumerate(code_lines) if 'torch==' in l), None)
+    cbx_line = next((i for i, l in enumerate(code_lines) if 'chatterbox-tts' in l), None)
     assert torch_line is not None and cbx_line is not None, "couldn't locate the pip install lines"
     assert torch_line < cbx_line, "CUDA torch must be installed BEFORE chatterbox-tts, else it re-resolves"
     assert 'refusing CPU run' in k or 'cuda_available' in k, "kernel dropped the GPU gate — could run CPU unnoticed"
