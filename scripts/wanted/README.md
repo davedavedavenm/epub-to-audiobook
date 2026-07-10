@@ -69,3 +69,13 @@ Hourly run with a lock (recommended):
 - `--max-requests-per-run`: hard cap of OpenBooks enqueues per run
 - `--request-cooldown-s`: minimum time between requests per title
 - `--min-wanted-age-s`: wait this long after becoming Wanted before enqueuing (helps avoid LL churn)
+
+## Pipeline healthcheck (installed 2026-07-10)
+
+`pipeline_healthcheck.sh` runs daily (cron 09:00 on docker-vm) and Telegram-alerts
+ONLY when something is wrong: LazyLibrarian API, SABnzbd API (key+whitelist),
+OpenBooks websocket handshake, library-sync freshness (sync.log on the OpenBooks
+host), stale stuck `.temp` downloads (>2h), and repeated bridge failures.
+Born from two weeks of silent failure: the sync cron died on a host-key change
+and the OpenBooks bridge failed 469 times on a parser bug — all logged, nothing
+alerted. Silent failure is the enemy; every leg now has a tripwire.
