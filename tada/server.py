@@ -105,6 +105,12 @@ def _voice_transcript(name):
     return _transcripts.get(name, "")
 
 
+# Natural pause inserted between generation chunks. Chunks split at sentence
+# boundaries, but TADA has no long-form mode (per HumeAI/tada docs), so
+# hard-concatenating chunks makes abrupt, paceless joins — heard as "weird
+# pacing" on long text (2026-07-09). ~250ms reads as a normal sentence gap.
+JOIN_SILENCE_MS = int(os.environ.get("TADA_JOIN_SILENCE_MS", "250"))
+
 # Throwaway lead-in absorbing the first-word cold-start; trimmed off after.
 LEADIN = os.environ.get("TADA_LEADIN", "Right. ")
 LEADIN_ENABLED = os.environ.get("TADA_TRIM_LEADIN", "1") not in ("0", "false", "no")
@@ -210,6 +216,8 @@ def speech(req: SpeechReq):
                 arr = np.asarray(w, dtype="float32").reshape(-1)
                 if lead:
                     arr = _trim_leadin(arr)
+                if i > 0 and JOIN_SILENCE_MS > 0:
+                    pieces.append(np.zeros(int(SR * JOIN_SILENCE_MS / 1000), dtype="float32"))
                 pieces.append(arr)
                 del out
         gc.collect()
