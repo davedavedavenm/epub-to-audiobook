@@ -180,23 +180,70 @@ def health():
 def list_voices():
     if not _voice_paths:
         _load_voices()
-    return {"voices": [{"id": v} for v in sorted(_voice_paths)]}
+    return {"voices": [{"id": v} for v in sorted(_voice_paths)] + [{"id": "native"}]}
+
+
+# NATIVE-VOICE BOOTSTRAP ("native" voice id): generate one calibration passage
+# UNCONDITIONED so the model speaks in its own preferred voice (heard acting a
+# quotation mid-book, it was impeccable — Dave 2026-07-10), then use that
+# output as the reference prompt for everything else. Consistency comes from
+# conditioning on in-distribution audio, and the reference transcript is
+# perfect by construction (we know exactly what it spoke), so alignment cannot
+# be wrong. Internals allow prompt=None (prompt_acoustic_features: ...|None).
+NATIVE_CAL_TEXT = ("The story begins quietly, as most true stories do. "
+                   "By the following spring, everything about the company had changed, "
+                   "and the people who built it knew there was no going back.")
+_native_prompt = None
+_NATIVE_REF_PATH = os.path.join(os.environ.get("HF_HOME", "/tmp"), "tada_native_ref.wav")
+
+
+def _get_native_prompt(enc, model):
+    global _native_prompt
+    if _native_prompt is not None:
+        return _native_prompt
+    if os.path.exists(_NATIVE_REF_PATH):
+        data, sr = sf.read(_NATIVE_REF_PATH, dtype="float32")
+        aud = torch.from_numpy(np.ascontiguousarray(data[None, :])).to(DEVICE)
+        _native_prompt = enc(aud, text=[NATIVE_CAL_TEXT], sample_rate=sr)
+        log.info("native voice: loaded cached calibration ref")
+        return _native_prompt
+    log.info("native voice: generating unconditioned calibration passage...")
+    try:
+        out = model.generate(text=NATIVE_CAL_TEXT)
+    except TypeError:
+        out = model.generate(prompt=None, text=NATIVE_CAL_TEXT)
+    w = out.audio
+    while isinstance(w, (list, tuple)):
+        w = w[0]
+    if hasattr(w, "detach"):
+        w = w.detach().cpu().float().numpy()
+    arr = np.asarray(w, dtype="float32").reshape(-1)
+    sf.write(_NATIVE_REF_PATH, arr, SR)
+    aud = torch.from_numpy(np.ascontiguousarray(arr[None, :])).to(DEVICE)
+    _native_prompt = enc(aud, text=[NATIVE_CAL_TEXT], sample_rate=SR)
+    log.info("native voice: calibration ref built (%.1fs)", len(arr) / SR)
+    return _native_prompt
 
 
 @app.post("/v1/audio/speech")
 def speech(req: SpeechReq):
     if not _voice_paths:
         _load_voices()
-    ref = _voice_paths.get(req.voice) or (next(iter(_voice_paths.values())) if _voice_paths else None)
-    if ref is None:
-        return JSONResponse({"error": "no reference voices installed"}, status_code=503)
-    ref_name = req.voice if req.voice in _voice_paths else os.path.splitext(os.path.basename(ref))[0]
+    if req.voice in ("native", "tada_native"):
+        enc, model = _get_model()
+        with _GEN_LOCK:
+            prompt = _get_native_prompt(enc, model)
+    else:
+        ref = _voice_paths.get(req.voice) or (next(iter(_voice_paths.values())) if _voice_paths else None)
+        if ref is None:
+            return JSONResponse({"error": "no reference voices installed"}, status_code=503)
+        ref_name = req.voice if req.voice in _voice_paths else os.path.splitext(os.path.basename(ref))[0]
 
-    enc, model = _get_model()
-    data, sr = sf.read(ref, dtype="float32")
-    data = data[None, :] if data.ndim == 1 else data.T
-    aud = torch.from_numpy(np.ascontiguousarray(data)).to(DEVICE)
-    prompt = enc(aud, text=[_voice_transcript(ref_name)], sample_rate=sr)
+        enc, model = _get_model()
+        data, sr = sf.read(ref, dtype="float32")
+        data = data[None, :] if data.ndim == 1 else data.T
+        aud = torch.from_numpy(np.ascontiguousarray(data)).to(DEVICE)
+        prompt = enc(aud, text=[_voice_transcript(ref_name)], sample_rate=sr)
 
     pieces = []
     with _GEN_LOCK:
