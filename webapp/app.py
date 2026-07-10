@@ -4669,6 +4669,83 @@ def library_toc():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def _extract_epub_cover(epub_path):
+    """Return (bytes, mimetype) for an epub's cover image, or (None, None).
+    Detection order: OPF meta name=cover -> manifest cover-image property ->
+    a manifest image whose href looks like a cover -> largest image."""
+    import zipfile, posixpath, re as _re
+    try:
+        with zipfile.ZipFile(epub_path) as z:
+            names = z.namelist()
+            # locate the OPF via container.xml
+            opf = None
+            try:
+                cont = z.read('META-INF/container.xml').decode('utf-8', 'ignore')
+                m = _re.search(r'full-path="([^"]+\.opf)"', cont)
+                if m:
+                    opf = m.group(1)
+            except Exception:
+                pass
+            if not opf:
+                opf = next((n for n in names if n.lower().endswith('.opf')), None)
+            base = posixpath.dirname(opf) if opf else ''
+            href = None
+            if opf:
+                x = z.read(opf).decode('utf-8', 'ignore')
+                cover_id = None
+                mm = _re.search(r'<meta[^>]+name="cover"[^>]+content="([^"]+)"', x) \
+                    or _re.search(r'<meta[^>]+content="([^"]+)"[^>]+name="cover"', x)
+                if mm:
+                    cover_id = mm.group(1)
+                item = None
+                if cover_id:
+                    item = _re.search(r'<item[^>]+id="%s"[^>]*href="([^"]+)"' % _re.escape(cover_id), x) \
+                        or _re.search(r'<item[^>]+href="([^"]+)"[^>]*id="%s"' % _re.escape(cover_id), x)
+                if not item:
+                    item = _re.search(r'<item[^>]+properties="[^"]*cover-image[^"]*"[^>]*href="([^"]+)"', x) \
+                        or _re.search(r'<item[^>]+href="([^"]+)"[^>]*properties="[^"]*cover-image', x)
+                if item:
+                    href = posixpath.normpath(posixpath.join(base, item.group(1)))
+            if not href:
+                imgs = [n for n in names if _re.search(r'\.(jpe?g|png|webp)$', n, _re.I)]
+                cand = [n for n in imgs if 'cover' in n.lower()]
+                pool = cand or imgs
+                if pool:
+                    href = max(pool, key=lambda n: z.getinfo(n).file_size)
+            if not href:
+                return None, None
+            if href not in names:
+                href = next((n for n in names if n.endswith(posixpath.basename(href))), href)
+            data = z.read(href)
+            ext = href.rsplit('.', 1)[-1].lower()
+            mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                    'webp': 'image/webp'}.get(ext, 'image/jpeg')
+            return data, mime
+    except Exception:
+        return None, None
+
+
+@app.route('/api/library/cover')
+def library_cover():
+    """Serve an epub's embedded cover image (GET, for use as <img src>)."""
+    path_str = request.args.get('path', '')
+    if not path_str:
+        return ('', 400)
+    try:
+        p = Path(path_str).resolve()
+        if not str(p).startswith(str(LIBRARY_DIR.resolve())) or not p.exists():
+            return ('', 404)
+        if p.suffix.lower() != '.epub':
+            return ('', 404)
+        data, mime = _extract_epub_cover(p)
+        if not data:
+            return ('', 404)
+        from flask import Response
+        return Response(data, mimetype=mime, headers={'Cache-Control': 'public, max-age=86400'})
+    except Exception:
+        return ('', 500)
+
+
 @app.route('/api/library/preview', methods=['POST'])
 def library_preview():
     data = request.json or {}

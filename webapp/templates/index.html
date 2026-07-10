@@ -196,9 +196,10 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .library-item::before{ display:none; }
 .library-item:hover{ transform:none; box-shadow:none; border-color:var(--border-strong); }
 .li-main{ display:flex; align-items:center; gap:15px; padding:15px 18px; }
-.li-cover{ width:38px; height:54px; border-radius:5px; flex:none; position:relative;
+.li-cover{ width:38px; height:54px; border-radius:5px; flex:none; position:relative; overflow:hidden;
   background:linear-gradient(150deg,#2A2E3A,#40465A); border:1px solid rgba(255,255,255,.07); }
-.li-cover::before{ content:""; position:absolute; top:6px; left:5px; width:13px; height:2px; background:var(--accent); border-radius:2px; opacity:.85; }
+.li-cover::before{ content:""; position:absolute; top:6px; left:5px; width:13px; height:2px; background:var(--accent); border-radius:2px; opacity:.85; z-index:0; }
+.li-cover img{ position:relative; z-index:1; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .3s; display:block; }
 .li-info{ flex:1; min-width:0; }
 .li-title{ font-family:var(--sans); font-size:1.02rem; font-weight:600; letter-spacing:-.01em; line-height:1.3; color:var(--text-primary);
   overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
@@ -652,7 +653,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             return `
                 <div class="library-item">
                     <div class="li-main">
-                        <div class="li-cover" aria-hidden="true"></div>
+                        <div class="li-cover" aria-hidden="true">${b.format && b.format.toLowerCase()==='epub' ? `<img loading="lazy" src="/api/library/cover?path=${encodeURIComponent(b.path)}" onload="this.style.opacity=1" onerror="this.remove()">` : ''}</div>
                         <div class="li-info">
                             <div class="li-title">${cleanTitle}</div>
                             <div class="li-meta"><span class="li-fmt">${b.format}</span>${statusBadge}</div>
