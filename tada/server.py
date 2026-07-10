@@ -211,12 +211,13 @@ def _get_native_prompt(enc, model):
     # generate() requires a prompt DATACLASS but its fields may each be None —
     # _generate() then zero-inits acoustic features, i.e. true unconditioned
     # generation (verified against tada/modules/tada.py:1207 + _generate sig).
-    from tada.modules.encoder import EncoderOutput
-    empty = EncoderOutput(**{f: None for f in EncoderOutput.__dataclass_fields__})
-    # generate() prepends the prompt transcript: prompt.text[0] + text, sliced
-    # by prompt.text_tokens_len — an empty prompt needs "" / 0 there (v10 fail).
-    empty.text = [""]
-    empty.text_tokens_len = [0]
+    # Encode 1s of SILENCE with an empty transcript: a fully-valid prompt by
+    # construction (v10/v11 died field-stuffing a bare EncoderOutput — generate()
+    # touches text, text_tokens_len, audio_len, sample_rate, ...). Silence
+    # carries no speaker cues, so generation is effectively unconditioned and
+    # the model picks its own voice.
+    sil = torch.zeros(1, SR, dtype=torch.float32).to(DEVICE)
+    empty = enc(sil, text=[""], sample_rate=SR)
     out = model.generate(prompt=empty, text=NATIVE_CAL_TEXT)
     w = out.audio
     while isinstance(w, (list, tuple)):
