@@ -44,8 +44,13 @@ FAILS=$(grep -c "bridge failed\|bridge timeout" <(tail -500 /home/dave/scripts/w
 
 if [ ${#PROBLEMS[@]} -gt 0 ]; then
   MSG="📚 Book pipeline problems:"
-  for p in "${PROBLEMS[@]}"; do MSG="$MSG%0A- $p"; done
-  curl -sf -m 10 "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}" >/dev/null
+  for p in "${PROBLEMS[@]}"; do MSG="$MSG
+- $p"; done
+  # URL-ENCODED send. The original query-string send failed SILENTLY on spaces
+  # (caught 2026-07-10: "alerts" never reached Telegram) — the alert path now
+  # verifies its own delivery and logs loudly if the send fails.
+  R=$(curl -s -m 10 -G "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" --data-urlencode "text=${MSG}")
+  echo "$R" | grep -q '"ok":true' || echo "TELEGRAM SEND FAILED: ${R:0:120}"
   echo "ALERTED: ${#PROBLEMS[@]} problems"; printf "%s\n" "${PROBLEMS[@]}"
   exit 1
 fi
