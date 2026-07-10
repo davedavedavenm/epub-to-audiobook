@@ -7,6 +7,26 @@ this file, the code is wrong. (This file exists because we spent days
 debugging problems the official docs already answered — see OPERATIONS.md
 2026-07-09.)
 
+## Listening outcomes (one user, one book — NOT a general ranking)
+
+Recorded so the repo reflects what was verified by ear, on `Apple in China`
+(dense proper nouns, non-fiction), 2026-07-10:
+
+| Engine | Verdict | Hardware |
+|---|---|---|
+| Chatterbox Turbo (`uk_male_minter` / "Arthur") | "really really good" — accepted for full-book use | CPU only (Ryzen 9 8945HS, 16 threads) |
+| TADA-1B (v8, cloned voice, after transcript+pacing fixes) | Better than earlier cuts, but residual pacing drift + proper-noun misreads | Kaggle T4 |
+
+**Read this as a data point, not a recommendation.** It reflects one listener,
+one non-fiction book, and CPU-only local hardware. TADA's ceiling is genuinely
+higher — mid-generation it spontaneously voiced a quotation in its own native
+voice with flawless prosody and pronunciation (v8 002, 03:03–03:55). Its
+weakness is *control*, not capability: no long-form mode, no pronunciation
+control, no documented sampling params. On a GPU, with shorter chapters, or
+with fiction/dialogue, TADA may well win — and if Hume ships long-form support
+it likely becomes the default (see issue #21). Both engines stay first-class;
+pick by ear on your own hardware.
+
 ## Hume TADA-1B
 
 Sources: [HumeAI/tada GitHub](https://github.com/HumeAI/tada) ·

@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-08.** Honest single source of truth. "Verified" = it
+**Last updated: 2026-07-10.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
@@ -63,9 +63,13 @@ making the **self-correcting loop automatic in the UI**.
   runs hit env conflicts, now fixed).
 - **Background hiss** — TADA vocoder artifact. `--denoise` now attacks it but
   the TADA-vs-Chatterbox A/B and default policy are open (#8).
-- **Real UI-path audio** — a real Chatterbox webapp job (`f6f87e36`) is
-  rendering on zorin CPU with the fixes applied; slow (CPU), gradeable output
-  pending.
+- **Engine A/B — verified by ear 2026-07-10**: on `Apple in China` (non-fiction,
+  CPU-only local), **Chatterbox Turbo (Arthur) graded "really really good" and
+  is the working choice for full-book runs here.** TADA v8 was better than
+  earlier cuts but still drifted on pacing/proper-nouns. This is one book on one
+  (GPU-less) box — NOT a general ranking; TADA's ceiling is higher and may win
+  on GPU / shorter chapters / dialogue. Recorded neutrally in ENGINES.md; TADA
+  refinement path in #21.
 
 ## Open work → GitHub issues
 

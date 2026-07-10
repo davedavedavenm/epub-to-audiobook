@@ -19,13 +19,17 @@ For current build state and remaining work see [STATUS.md](STATUS.md).
 - **Kokoro TTS** - default local engine; good quality, very low runtime cost, CPU or Vast.ai GPU
   - British, American, European, and multilingual voice packs
   - Voice mixing support (blend two voices)
-- **Chatterbox Turbo** - highest-quality local engine; voice-cloned British
-  narrators (Arthur, Edmund, Harriet, Beatrice) from public-domain LibriVox
-  readers. Runs on CPU (a few hours per novel) or GPU. Enable with the
-  `chatterbox` compose profile.
-- **Hume TADA** - the most natural / expressive engine; the same British
-  narrators, voice-cloned via TADA-1B. Slower than Turbo. Enable with the
-  `tada` compose profile.
+- **Chatterbox Turbo** - production narration engine with official pacing
+  controls; voice-cloned British narrators (Arthur, Edmund, Harriet, Beatrice)
+  from public-domain LibriVox readers. Runs well on **CPU** (a few hours per
+  novel) or GPU — no GPU required. Enable with the `chatterbox` compose profile.
+- **Hume TADA** - highest natural-voice ceiling and most expressive, via
+  TADA-1B; the same British narrators. A research model (no long-form/pacing
+  controls) — strongest on shorter or dialogue-heavy text and happiest on a
+  GPU. Enable with the `tada` compose profile.
+- Which sounds best is **text- and hardware-dependent — judge by ear**; see
+  [ENGINES.md](ENGINES.md) for officially-sourced facts and recorded listening
+  outcomes.
 - **Piper TTS** - lightweight local fallback for low-resource systems
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **AWS Polly** - legacy paid fallback via `tts-proxy`; not recommended (good long-form output is too expensive)
