@@ -77,7 +77,12 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
 - **Tabs** - Library, Upload, Queue, Voices, History, Settings
 - **Queue controls** - pause/resume, cancel, retry-all-failed, live log viewer
 - **Preprocessing badge** - per-job "PRE ✓" with a summary of what was cleaned
-- **Render Location toggle** - Local (default) vs Cloud GPU (off by default)
+- **Per-book render target** - choose **This machine / Kaggle GPU (free) /
+  Vast GPU** right in the Narrate card; Kaggle renders run on a free cloud GPU
+  and appear in the Queue
+- **Real book covers** - epub cover art in the library, sorted most-recent-first
+- **Guided, secure setup** - Settings has step-by-step Kaggle/LLM/ABS config
+  with Test-Connection buttons; secrets persist on the `/data` volume, masked
 
 ### Integration
 - **Audiobookshelf Sync** - Auto-sync completed books to ABS (each in its own
@@ -104,7 +109,7 @@ cp .env.example .env
 # 3. Start. Enable the engines you want via profiles:
 docker compose up -d                                              # Kokoro only (fast)
 docker compose --profile chatterbox up -d                        # + Chatterbox Turbo (best UK voices)
-docker compose --profile tada up -d                              # + TADA (most natural)
+docker compose --profile tada up -d                              # + TADA (expressive; research model)
 docker compose --profile piper --profile chatterbox --profile tada up -d   # everything
 
 # 4. Open the UI

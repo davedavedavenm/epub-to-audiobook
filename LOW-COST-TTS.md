@@ -210,7 +210,9 @@ preprocessed text. Dave's listening verdicts:
   is occasional pronunciation trips and slightly robotic pacing. Turbo
   degrades past ~300 chars per generation — always chunk (the devnen server
   does this automatically).
-- **TADA + preset voice**: the most natural prosody of anything tested, and
+- **TADA + preset voice**: the most natural prosody of anything tested *on easy
+  text* (on dense non-fiction it drifts — 2026-07-10 verdict in ENGINES.md chose
+  Chatterbox for the full book), and
   it spontaneously gives quoted dialogue a different voice (emergent
   speech-language-model behavior; Dave likes it). Artifacts: pacing drift
   within long passes, occasional background noise, and the preset voices are

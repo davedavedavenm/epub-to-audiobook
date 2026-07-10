@@ -5,33 +5,40 @@ was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
 
-## TL;DR (2026-07-08)
+## TL;DR (2026-07-10)
 
-The engines and pipeline work; the current frontier is **audio quality** and
-making the **self-correcting loop automatic in the UI**.
+The engines, pipeline, and web UI all work end to end. Focus has shifted from
+"does it convert" to **product**: a clean UI, free cloud-GPU rendering anyone
+can drive, and self-service configuration.
 
+- **Chosen engine (by ear, 2026-07-10)**: Chatterbox Turbo (Arthur) graded
+  "really really good" on Apple in China and is the working full-book engine on
+  Dave's hardware — recorded neutrally in ENGINES.md (NOT a general ranking;
+  TADA's ceiling is higher, GPU/fiction may flip it).
+- **Render anywhere, from the UI**: per-book **Render on → This machine /
+  Kaggle GPU / Vast** selector. Kaggle GPU is free (~30 GPU-hrs/wk) and fully
+  wired: the worker uploads the epub as a Kaggle dataset, pushes the GPU kernel,
+  polls, pulls the MP3s back into the library, and syncs to ABS — appears in the
+  Queue with (elapsed-estimate) progress. `webapp/kaggle_render.py` + the CLI
+  kernels in `scripts/kaggle/`.
+- **Self-service config**: Settings has guided, secure, persistent setup for
+  Kaggle + LLM + ABS + others — secrets stored in the app_settings DB on the
+  `/data` volume (survive restarts, masked on read), with Test-Connection
+  buttons. No `.env` editing needed.
+- **Studio Console UI** (2026-07-10 redesign): cool ink + one signal-coral
+  accent, mono for data, on-air motif, **real epub book covers**, library sorted
+  most-recent-first, light + dark.
 - **Preprocessing** is robust and layered: structural sanitize → minimal
   deterministic normalization (MODERN-ENGINE CONTRACT: modern engines keep raw
-  numbers/years) → per-book LLM narration profile (fiction/non-fiction aware) →
-  seed-rule floor. Provider fallback chain; never collapses to nothing.
-- **Engines**: Kokoro, Chatterbox Turbo, Hume TADA-1B, Piper — OpenAI-compatible.
-  TADA/Chatterbox GPU images pull a pinned **cu126** torch stack (fixes the
-  silent-CPU drift; `cuda_available:true` verified on Vast RTX 3090).
-- **GPU strategy**: Kaggle-first (free, ~30 GPU-hrs/wk, now phone-verified) +
-  Vast burst (~$1/book). Runbooks: `scripts/kaggle/`, `scripts/vast-gpu.sh`.
-- **QA Layer 2 (ASR self-check)** exists and is **proven locally on zorin**:
-  it caught a real audio bug (see below). Not yet automatic in the UI.
-- **Output**: one canonical location `data/audiobooks/<book>/`; AudioBookShelf
-  is the unified library. `scripts/sample.sh` for fast local few-page tests.
-- **Deployed to the live worker 2026-07-08** (it had been running 14-hour-old
-  code — the fixes weren't actually running). Running today's code through a
-  real webapp job surfaced and fixed a cluster of latent bugs (2026-07-08e).
-- **LLM now configured** (2026-07-08): Groq (`llama-3.3-70b-versatile`) is set
-  in webapp settings and verified live — real conversions now get full adaptive
-  pronunciation + fiction/non-fiction, not seed-only.
-- **Production caveats to know**: (1) ABS sync host still needs fixing (#15);
-  (2) fast + quality TADA via the UI needs GPU auto-provision (zorin is
-  CPU-only) — the main remaining architecture piece.
+  numbers/years; acronym letter-spacing kept — "CEO"→"C E O") → per-book LLM
+  narration profile (fiction/non-fiction aware) → seed-rule floor.
+- **GPU images** pinned to the full cu126/cu124 stack (torch+vision+audio) after
+  repeated silent-CPU drift; regression-guarded. `cuda_available` gate refuses
+  CPU runs.
+- **Fixed 2026-07-10**: ABS sync host (#15, AUDIOBOOKSHELF_HOST now the real IP).
+- **Remaining product gaps**: Kaggle progress is an elapsed estimate (Kaggle
+  exposes no per-chapter signal without a call-home tunnel); a webapp restart
+  strands an in-flight Kaggle job (render still completes on Kaggle's side).
 
 ## Done & VERIFIED (actually run)
 
