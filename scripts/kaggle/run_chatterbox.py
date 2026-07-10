@@ -43,8 +43,12 @@ def sh(cmd, **kw):
 # if USE_TF is ignored (belt-and-suspenders; non-fatal if absent).
 subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y",
                 "tensorflow", "tensorflow-cpu", "keras"], check=False)
+# Pin the FULL cu124 stack — torch + torchvision + torchaudio TOGETHER.
+# transformers (pulled by chatterbox-tts) imports torchvision; a mismatched
+# torchvision raises "operator torchvision::nms does not exist" and the
+# LlamaModel import dies (kernel v2, 2026-07-10). torch 2.6.0 <-> tv 0.21.0.
 subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-                "torch==2.6.0", "torchaudio==2.6.0",
+                "torch==2.6.0", "torchvision==0.21.0", "torchaudio==2.6.0",
                 "--index-url", "https://download.pytorch.org/whl/cu124"], check=False)
 sh([sys.executable, "-m", "pip", "install", "-q",
     "chatterbox-tts", "setuptools<81", "fastapi", "uvicorn", "soundfile",

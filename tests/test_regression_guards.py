@@ -105,6 +105,7 @@ def test_chatterbox_kaggle_kernel_pins_cuda_torch():
     assert torch_line is not None and cbx_line is not None, "couldn't locate the pip install lines"
     assert torch_line < cbx_line, "CUDA torch must be installed BEFORE chatterbox-tts, else it re-resolves"
     assert 'refusing CPU run' in k or 'cuda_available' in k, "kernel dropped the GPU gate — could run CPU unnoticed"
+    assert re.search(r'torchvision==\d', k), "chatterbox kernel must pin torchvision too (torchvision::nms mismatch, 2026-07-10)"
     assert 'setuptools<81' in k, "perth watermarker needs setuptools<81 (pkg_resources removed in 81+)"
 
 
