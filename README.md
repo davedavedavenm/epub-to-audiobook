@@ -206,6 +206,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 - [GETTING-STARTED.md](GETTING-STARTED.md) — new-user walkthrough
 - [STATUS.md](STATUS.md) — current state, caveats & open issues
 - [PREPROCESSING.md](PREPROCESSING.md) — the text pipeline & QA layers
+- [ENGINES.md](ENGINES.md) — officially-sourced engine facts (the baseline)
 - [OPERATIONS.md](OPERATIONS.md) — runbook & incident log
 - [LOW-COST-TTS.md](LOW-COST-TTS.md) — engine bake-off, costs & GPU strategy
 - [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) — one-command Vast GPU runbook

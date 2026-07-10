@@ -203,6 +203,12 @@ The lesson (now a standing rule): **prove fixes through the real worker path.**
 A path may be called "working" in STATUS.md only with evidence: a completed
 real conversion (job id / artifact / measurement) recorded alongside it.
 
+**Official docs are the baseline.** Engine behavior claims come from the
+engine's official documentation (collected in ENGINES.md), not from
+experiment-derived guesses. The TADA reference-transcript requirement and
+Chatterbox's cfg_weight/exaggeration pacing controls were both in the docs
+all along while we debugged blind (2026-07-09).
+
 **Prove fixes through the REAL worker path, not scripts.** Standalone scripts
 and hand-driven GPU rigs hid a cluster of bugs (2026-07-08e). A fix isn't
 proven until it has run through the webapp/worker the user actually uses — and
