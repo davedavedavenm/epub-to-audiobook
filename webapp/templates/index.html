@@ -126,10 +126,106 @@ select.input-control { cursor: pointer; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 3px solid var(--paper); }
 ::-webkit-scrollbar-track { background: transparent; }
 </style>
+<style>
+/* ============================================================
+   STUDIO CONSOLE design system (2026-07-10 redesign).
+   Overrides the legacy Narration Press theme above by re-declaring
+   the same class names — markup + JS untouched. Cool ink neutrals,
+   one signal-coral accent (the "on-air" light), mono for all data,
+   waveform motif. Both themes designed.
+   ============================================================ */
+:root{
+  --paper:#F5F6F9; --paper-raised:#FFFFFF; --surface-2:#F0F2F6;
+  --ink:#14161D; --text-primary:#14161D; --text-secondary:#565C69; --ink-soft:#565C69; --ink-3:#8B909D;
+  --bg-sidebar:#14161D; --bg-element:#F0F2F6; --bg-hover:#E7EAF1; --text-on-dark:#ECEEF4;
+  --accent:#DD5638; --accent-deep:#B23A22; --accent-tint:#FBE9E3; --accent-ink:#A6361F;
+  --cloud:#1F8A86; --cloud-tint:#E1F0EF; --cloud-ink:#0F5F5C; --gilt:#DD5638;
+  --border:#E5E8EF; --border-strong:#D3D8E2; --success:#2E9E6B; --error:#D64242;
+  --serif:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --radius-lg:16px; --radius-md:10px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(20,22,29,.04), 0 12px 32px -20px rgba(20,22,29,.25);
+}
+[data-theme="dark"]{
+  --paper:#0E1015; --paper-raised:#171A21; --surface-2:#1F232C;
+  --ink:#ECEEF4; --text-primary:#ECEEF4; --text-secondary:#A4AAB8; --ink-soft:#A4AAB8; --ink-3:#6C7280;
+  --bg-sidebar:#0A0C10; --bg-element:#1F232C; --bg-hover:#262B35; --text-on-dark:#ECEEF4;
+  --accent:#F26B4E; --accent-deep:#D9502F; --accent-tint:#2B1A15; --accent-ink:#F9C7BA;
+  --cloud:#4FB6B0; --cloud-tint:#14241F; --cloud-ink:#7FD3CD; --gilt:#F26B4E;
+  --border:#262B35; --border-strong:#333A47; --success:#46B57E; --error:#E86A6A;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 14px 34px -20px rgba(0,0,0,.6);
+}
+body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
+::selection{ background:var(--accent); color:#fff; }
+.mono,.job-detail-item b,.setup-label,.sidebar-tag{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
+
+/* sidebar / nav */
+.sidebar{ background:var(--bg-sidebar); padding:30px 20px; border-right:1px solid rgba(255,255,255,.06); }
+.sidebar-brand{ font-family:var(--sans); font-size:1.25rem; font-weight:600; letter-spacing:-.01em; margin-bottom:2px; display:flex; align-items:center; gap:10px; }
+.sidebar-brand::first-letter{ color:inherit; }
+.sidebar-brand::before{ content:""; width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 0 var(--accent); animation:reclight 2.4s infinite; }
+@keyframes reclight{ 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)} 70%{box-shadow:0 0 0 7px transparent} 100%{box-shadow:0 0 0 0 transparent} }
+.sidebar-tag{ font-size:.6rem; letter-spacing:.24em; color:rgba(236,238,244,.35); margin-bottom:38px; }
+.nav-tab{ font-family:var(--sans); font-size:.94rem; font-weight:500; color:rgba(236,238,244,.6); padding:10px 13px; border-radius:9px; gap:12px; }
+.nav-tab i{ font-size:.95rem; opacity:.7; }
+.nav-tab:hover{ background:rgba(236,238,244,.06); color:#fff; }
+.nav-tab.active{ background:var(--accent); color:#fff; box-shadow:none; }
+.nav-tab.active::before{ display:none; }
+.gpu-dot.active{ background:var(--success); box-shadow:0 0 8px color-mix(in srgb,var(--success) 60%,transparent); }
+
+/* top bar */
+.top-bar{ padding:22px 64px; align-items:center; background:color-mix(in srgb,var(--paper) 90%,transparent); }
+.page-title{ font-family:var(--sans); font-size:1.7rem; font-weight:600; letter-spacing:-.02em; }
+.page-title::after{ display:none; }
+.theme-btn{ background:var(--surface-2); border:1px solid var(--border); border-radius:8px; }
+
+/* cards + controls */
+.card{ background:var(--paper-raised); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; box-shadow:var(--shadow); }
+.btn{ font-family:var(--sans); font-size:.92rem; font-weight:500; padding:10px 18px; border-radius:9px; border:1px solid var(--border-strong); background:var(--paper-raised); color:var(--text-primary); letter-spacing:0; }
+.btn:hover{ border-color:var(--ink-3); background:var(--surface-2); transform:none; }
+.btn-primary{ background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+.btn-primary:hover{ background:var(--accent-deep); border-color:var(--accent-deep); color:#fff; box-shadow:none; }
+.input-control{ background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:var(--radius-md); font-family:var(--sans); font-size:.94rem; padding:10px 13px; }
+.input-control:focus{ border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent); }
+
+/* library */
+.library-item{ border-radius:var(--radius-lg); padding:24px 26px; }
+.library-item::before{ width:3px; }
+.library-item:hover{ transform:none; box-shadow:var(--shadow); }
+.library-item-title{ font-family:var(--sans); font-size:1.3rem; font-weight:600; letter-spacing:-.02em; }
+.library-item-format{ font-family:var(--mono); background:var(--surface-2); color:var(--text-secondary); font-weight:500; letter-spacing:.06em; border-radius:6px; }
+
+/* setup / labels / progress / job data */
+.setup-label{ font-size:.66rem; letter-spacing:.12em; color:var(--ink-3); font-weight:400; }
+.progress-bar{ background:var(--surface-2); height:6px; }
+.progress-fill{ background:var(--accent); }
+.job-detail-row{ font-family:var(--mono); font-size:.62rem; letter-spacing:.08em; color:var(--ink-3); }
+.job-detail-item b{ font-family:var(--mono); font-weight:500; font-size:.95rem; color:var(--text-primary); }
+
+/* voices */
+.engine-header{ font-family:var(--sans); font-size:1.05rem; font-weight:600; color:var(--text-primary); }
+.voice-card{ border-radius:var(--radius-md); padding:18px 20px; }
+.voice-card:hover{ transform:none; border-color:var(--border-strong); }
+.voice-name{ font-family:var(--sans); font-weight:600; font-size:1.05rem; }
+.voice-meta{ font-family:var(--mono); font-size:.68rem; letter-spacing:.06em; }
+.preview-btn{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.preview-btn:hover{ background:var(--accent-deep); transform:scale(1.05); }
+
+/* modal / preview / toc */
+.modal-content{ border-radius:var(--radius-lg); }
+.preview-text{ font-family:var(--serif); font-weight:400; }
+.toc-item.active{ background:var(--accent); border-color:var(--accent); }
+
+/* render-target selector (studio cards) */
+.rt-opt{ border-radius:var(--radius-md)!important; }
+.rt-opt:hover{ border-color:var(--ink-3)!important; }
+.tab-panel.active{ animation:fadeIn .4s ease; }
+</style>
 </head><body>
 <aside class="sidebar">
     <div class="sidebar-brand">Studio</div>
-    <div class="sidebar-tag">Narration Press</div>
+    <div class="sidebar-tag">Audiobook · self-hosted</div>
     <nav class="nav-links">
         <button class="nav-tab active" data-tab="library" onclick="switchTab('library')"><i>📚</i> <span>Library</span></button>
         <button class="nav-tab" data-tab="convert" onclick="switchTab('convert')"><i>📤</i> <span>Upload</span></button>
