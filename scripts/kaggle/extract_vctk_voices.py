@@ -24,13 +24,22 @@ assert info, "speaker-info.txt not found under /kaggle/input"
 base = os.path.dirname(info)
 print("dataset base:", base, flush=True)
 
-# parse: ID  AGE  GENDER  ACCENT  REGION
+# parse: ID  AGE  GENDER  ACCENT  REGION  (ID is a bare number like "225",
+# the directories are p225; handle both "225" and "p225")
 speakers = {}
 for line in open(info, encoding="utf-8", errors="ignore"):
     parts = line.split()
-    if len(parts) >= 4 and parts[0].upper().startswith("P") and parts[0][1:].isdigit():
-        sid, age, gender, accent = parts[0], parts[1], parts[2], parts[3]
-        speakers[sid] = {"gender": gender, "accent": accent}
+    if len(parts) < 4:
+        continue
+    raw = parts[0]
+    if raw.isdigit():
+        sid = "p" + raw
+    elif raw[0].lower() == "p" and raw[1:].isdigit():
+        sid = raw
+    else:
+        continue
+    speakers[sid] = {"gender": parts[2], "accent": parts[3]}
+print(f"parsed {len(speakers)} speakers; accents: {sorted(set(v['accent'] for v in speakers.values()))}", flush=True)
 
 # which accents we want, and how many speakers each (M/F if available)
 WANT = ["Australian", "Scottish", "Irish", "NorthernIrish", "Welsh",
