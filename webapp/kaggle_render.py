@@ -79,6 +79,7 @@ def kaggle_ready():
 
 def _slug(text, maxlen=40):
     s = re.sub(r"[^a-z0-9-]+", "-", text.lower()).strip("-")
+    s = re.sub(r"-+", "-", s)
     return (s[:maxlen] or "book").strip("-")
 
 
@@ -177,7 +178,7 @@ def _kaggle(*args, timeout=300):
 
 
 def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
-                     repo_kaggle_dir, log=print, on_status=None):
+                     repo_kaggle_dir, log=print, on_status=None, resume=False):
     """Render a book on Kaggle GPU end-to-end. Blocks until done.
 
     Returns (ok: bool, message: str). Writes MP3s + qa_report.json into out_dir.
@@ -201,31 +202,34 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
     os.makedirs(out_dir, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp:
-        # 1. dataset (epub upload) — create, or new version if it exists
-        ds_dir = os.path.join(tmp, "ds")
-        os.makedirs(ds_dir)
-        shutil.copy(epub_path, os.path.join(ds_dir, os.path.basename(epub_path)))
-        json.dump(dataset_metadata(user, ds_slug, book),
-                  open(os.path.join(ds_dir, "dataset-metadata.json"), "w"))
-        log(f"Kaggle: uploading epub as dataset {dataset_id}")
-        r = _kaggle("datasets", "create", "-p", ds_dir, "-r", "zip", timeout=600)
-        if "already exists" in (r.stdout + r.stderr).lower() or r.returncode != 0:
-            r = _kaggle("datasets", "version", "-p", ds_dir, "-m", "update",
-                        "-r", "zip", timeout=600)
-        if r.returncode != 0 and "already" not in (r.stdout + r.stderr).lower():
-            return False, f"dataset upload failed: {(r.stderr or r.stdout)[:200]}"
+        if not resume:
+            # 1. dataset (epub upload) — create, or new version if it exists
+            ds_dir = os.path.join(tmp, "ds")
+            os.makedirs(ds_dir)
+            shutil.copy(epub_path, os.path.join(ds_dir, os.path.basename(epub_path)))
+            json.dump(dataset_metadata(user, ds_slug, book),
+                      open(os.path.join(ds_dir, "dataset-metadata.json"), "w"))
+            log(f"Kaggle: uploading epub as dataset {dataset_id}")
+            r = _kaggle("datasets", "create", "-p", ds_dir, "-r", "zip", timeout=600)
+            if "already exists" in (r.stdout + r.stderr).lower() or r.returncode != 0:
+                r = _kaggle("datasets", "version", "-p", ds_dir, "-m", "update",
+                            "-r", "zip", timeout=600)
+            if r.returncode != 0 and "already" not in (r.stdout + r.stderr).lower():
+                return False, f"dataset upload failed: {(r.stderr or r.stdout)[:200]}"
 
-        # 2. kernel (push the GPU render job)
-        k_dir = os.path.join(tmp, "k")
-        os.makedirs(k_dir)
-        open(os.path.join(k_dir, "run.py"), "w", encoding="utf-8").write(
-            render_kernel_source(template_src, voice, start, end))
-        json.dump(kernel_metadata(user, kslug, dataset_id),
-                  open(os.path.join(k_dir, "kernel-metadata.json"), "w"))
-        log(f"Kaggle: pushing GPU kernel {user}/{kslug} (engine={engine}, voice={voice})")
-        r = _kaggle("kernels", "push", "-p", k_dir, timeout=300)
-        if r.returncode != 0:
-            return False, f"kernel push failed: {(r.stderr or r.stdout)[:200]}"
+            # 2. kernel (push the GPU render job)
+            k_dir = os.path.join(tmp, "k")
+            os.makedirs(k_dir)
+            open(os.path.join(k_dir, "run.py"), "w", encoding="utf-8").write(
+                render_kernel_source(template_src, voice, start, end))
+            json.dump(kernel_metadata(user, kslug, dataset_id),
+                      open(os.path.join(k_dir, "kernel-metadata.json"), "w"))
+            log(f"Kaggle: pushing GPU kernel {user}/{kslug} (engine={engine}, voice={voice})")
+            r = _kaggle("kernels", "push", "-p", k_dir, timeout=300)
+            if r.returncode != 0:
+                return False, f"kernel push failed: {(r.stderr or r.stdout)[:200]}"
+        else:
+            log(f"Kaggle: resuming tracking for existing kernel {user}/{kslug}")
 
         # 3. poll
         started = time.time()

@@ -39,3 +39,9 @@ def test_quota_math_trailing_7_days():
 def test_only_gpu_engines_allowed():
     ok, msg = K.render_on_kaggle("/x.epub", "v", "kokoro", 1, 0, "/out", "/k")
     assert not ok and "kokoro" in msg
+
+
+def test_slug_collapses_consecutive_dashes():
+    assert K._slug("Breakneck - Dan Wang") == "breakneck-dan-wang"
+    assert K._slug("A - B - C") == "a-b-c"
+    assert K._slug("hello---world") == "hello-world"

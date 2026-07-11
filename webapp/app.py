@@ -1822,9 +1822,9 @@ def resume_inflight_jobs():
     """Reattach monitors to running conversion containers after restart."""
     with get_db() as conn:
         rows = conn.execute('''
-            SELECT id, container_name, status
+            SELECT id, container_name, status, input_filename, output_dirname, voice
             FROM jobs
-            WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering', 'rendering on Kaggle GPU', 'queued on Kaggle')
         ''').fetchall()
 
     resumed = 0
@@ -1838,6 +1838,19 @@ def resume_inflight_jobs():
             recovery_thread.start()
             resumed += 1
             app.logger.info(f"Resumed recovery for job {job_id}")
+        elif current_status in ('rendering on Kaggle GPU', 'queued on Kaggle'):
+            input_filename = row['input_filename']
+            output_dirname = row['output_dirname']
+            voice = row['voice']
+            monitor_thread = threading.Thread(
+                target=convert_book_kaggle,
+                args=(job_id, input_filename, output_dirname, voice),
+                kwargs={'resume': True},
+                daemon=True
+            )
+            monitor_thread.start()
+            resumed += 1
+            app.logger.info(f"Resumed Kaggle monitoring for job {job_id}")
         elif container_name and check_container_running(container_name):
             running_containers[job_id] = container_name
             monitor_thread = threading.Thread(target=monitor_conversion, args=(job_id, container_name), daemon=True)
@@ -3016,7 +3029,7 @@ def monitor_conversion(job_id: str, container_name: str):
 KAGGLE_KERNELS_DIR = os.environ.get('KAGGLE_KERNELS_DIR', '/app/kaggle_kernels')
 
 
-def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, voice: str):
+def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, voice: str, resume: bool = False):
     """Render a book on a free Kaggle GPU (chatterbox/tada), then run the same
     completion path as a local conversion (verify, ABS sync, notify)."""
     try:
@@ -3058,8 +3071,13 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
     output_path.mkdir(parents=True, exist_ok=True)
     start = job.get('start_chapter') or 1
     end = job.get('end_chapter') or 0
-    update_job(job_id, status='rendering on Kaggle GPU', progress_percent=1)
-    append_job_log(job_id, f"Kaggle GPU render start (engine={engine}, voice={voice})")
+
+    if not resume:
+        update_job(job_id, status='rendering on Kaggle GPU', progress_percent=1)
+        append_job_log(job_id, f"Kaggle GPU render start (engine={engine}, voice={voice})")
+    else:
+        app.logger.info(f"Kaggle: Resuming monitoring for job {job_id}")
+        append_job_log(job_id, f"Kaggle: Resuming monitoring (engine={engine}, voice={voice})")
 
     # Honest coarse progress: Kaggle exposes only queued/running/complete, so we
     # estimate from elapsed vs a projection SCALED BY CHAPTER COUNT (~6 min/chapter
@@ -3070,13 +3088,29 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
     proj_min = max(15, 12 + n_ch * 6)
 
     def on_status(st, mins):
+        current = get_job(job_id)
+        if current and current.get('status') == 'cancelled':
+            raise Exception("Job was cancelled by user")
         pct = min(95, max(2, int(mins / proj_min * 100)))
         label = {'queued': 'queued on Kaggle', 'running': 'rendering on Kaggle GPU'}.get(st, 'rendering on Kaggle GPU')
         update_job(job_id, status=label, progress_percent=pct, eta_minutes=max(0, proj_min - mins))
 
-    ok, msg = KR.render_on_kaggle(
-        str(epub_path), voice, engine, start, end, str(output_path),
-        KAGGLE_KERNELS_DIR, log=lambda m: append_job_log(job_id, m), on_status=on_status)
+    try:
+        ok, msg = KR.render_on_kaggle(
+            str(epub_path), voice, engine, start, end, str(output_path),
+            KAGGLE_KERNELS_DIR, log=lambda m: append_job_log(job_id, m),
+            on_status=on_status, resume=resume)
+    except Exception as e:
+        current = get_job(job_id)
+        if current and current.get('status') == 'cancelled':
+            append_job_log(job_id, "Kaggle render loop aborted: job cancelled by user.")
+            maybe_start_next_queued_job()
+            return
+        update_job(job_id, status='failed', error=f'Kaggle render error: {e}',
+                   completed_at=datetime.now().isoformat())
+        append_job_log(job_id, f"Kaggle render error: {e}")
+        maybe_start_next_queued_job()
+        return
 
     if not ok:
         update_job(job_id, status='failed', error=f'Kaggle render failed: {msg}',
@@ -4538,7 +4572,7 @@ def cancel_job(job_id: str):
     if not job:
         return jsonify({'error': 'Job not found'}), 404
 
-    if job['status'] not in ('queued', 'converting', 'converting PDF', 'converting to audio'):
+    if job['status'] not in ('queued', 'converting', 'converting PDF', 'converting to audio', 'rendering on Kaggle GPU', 'queued on Kaggle'):
         return jsonify({'error': 'Job is not running'}), 400
 
     # Stop the container if running
