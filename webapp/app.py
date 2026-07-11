@@ -489,6 +489,8 @@ VOICES = {
     'mil_nicholson': {'name': 'Mil Nicholson (expressive, Dickens)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
     'adrian_praetzellis': {'name': 'Adrian Praetzellis (adventure, storyteller)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'tadhg_hynes': {'name': 'Tadhg Hynes (rich, Hardy/Dickens)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'chatterbox'},
+    'martin_geeson': {'name': 'Martin Geeson (British male, classic prose)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
+    'nigel_boydell': {'name': 'Nigel Boydell (British male, characterful)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     # ============ TADA (LOCAL/GPU, MOST NATURAL) ============
     'uk_male_minter_tada': {'name': 'Arthur — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
     'uk_female_golding_tada': {'name': 'Harriet — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
