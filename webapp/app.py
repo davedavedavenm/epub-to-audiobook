@@ -3062,12 +3062,17 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
     append_job_log(job_id, f"Kaggle GPU render start (engine={engine}, voice={voice})")
 
     # Honest coarse progress: Kaggle exposes only queued/running/complete, so we
-    # estimate from elapsed vs a rough projection (full book ~5h) and snap to the
-    # real chapter count on completion. Labeled as an estimate in the status.
+    # estimate from elapsed vs a projection SCALED BY CHAPTER COUNT (~6 min/chapter
+    # on a T4 + ~12 min one-time setup/model-load), and snap to the real chapter
+    # count on completion. Still an estimate — true per-chapter needs a call-home.
+    n_ch = max(1, (int(end) - int(start) + 1)) if end and int(end) > 0 else \
+        max(1, (job.get('total_chapters') or 20) - int(start) + 1)
+    proj_min = max(15, 12 + n_ch * 6)
+
     def on_status(st, mins):
-        pct = min(95, max(2, int(mins / (5 * 60) * 100)))  # ~5h projection
+        pct = min(95, max(2, int(mins / proj_min * 100)))
         label = {'queued': 'queued on Kaggle', 'running': 'rendering on Kaggle GPU'}.get(st, 'rendering on Kaggle GPU')
-        update_job(job_id, status=label, progress_percent=pct, eta_minutes=max(0, 5 * 60 - mins))
+        update_job(job_id, status=label, progress_percent=pct, eta_minutes=max(0, proj_min - mins))
 
     ok, msg = KR.render_on_kaggle(
         str(epub_path), voice, engine, start, end, str(output_path),

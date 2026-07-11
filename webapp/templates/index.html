@@ -1020,8 +1020,8 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             ${j.status === 'failed' && j.error ? `<div style="color:var(--error); font-size:0.85rem; margin-top:4px; max-width:80%;">${escapeHtml(j.error)}</div>` : ''}
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:1.5rem; font-weight:800; color:${j.status === 'failed' ? 'var(--error)' : 'var(--text-primary)'};">${j.progress_percent || 0}%</div>
-                            <div style="font-size:0.7rem; color:var(--text-secondary);">ETA: ${j.eta_minutes || '?'}m</div>
+                            <div style="font-size:1.5rem; font-weight:800; color:${j.status === 'failed' ? 'var(--error)' : 'var(--text-primary)'};">${j.status.includes('Kaggle') ? '~' : ''}${j.progress_percent || 0}%</div>
+                            <div style="font-size:0.7rem; color:var(--text-secondary);">${j.status.includes('Kaggle') ? 'est. ' : 'ETA: '}${j.eta_minutes || '?'}m${j.status.includes('Kaggle') ? ' left' : ''}</div>
                         </div>
                     </div>
                     <div class="qwave ${j.status === 'failed' ? 'failed' : (j.status === 'completed' ? 'done' : 'live')}" data-pct="${j.progress_percent || 0}" aria-hidden="true"></div>
