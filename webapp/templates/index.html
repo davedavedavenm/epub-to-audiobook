@@ -256,6 +256,12 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 [data-theme="dark"] .rt-note .ok, :root:not([data-theme="light"]) .rt-note .ok{ color:var(--cloud); }
 [data-theme="dark"] .rt-note .warn{ color:var(--accent); }
 .tab-panel.active{ animation:fadeIn .4s ease; }
+/* queue waveform — the render-console motif */
+.qwave{ display:flex; align-items:flex-end; gap:2px; height:34px; margin:16px 0 4px; }
+.qwave i{ flex:1; min-width:2px; height:12%; border-radius:1px; background:var(--ink-3); opacity:.3; transition:height .38s ease; }
+.qwave.live i.on{ background:var(--accent); opacity:.9; }
+.qwave.done i{ background:var(--success); opacity:.5; }
+.qwave.failed i{ background:var(--error); opacity:.4; }
 </style>
 </head><body>
 <aside class="sidebar">
@@ -1018,7 +1024,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             <div style="font-size:0.7rem; color:var(--text-secondary);">ETA: ${j.eta_minutes || '?'}m</div>
                         </div>
                     </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width: ${j.progress_percent}%; ${j.status === 'failed' ? 'background: var(--error);' : ''}"></div></div>
+                    <div class="qwave ${j.status === 'failed' ? 'failed' : (j.status === 'completed' ? 'done' : 'live')}" data-pct="${j.progress_percent || 0}" aria-hidden="true"></div>
                     <div class="job-detail-row">
                         <div class="job-detail-item">Narrator <b>${j.voice_name || j.voice}${j.voice2 ? ' + ' + (j.voice2_name || j.voice2) : ''}</b></div>
                         <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
@@ -1056,7 +1062,40 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         }
         // restore any log panes the user had open before this re-render
         openLogs.forEach(id => fillLogsPane(id));
+        paintWaves();
     }
+
+    // Build + animate the queue waveforms (the studio 'render console' motif).
+    const _waveReduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function paintWaves() {
+        document.querySelectorAll('.qwave').forEach(w => {
+            if (!w.dataset.painted) {
+                w.dataset.painted = '1';
+                for (let i = 0; i < 52; i++) w.appendChild(document.createElement('i'));
+            }
+            tickWave(w);
+        });
+    }
+    function tickWave(w) {
+        const pct = parseInt(w.dataset.pct || 0, 10);
+        const bars = w.children, N = bars.length, filled = Math.round(N * pct / 100);
+        const live = w.classList.contains('live'), done = w.classList.contains('done'), failed = w.classList.contains('failed');
+        for (let i = 0; i < N; i++) {
+            const on = i < filled || done;
+            let h;
+            if (failed) h = 14;
+            else if (done) h = 28 + ((i * 37) % 62);
+            else if (on) h = live && !_waveReduce ? (24 + Math.random() * 72) : (30 + ((i * 41) % 60));
+            else h = 10 + ((i * 13) % 12);
+            bars[i].style.height = h + '%';
+            bars[i].classList.toggle('on', on);
+        }
+    }
+    function animateWaves() {
+        if (_waveReduce) return;
+        document.querySelectorAll('.qwave.live').forEach(tickWave);
+    }
+    setInterval(animateWaves, 430);
 
     async function loadHistory() {
         const resp = await fetch('/api/history');
