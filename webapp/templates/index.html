@@ -859,6 +859,10 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             if (!q || !q.configured) { alert('Kaggle isn\'t set up yet. Add your free token in Settings → Free Cloud GPU, then try again.'); return; }
             if (q.left <= 0 && !confirm(`You've used your free ${q.weekly} Kaggle GPU-hrs this week (resets weekly). Queue anyway?`)) return;
         }
+        // Explicit confirmation — a conversion is a long job, never start one by surprise.
+        const voiceName = el.closest('.production-workspace')?.querySelector('#voice-' + bookId)?.selectedOptions[0]?.text || voice;
+        const where = { local: 'this computer (free, slower)', kaggle: 'free Kaggle GPU', vast: 'Vast GPU (paid)' }[renderTarget] || renderTarget;
+        if (!confirm(`Start narrating this book?\n\nVoice: ${voiceName}\nRender on: ${where}\n\nThis creates an audiobook and can take a while. You can watch or cancel it in the Queue tab.`)) return;
         const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget }) });
         const data = await resp.json();
         if(data.status === 'success') {
