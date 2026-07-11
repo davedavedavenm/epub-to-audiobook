@@ -987,7 +987,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const [resp, statusResp] = await Promise.all([fetch('/api/jobs'), fetch('/api/queue/status')]);
         const jobs = await resp.json();
         const qstatus = await statusResp.json();
-        const active = jobs.filter(j => ['queued', 'converting', 'recovering', 'failed', 'converting PDF', 'converting to audio'].some(s => j.status.includes(s)));
+        const active = jobs.filter(j => ['queued', 'converting', 'recovering', 'failed', 'converting PDF', 'converting to audio', 'Kaggle', 'rendering'].some(s => j.status.includes(s)));
         const badge = document.getElementById('queue-badge');
         if(badge) {
             badge.textContent = active.length;
