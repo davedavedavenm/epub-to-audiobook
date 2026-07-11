@@ -4563,6 +4563,64 @@ def get_job_logs(job_id: str):
     return jsonify({'container': container_name, 'logs': combined_logs, 'container_logs': container_logs})
 
 
+@app.route('/api/jobs/<job_id>/qa')
+def job_qa(job_id: str):
+    """Surface the ASR QA report for a completed job (#10). Reads whichever
+    report the render path wrote: qa_report.json (kaggle/standalone) or
+    _verification/audio_verify_sample.json (webapp local sample)."""
+    import json as _json
+    job = get_job(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+    outdir = OUTPUT_DIR / (job.get('output_dirname') or '')
+    report = None
+    for cand in (outdir / 'qa_report.json', outdir / '_verification' / 'audio_verify_sample.json'):
+        if cand.exists():
+            try:
+                report = _json.loads(cand.read_text(encoding='utf-8'))
+                break
+            except Exception:
+                pass
+    if not report:
+        return jsonify({'available': False})
+    chapters = report.get('chapters') or ([report] if 'wer' in report else [])
+    # Aggregate: worst WER, dropped-word runs (RELIABLE), lexicon suggestions.
+    drops, suggestions = [], {}
+    worst = 0.0
+    for c in chapters:
+        worst = max(worst, c.get('wer', 0) or 0)
+        for d in (c.get('divergences') or []):
+            if d.get('type') == 'drop' and len(d.get('source', [])) >= 3:
+                drops.append(' '.join(d['source'])[:80])
+        for k, v in (c.get('lexicon_suggestions') or {}).items():
+            suggestions[k] = v
+    return jsonify({'available': True, 'worst_wer': round(worst, 3),
+                    'chapters': len(chapters),
+                    'dropped_runs': drops[:12],
+                    'suggestions': suggestions})
+
+
+@app.route('/api/jobs/<job_id>/qa/apply', methods=['POST'])
+def job_qa_apply(job_id: str):
+    """Human-in-the-loop 'self-healing' (#7): append a reviewed pronunciation
+    fix to the GLOBAL rules. NOT auto-applied — Whisper's guesses are noisy, so
+    the user picks which suggestions to keep."""
+    data = request.json or {}
+    word, repl = (data.get('word') or '').strip(), (data.get('replacement') or '').strip()
+    if not word or not repl:
+        return jsonify({'error': 'word and replacement required'}), 400
+    conf = UPLOAD_DIR / 'global_pronunciations.conf'
+    existing = conf.read_text(encoding='utf-8') if conf.exists() else ''
+    rule = f"{word}=={repl}"
+    if rule in existing:
+        return jsonify({'status': 'already present'})
+    with open(conf, 'a', encoding='utf-8') as f:
+        if existing and not existing.endswith('\n'):
+            f.write('\n')
+        f.write(rule + '\n')
+    return jsonify({'status': 'applied', 'rule': rule})
+
+
 @app.route('/api/diagnostics')
 def diagnostics():
     """Return queue/runtime diagnostics for UI drawer."""

@@ -759,6 +759,10 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             </div>
                             <div class="rt-note" id="rt-note-${bookId}"></div>
                             <input type="hidden" id="rt-${bookId}" value="local">
+                            <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:0.85rem; color:var(--text-secondary); cursor:pointer;">
+                                <input type="checkbox" id="fallback-${bookId}" style="width:auto;">
+                                If the chosen voice's engine is offline, auto-switch to a working engine instead of failing
+                            </label>
                         </div>
                         <details style="margin-bottom: 24px;">
                             <summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Advanced (voice blend &amp; pronunciation)</summary>
@@ -860,6 +864,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const voice2 = document.getElementById('voice2-' + bookId)?.value || '';
         const customRegex = document.getElementById('regex-' + bookId)?.value || '';
         const renderTarget = document.getElementById('rt-' + bookId)?.value || 'local';
+        const allowFallback = document.getElementById('fallback-' + bookId)?.checked || false;
         if (renderTarget === 'kaggle') {
             const q = kaggleQuota;
             if (!q || !q.configured) { alert('Kaggle isn\'t set up yet. Add your free token in Settings → Free Cloud GPU, then try again.'); return; }
@@ -869,7 +874,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const voiceName = el.closest('.production-workspace')?.querySelector('#voice-' + bookId)?.selectedOptions[0]?.text || voice;
         const where = { local: 'this computer (free, slower)', kaggle: 'free Kaggle GPU', vast: 'Vast GPU (paid)' }[renderTarget] || renderTarget;
         if (!confirm(`Start narrating this book?\n\nVoice: ${voiceName}\nRender on: ${where}\n\nThis creates an audiobook and can take a while. You can watch or cancel it in the Queue tab.`)) return;
-        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget }) });
+        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget, allow_engine_fallback: allowFallback }) });
         const data = await resp.json();
         if(data.status === 'success') {
             const oldText = el.textContent;
@@ -1038,8 +1043,10 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button>
                             <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 EPUB</button>
                             <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="syncJob('${j.id}', this)">☁️ ${j.synced_to_abs ? 'Re-sync to ABS' : 'Sync to ABS'}</button>
+                            <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="toggleQA('${j.id}', this)">🔍 QA report</button>
                         ` : ''}
                     </div>
+                    <div id="qa-${j.id}" class="hidden" style="margin-top:16px;"></div>
                     <pre id="logs-${j.id}" class="hidden" style="margin-top:16px; background:var(--bg-element); border-radius:12px; padding:16px; font-size:0.75rem; max-height:220px; overflow:auto; white-space:pre-wrap;"></pre>
                     ${j.status === 'failed' ? `
                     <div style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">
@@ -1130,6 +1137,43 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         if(!confirm('Permanently delete this job and its partial files?')) return;
         await fetch(`/api/jobs/${jobId}/delete`, { method: 'DELETE' });
         setTimeout(loadJobs, 500); // Give backend time to delete rows
+    }
+    async function toggleQA(jobId, btn) {
+        const panel = document.getElementById('qa-' + jobId);
+        if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+        panel.classList.remove('hidden');
+        panel.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem;">Loading QA…</div>';
+        try {
+            const q = await (await fetch('/api/jobs/' + jobId + '/qa')).json();
+            if (!q.available) { panel.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem;">No QA report for this render (QA runs on Kaggle renders and sampled local checks).</div>'; return; }
+            const werColor = q.worst_wer > 0.15 ? 'var(--accent-ink)' : 'var(--cloud-ink)';
+            let html = `<div style="background:var(--surface-2); border-radius:12px; padding:16px;">
+                <div style="font-family:var(--mono); font-size:0.8rem; color:var(--ink-3); margin-bottom:10px;">ASR QUALITY CHECK · ${q.chapters} chapters · worst WER <b style="color:${werColor}">${(q.worst_wer*100).toFixed(1)}%</b></div>`;
+            if (q.dropped_runs && q.dropped_runs.length) {
+                html += `<div style="font-size:0.85rem; margin-bottom:8px;"><b>Possibly dropped/garbled passages</b> (reliable signal):</div>`;
+                html += q.dropped_runs.map(d => `<div style="font-family:var(--mono); font-size:0.75rem; color:var(--text-secondary); margin:2px 0;">· ${escapeHtml(d)}…</div>`).join('');
+            }
+            const sugg = q.suggestions || {};
+            const keys = Object.keys(sugg);
+            if (keys.length) {
+                html += `<div style="font-size:0.85rem; margin:12px 0 6px;"><b>Pronunciation suggestions</b> <span style="color:var(--ink-3); font-weight:400;">(review — may be transcription noise, not truth)</span>:</div>`;
+                html += keys.map(k => `<div style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:0.82rem;">
+                    <code style="background:var(--paper); padding:2px 6px; border-radius:4px;">${escapeHtml(k)} → ${escapeHtml(sugg[k])}</code>
+                    <button class="btn" style="font-size:0.72rem; padding:4px 10px;" onclick="applyQA('${jobId}', ${JSON.stringify(k).replace(/"/g,'&quot;')}, ${JSON.stringify(sugg[k]).replace(/"/g,'&quot;')}, this)">Apply</button>
+                </div>`).join('');
+            }
+            if (!q.dropped_runs?.length && !keys.length) html += '<div style="font-size:0.85rem; color:var(--cloud-ink);">✓ No issues flagged.</div>';
+            html += '</div>';
+            panel.innerHTML = html;
+        } catch(e) { panel.innerHTML = '<div style="color:var(--error); font-size:0.85rem;">QA load failed.</div>'; }
+    }
+    async function applyQA(jobId, word, replacement, btn) {
+        btn.textContent = '…'; btn.disabled = true;
+        try {
+            const r = await (await fetch('/api/jobs/' + jobId + '/qa/apply', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ word, replacement }) })).json();
+            btn.textContent = r.status === 'applied' ? '✓ Added' : (r.status || 'done');
+            btn.style.color = 'var(--cloud-ink)';
+        } catch(e) { btn.textContent = 'failed'; btn.disabled = false; }
     }
     async function syncJob(jobId, btn) {
         const original = btn.textContent;
