@@ -14,6 +14,7 @@ BRANCH = "master"
 VOICE  = "native_v8"  # EXPERIMENT (#21): model's own voice, harvested from v8 (Dave: "impeccable")
 START  = 1
 END    = 2
+PROGRESS_URL = ""             # real per-chapter progress phone-home
 # ---------------------------------------------------------------------------
 
 WORK, REPO_DIR, OUT = "/kaggle/working", "/kaggle/working/repo", "/kaggle/working/out"
@@ -107,7 +108,8 @@ t0 = time.time()
 sh([sys.executable, f"{REPO_DIR}/scripts/convert_book.py",
     "--epub", EPUB, "--engine-url", "http://127.0.0.1:8005/v1",
     "--voice", VOICE, "--out", OUT, "--start", str(START), "--end", str(END),
-    "--chunk-chars", "600", "--qa", "--qa-model", "base"])
+    "--chunk-chars", "600", "--qa", "--qa-model", "base"]
+    + (["--progress-url", PROGRESS_URL] if PROGRESS_URL else []))
 print(f"conversion wall time: {time.time()-t0:.0f}s", flush=True)
 
 # 6. surface outputs + QA report in /kaggle/working (kernel output root)

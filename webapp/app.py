@@ -484,7 +484,7 @@ VOICES = {
     'uk_male_yearsley': {'name': 'Edmund (UK, human-cloned)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'uk_female_samuel': {'name': 'Beatrice (UK, human-cloned)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
     # --- Top LibriVox narrators (public-domain, human-cloned) ---
-    'elizabeth_klett': {'name': 'Elizabeth Klett (literary classics)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
+    'elizabeth_klett': {'name': 'Elizabeth Klett (literary classics)', 'accent': 'American', 'gender': 'Female', 'engine': 'chatterbox'},
     'karen_savage': {'name': 'Karen Savage (warm, classic novels)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
     'mil_nicholson': {'name': 'Mil Nicholson (expressive, Dickens)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
     'adrian_praetzellis': {'name': 'Adrian Praetzellis (adventure, storyteller)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
@@ -3093,13 +3093,21 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
         max(1, (job.get('total_chapters') or 20) - int(start) + 1)
     proj_min = max(15, 12 + n_ch * 6)
 
-    def on_status(st, mins):
+    def on_status(st, mins, real_pct=None):
         current = get_job(job_id)
         if current and current.get('status') == 'cancelled':
             raise Exception("Job was cancelled by user")
-        pct = min(95, max(2, int(mins / proj_min * 100)))
         label = {'queued': 'queued on Kaggle', 'running': 'rendering on Kaggle GPU'}.get(st, 'rendering on Kaggle GPU')
-        update_job(job_id, status=label, progress_percent=pct, eta_minutes=max(0, proj_min - mins))
+        if real_pct is not None:
+            # True per-chapter progress the kernel phoned home — no longer an estimate.
+            pct = min(99, max(1, int(real_pct)))
+            # ETA from actual rate so far.
+            eta = int(mins * (100 - pct) / pct) if pct > 0 else None
+            update_job(job_id, status=label, progress_percent=pct,
+                       eta_minutes=eta if eta is not None else 0)
+        else:
+            pct = min(95, max(2, int(mins / proj_min * 100)))
+            update_job(job_id, status=label, progress_percent=pct, eta_minutes=max(0, proj_min - mins))
 
     try:
         ok, msg = KR.render_on_kaggle(

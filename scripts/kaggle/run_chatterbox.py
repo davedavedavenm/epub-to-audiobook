@@ -15,6 +15,7 @@ BRANCH = "master"
 VOICE  = "uk_male_minter"     # "Arthur" — the approved voice
 START  = 1
 END    = 0                    # 0 = to end of book
+PROGRESS_URL = ""             # if set, convert_book POSTs real per-chapter progress here
 # ---------------------------------------------------------------------------
 
 WORK, REPO_DIR, OUT = "/kaggle/working", "/kaggle/working/repo", "/kaggle/working/out"
@@ -104,6 +105,8 @@ args = [sys.executable, f"{REPO_DIR}/scripts/convert_book.py",
         "--chunk-chars", "600", "--qa", "--qa-model", "base"]
 if END and int(END) > 0:
     args += ["--end", str(END)]
+if PROGRESS_URL:
+    args += ["--progress-url", PROGRESS_URL]
 t0 = time.time()
 sh(args)
 print(f"conversion wall time: {time.time()-t0:.0f}s", flush=True)

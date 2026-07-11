@@ -206,6 +206,7 @@ def main():
     ap.add_argument('--qa', action='store_true',
                     help='QA Layer 2: ASR-verify each chapter locally (needs faster-whisper)')
     ap.add_argument('--qa-model', default='base', help='whisper model size for --qa (tiny/base/small)')
+    ap.add_argument('--progress-url', default='', help='POST real per-chapter progress here (e.g. an ntfy.sh topic) so a remote UI can show true progress, not an estimate')
     a = ap.parse_args()
     # modern voice-clone engines read numbers/years natively; skip spelling.
     modern = ('_tada' in a.voice) or (a.voice.startswith('uk_') and '_tada' not in a.voice) or a.chunk_chars >= 280
@@ -230,7 +231,35 @@ def main():
     _LEXICON = build_lexicon(epub)
     z = zipfile.ZipFile(epub)
     docs = spine_docs(z)
+
+    def _post_progress(done, total, current):
+        if not a.progress_url:
+            return
+        try:
+            import json as _json
+            body = _json.dumps({"done": done, "total": total, "current": current,
+                                "pct": int(done * 100 / total) if total else 0}).encode()
+            req = urllib.request.Request(a.progress_url, data=body,
+                                         headers={"Content-Type": "application/json", "Title": "render-progress"})
+            urllib.request.urlopen(req, timeout=8).read()
+        except Exception as e:
+            print(f"[progress] post failed (non-fatal): {str(e)[:60]}", flush=True)
+
+    # Pre-count renderable chapters (>= min_words, within range) so progress is
+    # a real fraction, not an estimate. Preprocessing is cheap vs synthesis.
+    total_render, _c = 0, 0
+    for name in docs:
+        if len(chapter_text(z, name).split()) < a.min_words:
+            continue
+        _c += 1
+        if _c < a.start or (a.end and _c > a.end):
+            continue
+        total_render += 1
+    print(f"renderable chapters: {total_render}", flush=True)
+    _post_progress(0, total_render, 0)
+
     idx = 0
+    done_render = 0
     qa_reports = []
     for name in docs:
         text = chapter_text(z, name)
@@ -274,6 +303,8 @@ def main():
                       f"WER={rep['wer']} divergences={len(rep['divergences'])}", flush=True)
             except Exception as e:
                 print(f"[chapter {idx}] QA skipped ({str(e)[:120]})", flush=True)
+        done_render += 1
+        _post_progress(done_render, total_render, idx)
     if a.qa and qa_reports:
         agg = {}
         for r in qa_reports:

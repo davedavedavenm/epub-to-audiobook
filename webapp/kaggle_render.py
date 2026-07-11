@@ -105,12 +105,40 @@ def kernel_metadata(username, slug, dataset_id, enable_gpu=True):
     }
 
 
-def render_kernel_source(template_src, voice, start, end):
+def render_kernel_source(template_src, voice, start, end, progress_url=""):
     """Substitute the knobs block of a kernel template. END<=0 means to end."""
     s = re.sub(r'VOICE\s*=\s*"[^"]*"', f'VOICE  = "{voice}"', template_src, count=1)
     s = re.sub(r'START\s*=\s*\d+', f'START  = {int(start) if start else 1}', s, count=1)
     s = re.sub(r'END\s*=\s*\d+', f'END    = {int(end) if end else 0}', s, count=1)
+    if 'PROGRESS_URL' in s:
+        s = re.sub(r'PROGRESS_URL\s*=\s*"[^"]*"', f'PROGRESS_URL = "{progress_url}"', s, count=1)
     return s
+
+
+def _ntfy_progress(topic):
+    """Fetch the latest real progress the kernel POSTed to its ntfy topic.
+    Returns (pct, done, total) or None. Kaggle kernels have outbound internet,
+    so they phone home per-chapter — no tunnel/infra needed."""
+    try:
+        import urllib.request
+        url = f"https://ntfy.sh/{topic}/json?poll=1"
+        raw = urllib.request.urlopen(url, timeout=8).read().decode("utf-8", "ignore")
+        latest = None
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            try:
+                msg = json.loads(line)
+                body = msg.get("message")
+                if body:
+                    latest = json.loads(body)
+            except Exception:
+                continue
+        if latest and "pct" in latest:
+            return int(latest["pct"]), latest.get("done"), latest.get("total")
+    except Exception:
+        pass
+    return None
 
 
 def parse_status(cli_out):
@@ -200,6 +228,10 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
     kslug = _slug(f"render-{book}")
     dataset_id = f"{user}/{ds_slug}"
     os.makedirs(out_dir, exist_ok=True)
+    # Stable per-render ntfy topic (deterministic so resume tracks the same one).
+    import hashlib
+    topic = "aud-" + hashlib.md5(f"{user}/{kslug}".encode()).hexdigest()[:16]
+    progress_url = f"https://ntfy.sh/{topic}"
 
     with tempfile.TemporaryDirectory() as tmp:
         if not resume:
@@ -221,7 +253,7 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
             k_dir = os.path.join(tmp, "k")
             os.makedirs(k_dir)
             open(os.path.join(k_dir, "run.py"), "w", encoding="utf-8").write(
-                render_kernel_source(template_src, voice, start, end))
+                render_kernel_source(template_src, voice, start, end, progress_url))
             json.dump(kernel_metadata(user, kslug, dataset_id),
                       open(os.path.join(k_dir, "kernel-metadata.json"), "w"))
             log(f"Kaggle: pushing GPU kernel {user}/{kslug} (engine={engine}, voice={voice})")
@@ -239,8 +271,12 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
                 return False, f"render exceeded {MAX_RENDER_HOURS}h cap — Kaggle likely killed the session"
             r = _kaggle("kernels", "status", f"{user}/{kslug}", timeout=120)
             st = parse_status(r.stdout + r.stderr)
+            # Real per-chapter progress the kernel phoned home (falls back to
+            # the caller's elapsed estimate when nothing's arrived yet).
+            prog = _ntfy_progress(topic)
             if on_status:
-                on_status(st, round((time.time() - started) / 60))
+                on_status(st, round((time.time() - started) / 60),
+                          prog[0] if prog else None)
             if st in ("complete", "error", "cancelled"):
                 break
 
