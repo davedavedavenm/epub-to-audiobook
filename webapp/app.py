@@ -4911,7 +4911,14 @@ def list_library():
         progress = job.get('progress_percent', 0)
 
         if status == 'completed':
-            job_status_map[book_name] = {'status': 'completed', 'progress': 100}
+            # Only trust a 'completed' record if the rendered audio still exists.
+            # A leftover job row whose output was deleted (or a partial test
+            # render that got cleaned up) must NOT keep claiming "Audiobook
+            # ready" — the book is really just 'available' to convert again.
+            out = (job.get('output_dirname') or '').strip()
+            out_dir = OUTPUT_DIR / out if out else None
+            if out_dir and out_dir.is_dir() and any(out_dir.glob('*.mp3')):
+                job_status_map[book_name] = {'status': 'completed', 'progress': 100}
         elif status in ('queued', 'converting', 'converting PDF', 'converting to audio'):
             job_status_map[book_name] = {'status': 'converting', 'progress': progress or 0}
 
