@@ -1845,7 +1845,9 @@ def resume_inflight_jobs():
         rows = conn.execute('''
             SELECT id, container_name, status, input_filename, output_dirname, voice
             FROM jobs
-            WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering', 'rendering on Kaggle GPU', 'queued on Kaggle')
+            WHERE status IN ('converting', 'converting PDF', 'converting to audio', 'recovering')
+               OR status LIKE 'rendering on Kaggle GPU%'
+               OR status LIKE 'queued on Kaggle%'
         ''').fetchall()
 
     resumed = 0
@@ -1859,7 +1861,7 @@ def resume_inflight_jobs():
             recovery_thread.start()
             resumed += 1
             app.logger.info(f"Resumed recovery for job {job_id}")
-        elif current_status in ('rendering on Kaggle GPU', 'queued on Kaggle'):
+        elif current_status.startswith('rendering on Kaggle GPU') or current_status.startswith('queued on Kaggle'):
             input_filename = row['input_filename']
             output_dirname = row['output_dirname']
             voice = row['voice']
@@ -3131,21 +3133,40 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
         max(1, (job.get('total_chapters') or 20) - int(start) + 1)
     proj_min = max(15, 12 + n_ch * 6)
 
-    def on_status(st, mins, real_pct=None):
+    def on_status(st, mins, prog=None):
         current = get_job(job_id)
         if current and current.get('status') == 'cancelled':
             raise Exception("Job was cancelled by user")
-        label = {'queued': 'queued on Kaggle', 'running': 'rendering on Kaggle GPU'}.get(st, 'rendering on Kaggle GPU')
-        if real_pct is not None:
-            # True per-chapter progress the kernel phoned home — no longer an estimate.
-            pct = min(99, max(1, int(real_pct)))
-            # ETA from actual rate so far.
-            eta = int(mins * (100 - pct) / pct) if pct > 0 else None
-            update_job(job_id, status=label, progress_percent=pct,
-                       eta_minutes=eta if eta is not None else 0)
+        base = {'queued': 'queued on Kaggle', 'running': 'rendering on Kaggle GPU'}.get(st, 'rendering on Kaggle GPU')
+        # prog is (pct, done, total) phoned home by the kernel, or None.
+        done = total = None
+        if prog:
+            try:
+                _p, done, total = prog
+                done, total = int(done), int(total)
+            except Exception:
+                done = total = None
+
+        if total and total > 0 and done is not None and done >= 1:
+            # A chapter has ACTUALLY completed — bar and ETA are both grounded in
+            # the measured rate, so they're trustworthy now.
+            pct = min(99, max(1, int(done / total * 100)))
+            eta = int((mins / done) * (total - done))   # avg time/chapter so far
+            update_job(job_id, status=f"{base} · chapter {min(done + 1, total)}/{total}",
+                       progress_percent=pct, eta_minutes=max(0, eta))
+        elif total and total > 0:
+            # Set up and rendering the FIRST chapter: nothing has finished, so any
+            # ETA would be fiction. Show the phase, creep the bar within the first
+            # chapter's share only, and show NO ETA (0 -> UI renders "?").
+            cap = max(1, int(100 / total) - 1)          # never imply a chapter is done
+            pct = min(cap, max(1, int(mins / proj_min * 100)))
+            update_job(job_id, status=f"{base} · rendering chapter 1/{total}",
+                       progress_percent=pct, eta_minutes=0)
         else:
+            # No call-home yet (installing the CUDA stack / loading the model).
+            # Coarse elapsed-vs-projection estimate; clearly still "preparing".
             pct = min(95, max(2, int(mins / proj_min * 100)))
-            update_job(job_id, status=label, progress_percent=pct, eta_minutes=max(0, proj_min - mins))
+            update_job(job_id, status=base, progress_percent=pct, eta_minutes=max(0, proj_min - mins))
 
     try:
         ok, msg = KR.render_on_kaggle(
@@ -4682,7 +4703,8 @@ def cancel_job(job_id: str):
     if not job:
         return jsonify({'error': 'Job not found'}), 404
 
-    if job['status'] not in ('queued', 'converting', 'converting PDF', 'converting to audio', 'rendering on Kaggle GPU', 'queued on Kaggle'):
+    if job['status'] not in ('queued', 'converting', 'converting PDF', 'converting to audio') \
+            and not job['status'].startswith(('rendering on Kaggle GPU', 'queued on Kaggle')):
         return jsonify({'error': 'Job is not running'}), 400
 
     # Stop the container if running

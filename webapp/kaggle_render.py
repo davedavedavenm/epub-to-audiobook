@@ -275,8 +275,10 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
             # the caller's elapsed estimate when nothing's arrived yet).
             prog = _ntfy_progress(topic)
             if on_status:
-                on_status(st, round((time.time() - started) / 60),
-                          prog[0] if prog else None)
+                # Forward the whole (pct, done, total) tuple so the caller can
+                # show honest chapter-based progress and suppress a fake ETA
+                # until a chapter has actually completed.
+                on_status(st, round((time.time() - started) / 60), prog)
             if st in ("complete", "error", "cancelled"):
                 break
 
