@@ -2814,6 +2814,29 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
                 append_job_log(job_id, f"Sync mkdir failed: {err}")
             return False
 
+        # Auto-sync the REAL cover: extract it from the source epub and drop a
+        # cover.jpg into the output folder before rsync. ABS auto-detects a
+        # cover.jpg in a book folder and uses it, so the correct art lands with
+        # no manual step (otherwise ABS guesses from metadata and gets it wrong).
+        try:
+            _existing = list(Path(output_dir).glob('cover.*'))
+            if not _existing and job_id:
+                _job = get_job(job_id) or {}
+                _in = _job.get('input_filename', '') or ''
+                if _in:
+                    _epub_name = _in if not _job.get('is_pdf') else _in.rsplit('.', 1)[0] + '.epub'
+                    _epub = UPLOAD_DIR / _epub_name
+                    if _epub.exists():
+                        _data, _mime = _extract_epub_cover(str(_epub))
+                        if _data:
+                            _ext = {'image/png': 'png', 'image/webp': 'webp'}.get(_mime or '', 'jpg')
+                            cover_path = Path(output_dir) / f'cover.{_ext}'
+                            cover_path.write_bytes(_data)
+                            append_job_log(job_id, f"Cover extracted from epub -> {cover_path.name}")
+        except Exception as _ce:
+            if job_id:
+                append_job_log(job_id, f"Cover extract skipped: {_ce}")
+
         cmd = ['rsync', '-av', '-s', '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
