@@ -1023,7 +1023,8 @@ def remove_stale_container(container_name):
 def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | None,
                          start_chapter: int | None = None,
                          end_chapter: int | None = None,
-                         cleaned_up_count: int = 0) -> tuple[bool, str]:
+                         cleaned_up_count: int = 0,
+                         expected_override: int | None = None) -> tuple[bool, str]:
     """Verify all chapters exist and have valid audio.
 
     Returns (is_complete, message). Used before marking any job as completed
@@ -1040,8 +1041,16 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
     if not output_files:
         return False, "No output MP3 files found"
 
-    # Determine expected chapter count (range-aware)
-    if start_chapter and end_chapter:
+    # Determine expected chapter count.
+    # A raw range span (end-start+1) is WRONG for range jobs: the renderer skips
+    # sub-min-words sections (front/back-matter) and clamps to what actually
+    # exists, so "chapters 5-13" of a 10-chapter book renders 6 files, not 9.
+    # When the renderer told us how many chapters were truly renderable in-range
+    # (expected_override, phoned home via the progress relay), trust that instead
+    # of the span — that's the only count that can't false-fail. (#: range verify)
+    if expected_override and expected_override > 0:
+        expected = expected_override
+    elif start_chapter and end_chapter:
         expected = end_chapter - start_chapter + 1
     elif total_chapters:
         expected = total_chapters
@@ -3133,6 +3142,11 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
         max(1, (job.get('total_chapters') or 20) - int(start) + 1)
     proj_min = max(15, 12 + n_ch * 6)
 
+    # The renderer phones home the TRUE count of renderable chapters in the
+    # requested range; capture it so verification checks against reality, not the
+    # raw range span (which false-fails when a range overshoots the book).
+    render_stats = {'total': None}
+
     def on_status(st, mins, prog=None):
         current = get_job(job_id)
         if current and current.get('status') == 'cancelled':
@@ -3146,6 +3160,8 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
                 done, total = int(done), int(total)
             except Exception:
                 done = total = None
+        if total and total > 0:
+            render_stats['total'] = total   # true renderable count for verification
 
         if total and total > 0 and done is not None and done >= 1:
             # A chapter has ACTUALLY completed — bar and ETA are both grounded in
@@ -3198,7 +3214,7 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
     is_ok, verify_msg = verify_book_complete(
         job_id, output_path, job.get('total_chapters'),
         start_chapter=job.get('start_chapter'), end_chapter=job.get('end_chapter'),
-        cleaned_up_count=removed)
+        cleaned_up_count=removed, expected_override=render_stats.get('total'))
     if not is_ok:
         update_job(job_id, status='failed', error=f'Verification failed: {verify_msg}',
                    completed_at=datetime.now().isoformat())
