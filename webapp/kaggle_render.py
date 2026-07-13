@@ -158,6 +158,24 @@ def parse_status(cli_out):
     return "unknown"
 
 
+def _wait_dataset_ready(user, ds_slug, log, timeout=300):
+    """Block until an uploaded epub dataset finishes Kaggle's async ingestion.
+
+    A kernel pushed before the dataset is 'ready' attaches an EMPTY version, so
+    the render dies instantly with "no .epub under /kaggle/input" (intermittent
+    race, hit 2026-07-13). `kaggle datasets status` returns 'ready' once the file
+    is processed — poll it before pushing the kernel.
+    """
+    ref = f"{user}/{ds_slug}"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        s = _kaggle("datasets", "status", ref, timeout=60)
+        if "ready" in (s.stdout + s.stderr).lower():
+            return True
+        time.sleep(6)
+    return False
+
+
 def _load_state():
     try:
         return json.load(open(STATE_PATH))
@@ -248,6 +266,13 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
                             "-r", "zip", timeout=600)
             if r.returncode != 0 and "already" not in (r.stdout + r.stderr).lower():
                 return False, f"dataset upload failed: {(r.stderr or r.stdout)[:200]}"
+
+            # Wait for Kaggle to finish ingesting the epub before pushing the
+            # kernel — otherwise the kernel attaches an empty dataset version and
+            # dies with "no .epub under /kaggle/input".
+            log(f"Kaggle: waiting for dataset {dataset_id} to be ready")
+            if not _wait_dataset_ready(user, ds_slug, log):
+                return False, "epub dataset did not become ready on Kaggle in time"
 
             # 2. kernel (push the GPU render job)
             k_dir = os.path.join(tmp, "k")

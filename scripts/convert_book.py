@@ -25,6 +25,9 @@ from html.parser import HTMLParser
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
 from tts_preprocess import sanitize_html, normalize_text_for_tts  # noqa: E402
+# Shared chapter numbering — the SAME function the web UI's picker uses, so the
+# chapter number a user selects is exactly the chapter that renders here.
+from chapters import spine_docs, renderable_wordcount  # noqa: E402
 import requests  # noqa: E402
 
 # Optional adaptive pronunciation (QA Layer 1) — same as the app. Needs an LLM
@@ -75,17 +78,6 @@ class _P(HTMLParser):
     def handle_data(self, d):
         if self.inp:
             self.parts.append(d)
-
-
-def spine_docs(z):
-    opf = [n for n in z.namelist() if n.endswith('.opf')][0]
-    t = z.read(opf).decode('utf-8', 'ignore')
-    base = opf.rsplit('/', 1)[0] + '/' if '/' in opf else ''
-    items = dict(re.findall(r'<item[^>]*id="([^"]+)"[^>]*href="([^"]+)"', t))
-    items.update({b: a for a, b in re.findall(r'<item[^>]*href="([^"]+)"[^>]*id="([^"]+)"', t)})
-    spine = re.findall(r'<itemref[^>]*idref="([^"]+)"', t)
-    docs = [base + items[i] for i in spine if i in items and re.search(r'\.x?html?$', items.get(i, ''))]
-    return [d for d in docs if d in z.namelist()]
 
 
 def chapter_text(z, name):
@@ -249,7 +241,7 @@ def main():
     # a real fraction, not an estimate. Preprocessing is cheap vs synthesis.
     total_render, _c = 0, 0
     for name in docs:
-        if len(chapter_text(z, name).split()) < a.min_words:
+        if renderable_wordcount(z, name) < a.min_words:
             continue
         _c += 1
         if _c < a.start or (a.end and _c > a.end):
@@ -262,12 +254,14 @@ def main():
     done_render = 0
     qa_reports = []
     for name in docs:
-        text = chapter_text(z, name)
-        if len(text.split()) < a.min_words:
+        # Renderable decision + numbering via the shared function so file numbers
+        # match the UI picker exactly. TTS text (with lexicon) is built after.
+        if renderable_wordcount(z, name) < a.min_words:
             continue
         idx += 1
         if idx < a.start or (a.end and idx > a.end):
             continue
+        text = chapter_text(z, name)
         # resume: accept a prior .mp3 OR .wav for this chapter
         fn = None
         for ext in ('mp3', 'wav'):

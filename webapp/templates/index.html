@@ -656,11 +656,19 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 const resp = await fetch('/api/library/toc', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path }) });
                 const data = await resp.json();
                 if(data.chapters && data.chapters.length > 0) {
-                    const opts = data.chapters.map(c => `<option value="${c.index}">${c.index}. ${escapeHtml(c.title)}</option>`).join('');
+                    // These indices are the SAME numbers the converter renders, so
+                    // "chapter 5" here is chapter 5 in the audiobook. Back-matter
+                    // (Acknowledgments/Notes/Index) is marked and excluded from the
+                    // default range.
+                    const opts = data.chapters.map(c => {
+                        const tag = c.back_matter ? ' — extra (Acknowledgments/Notes)' : '';
+                        return `<option value="${c.index}">${c.index}. ${escapeHtml(c.title)}${tag}</option>`;
+                    }).join('');
                     startSel.innerHTML = opts;
                     endSel.innerHTML = opts;
                     startSel.value = 1;
-                    endSel.value = data.chapters[data.chapters.length-1].index;
+                    // Default End to the last real book chapter, not trailing back-matter.
+                    endSel.value = data.last_body_index || data.chapters[data.chapters.length-1].index;
                 } else {
                     startSel.innerHTML = '<option value="1">Chapter 1</option>';
                     endSel.innerHTML = '<option value="">End of Book</option>';

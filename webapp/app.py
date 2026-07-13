@@ -22,6 +22,7 @@ from collections import Counter
 from typing import Any, Optional, Dict, List
 from gpu_manager import GPUManager
 from epub_generator import package_epub3_with_audio
+from chapters import list_renderable_chapters
 
 from flask import Flask, render_template, request, jsonify, send_file, Response
 import requests
@@ -4990,7 +4991,10 @@ def list_library():
 
 @app.route('/api/library/toc', methods=['POST'])
 def library_toc():
-    """Get EPUB Table of Contents with caching."""
+    """Chapter list for the picker — numbered EXACTLY as the converter numbers
+    chapters (renderable-only, 1-based), so the number a user picks is the
+    chapter that actually renders. Back-matter (Acknowledgments/Notes/Index) is
+    flagged so the UI can default the range to the book body."""
     data = request.json or {}
     path_str = data.get('path')
     if not path_str: return jsonify({'error': 'No path'}), 400
@@ -4998,8 +5002,13 @@ def library_toc():
         path = Path(path_str)
         if not path.exists(): return jsonify({'error': 'Not found'}), 404
         if path.suffix.lower() == '.epub':
-            chapters = get_epub_toc(path)
-            return jsonify({'chapters': [{'index': c['index'], 'title': c['title']} for c in chapters]})
+            chapters = list_renderable_chapters(path)
+            # Last chapter that's actual book body (not back-matter) — the UI
+            # defaults the End selector here so "convert the book" excludes
+            # citations/index unless the user extends it.
+            body = [c['index'] for c in chapters if not c['back_matter']]
+            return jsonify({'chapters': chapters,
+                            'last_body_index': body[-1] if body else (chapters[-1]['index'] if chapters else 1)})
         return jsonify({'chapters': []})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -5107,8 +5116,10 @@ def library_preview():
         chapters = []
         
         if file_path.suffix.lower() == '.epub':
-            chapters = get_epub_toc(file_path)
-            
+            # Same renderable numbering as the convert picker so a previewed
+            # "chapter 5" is the chapter that renders as 5.
+            chapters = list_renderable_chapters(file_path)
+
             with zipfile.ZipFile(file_path, 'r') as zf:
                 if chapter_index:
                     target = next((c for c in chapters if c['index'] == int(chapter_index)), None)
@@ -5118,8 +5129,8 @@ def library_preview():
                         text = re.sub(r'\s+', ' ', text).strip()
                         preview_text = text[:5000]
                 else:
-                    # Default: first 3 non-nav items
-                    content_files = [c['href'] for c in chapters if 'toc' not in c['href'].lower() and 'nav' not in c['href'].lower()]
+                    # Default: first 3 renderable chapters (front-matter already excluded)
+                    content_files = [c['href'] for c in chapters]
                     for cf in content_files[:3]:
                         content = zf.read(cf).decode('utf-8', errors='ignore')
                         text = re.sub(r'<[^>]+>', ' ', content)
@@ -5243,10 +5254,12 @@ def convert_from_library():
         shutil.copy2(file_path, input_path)
 
         
-        # Validate chapter range against actual book content
+        # Validate chapter range against actual book content. Use the SAME
+        # renderable count the picker/converter use, so the clamp matches the
+        # numbers the user saw.
         try:
             if not file_ext == '.pdf':
-                toc = get_epub_toc(file_path)
+                toc = list_renderable_chapters(file_path)
                 max_chapters = len(toc) if toc else 999
                 if start_chapter and start_chapter > max_chapters:
                     start_chapter = 1
