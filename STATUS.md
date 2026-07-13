@@ -1,9 +1,30 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-10.** Honest single source of truth. "Verified" = it
+**Last updated: 2026-07-13.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
+
+## Recent fixes (2026-07-13)
+
+- **Chapter picker now matches the renderer.** The UI numbered chapters by raw
+  spine position (Cover=1, Contents=4, Introduction=5) while the converter
+  numbered only substantial chapters (Introduction=1) — so "chapters 5–13" of a
+  10-chapter book rendered Chapter 4 → back-matter and looked broken. New
+  `webapp/chapters.py` is the single source of truth for chapter numbering,
+  imported by **both** the web UI and `scripts/convert_book.py`. The picker shows
+  real chapter **titles**, flags back-matter (Acknowledgments/Notes/Index), and
+  defaults the range to the book body.
+- **Range verification no longer false-fails.** A range that reaches the end of
+  the book compared file count to `end-start+1` (the raw span) and marked a
+  finished render FAILED (so it never synced). It now checks the renderer's true
+  renderable-chapter count.
+- **Kaggle epub-attach race fixed.** The kernel could be pushed before the epub
+  dataset finished Kaggle's async ingestion, dying with "no .epub under
+  /kaggle/input". The orchestration now waits for `datasets status = ready`.
+- **Auto cover-sync to Audiobookshelf** on every render; **honest Kaggle
+  progress** (chapter X/N, no fake ETA before a chapter completes); library
+  "Audiobook ready" badge now verifies the audio actually exists.
 
 ## TL;DR (2026-07-10)
 
