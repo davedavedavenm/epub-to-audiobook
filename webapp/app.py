@@ -22,7 +22,7 @@ from collections import Counter
 from typing import Any, Optional, Dict, List
 from gpu_manager import GPUManager
 from epub_generator import package_epub3_with_audio
-from chapters import list_renderable_chapters
+from chapters import list_renderable_chapters, body_end_index
 
 from flask import Flask, render_template, request, jsonify, send_file, Response
 import requests
@@ -5003,12 +5003,11 @@ def library_toc():
         if not path.exists(): return jsonify({'error': 'Not found'}), 404
         if path.suffix.lower() == '.epub':
             chapters = list_renderable_chapters(path)
-            # Last chapter that's actual book body (not back-matter) — the UI
-            # defaults the End selector here so "convert the book" excludes
-            # citations/index unless the user extends it.
-            body = [c['index'] for c in chapters if not c['back_matter']]
+            # The UI defaults the End selector to the last body chapter so
+            # "convert the book" excludes the trailing citations/index/junk
+            # unless the user deliberately extends it.
             return jsonify({'chapters': chapters,
-                            'last_body_index': body[-1] if body else (chapters[-1]['index'] if chapters else 1)})
+                            'last_body_index': body_end_index(chapters)})
         return jsonify({'chapters': []})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

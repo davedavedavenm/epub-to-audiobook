@@ -24,10 +24,36 @@ MIN_WORDS = 120
 # Renderable, but usually not "the book" — Acknowledgments, Notes/citations,
 # Index, etc. Flagged so the UI can default "convert the whole book" to the body
 # and not tack on a citations dump the listener didn't ask for.
+# Match a word STEM then any suffix (\w*) — "bibliograph" must catch
+# "bibliography", "note" must catch "notes". A trailing \b on a stem silently
+# fails ("\bbibliograph\b" never matches "bibliography"), which is the bug that
+# let Summer Moon's Bibliography through.
 BACK_MATTER_RE = re.compile(
-    r'\b(acknowledge?ments?|notes?|bibliograph|references?|index|'
-    r'copyright|about the author|glossary|appendix|footnotes?|endnotes?|'
-    r'credits|permissions|further reading|colophon|also by)\b', re.I)
+    r'\b(?:acknowledge?ment|note|bibliograph|reference|index|copyright|'
+    r'about the author|glossar|appendix|appendice|footnote|endnote|credit|'
+    r'permission|further reading|colophon|also by|discograph|'
+    r'illustration credit|photo credit|reading group|dramatis personae)\w*', re.I)
+
+
+def body_end_index(chapters):
+    """Last chapter that is the actual book BODY.
+
+    Books run [front-matter][body...][back-matter...], and back-matter is a
+    contiguous tail. So the body ends just before the first back-matter section
+    that appears in the latter half of the book — the 'latter half' guard stops
+    a stray mid-book match (e.g. a chapter literally called "Notes") from
+    truncating the body early. Falls back to the last non-back-matter chapter,
+    then to the last chapter. This is what makes "convert the whole book" pick
+    the right range with no manual tweak.
+    """
+    if not chapters:
+        return 1
+    n = len(chapters)
+    for c in chapters:
+        if c['back_matter'] and c['index'] > n * 0.5:
+            return max(1, c['index'] - 1)
+    body = [c['index'] for c in chapters if not c['back_matter']]
+    return body[-1] if body else chapters[-1]['index']
 
 
 class _PBody(HTMLParser):
