@@ -5560,13 +5560,43 @@ def convert_from_library():
 
 
 def _cache_all_voices_background():
-    app.logger.info("Starting background voice caching...")
+    """Pre-generate voice samples — THROTTLED.
+
+    This runs on the same box as the TTS engines, and generating a full sample is
+    heavy: chatterbox pegs a core for minutes and holds ~4.5GB; kokoro bursts to
+    ~400% CPU. Looping flat-out over every voice saturated the NUC (load 8+, swap
+    full) — the web UI was starved and engines failed their OWN healthchecks and
+    reported "offline" while they were merely too busy to answer (2026-07-14).
+
+    So: wait for the machine to be quiet before each voice, and pause between
+    them. A cache that fills slowly is worth a box that stays usable.
+    """
+    if os.environ.get('VOICE_CACHE_ON_START', '1').lower() not in ('1', 'true', 'yes'):
+        app.logger.info("Background voice caching disabled (VOICE_CACHE_ON_START=0)")
+        return
+    import time
+    ncpu = os.cpu_count() or 4
+    max_load = float(os.environ.get('VOICE_CACHE_MAX_LOAD', str(round(ncpu * 0.6, 1))))
+    delay = float(os.environ.get('VOICE_CACHE_DELAY', '5'))
+    app.logger.info(
+        f"Starting background voice caching (throttled: max_load={max_load}, delay={delay}s)")
     for voice_id in VOICES.keys():
+        preview_path = PREVIEWS_DIR / f"{voice_id}.mp3"
+        if preview_path.exists() and preview_path.stat().st_size > 5000:
+            continue                                   # already cached
+        # Never start a heavy synthesis while the box is already loaded.
+        for _ in range(90):                            # wait up to ~15 min
+            try:
+                if os.getloadavg()[0] <= max_load:
+                    break
+            except Exception:
+                break
+            time.sleep(10)
         try:
-            # This handles generating and caching locally if not already done
             get_voice_preview(voice_id)
         except Exception as e:
             app.logger.error(f"Failed to cache voice {voice_id}: {e}")
+        time.sleep(delay)                              # let the box breathe
     app.logger.info("Background voice caching complete.")
 
 def background_startup():
