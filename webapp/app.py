@@ -513,53 +513,10 @@ VOICES = {
     'uk_female_samuel_tada': {'name': 'Beatrice — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
 }
 
-# Voice-sample text. Deliberately HARD: years, percentages, currency, large
-# numbers, units, acronyms, an abbreviation, foreign proper nouns, and mixed
-# punctuation — the things that actually separate a good narrator from a bad one.
-# Long enough (~135 words / ~1 min) to judge pacing and tone, not just timbre.
-PREVIEW_TEXT = (
-    "In the spring of 1997, Apple was nine weeks from bankruptcy. Its CEO had been "
-    "ousted, the share price had fallen 71 percent, and the company was burning "
-    "through $1.2 billion a year. Few analysts at Goldman Sachs believed it would "
-    "survive to see the year 2000.\n\n"
-    "What changed was not one decision but a thousand small ones. Between 2001 and "
-    "2007, its partners in Shenzhen scaled from 3,400 workers to over 230,000; a "
-    "single Foxconn campus drew 1.5 gigawatts. Dr. Wang, then a junior engineer, "
-    "called the pace \"relentless, exhilarating, and frankly unsustainable.\"\n\n"
-    "Today the iPhone accounts for roughly 52% of revenue, and the App Store for "
-    "some £24.6 billion a year. Whether that is a triumph or a trap — for the WTO, "
-    "for the EU, for a supply chain 7,000 miles long — is the question."
-)
+# The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
+# Kaggle GPU sample-renderer and this app use byte-identical text.
+from voice_sample import SAMPLE_TEXT as PREVIEW_TEXT, sample_text_for as _preview_text_for  # noqa: E402
 
-
-# Acronym LETTER-SPACING for the undotted initialisms in the sample. This is the
-# ONE lexicon class the modern-engine contract allows (plain letters, never a
-# phonetic respelling) — without it a modern engine reads "CEO" as "see you".
-# The built-in table only covers DOTTED forms ("U.S."), so undotted ones must be
-# declared. A real render gets these from its lexicon; the sample declares them
-# so what you audition is what you'd actually hear.
-PREVIEW_LEXICON = {"CEO": "C E O", "WTO": "W T O", "EU": "E U"}
-
-
-def _preview_text_for(engine: str) -> str:
-    """Run the sample through the SAME preprocessing a real render uses, so the
-    voice you hear is the voice you'd actually get in a book.
-
-    Per the MODERN-ENGINE CONTRACT this is deliberately asymmetric:
-      * chatterbox/tada (modern) -> numbers/dates left ALONE (they read them
-        natively) and NO phonetic respellings; only acronym letter-spacing.
-      * kokoro/piper/edge/polly  -> numbers spelled out, which they need.
-    Sending raw text to everything would make the dumb engines mangle "$1.2
-    billion" and you'd be judging a preprocessing bug, not the voice."""
-    try:
-        from tts_preprocess import normalize_text_for_tts
-        return normalize_text_for_tts(PREVIEW_TEXT, lexicon=PREVIEW_LEXICON,
-                                      modern=engine in ('chatterbox', 'tada'))
-    except Exception:
-        return PREVIEW_TEXT
-
-
-# ============ Database Functions ============
 
 def init_db():
     """Initialize SQLite database for job persistence."""
