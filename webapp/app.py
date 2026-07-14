@@ -2196,7 +2196,12 @@ def get_voice_preview(voice_id: str) -> Path:
             app.logger.info(f"Generating EdgeTTS preview: {' '.join(cmd)}")
             subprocess.run(cmd, capture_output=True, check=True, timeout=30)
         elif engine in ('chatterbox', 'tada'):
-            # Chatterbox/TADA preview (direct to the local service)
+            # Chatterbox/TADA preview (direct to the local service).
+            # Timeout must exceed the actual CPU synthesis time: chatterbox runs
+            # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
+            # 180s cap was SHORTER than that, so every chatterbox sample was
+            # generated, timed out, and thrown away — the cache could never fill
+            # (2026-07-14). Be generous; this is a background job.
             _url = CHATTERBOX_URL if engine == 'chatterbox' else TADA_URL
             response = requests.post(
                 f"{_url}/audio/speech",
@@ -2206,7 +2211,7 @@ def get_voice_preview(voice_id: str) -> Path:
                     "voice": voice_id,
                     "response_format": "mp3"
                 },
-                timeout=180
+                timeout=int(os.environ.get('PREVIEW_TIMEOUT', '600'))
             )
             response.raise_for_status()
             with open(preview_path, 'wb') as f:
