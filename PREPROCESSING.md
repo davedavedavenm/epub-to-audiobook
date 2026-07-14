@@ -26,28 +26,39 @@ inside the spelling.**
 **Lesson: when a transform "hurts" an engine, suspect the *formatting* of the
 output before you ban the *idea*.**
 
-### 2. The pronunciation subsystem is a NO-OP on modern engines (open bug **#27**)
+### 2. Help the weak engines hard. Leave the strong one alone. (**#27**)
 
-There are three pronunciation mechanisms: the **seed dictionary**
-(`webapp/lexicon.py`), the **LLM per-book lexicon**, and the **QA self-healing
-loop**. For modern engines, `normalize_text_for_tts` filters the lexicon down to
-the *letter-spacing* class only. Measured on a realistic combined lexicon:
+The asymmetry is the *point*, not a defect. A good voice-clone model reads real
+words and numbers natively; a weak one cannot. So:
 
-| | count | examples |
-| --- | --- | --- |
-| Survive for **chatterbox** | **5** | CEO, WTO, EU, GDP, IPO — *all acronyms* |
-| **Dropped** for chatterbox | **19** | Xiaomi, Huawei, Beijing, Cupertino, Nguyen, Foxconn… — *every proper noun* |
+- **Weak engines (kokoro / piper / edge / polly) get EVERYTHING** — numbers spelled,
+  proper nouns respelled, abbreviations expanded, the full seed + LLM + QA lexicon.
+  This is what makes them usable at all, and it is why kokoro leapt in quality once
+  the sample finally applied it.
+- **Modern engines (chatterbox / tada) get almost nothing** — deliberately. Only
+  years and acronym letter-spacing. Phonetic respellings are dropped because
+  `Beijing` → `Bay-JING` was heard as "bay…zhing".
 
-**So on the engine actually used for books, the LLM pronunciation feature and the
-QA self-healing loop generate rules that are then thrown away.** Dave: *"Xiaomi
-was not spoken well at all."* It works as designed on kokoro/piper/edge, where the
-whole lexicon applies.
+Verified end-to-end, same source sentence:
 
-The filter exists for a real reason (`Beijing` → `Bay-JING` was heard as
-"bay…zhing"). But note the *format* of these rules — `SHOW-mee`, `Bay-JING`,
-`HWAH-way`: **shouty caps and hyphens**. Given lesson #1, the format is the prime
-suspect, not the concept. **Untested. Settle it with an ear-test A/B (#27), never
-by argument.**
+```
+SOURCE     : In 1997 Xiaomi and Huawei shipped 3,400 units, 52% of $1.2 billion,
+             said Dr. Nguyen in Shenzhen.
+
+KOKORO     : In nineteen ninety-seven SHOW-mee and HWAH-way shipped three thousand
+             four hundred units, fifty-two percent of 1.2 billion dollars,
+             said Doctor Nwin in SHUN-jen.
+
+CHATTERBOX : In nineteen ninety-seven Xiaomi and Huawei shipped 3,400 units,
+             52% of $1.2 billion, said Dr. Nguyen in Shenzhen.
+```
+
+**The open question (#27) is NOT "why is the filter there".** It is: *does
+chatterbox actually pronounce `Xiaomi` / `Nguyen` / `Shenzhen` correctly on its
+own?* If yes, the filter is exactly right. If it mangles them, the rules it needs
+are being filtered out — and the fix would be **natural-format** respellings, since
+the shouty `SHOW-mee` / `Bay-JING` style is the prime suspect, not the concept
+(cf. lesson #1). **Untested. Do not touch the filter without an ear-test.**
 
 ---
 
