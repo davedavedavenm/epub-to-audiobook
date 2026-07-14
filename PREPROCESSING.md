@@ -4,6 +4,53 @@
 this pipeline first. Direction set 2026-07 after the Abundance test proved the
 worst listening problems were text defects, not voice defects.
 
+---
+
+## ⚠️ Read this first: two hard-won lessons (2026-07-14)
+
+### 1. A comma is a pause. This one bug caused two wrong conclusions.
+
+`num2words` returns `3,400` → **"three thousand, four hundred"**. Every TTS engine
+reads that **comma as a pause**, so large numbers came out broken-up and stilted.
+Dave heard it and said *"stilted and weird — not wrong, stilted."*
+
+That single defect is now believed to be the true cause of an earlier finding that
+got **year-spelling banned for modern engines** (the model appeared to "pause
+mid-number": `1976` heard as `1970…6`). It wasn't the spelling. **It was the comma
+inside the spelling.**
+
+- Commas are now stripped from all spelled numbers (regression-tested).
+- Years are now spelled for **every** engine, modern included — A/B'd by ear
+  (**#26**): Dave judged the spelled form better.
+
+**Lesson: when a transform "hurts" an engine, suspect the *formatting* of the
+output before you ban the *idea*.**
+
+### 2. The pronunciation subsystem is a NO-OP on modern engines (open bug **#27**)
+
+There are three pronunciation mechanisms: the **seed dictionary**
+(`webapp/lexicon.py`), the **LLM per-book lexicon**, and the **QA self-healing
+loop**. For modern engines, `normalize_text_for_tts` filters the lexicon down to
+the *letter-spacing* class only. Measured on a realistic combined lexicon:
+
+| | count | examples |
+| --- | --- | --- |
+| Survive for **chatterbox** | **5** | CEO, WTO, EU, GDP, IPO — *all acronyms* |
+| **Dropped** for chatterbox | **19** | Xiaomi, Huawei, Beijing, Cupertino, Nguyen, Foxconn… — *every proper noun* |
+
+**So on the engine actually used for books, the LLM pronunciation feature and the
+QA self-healing loop generate rules that are then thrown away.** Dave: *"Xiaomi
+was not spoken well at all."* It works as designed on kokoro/piper/edge, where the
+whole lexicon applies.
+
+The filter exists for a real reason (`Beijing` → `Bay-JING` was heard as
+"bay…zhing"). But note the *format* of these rules — `SHOW-mee`, `Bay-JING`,
+`HWAH-way`: **shouty caps and hyphens**. Given lesson #1, the format is the prime
+suspect, not the concept. **Untested. Settle it with an ear-test A/B (#27), never
+by argument.**
+
+---
+
 ## Why this exists
 
 A listening test on *Abundance* (Klein/Thompson) traced the main quality
@@ -125,3 +172,49 @@ all five of its endnote markers structurally while leaving "2.6 percent",
   structural selectors) or a fallback to the original text.
 - `--remove_endnotes` must never be reintroduced (see defect list above).
 - The original upload is never modified; `_tts.epub` is regenerable.
+
+---
+
+## What each engine ACTUALLY receives (2026-07-14)
+
+The pipeline is deliberately **asymmetric**. `normalize_text_for_tts(text, lexicon,
+modern=…)` is the single function that decides this, and it is called by **both**
+`scripts/convert_book.py` (real renders) and `webapp/voice_sample.py` (voice
+auditions) — so **what you audition is what the book gets**. That is the whole
+point; do not let them drift.
+
+| Transform | modern (chatterbox / tada) | legacy (kokoro / piper / edge / polly) |
+| --- | --- | --- |
+| Structural clean (endnotes, unicode) | ✅ | ✅ |
+| **Years** (`1997` → "nineteen ninety-seven") | ✅ *(reversed 2026-07-14, #26)* | ✅ |
+| **Acronym letter-spacing** (`CEO` → `C E O`) | ✅ | ✅ |
+| Numbers / large ints (`3,400`) | ❌ raw | ✅ spelled, **no comma** |
+| Currency (`$1.2 billion`) | ❌ raw | ✅ spelled |
+| Percent (`52%`) | ❌ raw | ✅ spelled |
+| Ordinals (`21st`) | ❌ raw | ✅ spelled |
+| **Phonetic respellings** (`Xiaomi` → `SHOW-mee`) | ❌ **dropped — see #27** | ✅ |
+| Word abbreviations (`Dr.` → `Doctor`) | ❌ raw | ✅ |
+
+**Untested by ear (do not change without an A/B):** currency, percent, large ints
+and ordinals for modern engines. Those are the numbers that dominate real
+non-fiction, so they are the obvious next A/B after #27.
+
+## The rule this project keeps re-learning
+
+> **Never conclude anything about TTS output by reasoning. Render it and listen.**
+
+Two documented bans (year-spelling; and probably respellings) came from
+misdiagnosing a *formatting* artefact as a *conceptual* failure. Both cost months.
+The A/B harness exists precisely so this is cheap:
+`scripts/kaggle/render_voice_samples.py` renders comparison clips on a free GPU in
+minutes, and `/api/sample/<name>` serves them for judgement.
+
+## Voice auditions must not flatter (or libel) the engine
+
+The voice sample runs through the **same preprocessing and the same seed lexicon**
+as a real render (`webapp/voice_sample.py` + `webapp/lexicon.py`, both shared with
+the converter).
+
+This was broken once and it matters: the sample used to send proper nouns **raw**
+while a real book respelled them, so kokoro sounded **worse in the audition than in
+the actual book**. An audition you can't trust is worse than no audition.
