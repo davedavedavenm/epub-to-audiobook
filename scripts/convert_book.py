@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
 from tts_preprocess import sanitize_html, normalize_text_for_tts  # noqa: E402
 # Shared chapter numbering — the SAME function the web UI's picker uses, so the
 # chapter number a user selects is exactly the chapter that renders here.
-from chapters import spine_docs, renderable_wordcount  # noqa: E402
+from chapters import spine_docs, renderable_wordcount, _title_for  # noqa: E402
 import requests  # noqa: E402
 
 # Optional adaptive pronunciation (QA Layer 1) — same as the app. Needs an LLM
@@ -136,11 +136,13 @@ def _concat_wav(chunks):
     return out.getvalue()
 
 
-def _to_mp3(wav_bytes, denoise=False):
+def _to_mp3(wav_bytes, denoise=False, meta=None):
     """Encode a clean WAV to MP3 with one ffmpeg pass (single stream, correct
     framing). With denoise=True, applies afftdn (adaptive FFT denoiser) to
     knock down steady neural-vocoder hiss (TADA) without gutting speech — see
-    issue #8. Returns None if ffmpeg isn't on PATH — caller keeps the WAV."""
+    issue #8. *meta* (title/album/artist/album_artist/track/genre) is written as
+    ID3v2 tags so Audiobookshelf can group the files and order/name the chapters.
+    Returns None if ffmpeg isn't on PATH — caller keeps the WAV."""
     ff = shutil.which('ffmpeg')
     if not ff:
         return None
@@ -151,7 +153,13 @@ def _to_mp3(wav_bytes, denoise=False):
         # (Dave, 2026-07-08). nr=6/nf=-45 removes steady hiss without dulling
         # speech. Tune via issue #8.
         cmd += ['-af', 'afftdn=nr=6:nf=-45']
-    cmd += ['-f', 'mp3', '-b:a', '192k', 'pipe:1']
+    cmd += ['-f', 'mp3', '-b:a', '192k']
+    if meta:
+        cmd += ['-id3v2_version', '3']
+        for k, v in meta.items():
+            if v:
+                cmd += ['-metadata', f'{k}={v}']
+    cmd += ['pipe:1']
     p = subprocess.run(cmd, input=wav_bytes, capture_output=True)
     return p.stdout if p.returncode == 0 and p.stdout else None
 
@@ -224,6 +232,22 @@ def main():
     z = zipfile.ZipFile(epub)
     docs = spine_docs(z)
 
+    # Book title/author for ID3 tags — Audiobookshelf needs these (plus a track
+    # number and per-file title) to group the files as one book and order/name
+    # the chapters. Without them chapter navigation is broken (the files carry no
+    # metadata otherwise).
+    def _book_meta():
+        try:
+            opf = [n for n in z.namelist() if n.endswith('.opf')][0]
+            t = z.read(opf).decode('utf-8', 'ignore')
+            ti = re.search(r'<dc:title[^>]*>([^<]+)', t)
+            au = re.search(r'<dc:creator[^>]*>([^<]+)', t)
+            return (ti.group(1).strip() if ti else Path(a.epub).stem,
+                    au.group(1).strip() if au else '')
+        except Exception:
+            return Path(a.epub).stem, ''
+    book_title, book_author = _book_meta()
+
     def _post_progress(done, total, current):
         if not a.progress_url:
             return
@@ -273,8 +297,12 @@ def main():
             print(f"[chapter {idx}] already done — skipping (resume)", flush=True)
         else:
             print(f"[chapter {idx}] {len(text.split())} words -> synthesizing", flush=True)
+            ctitle = _title_for(z.read(name).decode('utf-8', 'ignore'), f"Chapter {idx}")
+            meta = {'title': ctitle, 'album': book_title, 'artist': book_author,
+                    'album_artist': book_author, 'genre': 'Audiobook',
+                    'track': f"{done_render + 1}/{total_render}"}
             wav = synth(a.engine_url, a.voice, text, a.chunk_chars)
-            mp3 = _to_mp3(wav, denoise=a.denoise)
+            mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
                 fn = out / f"{idx:03d}.mp3"
                 fn.write_bytes(mp3)
