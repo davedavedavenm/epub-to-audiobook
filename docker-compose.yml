@@ -166,6 +166,13 @@ services:
       - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN:-}
       - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
       - KAGGLE_RENDER_STATE=/data/kaggle_render_state.json
+      # LLM (OpenAI-compatible): powers the smart chapter guard + adaptive
+      # pronunciation. Optional — without a key the app uses a deterministic
+      # heuristic. Free options: Groq (fast, recommended) or Gemini. Can also be
+      # set in the Settings UI instead of here.
+      - LLM_API_BASE_URL=${LLM_API_BASE_URL:-https://api.openai.com/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-4o-mini}
       # GPU status display (webapp reads worker's status file, these are fallback)
       - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
       - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
@@ -245,6 +252,11 @@ services:
       - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN:-}
       - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
       - KAGGLE_KERNELS_DIR=/app/kaggle_kernels
+      # LLM (OpenAI-compatible): smart chapter guard + adaptive pronunciation.
+      # Optional — heuristic fallback if unset. Free: Groq / Gemini.
+      - LLM_API_BASE_URL=${LLM_API_BASE_URL:-https://api.openai.com/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-4o-mini}
       # Shared GPU-hours state (webapp reads for the quota readout, worker writes)
       - KAGGLE_RENDER_STATE=/data/kaggle_render_state.json
     volumes:

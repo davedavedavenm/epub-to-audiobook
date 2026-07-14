@@ -89,8 +89,11 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
   folder; never overwrites existing audiobooks)
 - **EPUB3 Read-Along Packaging** - EPUB output with Media Overlay/SMIL
 - **Telegram / WhatsApp Notifications** - optional completion alerts
-- **LLM Integration** - any OpenAI-compatible provider (Z AI, Groq, Gemini,
-  OpenAI, …) for metadata + adaptive pronunciation
+- **Smart chapter guard** - the convert panel lists chapters by real title and
+  auto-selects the actual book body (skips copyright pages, notes, index). Uses
+  an LLM when configured, with a deterministic fallback so it works without one
+- **LLM Integration** - any OpenAI-compatible provider (Groq, Gemini, OpenAI, …)
+  for the chapter guard, metadata + adaptive pronunciation
 - **Download as ZIP**
 
 ## Quick Start (works on any machine, incl. for friends)
@@ -189,7 +192,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `TADA_URL` | TADA endpoint (default: `http://tada-tts:8005/v1`) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
-| `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | OpenAI-compatible LLM for metadata + adaptive pronunciation |
+| `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | OpenAI-compatible LLM for the smart chapter guard, metadata + adaptive pronunciation. Optional (heuristic fallback). Free: Groq or Gemini — see `.env.example` |
 | `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` / `AUDIOBOOKSHELF_USER` / `AUDIOBOOKSHELF_PORT` | Audiobookshelf rsync sync target |
 | `LIBRARY_DIR` | Folder of ebooks to browse (default: `/mnt/openbooks`) |
 | `GPU_RENDER_ENABLED` | Master gate for paid Vast.ai GPU render (default `0` / off — see GPU-SAFETY.md) |
