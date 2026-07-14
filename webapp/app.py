@@ -513,7 +513,36 @@ VOICES = {
     'uk_female_samuel_tada': {'name': 'Beatrice — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
 }
 
-PREVIEW_TEXT = "The quick brown fox jumps over the lazy dog. This is a preview of how this voice sounds when reading audiobooks."
+# Voice-sample text. Deliberately HARD: years, percentages, currency, large
+# numbers, units, acronyms, an abbreviation, foreign proper nouns, and mixed
+# punctuation — the things that actually separate a good narrator from a bad one.
+# Long enough (~135 words / ~1 min) to judge pacing and tone, not just timbre.
+PREVIEW_TEXT = (
+    "In the spring of 1997, Apple was nine weeks from bankruptcy. Its CEO had been "
+    "ousted, the share price had fallen 71 percent, and the company was burning "
+    "through $1.2 billion a year. Few analysts at Goldman Sachs believed it would "
+    "survive to see the year 2000.\n\n"
+    "What changed was not one decision but a thousand small ones. Between 2001 and "
+    "2007, its partners in Shenzhen scaled from 3,400 workers to over 230,000; a "
+    "single Foxconn campus drew 1.5 gigawatts. Dr. Wang, then a junior engineer, "
+    "called the pace \"relentless, exhilarating, and frankly unsustainable.\"\n\n"
+    "Today the iPhone accounts for roughly 52% of revenue, and the App Store for "
+    "some £24.6 billion a year. Whether that is a triumph or a trap — for the WTO, "
+    "for the EU, for a supply chain 7,000 miles long — is the question."
+)
+
+
+def _preview_text_for(engine: str) -> str:
+    """Run the sample through the SAME preprocessing a real render uses, so the
+    voice you hear is the voice you'd actually get in a book. Sending raw text
+    would make every engine sound worse than it really is (unspaced acronyms,
+    unspoken numbers). Modern voice-clone engines (chatterbox/tada) read numbers
+    natively; the others need them spelled out."""
+    try:
+        from tts_preprocess import normalize_text_for_tts
+        return normalize_text_for_tts(PREVIEW_TEXT, modern=engine in ('chatterbox', 'tada'))
+    except Exception:
+        return PREVIEW_TEXT
 
 
 # ============ Database Functions ============
@@ -2086,6 +2115,7 @@ def get_voice_preview(voice_id: str) -> Path:
     # Determine TTS engine from voice definition
     voice_info = VOICES.get(voice_id, {})
     engine = voice_info.get('engine', 'kokoro')
+    ptext = _preview_text_for(engine)
 
     try:
         if engine == 'piper':
@@ -2094,7 +2124,7 @@ def get_voice_preview(voice_id: str) -> Path:
                 f"{PIPER_URL}/audio/speech",
                 json={
                     "model": "tts-1",
-                    "input": PREVIEW_TEXT,
+                    "input": ptext,
                     "voice": voice_id
                 },
                 timeout=60
@@ -2114,7 +2144,7 @@ def get_voice_preview(voice_id: str) -> Path:
                 f"{proxy_base}/j/preview/v1/audio/speech",
                 json={
                     "model": "polly",
-                    "input": PREVIEW_TEXT,
+                    "input": ptext,
                     "voice": voice_id
                 },
                 timeout=60
@@ -2130,7 +2160,7 @@ def get_voice_preview(voice_id: str) -> Path:
                 f"{proxy_base}/j/preview/v1/audio/speech",
                 json={
                     "model": "inworld",
-                    "input": PREVIEW_TEXT,
+                    "input": ptext,
                     "voice": f"inworld_{inworld_voice_id}"
                 },
                 timeout=60
@@ -2146,7 +2176,7 @@ def get_voice_preview(voice_id: str) -> Path:
                 '--entrypoint', 'edge-tts',
                 'ghcr.io/p0n1/epub_to_audiobook:latest',
                 '--voice', voice_id,
-                '--text', PREVIEW_TEXT,
+                '--text', ptext,
                 '--write-media', f"/output/{voice_id}.mp3"
             ]
             app.logger.info(f"Generating EdgeTTS preview: {' '.join(cmd)}")
@@ -2158,7 +2188,7 @@ def get_voice_preview(voice_id: str) -> Path:
                 f"{_url}/audio/speech",
                 json={
                     "model": "tts-1",
-                    "input": PREVIEW_TEXT,
+                    "input": ptext,
                     "voice": voice_id,
                     "response_format": "mp3"
                 },
@@ -2173,7 +2203,7 @@ def get_voice_preview(voice_id: str) -> Path:
                 f"{KOKORO_URL}/audio/speech",
                 json={
                     "model": "kokoro",
-                    "input": PREVIEW_TEXT,
+                    "input": ptext,
                     "voice": voice_id,
                     "response_format": "mp3"
                 },
