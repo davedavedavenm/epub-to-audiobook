@@ -314,12 +314,22 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
 
     # === Years: 1962 -> nineteen sixty-two ===
     # Must come before general number handling.
-    # SKIP for modern voice-clone engines (chatterbox/tada): they read years
-    # natively and correctly, whereas spelling "1976" as "nineteen seventy-six"
-    # makes them PAUSE before the final digit — so "six"/"seven" sound like a
-    # detached endnote number ("1976" heard as "1970...6"). Incident 2026-07-08.
-    if not modern:
-        text = re.sub(r'\b(1[0-9]{3}|20[0-9]{2})\b', lambda m: _year_to_words(m.group(0)), text)
+    #
+    # Years ARE spelled for EVERY engine, including modern ones — reversed
+    # 2026-07-14 after an A/B, judged by ear (#26).
+    #
+    # History worth keeping: this was previously skipped for modern engines
+    # because spelling "1976" made them PAUSE before the final digit ("1976"
+    # heard as "1970...6", incident 2026-07-08). That diagnosis was WRONG. The
+    # pause came from the COMMA num2words inserts into spelled numbers
+    # ("three thousand, four hundred") — engines read a comma as a pause. Once the
+    # comma was stripped, Dave A/B'd raw "1997" vs "nineteen ninety-seven" on
+    # chatterbox and judged the SPELLED form better. So the original defect was
+    # the comma, not the spelling, and the ban was collateral damage.
+    #
+    # Modern engines still keep raw currency/percent/large ints (untested by ear —
+    # do NOT extend this without an A/B; see #26).
+    text = re.sub(r'\b(1[0-9]{3}|20[0-9]{2})\b', lambda m: _year_to_words(m.group(0)), text)
 
     # === Currency (before general number handling) ===
     def replace_currency(m):

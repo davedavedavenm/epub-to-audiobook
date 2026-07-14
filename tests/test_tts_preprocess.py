@@ -152,3 +152,23 @@ def test_year_reads_naturally_for_dumb_engines():
     out = normalize_text_for_tts("In the spring of 1997, Apple", modern=False)
     assert 'nineteen ninety-seven' in out, out
     assert 'one thousand' not in out, out
+
+
+# --- years are spelled for EVERY engine (A/B verdict, 2026-07-14, #26) --------
+# Reversed the old modern-engine ban: the "pause" that got year-spelling banned
+# was caused by num2words' COMMA, not by the spelling. Dave A/B'd raw vs spelled
+# on chatterbox and judged spelled better.
+
+def test_years_are_spelled_for_modern_engines_too():
+    from tts_preprocess import normalize_text_for_tts
+    out = normalize_text_for_tts("In the spring of 1997, and again in 2001.", modern=True)
+    assert 'nineteen ninety-seven' in out, out
+    assert 'two thousand one' in out, out
+    assert '1997' not in out, out
+
+
+def test_modern_still_keeps_raw_currency_and_percent():
+    # NOT judged by ear yet — must stay raw until A/B'd (#26).
+    from tts_preprocess import normalize_text_for_tts
+    out = normalize_text_for_tts("roughly 52% of $1.2 billion", modern=True)
+    assert '52%' in out and '$1.2' in out, out

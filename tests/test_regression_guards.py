@@ -202,16 +202,32 @@ def _load_tp():
     return tp
 
 
-def test_modern_engines_keep_raw_years():
-    """Spelling '1976'->'nineteen seventy-six' made TADA pause before the last
-    digit, so years sounded like endnote numbers ('1976' heard as '1970...6').
-    Modern engines must keep raw years/numbers (incident 2026-07-08)."""
+def test_years_are_spelled_for_every_engine():
+    """REVERSED 2026-07-14 by an ear-test A/B (#26).
+
+    This guard used to assert the opposite: modern engines had to keep RAW years,
+    because spelling '1976' made them PAUSE before the last digit ('1976' heard as
+    '1970...6', incident 2026-07-08).
+
+    That diagnosis was wrong. The pause came from the COMMA num2words inserts into
+    spelled numbers ("three thousand, four hundred") — engines read a comma as a
+    pause. With the comma stripped, Dave A/B'd raw '1997' vs 'nineteen ninety-seven'
+    on chatterbox and judged the SPELLED form better. The original defect was the
+    comma; the year-spelling ban was collateral damage.
+
+    So: years are spelled for EVERY engine. Currency/percent/large ints are still
+    raw for modern — NOT yet judged by ear, do not extend without an A/B (#26).
+    """
     tp = _load_tp()
-    out = tp.normalize_text_for_tts("founded in 1976, returned in 1997.", modern=True)
-    assert '1976' in out and '1997' in out and 'seventy-six' not in out,         "modern engine year-spelling regressed — re-opens 2026-07-08 '1970...6' artifact"
-    # legacy path still spells (unchanged for Kokoro/Piper)
-    leg = tp.normalize_text_for_tts("founded in 1976.", modern=False)
-    assert 'seventy-six' in leg, "legacy year spelling broken"
+    for modern in (True, False):
+        out = tp.normalize_text_for_tts("founded in 1976, returned in 1997.", modern=modern)
+        assert 'seventy-six' in out and 'ninety-seven' in out, \
+            f"year spelling broken (modern={modern}): {out}"
+        assert '1976' not in out, f"raw year leaked (modern={modern}): {out}"
+
+    # The comma that caused the original artifact must never come back.
+    big = tp.normalize_text_for_tts("3,400 workers", modern=False)
+    assert 'three thousand four hundred' in big and 'thousand,' not in big, big
 
 
 def test_modern_contract_skips_all_plain_number_spelling():
