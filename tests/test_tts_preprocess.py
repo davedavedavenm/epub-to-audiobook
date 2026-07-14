@@ -127,3 +127,28 @@ def test_year_2000s_natural():
     # 2010+ and 19xx keep the "twenty ten" / "nineteen ..." style
     assert 'twenty' in tp._year_to_words('2019')
     assert 'nineteen' in tp._year_to_words('1994')
+
+
+# --- stilted-numbers regression (2026-07-14) -------------------------------
+# num2words returns "three thousand, four hundred". Every TTS engine reads that
+# comma as a PAUSE, so numbers came out broken-up and stilted. Dave heard it and
+# called it "stilted and weird". Numbers must be ONE flowing phrase.
+
+def test_spelled_numbers_have_no_commas():
+    from tts_preprocess import _number_to_words
+    for n in (3400, 230000, 1234567, 101):
+        assert ',' not in _number_to_words(n), f"comma in spelled number {n}"
+
+
+def test_large_number_in_prose_is_not_broken_up():
+    from tts_preprocess import normalize_text_for_tts
+    out = normalize_text_for_tts("scaled from 3,400 workers", modern=False)
+    assert 'three thousand four hundred' in out, out
+    assert 'thousand,' not in out, out
+
+
+def test_year_reads_naturally_for_dumb_engines():
+    from tts_preprocess import normalize_text_for_tts
+    out = normalize_text_for_tts("In the spring of 1997, Apple", modern=False)
+    assert 'nineteen ninety-seven' in out, out
+    assert 'one thousand' not in out, out

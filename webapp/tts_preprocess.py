@@ -95,16 +95,24 @@ except ImportError:
 
 
 def _number_to_words(n: int, lang: str = 'en') -> str:
-    """Convert integer to words, with fallback if num2words unavailable."""
+    """Convert integer to words, with fallback if num2words unavailable.
+
+    STRIP THE COMMAS num2words inserts. It returns "three thousand, four hundred"
+    — and every TTS engine reads that comma as a PAUSE, so a plain number comes
+    out broken-up and stilted ("three thousand… four hundred"). Dave heard exactly
+    this and called it "stilted and weird" (2026-07-14). The words alone are
+    unambiguous and read as one natural phrase. Affects every large number in
+    every book, so it is worth being blunt about.
+    """
     if HAS_NUM2WORDS:
-        return num2words(n, lang=lang)
+        return num2words(n, lang=lang).replace(',', '')
     return str(n)
 
 
 def _ordinal_to_words(n: int, lang: str = 'en') -> str:
     """Convert ordinal number to words."""
     if HAS_NUM2WORDS:
-        return num2words(n, to='ordinal', lang=lang)
+        return num2words(n, to='ordinal', lang=lang).replace(',', '')
     # Fallback for common ordinals
     suffixes = {1: 'first', 2: 'second', 3: 'third'}
     if n in suffixes:
