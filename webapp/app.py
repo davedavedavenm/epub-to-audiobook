@@ -4288,6 +4288,19 @@ def get_history():
         return jsonify([job_to_dict(row) for row in rows])
 
 
+@app.route('/api/sample/<name>')
+def audition_sample(name: str):
+    """Serve a one-off audition clip — currently the 1997 A/B pair (#26), so the
+    modern-engine number question is settled by ear rather than by argument.
+    Allowlisted names only; never an arbitrary path."""
+    if name not in ('ab_1997_raw', 'ab_1997_spelled'):
+        return jsonify({'error': 'Unknown sample'}), 404
+    p = PREVIEWS_DIR / f"{name}.mp3"
+    if not p.exists():
+        return jsonify({'error': 'Not generated yet'}), 404
+    return send_file(p, mimetype='audio/mpeg')
+
+
 @app.route('/api/preview/<voice_id>')
 def voice_preview(voice_id: str):
     """Stream voice preview audio."""
