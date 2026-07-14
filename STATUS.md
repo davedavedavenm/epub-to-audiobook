@@ -1,9 +1,39 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-13.** Honest single source of truth. "Verified" = it
+**Last updated: 2026-07-14.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
+
+## Recent fixes (2026-07-14)
+
+- **Numbers were STILTED, not mispronounced.** `num2words` returns
+  "three thousand**,** four hundred" and every TTS engine reads that comma as a
+  **pause** — so large numbers came out broken-up. Dave heard it as "stilted and
+  weird". Commas are now stripped; numbers read as one flowing phrase.
+  Regression-tested. This hit **every large number in every book**.
+  *Suspected knock-on:* this comma is very likely the true cause of the old
+  "year-spelling hurts modern engines" finding (the model "pausing" mid-number) —
+  see **#26**, to be settled by an ear-test A/B, not by argument.
+- **Voice samples are now GPU-rendered, one-off.** Chatterbox on CPU is ~3.5
+  min/sample; 23 voices saturated the NUC (load 8+, swap full) and starved the UI
+  — engines even failed their own healthchecks and reported "offline" while merely
+  too busy to answer. Samples are a fixed set, so
+  `scripts/kaggle/render_voice_samples.py` renders them all on a free T4 in
+  minutes and they're cached permanently. Local caching is now **throttled**
+  (load-aware, skip-cached, off-switch) so it can never starve the host again.
+- **The sample is production-accurate.** `webapp/voice_sample.py` holds ONE
+  sample text, shared by the web app and the GPU renderer, and it runs through the
+  **same `normalize_text_for_tts` a real render uses** (per-engine modern/legacy
+  contract). What you audition is what the book gets.
+- **Preview timeout was shorter than the synthesis** (180s cap vs ~208s of CPU
+  work), so every chatterbox sample was generated, timed out, and discarded — the
+  cache could never fill and merely looked "slow". Raised to 600s.
+- **MP3s now carry ID3 tags** (title/album/artist/track), so Audiobookshelf can
+  group a book and order/name its chapters — chapter navigation was broken without
+  them.
+- **Voices that cannot work are documented, not silently broken:** TADA (engine
+  fails to load, **#23**), Inworld (no API key) and Polly (no AWS creds) — **#24**.
 
 ## Recent fixes (2026-07-13)
 
