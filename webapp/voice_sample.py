@@ -24,11 +24,11 @@ SAMPLE_TEXT = (
     "spent a decade trying to answer."
 )
 
-# Acronym LETTER-SPACING only — the one lexicon class the MODERN-ENGINE CONTRACT
-# allows (plain letters, never a phonetic respelling). The built-in table covers
-# DOTTED forms ("U.S."); undotted initialisms must be declared or a modern engine
-# reads "CEO" as "see you".
-SAMPLE_LEXICON = {"CEO": "C E O", "WTO": "W T O", "EU": "E U"}
+# The SAME dictionary a real render uses — so the audition can't be harsher (or
+# kinder) than the book. tts_preprocess applies it per the MODERN-ENGINE CONTRACT:
+# legacy engines get the whole dict (so "Xiaomi" -> "SHOW-mee"); modern engines
+# keep only the acronym letter-spacing class.
+from lexicon import SEED_PRONUNCIATION as SAMPLE_LEXICON  # noqa: E402
 
 MODERN_ENGINES = ("chatterbox", "tada")
 

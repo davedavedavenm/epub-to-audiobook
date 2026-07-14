@@ -34,14 +34,10 @@ import requests  # noqa: E402
 # configured (LLM_API_KEY env). Without it, falls back to a small seed dict so
 # common place/brand names still get help. This closes the gap where standalone
 # script conversions (e.g. Apple in China) skipped pronunciation entirely.
-SEED_PRONUNCIATION = {
-    "Cupertino": "Coo-per-TEE-no", "Beijing": "Bay-JING", "McDonald's": "Mick-DON-uld-z",
-    "Huawei": "HWAH-way", "Xiaomi": "SHOW-mee", "Nguyen": "Nwin", "Qualcomm": "KWAL-com",
-    "Foxconn": "FOX-con", "Shenzhen": "SHUN-jen", "Guangzhou": "GWANG-joe",
-    # TADA tokenizer quirks caught by ear/QA (2026-07-08): "iPhones" -> "if owns"
-    "iPhone": "eye-phone", "iPhones": "eye-phones", "iPad": "eye-pad", "iPods": "eye-pods",
-    "iPod": "eye-pod", "iOS": "eye-O-S",
-}
+# Seed pronunciations live in ONE place (webapp/lexicon.py) so the voice-audition
+# sample and a real render use the identical dictionary.
+from lexicon import SEED_PRONUNCIATION  # noqa: E402
+
 _LEXICON = {}
 _MODERN = True   # this script only drives the modern engines
 
