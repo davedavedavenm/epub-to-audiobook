@@ -123,6 +123,30 @@ def resolve_body_range(chapters, llm_chat, head=6, tail=8):
     return first_body, last_body
 
 
+def explain_gate(flags, llm_chat):
+    """One or two plain sentences explaining a pre-sync quality hold, phrased from
+    the deterministically-detected facts. Non-load-bearing: the hold decision is
+    made in code; this only humanises it. Returns None on any failure (the raw
+    per-chapter details stand on their own)."""
+    if not flags:
+        return None
+    facts = "; ".join(
+        f"chapter {f.get('chapter')} looks {f.get('issue')} ({f.get('detail', '')})"
+        for f in flags)
+    sys = (
+        "You explain an audiobook quality hold to its owner in ONE or TWO plain "
+        "sentences. You are given the detected problems as facts — state what is "
+        "wrong and recommend re-rendering the affected chapter(s). Do not invent "
+        "anything beyond the facts. No preamble, no list, no markdown.")
+    try:
+        out = llm_chat([{"role": "system", "content": sys},
+                        {"role": "user", "content": "Problems: " + facts}])
+        out = (out or "").strip()
+        return out[:400] or None
+    except Exception:
+        return None
+
+
 def body_range(labels, n_chapters):
     """From {index:label}, return (first_body, last_body) for the book body, or
     None if the classification looks unsafe (too little body, or too gappy to be

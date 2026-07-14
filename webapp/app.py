@@ -1154,15 +1154,8 @@ def verify_chapter_integrity(job_id):
 
 
     output_files = list(output_path.glob('*.mp3'))
-    synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
-    update_job(
-        job_id,
-        status='completed',
-        file_count=len(output_files),
-        progress_percent=100,
-        synced_to_abs=synced,
-        completed_at=datetime.now().isoformat()
-    )
+    # pre-sync quality gate: hold a broken render for review instead of shipping it
+    _gate_and_sync(job_id, output_path, job['book_name'], len(output_files))
     app.logger.info(f"Recovered completion for job {job_id} with {len(output_files)} files")
 
     job = get_job(job_id)
@@ -1232,17 +1225,8 @@ def finalize_completed_job(job_id: str) -> bool:
     output_files = list(output_path.glob('*.mp3'))
     
 
-    # Sync to ABS
-    synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
-    
-    update_job(
-        job_id,
-        status='completed',
-        file_count=len(output_files),
-        progress_percent=100,
-        synced_to_abs=synced,
-        completed_at=datetime.now().isoformat()
-    )
+    # pre-sync quality gate: hold a broken render for review instead of shipping it
+    _gate_and_sync(job_id, output_path, job['book_name'], len(output_files))
     
     app.logger.info(f"Finalized job {job_id} with {len(output_files)} files")
     
@@ -2690,25 +2674,33 @@ def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
         return
     append_job_log(job_id, f"Verification passed: {verify_msg}")
 
-    synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
-
-    update_job(
-        job_id,
-        status='completed',
-        file_count=len(output_files),
-        progress_percent=100,
-        synced_to_abs=synced,
-        completed_at=datetime.now().isoformat(),
-        total_chapters=total_chapters,
-    )
-    app.logger.info(
-        f"Recovery {job_id}: Completed with {len(output_files)} files, synced={synced}")
-    append_job_log(job_id, f"Completed with {len(output_files)} chapters (recovery path)")
+    held, gate_flags, gate_summary = presync_quality_gate(job_id, output_path)
+    if held:
+        reasons = gate_summary or '; '.join("chapter %s %s" % (f['chapter'], f['issue']) for f in gate_flags)
+        update_job(
+            job_id, status='review needed', progress_percent=100,
+            file_count=len(output_files), total_chapters=total_chapters,
+            error=reasons, completed_at=datetime.now().isoformat())
+        append_job_log(job_id, "Held for review — not synced to Audiobookshelf: " + reasons)
+    else:
+        synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
+        update_job(
+            job_id,
+            status='completed',
+            file_count=len(output_files),
+            progress_percent=100,
+            synced_to_abs=synced,
+            completed_at=datetime.now().isoformat(),
+            total_chapters=total_chapters,
+        )
+        app.logger.info(
+            f"Recovery {job_id}: Completed with {len(output_files)} files, synced={synced}")
+        append_job_log(job_id, f"Completed with {len(output_files)} chapters (recovery path)")
 
     job = get_job(job_id)
     if job:
         record_conversion_metrics(job)
-        if job.get('notify_telegram'):
+        if job.get('status') == 'completed' and job.get('notify_telegram'):
             send_telegram_notification(job, success=True)
 
     # Start next queued job
@@ -3222,13 +3214,10 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
                    completed_at=datetime.now().isoformat())
         maybe_start_next_queued_job()
         return
-    synced = copy_to_audiobookshelf(output_path, job.get('book_name'), job_id=job_id)
-    update_job(job_id, status='completed', file_count=len(output_files),
-               progress_percent=100, synced_to_abs=synced,
-               completed_at=datetime.now().isoformat())
+    outcome = _gate_and_sync(job_id, output_path, job.get('book_name'), len(output_files))
     append_job_log(job_id, f"Kaggle render complete: {len(output_files)} chapters ({msg})")
     job = get_job(job_id)
-    if job and job.get('notify_telegram'):
+    if outcome == 'completed' and job and job.get('notify_telegram'):
         send_telegram_notification(job, success=True)
     maybe_start_next_queued_job()
 
@@ -3636,8 +3625,16 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 return
             append_job_log(job_id, f"Verification passed: {verify_msg}")
 
-            # Sync to Audiobookshelf
-            synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
+            # pre-sync quality gate: hold a broken render for review, don't ship it
+            _held, _gf, _gsum = presync_quality_gate(job_id, output_path)
+            _review = None
+            if _held:
+                synced = False
+                _review = _gsum or '; '.join("chapter %s %s" % (f['chapter'], f['issue']) for f in _gf)
+                append_job_log(job_id, "Held for review — not synced to Audiobookshelf: " + _review)
+            else:
+                # Sync to Audiobookshelf
+                synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
 
             # Best-effort transcript verification (only meaningful if TTS_PROXY_URL is enabled).
             try:
@@ -3657,7 +3654,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 pass
 
             update_job(job_id,
-                status='completed',
+                status='review needed' if _review else 'completed',
+                error=_review,
                 file_count=len(output_files),
                 progress_percent=100,
                 synced_to_abs=synced,
@@ -3675,8 +3673,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 if full:
                     record_conversion_metrics(job)
 
-            # Send Telegram notification if requested
-            if job and job.get('notify_telegram'):
+            # Send Telegram notification if requested (not for held-for-review books)
+            if job and not _review and job.get('notify_telegram'):
                 send_telegram_notification(job, success=True)
 
             # Cleanup transcript directory since it's successfully converted and synced
@@ -4643,8 +4641,16 @@ def job_qa(job_id: str):
                 break
             except Exception:
                 pass
+    # pre-sync quality-gate result (why a book was held for review), if any
+    gate = None
+    _gp = outdir / '_presync_gate.json'
+    if _gp.exists():
+        try:
+            gate = _json.loads(_gp.read_text(encoding='utf-8'))
+        except Exception:
+            pass
     if not report:
-        return jsonify({'available': False})
+        return jsonify({'available': False, 'gate': gate})
     chapters = report.get('chapters') or ([report] if 'wer' in report else [])
     # Aggregate: worst WER, dropped-word runs (RELIABLE), lexicon suggestions.
     drops, suggestions = [], {}
@@ -4659,7 +4665,8 @@ def job_qa(job_id: str):
     return jsonify({'available': True, 'worst_wer': round(worst, 3),
                     'chapters': len(chapters),
                     'dropped_runs': drops[:12],
-                    'suggestions': suggestions})
+                    'suggestions': suggestions,
+                    'gate': gate})
 
 
 @app.route('/api/jobs/<job_id>/qa/apply', methods=['POST'])
@@ -4880,7 +4887,9 @@ def sync_job(job_id: str):
     if not job:
         return jsonify({'error': 'Job not found'}), 404
 
-    if job['status'] != 'completed':
+    # Allow 'review needed' too — a manual sync is the user overriding a quality
+    # hold (the guard never blocks an explicit user action).
+    if job['status'] not in ('completed', 'review needed'):
         return jsonify({'error': 'Job not completed'}), 400
 
     output_dir = OUTPUT_DIR / job['output_dirname']
@@ -4888,7 +4897,9 @@ def sync_job(job_id: str):
         return jsonify({'error': 'Output files not found'}), 404
 
     synced = copy_to_audiobookshelf(output_dir, job['book_name'], job_id=job_id)
-    update_job(job_id, synced_to_abs=synced)
+    # Clear the review hold once the user has synced it through.
+    update_job(job_id, synced_to_abs=synced,
+               **({'status': 'completed', 'error': ''} if synced else {}))
 
     if synced:
         return jsonify({'status': 'synced'})
@@ -5050,6 +5061,113 @@ def guard_refine_chapters(epub_path, chapters):
         pass
     result['back'] = set(back)
     return result
+
+
+def _ollama_available() -> bool:
+    return bool(os.environ.get('OLLAMA_URL') or get_setting('OLLAMA_URL'))
+
+
+def _ollama_chat(messages, timeout=40, max_tokens=200) -> str:
+    """Background-job call to the SHARED local Ollama (khpi5). For NON-latency-
+    sensitive guard jobs only (per local-llm-reference.md). Hard timeout,
+    fail-open — raises on any problem so callers proceed without it."""
+    base = (os.environ.get('OLLAMA_URL') or get_setting('OLLAMA_URL') or '').rstrip('/')
+    model = os.environ.get('OLLAMA_MODEL') or get_setting('OLLAMA_MODEL') or 'qwen2.5:3b'
+    if not base:
+        raise RuntimeError("no local Ollama configured")
+    r = requests.post(f"{base}/chat/completions",
+                      headers={"Content-Type": "application/json"},
+                      json={"model": model, "messages": messages, "temperature": 0,
+                            "max_tokens": max_tokens, "keep_alive": "24h"},
+                      timeout=timeout)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+
+
+def presync_quality_gate(job_id, output_path):
+    """Before syncing a finished render to Audiobookshelf, catch chapters that
+    rendered broken so a bad book is HELD for review instead of shipped.
+
+    Deterministic decision (the LLM is never load-bearing): a chapter is flagged
+    when its audio is far too short for its text (bytes-per-word << the book's own
+    median → truncated/silent) or its ASR word-error is extreme (garbled). A
+    local-Ollama call only phrases a human recommendation, fail-open.
+
+    Returns (held: bool, flags: list, summary: str|None). Writes _presync_gate.json.
+    """
+    import statistics
+    output_path = Path(output_path)
+    mp3s = sorted(output_path.glob('*.mp3'))
+    if len(mp3s) < 2:
+        return False, [], None      # nothing to compare against; don't block
+
+    wer, words = {}, {}
+    qa_path = output_path / 'qa_report.json'
+    if qa_path.exists():
+        try:
+            rep = json.loads(qa_path.read_text(encoding='utf-8'))
+            for c in rep.get('chapters', []):
+                ch = c.get('chapter')
+                if ch is not None:
+                    wer[int(ch)] = c.get('wer')
+                    words[int(ch)] = c.get('n_source') or 0
+        except Exception:
+            pass
+
+    bpw = {}
+    for f in mp3s:
+        try:
+            ch = int(f.stem)
+        except ValueError:
+            continue
+        w = words.get(ch, 0)
+        if w > 50:
+            bpw[ch] = f.stat().st_size / w
+    med = statistics.median(bpw.values()) if bpw else None
+
+    flags = []
+    for f in mp3s:
+        try:
+            ch = int(f.stem)
+        except ValueError:
+            continue
+        w, e = words.get(ch, 0), wer.get(ch)
+        if med and w > 200 and ch in bpw and bpw[ch] < 0.25 * med:
+            flags.append({'chapter': ch, 'issue': 'truncated', 'words': w,
+                          'detail': f'audio is far too short for {w} words of text '
+                                    f'({bpw[ch]:.0f} vs median {med:.0f} bytes/word)'})
+        elif e is not None and e > 0.7:
+            flags.append({'chapter': ch, 'issue': 'garbled', 'wer': round(e, 3),
+                          'detail': f'ASR word-error {e:.0%} — audio does not match the text'})
+
+    held = bool(flags)
+    summary = None
+    if held and _ollama_available():
+        summary = guard.explain_gate(flags, _ollama_chat)   # fail-open, non-deciding
+    try:
+        (output_path / '_presync_gate.json').write_text(
+            json.dumps({'held': held, 'flags': flags, 'summary': summary}), encoding='utf-8')
+    except Exception:
+        pass
+    return held, flags, summary
+
+
+def _gate_and_sync(job_id, output_path, book_name, file_count):
+    """Quality-gate a finished render, then hold-for-review or sync+complete.
+    Shared by every render path. Returns 'held' or 'completed'."""
+    held, flags, summary = presync_quality_gate(job_id, output_path)
+    if held:
+        reasons = summary or '; '.join("chapter %s %s" % (f['chapter'], f['issue']) for f in flags)
+        update_job(job_id, status='review needed', progress_percent=100,
+                   file_count=file_count, error=reasons,
+                   completed_at=datetime.now().isoformat())
+        append_job_log(job_id, "Held for review — not synced to Audiobookshelf: " + reasons)
+        return 'held'
+    synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
+    update_job(job_id, status='completed', file_count=file_count,
+               progress_percent=100, synced_to_abs=synced,
+               completed_at=datetime.now().isoformat())
+    return 'completed'
 
 
 @app.route('/api/library/toc', methods=['POST'])

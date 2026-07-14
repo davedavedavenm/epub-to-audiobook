@@ -1001,7 +1001,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const [resp, statusResp] = await Promise.all([fetch('/api/jobs'), fetch('/api/queue/status')]);
         const jobs = await resp.json();
         const qstatus = await statusResp.json();
-        const active = jobs.filter(j => ['queued', 'converting', 'recovering', 'failed', 'converting PDF', 'converting to audio', 'Kaggle', 'rendering'].some(s => j.status.includes(s)));
+        const active = jobs.filter(j => ['queued', 'converting', 'recovering', 'failed', 'converting PDF', 'converting to audio', 'Kaggle', 'rendering', 'review'].some(s => j.status.includes(s)));
         const badge = document.getElementById('queue-badge');
         if(badge) {
             badge.textContent = active.length;
@@ -1026,12 +1026,12 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 <div class="card" style="${j.status === 'failed' ? 'border-color: var(--error);' : ''}">
                     <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
                         <div>
-                            <div style="text-transform:uppercase; font-size:0.85rem; font-weight:900; color:${j.status === 'failed' ? 'var(--error)' : 'var(--accent)'}; display:flex; align-items:center; gap:10px;">
-                                ${j.status === 'failed' ? '<span style="font-size: 1.4rem;">⚠️</span> FAILED' : j.status}
+                            <div style="text-transform:uppercase; font-size:0.85rem; font-weight:900; color:${j.status === 'failed' ? 'var(--error)' : (j.status === 'review needed' ? '#d99414' : 'var(--accent)')}; display:flex; align-items:center; gap:10px;">
+                                ${j.status === 'failed' ? '<span style="font-size: 1.4rem;">⚠️</span> FAILED' : (j.status === 'review needed' ? '⏸️ Needs review' : j.status)}
                                 ${preBadge(j)}
                             </div>
                             <div class="library-item-title" style="margin-top:8px;">${escapeHtml(j.book_name)}</div>
-                            ${j.status === 'failed' && j.error ? `<div style="color:var(--error); font-size:0.85rem; margin-top:4px; max-width:80%;">${escapeHtml(j.error)}</div>` : ''}
+                            ${(j.status === 'failed' || j.status === 'review needed') && j.error ? `<div style="color:${j.status === 'review needed' ? '#d99414' : 'var(--error)'}; font-size:0.85rem; margin-top:4px; max-width:80%;">${escapeHtml(j.error)}</div>` : ''}
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:1.5rem; font-weight:800; color:${j.status === 'failed' ? 'var(--error)' : 'var(--text-primary)'};">${j.status.includes('Kaggle') ? '~' : ''}${j.progress_percent || 0}%</div>
@@ -1047,12 +1047,12 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
                     <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
                         <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="toggleLogs('${j.id}', this)">📜 Log</button>
-                        ${(j.status !== 'failed' && j.status !== 'completed') ? `<button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="cancelJob('${j.id}')">✋ Cancel</button>` : ''}
-                        ${j.status === 'completed' ? `
+                        ${(j.status !== 'failed' && j.status !== 'completed' && j.status !== 'review needed') ? `<button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="cancelJob('${j.id}')">✋ Cancel</button>` : ''}
+                        ${(j.status === 'completed' || j.status === 'review needed') ? `
                             <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button>
                             <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 EPUB</button>
-                            <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="syncJob('${j.id}', this)">☁️ ${j.synced_to_abs ? 'Re-sync to ABS' : 'Sync to ABS'}</button>
-                            <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="toggleQA('${j.id}', this)">🔍 QA report</button>
+                            <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="syncJob('${j.id}', this)">☁️ ${j.status === 'review needed' ? 'Sync anyway' : (j.synced_to_abs ? 'Re-sync to ABS' : 'Sync to ABS')}</button>
+                            <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="toggleQA('${j.id}', this)">🔍 ${j.status === 'review needed' ? 'Why held?' : 'QA report'}</button>
                         ` : ''}
                     </div>
                     <div id="qa-${j.id}" class="hidden" style="margin-top:16px;"></div>
@@ -1154,7 +1154,17 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         panel.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem;">Loading QA…</div>';
         try {
             const q = await (await fetch('/api/jobs/' + jobId + '/qa')).json();
-            if (!q.available) { panel.innerHTML = '<div style="color:var(--text-secondary); font-size:0.85rem;">No QA report for this render (QA runs on Kaggle renders and sampled local checks).</div>'; return; }
+            const g = q.gate;
+            let gateHtml = '';
+            if (g && g.held) {
+                gateHtml = `<div style="background:#fbf1de; border:1px solid #e6c675; border-radius:12px; padding:14px 16px; margin-bottom:12px;">
+                    <div style="font-weight:800; color:#a56d0a; margin-bottom:6px;">⏸️ Held for review — not synced to Audiobookshelf</div>
+                    ${g.summary ? `<div style="font-size:0.88rem; color:#7a5300; margin-bottom:8px;">${escapeHtml(g.summary)}</div>` : ''}
+                    ${(g.flags||[]).map(f => `<div style="font-family:var(--mono); font-size:0.76rem; color:#7a5300;">· chapter ${f.chapter}: ${escapeHtml(f.issue)} — ${escapeHtml(f.detail||'')}</div>`).join('')}
+                    <div style="font-size:0.8rem; color:#7a5300; margin-top:8px;">Re-render the affected chapter(s), or use <b>Sync anyway</b> to publish as-is.</div>
+                </div>`;
+            }
+            if (!q.available) { panel.innerHTML = gateHtml || '<div style="color:var(--text-secondary); font-size:0.85rem;">No QA report for this render (QA runs on Kaggle renders and sampled local checks).</div>'; return; }
             const werColor = q.worst_wer > 0.15 ? 'var(--accent-ink)' : 'var(--cloud-ink)';
             let html = `<div style="background:var(--surface-2); border-radius:12px; padding:16px;">
                 <div style="font-family:var(--mono); font-size:0.8rem; color:var(--ink-3); margin-bottom:10px;">ASR QUALITY CHECK · ${q.chapters} chapters · worst WER <b style="color:${werColor}">${(q.worst_wer*100).toFixed(1)}%</b></div>`;

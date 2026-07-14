@@ -173,6 +173,11 @@ services:
       - LLM_API_BASE_URL=${LLM_API_BASE_URL:-https://api.openai.com/v1}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-4o-mini}
+      # Local Ollama (e.g. a shared box) for background guard jobs (pre-sync
+      # quality gate diagnosis). Optional — the gate decision is deterministic;
+      # this only phrases the human explanation.
+      - OLLAMA_URL=${OLLAMA_URL:-}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
       # GPU status display (webapp reads worker's status file, these are fallback)
       - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
       - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
@@ -257,6 +262,9 @@ services:
       - LLM_API_BASE_URL=${LLM_API_BASE_URL:-https://api.openai.com/v1}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-4o-mini}
+      # Local Ollama for the pre-sync quality-gate diagnosis (optional, background)
+      - OLLAMA_URL=${OLLAMA_URL:-}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
       # Shared GPU-hours state (webapp reads for the quota readout, worker writes)
       - KAGGLE_RENDER_STATE=/data/kaggle_render_state.json
     volumes:
