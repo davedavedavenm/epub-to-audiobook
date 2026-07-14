@@ -532,15 +532,29 @@ PREVIEW_TEXT = (
 )
 
 
+# Acronym LETTER-SPACING for the undotted initialisms in the sample. This is the
+# ONE lexicon class the modern-engine contract allows (plain letters, never a
+# phonetic respelling) — without it a modern engine reads "CEO" as "see you".
+# The built-in table only covers DOTTED forms ("U.S."), so undotted ones must be
+# declared. A real render gets these from its lexicon; the sample declares them
+# so what you audition is what you'd actually hear.
+PREVIEW_LEXICON = {"CEO": "C E O", "WTO": "W T O", "EU": "E U"}
+
+
 def _preview_text_for(engine: str) -> str:
     """Run the sample through the SAME preprocessing a real render uses, so the
-    voice you hear is the voice you'd actually get in a book. Sending raw text
-    would make every engine sound worse than it really is (unspaced acronyms,
-    unspoken numbers). Modern voice-clone engines (chatterbox/tada) read numbers
-    natively; the others need them spelled out."""
+    voice you hear is the voice you'd actually get in a book.
+
+    Per the MODERN-ENGINE CONTRACT this is deliberately asymmetric:
+      * chatterbox/tada (modern) -> numbers/dates left ALONE (they read them
+        natively) and NO phonetic respellings; only acronym letter-spacing.
+      * kokoro/piper/edge/polly  -> numbers spelled out, which they need.
+    Sending raw text to everything would make the dumb engines mangle "$1.2
+    billion" and you'd be judging a preprocessing bug, not the voice."""
     try:
         from tts_preprocess import normalize_text_for_tts
-        return normalize_text_for_tts(PREVIEW_TEXT, modern=engine in ('chatterbox', 'tada'))
+        return normalize_text_for_tts(PREVIEW_TEXT, lexicon=PREVIEW_LEXICON,
+                                      modern=engine in ('chatterbox', 'tada'))
     except Exception:
         return PREVIEW_TEXT
 
