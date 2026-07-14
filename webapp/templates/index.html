@@ -666,8 +666,9 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     }).join('');
                     startSel.innerHTML = opts;
                     endSel.innerHTML = opts;
-                    startSel.value = 1;
-                    // Default End to the last real book chapter, not trailing back-matter.
+                    // Default the range to the actual book body (skips a copyright
+                    // page at the front and citations/index at the back).
+                    startSel.value = data.first_body_index || 1;
                     endSel.value = data.last_body_index || data.chapters[data.chapters.length-1].index;
                 } else {
                     startSel.innerHTML = '<option value="1">Chapter 1</option>';

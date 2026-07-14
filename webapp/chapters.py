@@ -133,7 +133,8 @@ def list_renderable_chapters(epub_path, min_words=MIN_WORDS):
         idx = 0
         for name in spine_docs(z):
             html = z.read(name).decode('utf-8', 'ignore')
-            words = len(_plain_text(html).split())
+            text = _plain_text(html)
+            words = len(text.split())
             if words < min_words:
                 continue
             idx += 1
@@ -143,6 +144,9 @@ def list_renderable_chapters(epub_path, min_words=MIN_WORDS):
                 'title': title,
                 'words': words,
                 'href': name,
+                # opening words — lets the LLM guard tell a copyright page from a
+                # real chapter even when the title is the book's own name.
+                'snippet': ' '.join(text.split()[:45]),
                 'back_matter': bool(BACK_MATTER_RE.search(title)),
             })
     return out

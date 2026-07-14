@@ -23,6 +23,7 @@ from typing import Any, Optional, Dict, List
 from gpu_manager import GPUManager
 from epub_generator import package_epub3_with_audio
 from chapters import list_renderable_chapters, body_end_index
+import guard
 
 from flask import Flask, render_template, request, jsonify, send_file, Response
 import requests
@@ -4989,6 +4990,63 @@ def list_library():
     return jsonify(books)
 
 
+def llm_configured() -> bool:
+    """True if an OpenAI-compatible LLM is set up (settings DB or env)."""
+    return bool(get_setting('LLM_API_KEY') or os.environ.get('LLM_API_KEY'))
+
+
+def _llm_chat(messages, temperature=0, max_tokens=900, timeout=45) -> str:
+    """One OpenAI-compatible chat-completions call using the configured LLM
+    (local Ollama primary / cloud fallback — same config the pronunciation
+    features use). Returns the assistant text; raises if unconfigured or failed
+    so the guard treats it as 'unavailable' and falls back to the heuristic."""
+    key = get_setting('LLM_API_KEY') or os.environ.get('LLM_API_KEY')
+    base = get_setting('LLM_API_BASE_URL') or os.environ.get('LLM_API_BASE_URL', 'https://api.openai.com/v1')
+    model = get_setting('LLM_MODEL_NAME') or os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    if not key:
+        raise RuntimeError("no LLM configured")
+    r = requests.post(
+        f"{base.rstrip('/')}/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": model, "messages": messages,
+              "temperature": temperature, "max_tokens": max_tokens},
+        timeout=timeout)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+
+
+def guard_refine_chapters(epub_path, chapters):
+    """LLM-guard the chapter classification. Returns
+    {'back': set(indices), 'first_body': int, 'last_body': int} or None when the
+    guard is unavailable / its result fails a sanity check (caller uses the
+    deterministic heuristic). Cached per book so it's one call, not per page-load.
+    """
+    if not chapters or not llm_configured():
+        return None
+    cache = TOC_CACHE_DIR / f"{Path(epub_path).stem}.guard.json"
+    try:
+        if cache.exists():
+            d = json.loads(cache.read_text(encoding='utf-8'))
+            return {'back': set(d['back']), 'first_body': d['first_body'], 'last_body': d['last_body']}
+    except Exception:
+        pass
+    labels = guard.classify_chapters(chapters, _llm_chat)
+    if not labels:
+        return None
+    rng = guard.body_range(labels, len(chapters))
+    if not rng:
+        return None
+    first_body, last_body = rng
+    back = sorted(c['index'] for c in chapters if labels.get(c['index'], 'body') != 'body')
+    result = {'back': back, 'first_body': first_body, 'last_body': last_body}
+    try:
+        cache.write_text(json.dumps(result), encoding='utf-8')
+    except Exception:
+        pass
+    result['back'] = set(back)
+    return result
+
+
 @app.route('/api/library/toc', methods=['POST'])
 def library_toc():
     """Chapter list for the picker — numbered EXACTLY as the converter numbers
@@ -5003,11 +5061,23 @@ def library_toc():
         if not path.exists(): return jsonify({'error': 'Not found'}), 404
         if path.suffix.lower() == '.epub':
             chapters = list_renderable_chapters(path)
-            # The UI defaults the End selector to the last body chapter so
-            # "convert the book" excludes the trailing citations/index/junk
-            # unless the user deliberately extends it.
+            # LLM guard refines front/body/back classification when available;
+            # otherwise the deterministic heuristic. The UI defaults the range to
+            # the book body so "convert the book" excludes copyright pages and
+            # trailing citations/index/junk unless the user extends it.
+            refined = guard_refine_chapters(path, chapters)
+            if refined:
+                for c in chapters:
+                    c['back_matter'] = c['index'] in refined['back']
+                first_body, last_body = refined['first_body'], refined['last_body']
+            else:
+                first_body, last_body = 1, body_end_index(chapters)
+            for c in chapters:
+                c.pop('snippet', None)   # internal to the guard, not for the UI
             return jsonify({'chapters': chapters,
-                            'last_body_index': body_end_index(chapters)})
+                            'first_body_index': first_body,
+                            'last_body_index': last_body,
+                            'guard': bool(refined)})
         return jsonify({'chapters': []})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
