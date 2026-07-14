@@ -85,6 +85,44 @@ def _parse_labels(raw, valid_indices):
     return out
 
 
+def resolve_body_range(chapters, llm_chat, head=6, tail=8):
+    """Find (first_body, last_body) by classifying ONLY the boundary chapters.
+
+    The book body is a contiguous middle block; the fuzzy decisions are all at the
+    edges (leading front-matter, trailing back-matter). Classifying just the first
+    `head` and last `tail` chapters keeps the prompt small enough for a Pi-hosted
+    model — the doc's "deterministic where determinable, LLM only for the fuzzy
+    remainder" principle. Middle chapters are body by construction.
+
+    Returns (first_body, last_body) or None (caller falls back to the heuristic).
+    """
+    n = len(chapters)
+    if n == 0:
+        return None
+    edge_idx = {c["index"] for c in chapters[:head]} | {c["index"] for c in chapters[-tail:]}
+    candidates = [c for c in chapters if c["index"] in edge_idx]
+    labels = classify_chapters(candidates, llm_chat)
+    if not labels:
+        return None
+
+    first_body = last_body = None
+    for c in chapters:                      # scan forward: skip leading non-body
+        i = c["index"]
+        if i not in labels or labels[i] == "body":
+            first_body = i
+            break
+    for c in reversed(chapters):            # scan backward: skip trailing non-body
+        i = c["index"]
+        if i not in labels or labels[i] == "body":
+            last_body = i
+            break
+    if first_body is None or last_body is None or first_body > last_body:
+        return None
+    if (last_body - first_body + 1) < max(1, 0.25 * n):   # body too small — distrust
+        return None
+    return first_body, last_body
+
+
 def body_range(labels, n_chapters):
     """From {index:label}, return (first_body, last_body) for the book body, or
     None if the classification looks unsafe (too little body, or too gappy to be

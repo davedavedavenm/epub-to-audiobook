@@ -5030,14 +5030,19 @@ def guard_refine_chapters(epub_path, chapters):
             return {'back': set(d['back']), 'first_body': d['first_body'], 'last_body': d['last_body']}
     except Exception:
         pass
-    labels = guard.classify_chapters(chapters, _llm_chat)
-    if not labels:
-        return None
-    rng = guard.body_range(labels, len(chapters))
+    # Classify only the boundary chapters (front/back matter live at the edges;
+    # the middle is body). Smaller prompt = faster + cheaper against the free
+    # tier, and robust enough for a fast cloud model. Latency-sensitive UI call,
+    # so this uses the configured cloud LLM (Groq) — NOT the Pi-hosted local
+    # model, which is reserved for the background guard jobs (per local-llm-reference.md).
+    # Tight timeout + small output: a UI call must fail open to the heuristic
+    # quickly if the cloud LLM is slow/rate-limited.
+    chat = lambda msgs: _llm_chat(msgs, timeout=20, max_tokens=300)
+    rng = guard.resolve_body_range(chapters, chat)
     if not rng:
         return None
     first_body, last_body = rng
-    back = sorted(c['index'] for c in chapters if labels.get(c['index'], 'body') != 'body')
+    back = sorted(c['index'] for c in chapters if c['index'] < first_body or c['index'] > last_body)
     result = {'back': back, 'first_body': first_body, 'last_body': last_body}
     try:
         cache.write_text(json.dumps(result), encoding='utf-8')
