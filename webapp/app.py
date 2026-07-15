@@ -1796,7 +1796,11 @@ def watchdog_loop():
                     job_id = job['id']
                     container_name = job['container_name']
                     book_label = (job['book_name'] or '')[:30]
-                    container_running = check_container_running(container_name)
+                    process = running_processes.get(job_id)
+                    if process:
+                        container_running = (process.poll() is None)
+                    else:
+                        container_running = check_container_running(container_name)
 
                     # --- Check 1: Container dead ---
                     if not container_running:
@@ -1836,11 +1840,22 @@ def watchdog_loop():
                                     job_id,
                                     f"Watchdog: stalled at ch {current_ch} ({current_pct}%) for "
                                     f"{stall_minutes:.0f} min — killing and retrying")
-                                # Kill the stuck container
-                                subprocess.run(['docker', 'stop', container_name],
-                                               capture_output=True, timeout=10)
-                                subprocess.run(['docker', 'rm', '-f', container_name],
-                                               capture_output=True, timeout=10)
+                                # Kill the stuck container or process
+                                process = running_processes.get(job_id)
+                                if process:
+                                    try:
+                                        process.terminate()
+                                        process.wait(timeout=5)
+                                    except Exception:
+                                        try:
+                                            process.kill()
+                                        except Exception:
+                                            pass
+                                else:
+                                    subprocess.run(['docker', 'stop', container_name],
+                                                   capture_output=True, timeout=10)
+                                    subprocess.run(['docker', 'rm', '-f', container_name],
+                                                   capture_output=True, timeout=10)
                                 handle_job_failure(
                                     job_id, 'container_died',
                                     f'Stalled at chapter {current_ch} ({current_pct}%) for '
@@ -1878,10 +1893,21 @@ def watchdog_loop():
                                 job_id,
                                 f"Watchdog: exceeded {ETA_KILL_MULTIPLIER}x ETA "
                                 f"({elapsed:.0f}m vs {eta_minutes}m) — killing and retrying")
-                            subprocess.run(['docker', 'stop', container_name],
-                                           capture_output=True, timeout=10)
-                            subprocess.run(['docker', 'rm', '-f', container_name],
-                                           capture_output=True, timeout=10)
+                            process = running_processes.get(job_id)
+                            if process:
+                                try:
+                                    process.terminate()
+                                    process.wait(timeout=5)
+                                except Exception:
+                                    try:
+                                        process.kill()
+                                    except Exception:
+                                        pass
+                            else:
+                                subprocess.run(['docker', 'stop', container_name],
+                                               capture_output=True, timeout=10)
+                                subprocess.run(['docker', 'rm', '-f', container_name],
+                                               capture_output=True, timeout=10)
                             handle_job_failure(
                                 job_id, 'timeout',
                                 f'Exceeded {ETA_KILL_MULTIPLIER}x ETA '
