@@ -114,18 +114,29 @@ def _concat_wav(chunks):
     strict decoders (ffmpeg/PyAV, and audiobook players' seek/duration) hit
     "Header missing / Invalid data" and stop early (found proving QA #7 —
     a 27-min chapter decoded to 19 words). WAV concat avoids that entirely."""
-    frames, params = [], None
+    # STREAMING-WAV SAFE: some engines (kokoro) return a WAV whose size fields are
+    # a placeholder (nframes = 0x7FFFFFFF) because the length isn't known up front.
+    # Trusting that count made stdlib `wave` try to write a >4GB header
+    # (struct.error) and the render died. Read the ACTUAL bytes, never the declared
+    # frame count, and let the writer compute the real length.
+    frames, ch, sw, fr = [], None, None, None
     for b in chunks:
         w = wave.open(io.BytesIO(b), 'rb')
-        if params is None:
-            params = w.getparams()
-        frames.append(w.readframes(w.getnframes()))
+        if ch is None:
+            ch, sw, fr = w.getnchannels(), w.getsampwidth(), w.getframerate()
+        data = w.readframes(0x7FFFFFFF)          # returns only the real bytes present
+        fsz = w.getnchannels() * w.getsampwidth()
+        if fsz and len(data) % fsz:
+            data = data[:len(data) - (len(data) % fsz)]
+        frames.append(data)
         w.close()
-    if params is None:
+    if ch is None:
         return b''
     out = io.BytesIO()
     ww = wave.open(out, 'wb')
-    ww.setparams(params)
+    ww.setnchannels(ch)                          # set individually — never copy the
+    ww.setsampwidth(sw)                          # source's placeholder nframes
+    ww.setframerate(fr)
     for f in frames:
         ww.writeframes(f)
     ww.close()
