@@ -5,6 +5,28 @@ was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
 
+## OPEN — local-render is broken (2026-07-15, needs work)
+
+A real conversion ("In the Nick of Time", `render_target: local`, kokoro) rendered
+**two publisher marketing pages and NOT the story**. Root cause: **the local path
+uses a different renderer with different chapter numbering than the picker.** The
+Kaggle path was unified on `chapters.py`; the local path was not — it still shells
+out to the legacy p0n1 container. This is not a one-off; any local render can pick
+the wrong chapters. Tracked, grounded, for other agents:
+
+- **#28** (CRITICAL) — local renders produce the WRONG chapters: picker numbering
+  (`chapters.py`) ≠ p0n1 numbering. The fix is to route local renders through
+  `scripts/convert_book.py` (one renderer, one numbering).
+- **#29** — `convert_book.py` crashes on kokoro's streaming WAV (blocks #28). A fix
+  is committed (`89ff1a5`) but **UNVERIFIED** — a kokoro book has not rendered
+  end-to-end.
+- **#30** — nothing catches a "completed" book that contains no real content
+  (rendered-words vs source-words sanity check missing).
+- **#31** — p0n1 ignores the min-words filter and writes no ID3 tags.
+
+**Do not trust a `completed` local render until #28/#29 are fixed and verified by
+listening/measurement.**
+
 ## Recent fixes (2026-07-14)
 
 - **Numbers were STILTED, not mispronounced.** `num2words` returns
