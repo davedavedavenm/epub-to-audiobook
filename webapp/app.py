@@ -5,6 +5,7 @@ Allows users to upload EPUB/PDF files, preview voices, and convert to audiobooks
 """
 
 import os
+import sys
 import subprocess
 import threading
 import uuid
