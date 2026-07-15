@@ -18,15 +18,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rsync \
     openssh-client \
     calibre \
+    ffmpeg \
     && curl -fsSL https://get.docker.com | sh \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements.txt .
+COPY webapp/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
-COPY . .
+COPY webapp/ .
+
+# Copy conversion script
+COPY scripts/convert_book.py ./scripts/convert_book.py
 
 # Create directories
 RUN mkdir -p /data/uploads /data/audiobooks /data/previews /data/logs

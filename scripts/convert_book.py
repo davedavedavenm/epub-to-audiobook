@@ -23,6 +23,7 @@ import urllib.request
 from pathlib import Path
 from html.parser import HTMLParser
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
 from tts_preprocess import sanitize_html, normalize_text_for_tts  # noqa: E402
 # Shared chapter numbering — the SAME function the web UI's picker uses, so the
@@ -40,6 +41,35 @@ from lexicon import SEED_PRONUNCIATION  # noqa: E402
 
 _LEXICON = {}
 _MODERN = True   # this script only drives the modern engines
+_SEARCH_REPLACE_RULES = []
+
+def load_search_and_replace(path):
+    rules = []
+    if not path or not os.path.exists(path):
+        return rules
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '==' in line:
+                    pattern, replacement = line.split('==', 1)
+                    try:
+                        compiled = re.compile(pattern)
+                        rules.append((compiled, replacement))
+                    except Exception as e:
+                        print(f"Warning: invalid regex pattern '{pattern}' in {path}: {e}", flush=True)
+    except Exception as e:
+        print(f"Warning: failed to load search and replace file {path}: {e}", flush=True)
+    return rules
+
+
+def apply_search_and_replace(text, rules):
+    for pattern, replacement in rules:
+        text = pattern.sub(replacement, text)
+    return text
+
 
 def build_lexicon(epub_path):
     lex = dict(SEED_PRONUNCIATION)
@@ -90,6 +120,8 @@ def chapter_text(z, name):
             k: v for k, v in _LEXICON.items() if _is_letter_spacing(k, v)}
         if lex:
             text = apply_lexicon(text, lex)
+    if _SEARCH_REPLACE_RULES:
+        text = apply_search_and_replace(text, _SEARCH_REPLACE_RULES)
     return text
 
 
@@ -171,13 +203,16 @@ def _to_mp3(wav_bytes, denoise=False, meta=None):
     return p.stdout if p.returncode == 0 and p.stdout else None
 
 
-def synth(engine_url, voice, text, chunk_chars):
+def synth(engine_url, voice, text, chunk_chars, chapter_idx=1):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
     caller encodes one MP3 from that."""
     import time
     parts = []
-    for c in chunk(text, chunk_chars):
+    chunks = chunk(text, chunk_chars)
+    total_chunks = len(chunks)
+    for chunk_idx, c in enumerate(chunks, 1):
+        print(f"Processing chapter-{chapter_idx}_chunk_{chunk_idx}_of_{total_chunks}", flush=True)
         # per-chunk retry: long CPU generations can drop the connection
         for attempt in range(3):
             try:
@@ -194,6 +229,14 @@ def synth(engine_url, voice, text, chunk_chars):
                 print(f"  chunk retry {attempt+1}/2 after error: {str(e)[:80]}", flush=True)
                 time.sleep(10 * (attempt + 1))
     return _concat_wav(parts)
+
+
+def sanitize_filename(name):
+    # Keep alphanumeric, dashes, underscores, spaces
+    name = re.sub(r'[^a-zA-Z0-9_\-\s]', '', name)
+    # Replace spaces or multiple dashes with single underscore
+    name = re.sub(r'[\s\-]+', '_', name)
+    return name.strip('_')
 
 
 def main():
@@ -214,7 +257,15 @@ def main():
                     help='QA Layer 2: ASR-verify each chapter locally (needs faster-whisper)')
     ap.add_argument('--qa-model', default='base', help='whisper model size for --qa (tiny/base/small)')
     ap.add_argument('--progress-url', default='', help='POST real per-chapter progress here (e.g. an ntfy.sh topic) so a remote UI can show true progress, not an estimate')
+    ap.add_argument('--search-and-replace-file', default=None,
+                    help='Path to a file containing search==replace rules (one per line) to apply to text')
     a = ap.parse_args()
+    
+    # Load search and replace rules if specified
+    global _SEARCH_REPLACE_RULES
+    if a.search_and_replace_file:
+        _SEARCH_REPLACE_RULES = load_search_and_replace(a.search_and_replace_file)
+
     # modern voice-clone engines read numbers/years natively; skip spelling.
     modern = ('_tada' in a.voice) or (a.voice.startswith('uk_') and '_tada' not in a.voice) or a.chunk_chars >= 280
     global _MODERN
@@ -278,6 +329,7 @@ def main():
         if _c < a.start or (a.end and _c > a.end):
             continue
         total_render += 1
+    print(f"Chapters count: {total_render}", flush=True)
     print(f"renderable chapters: {total_render}", flush=True)
     _post_progress(0, total_render, 0)
 
@@ -292,31 +344,42 @@ def main():
         idx += 1
         if idx < a.start or (a.end and idx > a.end):
             continue
+        
+        ctitle = _title_for(z.read(name).decode('utf-8', 'ignore'), f"Chapter {idx}")
+        clean_title = sanitize_filename(ctitle)
+        suffix = f"_{clean_title}" if clean_title else ""
+        
         text = chapter_text(z, name)
         # resume: accept a prior .mp3 OR .wav for this chapter
         fn = None
         for ext in ('mp3', 'wav'):
-            p = out / f"{idx:03d}.{ext}"
-            if p.exists() and p.stat().st_size > 10240:
-                fn = p
+            # Match 3-digit flat, 3-digit with name, or 4-digit with name
+            matches = (list(out.glob(f"{idx:03d}.{ext}")) + 
+                       list(out.glob(f"{idx:03d}_*.{ext}")) + 
+                       list(out.glob(f"{idx:04d}_*.{ext}")))
+            if matches and matches[0].stat().st_size > 10240:
+                fn = matches[0]
                 break
         if fn:
             print(f"[chapter {idx}] already done — skipping (resume)", flush=True)
+            print(f"Processing chapter {idx}: {ctitle}", flush=True)
+            print(f"Converted chapter {idx}", flush=True)
         else:
+            print(f"Processing chapter {idx}: {ctitle}", flush=True)
             print(f"[chapter {idx}] {len(text.split())} words -> synthesizing", flush=True)
-            ctitle = _title_for(z.read(name).decode('utf-8', 'ignore'), f"Chapter {idx}")
             meta = {'title': ctitle, 'album': book_title, 'artist': book_author,
                     'album_artist': book_author, 'genre': 'Audiobook',
                     'track': f"{done_render + 1}/{total_render}"}
-            wav = synth(a.engine_url, a.voice, text, a.chunk_chars)
+            wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx)
             mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
-                fn = out / f"{idx:03d}.mp3"
+                fn = out / f"{idx:03d}{suffix}.mp3"
                 fn.write_bytes(mp3)
             else:
-                fn = out / f"{idx:03d}.wav"
+                fn = out / f"{idx:03d}{suffix}.wav"
                 fn.write_bytes(wav)
                 print(f"[chapter {idx}] ffmpeg not found — wrote clean WAV instead of MP3", flush=True)
+            print(f"Converted chapter {idx}", flush=True)
             print(f"[chapter {idx}] wrote {fn} ({fn.stat().st_size} bytes)", flush=True)
         # QA Layer 2 (opt-in): ASR-verify what we just rendered against source.
         if a.qa:

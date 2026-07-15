@@ -1022,6 +1022,20 @@ def remove_stale_container(container_name):
     return False
 
 
+def get_mp3_duration(path: Path) -> float:
+    """Use ffprobe to get the duration of an audio file in seconds."""
+    try:
+        import subprocess
+        cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+               '-of', 'default=noprint_wrappers=1:nokey=1', str(path)]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        if res.returncode == 0:
+            return float(res.stdout.strip())
+    except Exception:
+        pass
+    return 0.0
+
+
 def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | None,
                          start_chapter: int | None = None,
                          end_chapter: int | None = None,
@@ -1086,6 +1100,66 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
     total_size_mb = sum(f.stat().st_size for f in output_files) / (1024 * 1024)
     if total_size_mb < min_total_mb:
         return False, f"Total audio only {total_size_mb:.1f}MB — likely corrupted"
+
+    # Check 4: Sanity check total rendered words/duration vs source words
+    try:
+        job = get_job(job_id)
+        if job:
+            input_filename = job.get('input_filename')
+            is_pdf = job.get('is_pdf')
+            epub_path = UPLOAD_DIR / input_filename
+            if is_pdf:
+                epub_path = UPLOAD_DIR / (input_filename.rsplit('.', 1)[0] + '.epub')
+            
+            # Prefer preprocessed EPUB if it exists
+            tts_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
+            if tts_path.exists():
+                epub_path = tts_path
+                
+            if epub_path.exists():
+                from chapters import list_renderable_chapters
+                ch_list = list_renderable_chapters(epub_path)
+                
+                # Sum the word counts of chapters that were supposed to be rendered
+                start_ch = start_chapter or 1
+                end_ch = end_chapter or len(ch_list)
+                
+                expected_words = sum(
+                    c['words'] for c in ch_list
+                    if start_ch <= c['index'] <= end_ch
+                )
+                
+                if expected_words > 0:
+                    # Calculate total duration of generated MP3 files
+                    total_duration = 0.0
+                    for f in output_files:
+                        total_duration += get_mp3_duration(f)
+                    
+                    # If duration couldn't be determined, fallback to estimating from file size
+                    # at 192kbps (which is the default)
+                    if total_duration == 0.0:
+                        total_bytes = sum(f.stat().st_size for f in output_files)
+                        # 192 kbps = 24,000 bytes/sec
+                        total_duration = total_bytes / 24000.0
+                    
+                    # Speech rate is typically ~130-160 WPM. Let's be very conservative.
+                    speed_factor = float(job.get('tts_speed') or 1.0)
+                    baseline_wps = 1.5
+                    estimated_words = total_duration * (baseline_wps * speed_factor)
+                    
+                    app.logger.info(
+                        f"Job {job_id} sanity check: expected_words={expected_words}, "
+                        f"estimated_words={estimated_words:.1f} (duration={total_duration:.1f}s)"
+                    )
+                    
+                    # If we got less than 30% of the expected words, fail.
+                    if estimated_words < expected_words * 0.3:
+                        return False, (
+                            f"Sanity check failed: epub has {expected_words} words in range "
+                            f"but audio only has ~{estimated_words:.0f} words ({total_duration:.1f}s)"
+                        )
+    except Exception as e:
+        app.logger.warning(f"Sanity check word count failed: {e}")
 
     return True, (
         f"Verified: {len(output_files)} files, {total_size_mb:.0f}MB total"
@@ -2300,17 +2374,14 @@ def find_missing_chapters(output_dir: Path, total_chapters: int,
                           end_chapter: int | None = None) -> list[int]:
     """Return 1-based chapter numbers that have no matching output file.
 
-    The converter names files like ``0001_Title.mp3``, ``0002_Title.mp3``, etc.
-    A chapter is 'missing' if no file with that prefix exists.
-
-    When *start_chapter* / *end_chapter* are given (chapter-range jobs like
-    quality samples), only chapters in that range are expected.
+    Handles both 3-digit (001.mp3 or 001_*.mp3) and 4-digit (0001_*.mp3) filenames.
     """
     existing = set()
-    for f in output_dir.glob('*.mp3'):
-        m = re.match(r'^(\d{4})_', f.name)
-        if m:
-            existing.add(int(m.group(1)))
+    if output_dir.exists():
+        for f in output_dir.glob('*.mp3'):
+            m = re.match(r'^(\d{3,4})(?:[_\-\.\s]|$)', f.name)
+            if m:
+                existing.add(int(m.group(1)))
 
     first = start_chapter or 1
     last = end_chapter or total_chapters
@@ -2327,66 +2398,72 @@ def retry_missing_chapters(
 ) -> list[int]:
     """Re-run the converter for each missing chapter individually.
 
-    Uses ``--chapter_start N --chapter_end N`` to convert one chapter at a time.
+    Uses ``--start N --end N`` to convert one chapter at a time.
     Returns the list of chapters that still failed after all retries.
     """
     still_missing = []
     for ch in missing:
         success = False
         for attempt in range(1, MAX_CHAPTER_RETRIES + 1):
-            retry_container = f"audiobook-{job_id}-retry-ch{ch}"
-            # Build retry command — same as original but targeting a single chapter
+            # Build retry command — same as original but targeting a single chapter using --start and --end
             retry_cmd = [c for c in cmd_template]  # shallow copy
-            # Replace container name
-            name_idx = retry_cmd.index('--name') + 1
-            retry_cmd[name_idx] = retry_container
-            # Add/replace chapter range
-            retry_cmd = [c for c in retry_cmd
-                         if c not in ('--chapter_start', '--chapter_end')]
-            # Also remove the values after those flags if present
+            # Remove any existing --start / --end flags if present
             clean = []
             skip_next = False
             for c in retry_cmd:
                 if skip_next:
                     skip_next = False
                     continue
-                if c in ('--chapter_start', '--chapter_end'):
+                if c in ('--start', '--end'):
                     skip_next = True
                     continue
                 clean.append(c)
-            clean.extend(['--chapter_start', str(ch), '--chapter_end', str(ch)])
+            clean.extend(['--start', str(ch), '--end', str(ch)])
 
             app.logger.info(f"Retry chapter {ch} attempt {attempt}/{MAX_CHAPTER_RETRIES}: {' '.join(clean)}")
             append_job_log(job_id, f"Retrying chapter {ch} (attempt {attempt}/{MAX_CHAPTER_RETRIES})")
 
-            subprocess.run(['docker', 'rm', '-f', retry_container], capture_output=True)
+            # Redirect output to a log file
+            log_file_path = Path(LOG_DIR) / f"{job_id}_retry_ch{ch}_attempt{attempt}.log"
+            log_file_path.parent.mkdir(parents=True, exist_ok=True)
+            log_file = open(log_file_path, 'w', encoding='utf-8')
 
             try:
-                proc = subprocess.Popen(clean, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = proc.communicate(timeout=timeout_seconds)
+                proc = subprocess.Popen(clean, stdout=log_file, stderr=subprocess.STDOUT)
+                running_processes[job_id] = proc
+                proc.wait(timeout=timeout_seconds)
                 if proc.returncode != 0:
+                    log_file.close()
+                    err_txt = log_file_path.read_text(encoding='utf-8', errors='ignore') if log_file_path.exists() else ""
                     app.logger.error(f"Retry chapter {ch} failed with return code {proc.returncode}")
-                    app.logger.error(f"STDERR: {stderr.decode('utf-8', errors='ignore')[:1000]}")
-                    append_job_log(job_id, f"Chapter {ch} retry error: {stderr.decode('utf-8', errors='ignore')[:200]}")
+                    app.logger.error(f"ERR LOG: {err_txt[:1000]}")
+                    append_job_log(job_id, f"Chapter {ch} retry error: {err_txt[:200]}")
             except subprocess.TimeoutExpired:
                 proc.kill()
-                subprocess.run(['docker', 'stop', retry_container], capture_output=True)
+                proc.wait()
                 app.logger.warning(f"Retry chapter {ch} attempt {attempt} timed out")
+                append_job_log(job_id, f"Chapter {ch} retry timed out")
                 continue
             finally:
-                subprocess.run(['docker', 'rm', '-f', retry_container], capture_output=True)
-            
+                if not log_file.closed:
+                    log_file.close()
+                running_processes.pop(job_id, None)
+
             # Wait for file system sync
             import time as time_module
             time_module.sleep(5)
-            
-            # Check if the chapter file now exists
-            ch_files = list(output_path.glob(f'{ch:04d}_*.mp3'))
+
+            # Check if the chapter file now exists (both 3-digit and 4-digit formats, and .mp3 / .wav)
+            ch_files = []
+            for ext in ('mp3', 'wav'):
+                ch_files.extend(output_path.glob(f'{ch:03d}.{ext}'))
+                ch_files.extend(output_path.glob(f'{ch:03d}_*.{ext}'))
+                ch_files.extend(output_path.glob(f'{ch:04d}_*.{ext}'))
+
             if ch_files and all(f.stat().st_size > 1024 for f in ch_files):
                 app.logger.info(f"Chapter {ch} recovered on attempt {attempt}")
                 append_job_log(job_id, f"Chapter {ch} recovered on attempt {attempt}")
-                # keep the UI honest during recovery (it froze at the
-                # pre-crash percentage otherwise — incident 2026-07-08)
+                # keep the UI honest during recovery
                 try:
                     done = len(list(output_path.glob('*.mp3')))
                     job_now = get_job(job_id)
@@ -2400,7 +2477,6 @@ def retry_missing_chapters(
                 break
             else:
                 app.logger.warning(f"Chapter {ch} still missing after attempt {attempt}. Retrying...")
-                # Small delay before next attempt to let Kokoro recover
                 import time
                 time.sleep(10)
 
@@ -2412,83 +2488,64 @@ def retry_missing_chapters(
 
 
 def build_retry_cmd_from_job(job: dict) -> list[str]:
-    """Reconstruct the docker run command from job metadata.
+    """Reconstruct the convert_book.py command from job metadata.
 
     Used by the watchdog recovery path when the original cmd variable
-    is no longer available (container died, process lost).
+    is no longer available (died, process lost).
     """
     job_id = job['id']
     input_filename = job['input_filename']
     output_dirname = job['output_dirname']
     voice = job['voice']
     tts_engine = job.get('tts_engine', 'kokoro')
-    tts_speed = float(job.get('tts_speed') or DEFAULT_TTS_SPEED)
 
-    host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
-    host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
     epub_filename = input_filename
-
-    # Handle EPUB from PDF conversion
     if job.get('is_pdf'):
         epub_filename = input_filename.rsplit('.', 1)[0] + '.epub'
-        host_input_path = f"{HOST_UPLOAD_DIR}/{epub_filename}"
 
-    # Prefer the preprocessed _tts copy so recovered chapters get the same
-    # sanitized/normalized text as the original conversion run
+    # Prefer the preprocessed _tts copy
     tts_filename = epub_filename.rsplit('.', 1)[0] + '_tts.epub'
-    if (UPLOAD_DIR / tts_filename).exists():
-        host_input_path = f"{HOST_UPLOAD_DIR}/{tts_filename}"
+    epub_path = UPLOAD_DIR / tts_filename
+    if not epub_path.exists():
+        epub_path = UPLOAD_DIR / epub_filename
 
-    # Effective voice (combine if voice2 specified for Kokoro)
     effective_voice = voice
     if tts_engine == 'kokoro' and job.get('voice2'):
         effective_voice = f"{voice}+{job['voice2']}"
 
-    # TTS configuration (matching convert_book logic)
     if tts_engine == 'piper':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
-        tts_model = 'tts-1'
     elif tts_engine == 'edge':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-        tts_model = 'tts-1'
     elif tts_engine == 'polly':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-        tts_model = 'tts-1'
     elif tts_engine == 'chatterbox':
         tts_base_url = CHATTERBOX_URL
-        tts_model = 'tts-1'
     elif tts_engine == 'tada':
         tts_base_url = TADA_URL
-        tts_model = 'tts-1'
     else:
         tts_base_url = KOKORO_URL
-        tts_model = 'kokoro'
 
-    # Optional: route Kokoro via proxy if configured
     if tts_engine == 'kokoro' and TTS_PROXY_URL:
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
 
-    container_name = f"audiobook-{job_id}"
+    output_path = OUTPUT_DIR / output_dirname
 
     cmd = [
-        'docker', 'run', '--rm',
-        '--name', container_name,
-        '--network', 'epub-to-audiobook_default',
-        '-e', 'OPENAI_API_KEY=not-needed',
-        '-e', f'OPENAI_BASE_URL={tts_base_url}',
-        '-v', f'{host_input_path}:/input/book.epub:ro',
-        '-v', f'{host_output_dir}:/output',
-        'ghcr.io/p0n1/epub_to_audiobook:latest',
-        '/input/book.epub', '/output',
-        '--tts', 'openai',
-        '--voice_name', voice if tts_engine == 'edge' else effective_voice,
-        '--model_name', tts_model,
-        '--no_prompt',
-        # NOTE: --remove_endnotes is intentionally NOT passed. Its upstream
-        # regex corrupts decimals ($2.58 -> $2.) and alphanumerics (B12 -> B).
-        # Endnote removal happens structurally in tts_preprocess.py instead.
-        '--speed', str(tts_speed),
+        sys.executable, '/app/scripts/convert_book.py',
+        '--epub', str(epub_path),
+        '--engine-url', tts_base_url,
+        '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
+        '--out', str(output_path),
     ]
+
+    conf_filename = f"search_{job_id}.conf"
+    search_conf_path = UPLOAD_DIR / conf_filename
+    if search_conf_path.exists():
+        cmd.extend(['--search-and-replace-file', str(search_conf_path)])
+
+    if tts_engine == 'tada':
+        cmd.append('--denoise')
 
     return cmd
 
@@ -2913,11 +2970,18 @@ def send_telegram_notification(job: dict, success: bool):
 def parse_conversion_progress(container_name: str, job_id: str):
     """Parse conversion container logs to update progress."""
     try:
-        result = subprocess.run(
-            ['docker', 'logs', '--tail', '500', container_name],
-            capture_output=True, text=True, timeout=5
-        )
-        logs = result.stderr + result.stdout
+        log_file = Path(LOG_DIR) / f"{job_id}_convert.log"
+        if log_file.exists():
+            try:
+                logs = log_file.read_text(encoding='utf-8', errors='replace')
+            except Exception:
+                logs = ""
+        else:
+            result = subprocess.run(
+                ['docker', 'logs', '--tail', '500', container_name],
+                capture_output=True, text=True, timeout=5
+            )
+            logs = result.stderr + result.stdout
 
         job = get_job(job_id)
 
@@ -3209,6 +3273,7 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
         return
 
     # Same completion tail as the local path.
+    rename_output_files(output_path, job.get('book_name') or output_dirname)
     removed = cleanup_small_files(output_path, MIN_CHAPTER_SIZE_KB)
     output_files = list(output_path.glob('*.mp3'))
     is_ok, verify_msg = verify_book_complete(
@@ -3463,52 +3528,35 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 append_job_log(job_id, f"Warning: Failed to apply regex rules: {e}")
 
         # Run conversion
+        output_path = Path(f"/data/audiobooks/{output_dirname}")
         cmd = [
-            'docker', 'run', '--rm',
-            '--name', container_name,
-            '--network', 'epub-to-audiobook_default',
-            '-e', 'OPENAI_API_KEY=not-needed',
-            '-e', f'OPENAI_BASE_URL={tts_base_url}',
-            '-v', f'{host_input_path}:/input/book.epub:ro',
-            '-v', f'{host_output_dir}:/output',
+            sys.executable, '/app/scripts/convert_book.py',
+            '--epub', str(epub_path),
+            '--engine-url', tts_base_url,
+            '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
+            '--out', str(output_path),
         ]
 
-        # Mount search.conf if exists
-        if host_search_conf_path:
-            cmd.extend(['-v', f'{host_search_conf_path}:/input/search.conf:ro'])
-
-        cmd.extend([
-            'ghcr.io/p0n1/epub_to_audiobook:latest',
-            '/input/book.epub', '/output',
-            '--tts', 'openai',
-            '--voice_name', voice if tts_engine in ('edge', 'inworld') else effective_voice,
-            '--model_name', tts_model,
-            '--no_prompt',
-            # NOTE: --remove_endnotes is intentionally NOT passed. Its upstream
-            # regex corrupts decimals ($2.58 -> $2.) and alphanumerics (B12 -> B).
-            # Endnote removal happens structurally in tts_preprocess.py instead.
-            '--speed', str(tts_speed),
-        ])
-
-        # Pass parsing flags
-        if job.get('newline_mode'):
-            cmd.extend(['--newline_mode', job['newline_mode']])
-        if job.get('title_mode'):
-            cmd.extend(['--title_mode', job['title_mode']])
-        if host_search_conf_path:
-            cmd.extend(['--search_and_replace_file', '/input/search.conf'])
-
-        # Add chapter selection if specified
         if job and job.get('start_chapter'):
-            cmd.extend(['--chapter_start', str(job['start_chapter'])])
+            cmd.extend(['--start', str(job['start_chapter'])])
         if job and job.get('end_chapter'):
-            cmd.extend(['--chapter_end', str(job['end_chapter'])])
+            cmd.extend(['--end', str(job['end_chapter'])])
+
+        if search_conf_path and search_conf_path.exists():
+            cmd.extend(['--search-and-replace-file', str(search_conf_path)])
+
+        if tts_engine == 'tada':
+            cmd.append('--denoise')
+
+        log_file_path = Path(LOG_DIR) / f"{job_id}_convert.log"
+        log_file_path.parent.mkdir(parents=True, exist_ok=True)
+        log_file = open(log_file_path, 'w', encoding='utf-8')
 
         app.logger.info(f"Running conversion: {' '.join(cmd)}")
         append_job_log(job_id, f"Running conversion (engine={tts_engine}, voice={effective_voice})")
 
         # Start process
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT)
         running_processes[job_id] = process
         running_containers[job_id] = container_name
 
@@ -3518,30 +3566,23 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         monitor_thread.start()
 
         # Wait for completion
-        stdout, stderr = b'', b''
         try:
-            stdout, stderr = process.communicate(timeout=timeout_seconds)
+            process.wait(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
             process.kill()
-            # Capture what we can before killing
-            try:
-                out, err = process.communicate(timeout=5)
-                stdout += out
-                stderr += err
-            except: pass
-            subprocess.run(['docker', 'stop', container_name], capture_output=True)
+            process.wait()
             raise
         finally:
+            log_file.close()
             running_processes.pop(job_id, None)
             running_containers.pop(job_id, None)
-            subprocess.run(['docker', 'rm', '-f', container_name], capture_output=True)
 
         # Combine output for error parsing
-        combined_output = (stdout.decode(errors='replace') + '\n' +
-                           stderr.decode(errors='replace'))
+        combined_output = ""
+        if log_file_path.exists():
+            combined_output = log_file_path.read_text(encoding='utf-8', errors='replace')
 
         # Check results
-        output_path = Path(f"/data/audiobooks/{output_dirname}")
         output_files = list(output_path.glob('*.mp3')) if output_path.exists() else []
 
         # Finalize transcript capture (best effort; does not affect job outcome)
