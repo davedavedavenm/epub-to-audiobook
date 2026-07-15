@@ -203,7 +203,7 @@ def _to_mp3(wav_bytes, denoise=False, meta=None):
     return p.stdout if p.returncode == 0 and p.stdout else None
 
 
-def synth(engine_url, voice, text, chunk_chars, chapter_idx=1):
+def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1'):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
     caller encodes one MP3 from that."""
@@ -217,7 +217,7 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1):
         for attempt in range(3):
             try:
                 r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
-                                  json={"model": "tts-1", "input": c, "voice": voice,
+                                  json={"model": model, "input": c, "voice": voice,
                                         "response_format": "wav"},
                                   timeout=(15, 3600))
                 r.raise_for_status()
@@ -259,6 +259,8 @@ def main():
     ap.add_argument('--progress-url', default='', help='POST real per-chapter progress here (e.g. an ntfy.sh topic) so a remote UI can show true progress, not an estimate')
     ap.add_argument('--search-and-replace-file', default=None,
                     help='Path to a file containing search==replace rules (one per line) to apply to text')
+    ap.add_argument('--model', default='tts-1',
+                    help='TTS model name to send in request')
     a = ap.parse_args()
     
     # Load search and replace rules if specified
@@ -370,7 +372,7 @@ def main():
             meta = {'title': ctitle, 'album': book_title, 'artist': book_author,
                     'album_artist': book_author, 'genre': 'Audiobook',
                     'track': f"{done_render + 1}/{total_render}"}
-            wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx)
+            wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx, model=a.model)
             mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
                 fn = out / f"{idx:03d}{suffix}.mp3"

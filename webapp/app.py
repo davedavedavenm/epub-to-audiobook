@@ -2516,16 +2516,22 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
 
     if tts_engine == 'piper':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
+        tts_model = 'tts-1'
     elif tts_engine == 'edge':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+        tts_model = 'tts-1'
     elif tts_engine == 'polly':
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+        tts_model = 'tts-1'
     elif tts_engine == 'chatterbox':
         tts_base_url = CHATTERBOX_URL
+        tts_model = 'tts-1'
     elif tts_engine == 'tada':
         tts_base_url = TADA_URL
+        tts_model = 'tts-1'
     else:
         tts_base_url = KOKORO_URL
+        tts_model = 'kokoro'
 
     if tts_engine == 'kokoro' and TTS_PROXY_URL:
         tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
@@ -2538,6 +2544,7 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         '--engine-url', tts_base_url,
         '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
         '--out', str(output_path),
+        '--model', tts_model,
     ]
 
     conf_filename = f"search_{job_id}.conf"
@@ -3536,6 +3543,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '--engine-url', tts_base_url,
             '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
             '--out', str(output_path),
+            '--model', tts_model,
         ]
 
         if job and job.get('start_chapter'):
