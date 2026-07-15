@@ -1937,6 +1937,14 @@ def start_watchdog():
 
 def resume_inflight_jobs():
     """Reattach monitors to running conversion containers after restart."""
+    try:
+        with get_db() as conn:
+            conn.execute("DELETE FROM app_settings WHERE key LIKE 'recovery_lock_%'")
+            conn.commit()
+            app.logger.info("Cleared stale recovery locks after restart")
+    except Exception as e:
+        app.logger.warning(f"Could not clear stale recovery locks: {e}")
+
     with get_db() as conn:
         rows = conn.execute('''
             SELECT id, container_name, status, input_filename, output_dirname, voice
