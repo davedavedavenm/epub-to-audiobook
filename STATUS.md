@@ -5,6 +5,28 @@ was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
 
+## Aims vs reality — the owner's scorecard (2026-07-15)
+
+The aims below are Dave's, stated verbatim or near-verbatim during development.
+This table is the project's honest report card; agents should treat a ❌/⚠️ here
+as the priority order.
+
+| Aim (as stated) | State | Evidence |
+|---|---|---|
+| "I go to the web UI, choose narrate, and it'll **just work**, all automatic" | ✅ **Kaggle path** / ❌ **local path** | Kaggle proven end-to-end twice (Breakneck 8ch, Summer Moon 22ch: chapters→GPU→progress→verify→cover→ABS, no manual steps). Local render uses a different renderer with different chapter numbering and shipped marketing pages instead of the book (#28). |
+| Everything **checked automatically** — no blind trust | ⚠️ porous | Verification + pre-sync gate + QA exist and each caught something, but a book with NO content passed all of them at "completed, 100%" (#30). QA/lexicon loop inert on chatterbox by design (#27). |
+| Accurate progress/ETA, no fake numbers | ✅ | Real per-chapter progress (ntfy call-home); honest "chapter X/N"; no ETA before evidence. Was elapsed-guesswork before. |
+| Chapter selection = the actual book, by title | ✅ picker / ❌ local render | Picker shows titles, flags back-matter, defaults to body (LLM guard + heuristic). The local renderer ignores that numbering (#28), so it's only end-to-end true on Kaggle. |
+| Covers + metadata land in ABS, chapters navigable | ✅ | ID3 title/album/artist/track on every convert_book render; auto cover-sync; ABS shows named ordered chapters. p0n1 path still untagged (#31). |
+| **All voices cached**, instant, judged on hard text | ✅ | 69/69 usable voices, ~30ms serve, ~135-word sample with years/currency/acronyms/names, production-accurate preprocessing per engine. 20 voices are dead engines, documented not hidden (#23/#24). |
+| Clear visually which voice is speaking | ✅ | Speaking card: accent glow, equaliser, stop toggle, single-voice rule. |
+| LLM guard: check/sort/act, local or free | ⚠️ partial | Chapter classifier live (Groq free, <1.5s, fail-open); gate phrasing on shared khpi5 Ollama. But the gate's porosity (#30) is the gap between "exists" and "guards". |
+| Anyone can clone + deploy and get all this | ⚠️ | Compose/env/docs carry every feature, but a fresh deployer using local render hits #28. |
+| "I shouldn't have to find every bug" | ❌ | Nine defects were found by the owner, not the system: wrong cover, false ready-badge, fake progress, false FAILED, wrong chapter range, stilted numbers, raw Xiaomi, uncached sample, bookless "book". This is the metric to move. |
+
+**Bottom line: cloud render ~90% of the aim; local render ~40%; automated
+trust ~60%. Fix order: #28/#29 (local path), #30 (content gate), then #24/#23.**
+
 ## OPEN — local-render is broken (2026-07-15, needs work)
 
 A real conversion ("In the Nick of Time", `render_target: local`, kokoro) rendered
