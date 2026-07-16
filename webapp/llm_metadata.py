@@ -262,10 +262,11 @@ This changes what to hunt for:
 
 Cover ALL of these categories (weighted by the form above):
 - Acronyms/initialisms read letter-by-letter (US -> "U S", UK -> "U K", CEO -> "C E O", IPO -> "I P O", FBI -> "F B I"). Only letters that are genuinely spelled out; leave true words (NASA, NATO) alone.
-- Proper nouns, surnames, place names, and BRAND/COMPANY names needing phonetic spelling — INCLUDING well-known ones a TTS still fumbles: e.g. "Cupertino" -> "Coo-per-TEE-no", "Beijing" -> "Bay-JING", "McDonald's" -> "Mick-DON-uld-z", "Nguyen" -> "Nwin", "Huawei" -> "HWAH-way", "Xiaomi" -> "SHOW-mee". Be generous: any name a general audiobook narrator might mispronounce.
+- Proper nouns, surnames, place names, and BRAND/COMPANY names needing phonetic spelling — ONLY where standard English text-to-speech models are highly likely to fumble them. e.g. "Cupertino" -> "coo-per-tee-no", "Beijing" -> "bay-jing", "McDonald's" -> "mick-don-ulds", "Nguyen" -> "nwin", "Huawei" -> "hwah-way", "Xiaomi" -> "show-mee".
+  CRITICAL: Do NOT generate rules for common English names (e.g., "Ian", "Peter", "James", "John", "Grace", "Rebus", etc.) or standard English dictionary words. Modern and neural TTS engines already pronounce them correctly; forcing phonetic rules on them ruins their natural pacing and flow. Phonetic spellings should be simple, lowercase, and avoid excessive hyphens to keep speech natural.
 - Foreign or invented words.
 - Numbers/dates/units that would be misread ONLY where context makes them ambiguous (a modern engine reads plain years and numbers correctly on its own — do NOT add rules just to spell numbers out).
-Err toward INCLUDING a name rather than skipping it.
+Err toward EXCLUDING standard/common English names rather than including them.
 
 Return ONLY a JSON object:
 {{"form": "fiction" | "nonfiction",
