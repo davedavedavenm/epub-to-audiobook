@@ -323,7 +323,9 @@ def generate_lexicon(epub_path: Path) -> dict:
     prompt = f"""
 You are an expert linguist and text-to-speech engineer. I will provide you with a sample from a book.
 Your task is to identify any complex Sci-Fi, Fantasy, non-English, or made-up names and terms that a standard text-to-speech engine might mispronounce.
-For each term, provide a simple English phonetic spelling to help the TTS engine pronounce it correctly (e.g., "Daenerys": "Duh-nair-iss").
+For each term, provide a simple English phonetic spelling to help the TTS engine pronounce it correctly (e.g., "Daenerys": "duh-nair-iss").
+
+CRITICAL: Do NOT generate phonetic spelling rules for common English names (e.g., "Ian", "Peter", "James", "John", "Grace", etc.) or standard English dictionary words, as standard TTS engines already pronounce them correctly. Phonetic spellings should be simple, lowercase, and avoid excessive hyphens to maintain natural speech pacing.
 
 Return ONLY a valid JSON object where keys are the original words and values are the phonetic spellings. Do not include markdown formatting like ```json or any other text. 
 If you find no such words, return an empty JSON object {{}}.
