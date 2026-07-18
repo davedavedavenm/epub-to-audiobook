@@ -16,11 +16,19 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 
 ## Capacity truths (NUC, 15 GB RAM)
 
-- Kokoro (idle ~1-2 GB) + Chatterbox (2-6 GB generating) + webapp/worker fit.
-- **TADA does NOT fit** alongside them (model load needs ~6.5 GB peak). The
-  tada-tts service is intentionally not run on the NUC; the UI health
-  lockdown marks TADA offline there. TADA runs: Windows box (free, slow),
-  GitHub Actions (free, very slow), or Vast GPU (fast, ~GBP0.5/book).
+- Kokoro + Piper + webapp/worker are the safe default local set.
+- **TADA does NOT fit.** On 2026-07-18 its 10 GiB cgroup was OOM-killed during
+  startup preview generation on every boot; on 2026-07-11 it also participated
+  in host-wide OOM events. Keep the TADA profile off on the NUC.
+- **Chatterbox is also opt-in pending re-validation.** Its 6 GiB cgroup was
+  repeatedly OOM-killed on 2026-07-11 and 2026-07-14 despite serialized
+  generation. A hard cgroup limit protects the host only from that container;
+  it does not prove the combined workload fits.
+- `scripts/deploy.sh` enables Piper only by default. A deliberately sized host
+  can opt in with `ENABLE_CHATTERBOX_PROFILE=1` or `ENABLE_TADA_PROFILE=1`.
+- Startup voice-preview generation defaults off. Set `VOICE_CACHE_ON_START=1`
+  only for a controlled cache-fill window after confirming the enabled engines
+  and host capacity.
 - A full Chatterbox book on the NUC is ~12-16 h. The job timeout is floored
   accordingly (see incident 3).
 
@@ -38,6 +46,20 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
   price for CPU speed.
 
 ## Incident log
+
+### 2026-07-18 — Startup preview cache caused repeated TADA OOM bursts
+- **Symptom:** repeated freezes/reboots after Docker and the web app started.
+- **Trigger:** there were no queued TADA jobs. Five seconds after web-app start,
+  `_cache_all_voices_background()` attempted missing TADA previews directly.
+  Model load filled TADA's 10 GiB cgroup; the kernel killed uvicorn and Docker
+  restarted it. Four preview attempts produced three kills per startup.
+- **Wider finding:** retained journals also contain Chatterbox 6 GiB cgroup
+  kills and TADA host-wide OOM events, so the history is a multi-engine memory
+  problem rather than one infinite TADA retry loop.
+- **Containment:** stop TADA and Chatterbox on the NUC; keep Kokoro/Piper/UI
+  available. Preview caching and both heavy deploy profiles now default off.
+- **Do not:** raise TADA to 12 GiB on this host; that removes the remaining
+  headroom and risks converting a contained cgroup kill into host-wide OOM.
 
 ### 2026-07-07a — Full-book job failed 3x instantly (job d67c50ac)
 - **Symptom**: "Container died unexpectedly", 0% each retry.

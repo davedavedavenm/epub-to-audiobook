@@ -13,6 +13,7 @@ APP = (ROOT / 'webapp' / 'app.py').read_text(encoding='utf-8')
 CB_SERVER = (ROOT / 'chatterbox' / 'server.py').read_text(encoding='utf-8')
 TADA_SERVER = (ROOT / 'tada' / 'server.py').read_text(encoding='utf-8')
 COMPOSE = (ROOT / 'docker-compose.yml').read_text(encoding='utf-8')
+DEPLOY = (ROOT / 'scripts' / 'deploy.sh').read_text(encoding='utf-8')
 
 
 # --- incident 2026-07-07a: retries must actually run ---
@@ -52,6 +53,27 @@ def test_engine_containers_have_memory_caps():
         block = COMPOSE.split(f'{svc}:', 1)[1][:800]
         assert 'mem_limit' in block, \
             f"{svc} lost its mem_limit — kernel OOM kills return (incident 2026-07-07b)"
+
+
+def test_startup_voice_cache_defaults_off():
+    """Incident 2026-07-18: startup preview generation loaded TADA without a job.
+
+    Both the image default and Compose default must fail safe. Hosts that have
+    enough capacity can opt in explicitly after measuring all configured engines.
+    """
+    assert "VOICE_CACHE_ON_START', '0'" in APP.replace('"', "'"), \
+        "webapp default enables background voice generation — reopens the Jul-18 OOM burst"
+    assert 'VOICE_CACHE_ON_START=${VOICE_CACHE_ON_START:-0}' in COMPOSE, \
+        "Compose default enables background voice generation — reopens the Jul-18 OOM burst"
+
+
+def test_heavy_engine_profiles_are_deploy_opt_in():
+    """The 15 GiB NUC must not auto-start the clone engines on every deploy."""
+    deploy_line = next(line for line in DEPLOY.splitlines() if 'docker compose' in line and 'up -d' in line)
+    assert '--profile chatterbox' not in deploy_line and '--profile tada' not in deploy_line, \
+        "deploy command unconditionally starts a clone engine on the 15 GiB NUC"
+    assert 'ENABLE_CHATTERBOX_PROFILE' in DEPLOY and 'ENABLE_TADA_PROFILE' in DEPLOY, \
+        "heavy engine profiles lost their explicit deploy opt-ins"
 
 
 def test_slow_engine_timeout_floor():

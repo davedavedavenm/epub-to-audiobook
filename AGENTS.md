@@ -61,7 +61,7 @@ playbook but skips these is a net negative.
 
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
-- The deployed stack lives on zorin at `/opt/epub-to-audiobook`, deploys **from git only** (never patch live files). Deploy with `--profile piper --profile chatterbox --profile tada`.
+- The deployed stack is currently a Git checkout on Zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook` (the older `/opt/epub-to-audiobook` documentation was stale). Deploy **from git only**; never patch application source live. The default deploy enables Piper only. Chatterbox and TADA require the explicit `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1` opt-ins and must remain off on the 15 GiB NUC until capacity is re-proven.
 - Two custom engines are BUILT and containerised: `chatterbox/` (Turbo) and `tada/` (TADA), both OpenAI-compatible, UK human-cloned voices baked in. Adding an engine = VOICES entries + a branch at the three `tts_engine ==` sites in app.py.
 
 ## Scope

@@ -5630,7 +5630,7 @@ def _cache_all_voices_background():
     So: wait for the machine to be quiet before each voice, and pause between
     them. A cache that fills slowly is worth a box that stays usable.
     """
-    if os.environ.get('VOICE_CACHE_ON_START', '1').lower() not in ('1', 'true', 'yes'):
+    if os.environ.get('VOICE_CACHE_ON_START', '0').lower() not in ('1', 'true', 'yes'):
         app.logger.info("Background voice caching disabled (VOICE_CACHE_ON_START=0)")
         return
     import time

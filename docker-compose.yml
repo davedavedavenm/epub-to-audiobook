@@ -179,10 +179,10 @@ services:
       # this only phrases the human explanation.
       - OLLAMA_URL=${OLLAMA_URL:-}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
-      # Voice-sample pre-caching. Generating samples is CPU/RAM-heavy and shares
-      # the box with the TTS engines — it is throttled so it can't starve the UI.
-      # Set VOICE_CACHE_ON_START=0 to pause it entirely.
-      - VOICE_CACHE_ON_START=${VOICE_CACHE_ON_START:-1}
+      # Voice-sample pre-caching is opt-in. It can load every configured engine,
+      # so enabling it on a memory-constrained host can trigger an OOM burst even
+      # when no conversion job is queued (incident 2026-07-18).
+      - VOICE_CACHE_ON_START=${VOICE_CACHE_ON_START:-0}
       - VOICE_CACHE_MAX_LOAD=${VOICE_CACHE_MAX_LOAD:-}
       - VOICE_CACHE_DELAY=${VOICE_CACHE_DELAY:-5}
       # GPU status display (webapp reads worker's status file, these are fallback)

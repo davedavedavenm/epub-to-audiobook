@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-14.** Honest single source of truth. "Verified" = it
+**Last updated: 2026-07-18.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
@@ -62,6 +62,17 @@ as the priority order.
   them.
 - **Voices that cannot work are documented, not silently broken:** TADA (engine
   fails to load, **#23**), Inworld (no API key) and Polly (no AWS creds) — **#24**.
+
+## Stability containment (2026-07-18)
+
+- Zorin's automatic startup voice cache invoked missing TADA previews with no
+  conversion job queued, filling the 10 GiB cgroup and repeatedly killing the
+  engine. The default cache switch is now off.
+- TADA and Chatterbox profiles are no longer enabled by the default deploy.
+  Both remain available as explicit opt-ins for a deliberately sized host;
+  neither is currently safe to run on the 15 GiB NUC.
+- Kokoro, Piper, the UI/worker, and Nango remain the local service set. The
+  high-quality clone engines should run on a separately validated target.
 
 ## Recent fixes (2026-07-13)
 

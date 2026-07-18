@@ -23,8 +23,17 @@ fi
 GIT_SHA="$(git rev-parse --short HEAD)"
 BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
+PROFILE_ARGS=(--profile piper)
+if [[ "${ENABLE_CHATTERBOX_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile chatterbox)
+fi
+if [[ "${ENABLE_TADA_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile tada)
+fi
+
+echo "Enabled Compose profiles: ${PROFILE_ARGS[*]}"
 APP_GIT_SHA="${GIT_SHA}" APP_BUILD_TIME="${BUILD_TIME}" APP_VERSION="${TAG}" \
-  docker compose --profile piper --profile chatterbox --profile tada up -d --build --remove-orphans
+  docker compose "${PROFILE_ARGS[@]}" up -d --build --remove-orphans
 
 # Build the optional verifier image so the webapp can run it on demand (no services started).
 docker compose build audio-verify || true
