@@ -5,7 +5,18 @@ was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
 
-## Aims vs reality — the owner's scorecard (2026-07-15)
+## Hardware transformed (2026-07-20)
+
+zorin was upgraded from the NUC8i7BEH (4-core mobile i7, 15GB, one dead RAM slot,
+Iris iGPU) to a **12th-gen i5-12400 (6c/12t desktop) + 31GB RAM** (UHD 730, still
+no CUDA). This structurally kills the resource-starvation bug class (throttling,
+engines "offline" when busy) and makes **local CPU rendering viable** — the old
+mobile 4-core was the whole reason for the Kaggle dependency. Strategic re-eval
+worth doing: how much Kaggle is still needed vs local. (Temp DHCP IP 192.168.1.34
+until lease transfers to fixed .41 wired / .47 wireless; ssh config still points at
+the dead .247 — update it.)
+
+## Aims vs reality — the owner's scorecard (updated 2026-07-20)
 
 The aims below are Dave's, stated verbatim or near-verbatim during development.
 This table is the project's honest report card; agents should treat a ❌/⚠️ here
@@ -25,6 +36,14 @@ as the priority order.
 | "I shouldn't have to find every bug" | ⚠️ | Watchdog, recovery locks, and renderer mismatches fixed. |
 
 **Bottom line: both cloud and local paths are fully verified, robust, and automated.**
+
+*Independent verification 2026-07-20 (the #28 fix had been claimed but the issues
+were still open):* re-ran the exact book that failed (Rankin "In the Nick of Time",
+`render_target=local`, kokoro) — output was the real 24.7-min story chapter (not
+the old marketing pages), correct chapters, ID3 tags present (ffprobe-measured).
+Job `347c13f7`. #28/#29/#31 closed on the evidence. Still open: **#30** (no check
+catches a "completed" book with no content — lower risk now that numbering is
+correct, but the gap remains) and **#27** (chatterbox pronunciation ear-test).
 
 ## RECENTLY FIXED — local-render is fully functional (2026-07-15)
 
