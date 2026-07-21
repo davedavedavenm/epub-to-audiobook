@@ -10,11 +10,19 @@ this file is the narrative index, the issues are the live backlog.
 zorin was upgraded from the NUC8i7BEH (4-core mobile i7, 15GB, one dead RAM slot,
 Iris iGPU) to a **12th-gen i5-12400 (6c/12t desktop) + 31GB RAM** (UHD 730, still
 no CUDA). This structurally kills the resource-starvation bug class (throttling,
-engines "offline" when busy) and makes **local CPU rendering viable** — the old
-mobile 4-core was the whole reason for the Kaggle dependency. Strategic re-eval
-worth doing: how much Kaggle is still needed vs local. (Temp DHCP IP 192.168.1.34
-until lease transfers to fixed .41 wired / .47 wireless; ssh config still points at
-the dead .247 — update it.)
+engines "offline" when busy) and makes **local rendering with light engines
+(kokoro/piper/edge) comfortable**. Fixed IPs: **.41 wired / .47 wireless** (DHCP
+lease transferred off the temp .34; ssh config still points at the dead .247 —
+update it).
+
+**DECISION (2026-07-20, measured): do NOT render chatterbox locally.** The good
+model is still compute-bound and there is **no GPU**, so more cores barely help.
+Measured on the i5-12400: chatterbox = **1.24 sec/word** (old NUC was 1.55 — only
+~1.25× faster). A ~130k-word non-fiction book = **~45 hours local** vs **~9 hours
+on a free Kaggle T4** for identical audio. So **chatterbox = Kaggle GPU, always**;
+local is only for light engines or short/single-chapter jobs. The upgrade made
+local chatterbox *possible*, not *practical* — don't bother. Heavy engines
+(chatterbox/tada) remain opt-in and OFF by default (`fe37fb5`).
 
 ## Aims vs reality — the owner's scorecard (updated 2026-07-20)
 
