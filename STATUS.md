@@ -21,8 +21,15 @@ Measured on the i5-12400: chatterbox = **1.24 sec/word** (old NUC was 1.55 — o
 ~1.25× faster). A ~130k-word non-fiction book = **~45 hours local** vs **~9 hours
 on a free Kaggle T4** for identical audio. So **chatterbox = Kaggle GPU, always**;
 local is only for light engines or short/single-chapter jobs. The upgrade made
-local chatterbox *possible*, not *practical* — don't bother. Heavy engines
-(chatterbox/tada) remain opt-in and OFF by default (`fe37fb5`).
+local chatterbox *possible*, not *practical* — don't bother.
+
+**IMPORTANT nuance (2026-07-20): "don't render chatterbox locally" ≠ "turn the
+engine off".** The chatterbox container must stay **RUNNING** so its voices show
+online and are **previewable in the UI** (previews are one short paragraph — cheap
+on CPU — and the render still goes to Kaggle). `fe37fb5` made heavy engines
+opt-in; on the 31GB box that was over-cautious for chatterbox — keep chatterbox up
+(restart policy `unless-stopped`) for auditioning. Only TADA stays off (it's
+broken, #23).
 
 ## Aims vs reality — the owner's scorecard (updated 2026-07-20)
 
