@@ -50,7 +50,8 @@ def kaggle_username():
         p = os.path.join(cfg_dir, fn)
         if os.path.exists(p):
             try:
-                return json.load(open(p)).get("username")
+                with open(p) as f:
+                    return json.load(f).get("username")
             except Exception:
                 pass
     return None
@@ -178,7 +179,8 @@ def _wait_dataset_ready(user, ds_slug, log, timeout=300):
 
 def _load_state():
     try:
-        return json.load(open(STATE_PATH))
+        with open(STATE_PATH) as f:
+            return json.load(f)
     except Exception:
         return {"runs": []}
 
@@ -211,7 +213,8 @@ def _record_run(hours):
         {"ended": datetime.now(timezone.utc).isoformat(), "hours": round(hours, 3)})
     state["runs"] = state["runs"][-200:]
     try:
-        json.dump(state, open(STATE_PATH, "w"))
+        with open(STATE_PATH, "w") as f:
+            json.dump(state, f)
     except Exception:
         pass
 
@@ -239,7 +242,8 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
     template_path = os.path.join(repo_kaggle_dir, _ENGINE_KERNEL[engine])
     if not os.path.exists(template_path):
         return False, f"kernel template missing: {template_path}"
-    template_src = open(template_path, encoding="utf-8").read()
+    with open(template_path, encoding="utf-8") as f:
+        template_src = f.read()
 
     book = os.path.splitext(os.path.basename(epub_path))[0]
     ds_slug = _slug(f"epub-{book}")
@@ -257,8 +261,8 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
             ds_dir = os.path.join(tmp, "ds")
             os.makedirs(ds_dir)
             shutil.copy(epub_path, os.path.join(ds_dir, os.path.basename(epub_path)))
-            json.dump(dataset_metadata(user, ds_slug, book),
-                      open(os.path.join(ds_dir, "dataset-metadata.json"), "w"))
+            with open(os.path.join(ds_dir, "dataset-metadata.json"), "w") as f:
+                json.dump(dataset_metadata(user, ds_slug, book), f)
             log(f"Kaggle: uploading epub as dataset {dataset_id}")
             r = _kaggle("datasets", "create", "-p", ds_dir, "-r", "zip", timeout=600)
             if "already exists" in (r.stdout + r.stderr).lower() or r.returncode != 0:
@@ -277,10 +281,10 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
             # 2. kernel (push the GPU render job)
             k_dir = os.path.join(tmp, "k")
             os.makedirs(k_dir)
-            open(os.path.join(k_dir, "run.py"), "w", encoding="utf-8").write(
-                render_kernel_source(template_src, voice, start, end, progress_url))
-            json.dump(kernel_metadata(user, kslug, dataset_id),
-                      open(os.path.join(k_dir, "kernel-metadata.json"), "w"))
+            with open(os.path.join(k_dir, "run.py"), "w", encoding="utf-8") as f:
+                f.write(render_kernel_source(template_src, voice, start, end, progress_url))
+            with open(os.path.join(k_dir, "kernel-metadata.json"), "w") as f:
+                json.dump(kernel_metadata(user, kslug, dataset_id), f)
             log(f"Kaggle: pushing GPU kernel {user}/{kslug} (engine={engine}, voice={voice})")
             r = _kaggle("kernels", "push", "-p", k_dir, timeout=300)
             if r.returncode != 0:
@@ -319,7 +323,8 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
             tail = ""
             slog = os.path.join(out_tmp, "server.log")
             if os.path.exists(slog):
-                tail = open(slog, encoding="utf-8", errors="ignore").read()[-400:]
+                with open(slog, encoding="utf-8", errors="ignore") as f:
+                    tail = f.read()[-400:]
             return False, f"Kaggle render {st} with {len(mp3s)} mp3s. {tail}"
         for f in mp3s + [x for x in os.listdir(out_tmp) if x.endswith(".json")]:
             shutil.copy(os.path.join(out_tmp, f), os.path.join(out_dir, f))

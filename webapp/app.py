@@ -14,7 +14,6 @@ import zipfile
 import re
 import sqlite3
 import json
-import signal
 import shlex
 from datetime import datetime
 from pathlib import Path
@@ -121,6 +120,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Track running conversion processes and containers
+_state_lock = threading.Lock()
 running_processes = {}  # job_id -> subprocess.Popen
 running_containers = {}  # job_id -> container_name
 _recovery_in_progress = {}  # job_id -> True (prevents duplicate recovery threads)
