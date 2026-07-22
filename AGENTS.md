@@ -11,12 +11,13 @@ Read these before changing anything TTS- or text-related:
 | [GETTING-STARTED.md](GETTING-STARTED.md) | New-user walkthrough: install, convert, connect an LLM, voices, ABS. |
 | [OPERATIONS.md](OPERATIONS.md) | Runbook + incident log: job states, failure responses, capacity truths. |
 | [STATUS.md](STATUS.md) | **Current state & remaining tasks — read first.** What's verified vs unverified vs not-done. |
-| [PREPROCESSING.md](PREPROCESSING.md) | **Mandatory** text pipeline (5 stages; 1–3 implemented in `webapp/tts_preprocess.py`, 4–5 designed). Why upstream `--remove_endnotes` must never return. |
+| [PREPROCESSING.md](PREPROCESSING.md) | **Mandatory** text pipeline (6 stages; 1–4 implemented in `webapp/tts_preprocess.py`, 5 designed, 6 core implemented). Why upstream `--remove_endnotes` must never return. |
 | [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off, listening verdicts, cost model, UK reference voices. |
+| [TTS-LANDSCAPE-2026-07.md](TTS-LANDSCAPE-2026-07.md) | Mid-2026 state-of-the-art review: new engines, cost updates, what to evaluate next. |
+| [ENGINES.md](ENGINES.md) | Official engine facts + listening outcomes — the baseline for all engine claims. |
 | [PLAN.md](PLAN.md) | **Forward plan**: adaptive QA system, TADA/GPU completion, UI. |
 | [GPU-SAFETY.md](GPU-SAFETY.md) | **READ FIRST for any GPU work.** Default-local rules; how to not drain the Vast balance. |
 | [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern + operational steps. |
-| `archive/` | Historical plans, infra notes, roadmap — superseded, do not follow. |
 
 ## Verification Discipline (2026-07-15 — every rule here was paid for)
 
@@ -61,13 +62,13 @@ playbook but skips these is a net negative.
 
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
-- The deployed stack is currently a Git checkout on Zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook` (the older `/opt/epub-to-audiobook` documentation was stale). Deploy **from git only**; never patch application source live. The default deploy enables Piper only. Chatterbox and TADA require the explicit `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1` opt-ins and must remain off on the 15 GiB NUC until capacity is re-proven.
+- The deployed stack is currently a Git checkout on Zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook` (the older `/opt/epub-to-audiobook` documentation was stale). Deploy **from git only**; never patch application source live. The default deploy enables Piper only. Chatterbox and TADA require the explicit `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1` opt-ins. Zorin was upgraded to an i5-12400 / 31 GB (2026-07-20); Chatterbox now runs comfortably for previews. TADA stays off (broken, #23).
 - Two custom engines are BUILT and containerised: `chatterbox/` (Turbo) and `tada/` (TADA), both OpenAI-compatible, UK human-cloned voices baked in. Adding an engine = VOICES entries + a branch at the three `tts_engine ==` sites in app.py.
 
 ## Scope
 
 - App code, scripts, tests, Docker Compose, and deployment docs for this repo.
-- Target stack paths and host-specific deployment details are documented in `README.md`, `GPU-PLAYBOOK.md`, and `archive/INFRASTRUCTURE.md`.
+- Target stack paths and host-specific deployment details are documented in `README.md` and `GPU-PLAYBOOK.md`.
 - Do not expose or commit `.env`, `.secrets/`, SSH keys, generated audio, job databases, or local screenshots unless explicitly requested and reviewed.
 
 ## MCPProxy / Tool Surfaces

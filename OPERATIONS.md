@@ -14,23 +14,21 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 | `failed` | retries exhausted or timed out | read the Log on the job card; Resume re-runs only missing chapters |
 | `completed` | all chapters done; ABS sync attempted | check sync badge |
 
-## Capacity truths (NUC, 15 GB RAM)
+## Capacity truths (zorin: i5-12400, 31 GB RAM, no GPU — upgraded 2026-07-20)
 
-- Kokoro + Piper + webapp/worker are the safe default local set.
-- **TADA does NOT fit.** On 2026-07-18 its 10 GiB cgroup was OOM-killed during
-  startup preview generation on every boot; on 2026-07-11 it also participated
-  in host-wide OOM events. Keep the TADA profile off on the NUC.
-- **Chatterbox is also opt-in pending re-validation.** Its 6 GiB cgroup was
-  repeatedly OOM-killed on 2026-07-11 and 2026-07-14 despite serialized
-  generation. A hard cgroup limit protects the host only from that container;
-  it does not prove the combined workload fits.
-- `scripts/deploy.sh` enables Piper only by default. A deliberately sized host
-  can opt in with `ENABLE_CHATTERBOX_PROFILE=1` or `ENABLE_TADA_PROFILE=1`.
+- Kokoro + Piper + Chatterbox + webapp/worker fit comfortably on 31 GB.
+- **Chatterbox stays RUNNING** for voice previews and UI auditioning (previews
+  are one short paragraph — cheap on CPU). Full-book renders go to Kaggle GPU.
+- **TADA stays OFF** — it is broken (#23) and its 10 GiB cgroup was OOM-killed
+  repeatedly on the old 15 GB NUC. Re-validate on the 31 GB box only after #23
+  is fixed.
+- `scripts/deploy.sh` enables Piper only by default. Chatterbox and TADA
+  require `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`.
 - Startup voice-preview generation defaults off. Set `VOICE_CACHE_ON_START=1`
   only for a controlled cache-fill window after confirming the enabled engines
   and host capacity.
-- A full Chatterbox book on the NUC is ~12-16 h. The job timeout is floored
-  accordingly (see incident 3).
+- A full Chatterbox book on the i5-12400 is ~45 h (1.24 s/word measured).
+  Use Kaggle GPU (~9 h, free) for full books.
 
 ## Common failures → responses
 

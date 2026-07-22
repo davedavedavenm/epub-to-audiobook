@@ -72,8 +72,6 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
 - **"Studio Console" design** - cool ink neutrals, one signal-coral accent,
   mono for data, on-air motif, real book covers; light + dark. (Legacy note:
   the earlier warm "Narration Press" theme was replaced 2026-07-10.)
-- **_legacy_** - Fraunces + Hanken Grotesk, warm
-  paper/ink/oxblood palette, light & dark themes
 - **Tabs** - Library, Upload, Queue, Voices, History, Settings
 - **Queue controls** - pause/resume, cancel, retry-all-failed, live log viewer
 - **Preprocessing badge** - per-job "PRE ✓" with a summary of what was cleaned
@@ -150,10 +148,11 @@ Samples land in `data/audiobooks/_samples/<book>/` and never touch the real libr
 ## Production Deployment
 
 ```bash
-git clone https://github.com/davedavedavenm/epub-to-audiobook.git /opt/epub-to-audiobook
-cd /opt/epub-to-audiobook
+STACK_PATH=/home/dave/ai/lab/stacks/epub-to-audiobook   # or wherever you like
+git clone https://github.com/davedavedavenm/epub-to-audiobook.git "$STACK_PATH"
+cd "$STACK_PATH"
 cp .env.example .env
-./scripts/deploy.sh            # builds webapp/worker + chatterbox + tada + piper profiles
+./scripts/deploy.sh            # builds webapp/worker + piper; set ENABLE_CHATTERBOX_PROFILE=1 for more
 ./scripts/smoke-check.sh http://localhost:8881
 ```
 

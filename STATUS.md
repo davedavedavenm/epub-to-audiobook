@@ -103,8 +103,8 @@ correct, but the gap remains) and **#27** (chatterbox pronunciation ear-test).
   conversion job queued, filling the 10 GiB cgroup and repeatedly killing the
   engine. The default cache switch is now off.
 - TADA and Chatterbox profiles are no longer enabled by the default deploy.
-  Both remain available as explicit opt-ins for a deliberately sized host;
-  neither is currently safe to run on the 15 GiB NUC.
+  Both remain available as explicit opt-ins. On the upgraded 31 GB box,
+  Chatterbox runs comfortably for previews; TADA stays off (broken, #23).
 - Kokoro, Piper, the UI/worker, and Nango remain the local service set. The
   high-quality clone engines should run on a separately validated target.
 

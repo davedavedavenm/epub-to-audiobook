@@ -111,11 +111,9 @@ model load OOMs — incident-verified). Therefore:
    the UI's TADA voices light up automatically (health-gated), books queue
    through the normal app with all its recovery machinery. ~GBP0.5 and ~4 h
    per book. `down` when finished.
-3. **Optional one-off to make TADA free-and-local forever**: the NUC8i7BEH
-   officially supports 32 GB SODIMM (~GBP40-60). With 32 GB, tada-tts runs
-   as a normal zorin compose service (image + mem caps already exist) and
-   TADA becomes a first-class free engine, app-managed like Chatterbox.
-   Owner's call — hardware purchase.
+3. **RAM upgrade done (2026-07-20)**: zorin now has 31 GB (i5-12400).
+   TADA would fit in memory but stays off because it is broken (#23).
+   Once #23 is fixed, TADA can run as a normal compose service.
 4. Full one-click integration (GPU_RENDER_ENABLED auto-provisioning TADA via
    the generalized gpu_manager) remains §3 of this plan — the manual runbook
    is the validated interim.
@@ -147,11 +145,13 @@ Full visual + UX overhaul of `webapp/templates/index.html`:
 
 ## 6. Repo hygiene (keep public)
 
-- Delete dead `archive/root-scripts/` (one-off scripts leaking homelab paths).
-- Parameterize the private IP / stack paths in `docker-compose.yml`,
-  `webapp/app.py`, `.env.example` via env with generic defaults.
+- ~~Delete dead `archive/root-scripts/`~~ (done — archive/ is now empty).
+- ~~Parameterize the private IP / stack paths~~ (done — `STACK_PATH` env var
+  with generic defaults in docker-compose.yml and .env.example).
 - Keep functional docs; ensure `.env.example` documents every engine + GPU
   toggle for friends.
+- See [AUDIT-PLAN.md](AUDIT-PLAN.md) for the full remediation backlog
+  (Docker hardening, code quality, testing, frontend).
 
 ---
 

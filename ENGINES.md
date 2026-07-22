@@ -109,8 +109,8 @@ Source: [p0n1/epub_to_audiobook](https://github.com/p0n1/epub_to_audiobook)
 
 | Host | CPU | RAM | CUDA | Verdict |
 |---|---|---|---|---|
-| zorin NUC | i7-8559U (8 threads) | 15 GB | none | Kokoro/Piper fine; Chatterbox OOM-loops under load; TADA doesn't fit |
-| Windows box | Ryzen 9 8945HS (16 threads) | 29 GB | none (Radeon iGPU) | Chatterbox + TADA fit comfortably on CPU; ~3–4× NUC speed [measured CPU class] |
+| zorin (upgraded 2026-07-20) | i5-12400 (6c/12t) | 31 GB | none | Kokoro/Piper/Chatterbox comfortable; TADA off (broken #23); full-book Chatterbox ~45h — use Kaggle |
+| Windows box | Ryzen 9 8945HS (16 threads) | 29 GB | none (Radeon iGPU) | Chatterbox + TADA fit comfortably on CPU; ~3–4× old NUC speed [measured CPU class] |
 | Cloud | Kaggle T4 (free) / Vast (paid) | — | yes | fast path for TADA/Chatterbox |
 
 ## Standing rule

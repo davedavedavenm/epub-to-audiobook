@@ -137,6 +137,6 @@ use **Preview** to compare. (More detail in [ENGINES.md](ENGINES.md).)
 | The web app | http://localhost:8881 |
 | Your finished audiobooks | `data/audiobooks/<book name>/` |
 | Books you've uploaded | `data/uploads/` |
-| Settings + API keys | the **Settings** tab (stored in `.env`) |
+| Settings + API keys | the **Settings** tab (stored in the app database on the `/data` volume) |
 
 Enjoy your audiobooks. 🎧
