@@ -6,6 +6,7 @@ import hashlib
 import time
 import sqlite3
 import base64
+import logging
 import boto3
 import httpx
 import asyncio
@@ -18,6 +19,7 @@ from mutagen.mp3 import MP3
 import edge_tts
 
 app = FastAPI()
+logger = logging.getLogger("tts_proxy")
 
 DB_PATH = Path(os.environ.get("DB_PATH", "/data/jobs.db"))
 UPSTREAM_BASE = os.environ.get("TTS_UPSTREAM_BASE", "http://kokoro-tts:8880/v1").rstrip("/")
@@ -34,7 +36,7 @@ def get_audio_duration(audio_bytes: bytes) -> float:
         mp3 = MP3(audio_file)
         return mp3.info.length
     except Exception as e:
-        print(f"Duration error: {e}")
+        logger.error(f"Duration error: {e}")
         return 0.0
 
 def _now_iso() -> str:
@@ -80,7 +82,7 @@ def get_setting(key: str, default=None):
             if row:
                 return row['value']
     except Exception as e:
-        print(f"Error fetching setting {key}: {e}")
+        logger.error(f"Error fetching setting {key}: {e}")
     return os.environ.get(key, default)
 
 async def get_edge_audio(text: str, voice: str) -> bytes:
@@ -129,7 +131,7 @@ async def get_polly_audio(text: str, voice: str) -> bytes:
         if "selected engine: neural" in err_msg:
             # Try long-form (some newer voices like Patrick only support this)
             try:
-                print(f"Fallback to long-form engine for voice: {polly_voice}")
+                logger.info(f"Fallback to long-form engine for voice: {polly_voice}")
                 response = await loop.run_in_executor(
                     None,
                     lambda: client.synthesize_speech(
@@ -141,7 +143,7 @@ async def get_polly_audio(text: str, voice: str) -> bytes:
                 )
             except Exception as e2:
                 if "selected engine: long-form" in str(e2):
-                    print(f"Fallback to standard engine for voice: {polly_voice}")
+                    logger.info(f"Fallback to standard engine for voice: {polly_voice}")
                     response = await loop.run_in_executor(
                         None,
                         lambda: client.synthesize_speech(
@@ -233,30 +235,30 @@ async def audio_speech(job_id: str, request: Request):
 
     try:
         if is_inworld:
-            print(f"Processing Inworld request for voice: {voice}")
+            logger.info(f"Processing Inworld request for voice: {voice}")
             audio_content = await get_inworld_audio(text, voice)
         elif is_edge:
-            print(f"Processing Edge request for voice: {voice}")
+            logger.info(f"Processing Edge request for voice: {voice}")
             audio_content = await get_edge_audio(text, voice)
         elif is_polly:
-            print(f"Processing Polly request for voice: {voice}")
+            logger.info(f"Processing Polly request for voice: {voice}")
             audio_content = await get_polly_audio(text, voice)
         else:
             # Check if this is Piper or Kokoro
             target_base = UPSTREAM_BASE
             if payload.get("model") == "tts-1":
                 target_base = PIPER_BASE
-                print(f"Routing to Piper: {target_base}")
+                logger.info(f"Routing to Piper: {target_base}")
             
             upstream_url = f"{target_base}/audio/speech"
             async with httpx.AsyncClient(timeout=None) as client:
                 r = await client.post(upstream_url, json=payload)
             if r.status_code != 200:
-                print(f"Upstream error: {r.status_code} - {r.text}")
+                logger.error(f"Upstream error: {r.status_code} - {r.text}")
                 raise HTTPException(status_code=r.status_code, detail=f"Upstream error: {r.text}")
             audio_content = r.content
     except Exception as e:
-        print(f"TTS Error: {e}")
+        logger.error(f"TTS Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     duration = get_audio_duration(audio_content)

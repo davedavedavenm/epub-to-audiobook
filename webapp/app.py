@@ -2498,6 +2498,23 @@ def retry_missing_chapters(
     return still_missing
 
 
+def get_engine_url(tts_engine: str, job_id: str) -> tuple:
+    if tts_engine == 'piper':
+        url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
+        return url, 'tts-1'
+    elif tts_engine in ('inworld', 'edge', 'polly'):
+        url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
+        model = 'inworld' if tts_engine == 'inworld' else 'tts-1'
+        return url, model
+    elif tts_engine == 'chatterbox':
+        return CHATTERBOX_URL, 'tts-1'
+    elif tts_engine == 'tada':
+        return TADA_URL, 'tts-1'
+    else:
+        url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else KOKORO_URL
+        return url, 'kokoro'
+
+
 def build_retry_cmd_from_job(job: dict) -> list[str]:
     """Reconstruct the convert_book.py command from job metadata.
 
@@ -2524,27 +2541,7 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
     if tts_engine == 'kokoro' and job.get('voice2'):
         effective_voice = f"{voice}+{job['voice2']}"
 
-    if tts_engine == 'piper':
-        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
-        tts_model = 'tts-1'
-    elif tts_engine == 'edge':
-        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-        tts_model = 'tts-1'
-    elif tts_engine == 'polly':
-        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-        tts_model = 'tts-1'
-    elif tts_engine == 'chatterbox':
-        tts_base_url = CHATTERBOX_URL
-        tts_model = 'tts-1'
-    elif tts_engine == 'tada':
-        tts_base_url = TADA_URL
-        tts_model = 'tts-1'
-    else:
-        tts_base_url = KOKORO_URL
-        tts_model = 'kokoro'
-
-    if tts_engine == 'kokoro' and TTS_PROXY_URL:
-        tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
+    tts_base_url, tts_model = get_engine_url(tts_engine, job_id)
 
     output_path = OUTPUT_DIR / output_dirname
 
@@ -3475,41 +3472,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         if tts_engine == 'kokoro' and job and job.get('voice2'):
             effective_voice = f"{voice}+{job['voice2']}"
 
-        # Configure TTS settings based on engine
-        if tts_engine == 'piper':
-            # Piper via Proxy
-            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
-            tts_model = 'tts-1'  # openedai-speech model name
-        elif tts_engine == 'inworld':
-            # Inworld TTS 1.5 via proxy
-            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-            tts_model = 'inworld'
-        elif tts_engine == 'edge':
-            # EdgeTTS via Proxy
-            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-            tts_model = 'tts-1'
-        elif tts_engine == 'polly':
-            # AWS Polly via tts-proxy
-            # We force it through proxy because the upstream tool doesn't support Polly natively
-            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-            tts_model = 'tts-1'
-        elif tts_engine == 'chatterbox':
-            # Chatterbox Turbo (local voice-cloned UK narrators). Direct — the
-            # tts-proxy is Kokoro-oriented and would misroute this upstream.
-            tts_base_url = CHATTERBOX_URL
-            tts_model = 'tts-1'
-        elif tts_engine == 'tada':
-            # Hume TADA (local/GPU, most natural). Direct, like chatterbox.
-            tts_base_url = TADA_URL
-            tts_model = 'tts-1'
-        else:
-            # Kokoro (default)
-            tts_base_url = KOKORO_URL
-            tts_model = 'kokoro'
-
-        # Optional: route TTS via proxy so we can capture exact text chunks for verification.
-        if tts_engine == 'kokoro' and TTS_PROXY_URL:
-            tts_base_url = f"{TTS_PROXY_URL}/j/{job_id}/v1"
+        tts_base_url, tts_model = get_engine_url(tts_engine, job_id)
 
         # Determine TTS speed for this job
         tts_speed = DEFAULT_TTS_SPEED

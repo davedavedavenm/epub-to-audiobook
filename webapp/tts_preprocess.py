@@ -524,8 +524,8 @@ def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None
                             if normalized != data.decode('utf-8'):
                                 changes_made += 1
                             data = normalized.encode('utf-8')
-                        except (UnicodeDecodeError, Exception):
-                            pass  # Skip files that can't be decoded
+                        except Exception:
+                            pass
 
                     zout.writestr(item, data)
 

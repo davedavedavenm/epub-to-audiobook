@@ -7,6 +7,16 @@ import xml.etree.ElementTree as ET
 import zipfile
 from bs4 import BeautifulSoup
 
+def _strip_markdown_fences(content: str) -> str:
+    if content.startswith("```json"):
+        content = content[7:]
+    if content.startswith("```"):
+        content = content[3:]
+    if content.endswith("```"):
+        content = content[:-3]
+    return content.strip()
+
+
 def _get_llm_settings():
     # We need to import get_setting from app.py, but to avoid circular imports, 
     # we can just read from the DB or let the caller pass the settings.
@@ -118,16 +128,8 @@ Here is the book sample:
         
         data = resp.json()
         content = data['choices'][0]['message']['content'].strip()
-        
-        # Strip potential markdown formatting if the model ignored instructions
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-            
-        metadata = json.loads(content.strip())
+        content = _strip_markdown_fences(content)
+        metadata = json.loads(content)
         logging.info(f"Successfully generated metadata: {metadata.get('title')}")
         return metadata
     except Exception as e:
@@ -207,12 +209,8 @@ def _call_llm_json(prompt: str, settings: dict, temperature: float = 0.1):
     resp = requests.post(endpoint, headers=headers, json=payload, timeout=90)
     resp.raise_for_status()
     content = resp.json()['choices'][0]['message']['content'].strip()
-    for fence in ("```json", "```"):
-        if content.startswith(fence):
-            content = content[len(fence):]
-    if content.endswith("```"):
-        content = content[:-3]
-    return json.loads(content.strip())
+    content = _strip_markdown_fences(content)
+    return json.loads(content)
 
 
 # Sample the book more widely than just the opening — pull excerpts across the
@@ -357,15 +355,8 @@ Here is the book sample:
         
         data = resp.json()
         content = data['choices'][0]['message']['content'].strip()
-        
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-            
-        lexicon = json.loads(content.strip())
+        content = _strip_markdown_fences(content)
+        lexicon = json.loads(content)
         logging.info(f"Successfully generated lexicon with {len(lexicon)} entries.")
         return lexicon
     except Exception as e:

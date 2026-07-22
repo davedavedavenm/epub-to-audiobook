@@ -3,29 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Audiobook Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,400..700&family=Hanken+Grotesk:wght@300..800&display=swap" rel="stylesheet">
 <style>
-:root {
-    --paper: #f3ede1; --paper-raised: #faf6ec; --ink: #211b14; --ink-soft: #5c5346;
-    --bg-sidebar: #201a13; --bg-element: #e9e1d0; --bg-hover: #e0d6c1;
-    --accent: #9a3b32; --accent-deep: #7a2c25; --gilt: #b8892d;
-    --text-primary: #211b14; --text-secondary: #6b6152; --text-on-dark: #f0e8d8;
-    --border: #d8ccb4; --border-strong: #c4b493;
-    --success: #4f6b46; --error: #a63d34;
-    --radius-lg: 18px; --radius-md: 11px; --radius-sm: 7px;
-    --shadow: 0 22px 48px -28px rgba(33,27,20,0.45);
-    --serif: 'Fraunces', Georgia, serif; --sans: 'Hanken Grotesk', system-ui, sans-serif;
-}
-[data-theme="dark"] {
-    --paper: #17130d; --paper-raised: #1f1a12; --ink: #efe6d4; --ink-soft: #b7ab93;
-    --bg-sidebar: #0e0b07; --bg-element: #241d14; --bg-hover: #2f2618;
-    --accent: #c8564a; --accent-deep: #a83e34; --gilt: #d6a94a;
-    --text-primary: #efe6d4; --text-secondary: #a99d85; --text-on-dark: #efe6d4;
-    --border: #322818; --border-strong: #443722;
-    --shadow: 0 22px 48px -26px rgba(0,0,0,0.7);
-}
 * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
 body {
     font-family: var(--sans); background: var(--paper); color: var(--text-primary);
@@ -332,7 +310,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         </div>
         <div class="tab-panel" id="tab-convert">
             <div class="card">
-                <h2 style="font-family: 'Lora', serif; font-size: 2.2rem; margin-top: 0;">Upload New Book</h2>
+                <h2 style="font-family: var(--serif); font-size: 2.2rem; margin-top: 0;">Upload New Book</h2>
                 <div id="upload-area" style="border: 2px dashed var(--border); padding: 100px 40px; text-align: center; border-radius: 32px; cursor: pointer; background: var(--bg-element); margin: 40px 0;" onclick="document.getElementById('file-input').click()">
                     <div style="font-size: 5rem; margin-bottom: 24px;">📖</div>
                     <h3>Drop manuscript here</h3>
@@ -351,14 +329,14 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
                 <div class="tab-panel" id="tab-settings">
             <div class="card">
-                <h2 style="margin-top:0; font-family: 'Lora'; margin-bottom:24px;">Setup &amp; Configuration</h2>
+                <h2 style="margin-top:0; font-family: var(--serif); margin-bottom:24px;">Setup &amp; Configuration</h2>
                 <p style="font-size:1.1rem; line-height:1.6; color:var(--text-secondary); margin-bottom:40px;">
                     Welcome to Audiobook Studio! These settings help you connect your studio to other services. 
                     <strong>None of these are strictly required to start converting books</strong>, but they unlock powerful extra features like automatic syncing to your library and faster processing.
                 </p>
                 <div style="display:grid; gap:32px;">
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px; border:2px solid var(--accent);">
-                        <h3 style="margin-top:0; font-family:'Lora';">Render Location</h3>
+                        <h3 style="margin-top:0; font-family:var(--serif);">Render Location</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Where audiobooks are generated. <strong>Local is the default and is free.</strong>
                             Cloud GPU rents a paid Vast.ai instance (a few pence per book, but it
@@ -405,7 +383,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top:0; font-family:'Lora';">Audiobookshelf Sync</h3>
+                        <h3 style="margin-top:0; font-family:var(--serif);">Audiobookshelf Sync</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Automatically send finished audiobooks directly to your Audiobookshelf server. 
                             Find your token inside Audiobookshelf by clicking your username (top right) -&gt; <strong>Settings</strong> -&gt; <strong>Users</strong> -&gt; select your user -&gt; <strong>API Token</strong>.
@@ -426,7 +404,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top:0; font-family:'Lora';">LLM Integration (Optional)</h3>
+                        <h3 style="margin-top:0; font-family:var(--serif);">LLM Integration (Optional)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Connect an OpenAI-compatible LLM (e.g., Z AI, xAI, Groq, OpenAI) to unlock advanced features like automated metadata generation (summaries/titles), custom pronunciation lexicons for tricky names, and quality assurance transcript checks.
                         </p>
@@ -466,7 +444,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top:0; font-family:'Lora';">Pronunciation Dictionary (All Books)</h3>
+                        <h3 style="margin-top:0; font-family:var(--serif);">Pronunciation Dictionary (All Books)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Regex rules applied to <strong>every</strong> conversion, one per line as <code>search==replace</code>.
                             Lines starting with # are comments. Per-book rules live in each book's "Advanced" panel in the Library.
@@ -476,7 +454,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top:0; font-family:'Lora';">Amazon Polly Voices (Legacy — not recommended)</h3>
+                        <h3 style="margin-top:0; font-family:var(--serif);">Amazon Polly Voices (Legacy — not recommended)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             ⚠️ <strong>Proven too expensive for full audiobooks</strong> (see LOW-COST-TTS.md); kept only for compatibility.
                             The studio's free voices (Kokoro, EdgeTTS, Piper) are the recommended path. You must have an AWS account with 'polly:SynthesizeSpeech' permissions.
@@ -511,7 +489,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top:0; font-family:'Lora';">Inworld TTS 1.5 — Premium Voices (Optional)</h3>
+                        <h3 style="margin-top:0; font-family:var(--serif);">Inworld TTS 1.5 — Premium Voices (Optional)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Expressive paid engine. Pay-as-you-go: ~<strong>£2–£5 per novel</strong> —
                             ⚠️ at or above the project's £3/book budget rule (LOW-COST-TTS.md), so treat as premium/experimental only.
@@ -527,7 +505,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
-                        <h3 style="margin-top: 0; font-family: 'Lora';">Vast.ai Cloud GPU Speedup (Optional)</h3>
+                        <h3 style="margin-top: 0; font-family: var(--serif);">Vast.ai Cloud GPU Speedup (Optional)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
                             When you add multiple books to the queue, it can take a long time to process on your local machine. If you provide a Vast.ai API key, the studio will automatically rent a cloud GPU for a few cents an hour to process the books ~15x faster, and then automatically shut it down when finished.
                         </p>
@@ -542,17 +520,16 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             </div>
         </div>
     </div>
-    </div>
 </main>
 <div id="preview-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="preview-sidebar">
-            <h3 style="font-family: 'Lora'; margin-top: 0; margin-bottom: 32px;">Contents</h3>
+            <h3 style="font-family: var(--serif); margin-top: 0; margin-bottom: 32px;">Contents</h3>
             <div id="toc-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
         <div class="preview-body">
             <button class="modal-close" onclick="closePreview()">&#10005;</button>
-            <h2 id="preview-modal-title" style="font-family: 'Lora', serif; font-size: 1.8rem; margin: 0;">Page Preview</h2>
+            <h2 id="preview-modal-title" style="font-family: var(--serif); font-size: 1.8rem; margin: 0;">Page Preview</h2>
             <div id="preview-text-container" style="margin-top: 40px;">
                 <div id="preview-text" class="preview-text"></div>
             </div>
@@ -663,9 +640,15 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     }
 
     async function loadLibrary() {
-        const resp = await fetch('/api/library');
-        libraryBooks = await resp.json();
-        renderLibrary();
+        try {
+            const resp = await fetch('/api/library');
+            if(!resp.ok) throw new Error('HTTP ' + resp.status);
+            libraryBooks = await resp.json();
+            renderLibrary();
+        } catch(e) {
+            const grid = document.getElementById('library-grid');
+            if(grid) grid.innerHTML = '<div style="text-align:center; padding:60px 24px; color:var(--error); font-weight:600;">⚠️ Could not reach the studio API — check the server is running, then refresh.</div>';
+        }
     }
 
     async function openWorkspace(bookId, el) {
@@ -755,7 +738,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             .map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('');
 
         grid.innerHTML = filtered.map(b => {
-            const bookId = btoa(b.path).replace(/[^a-z0-9]/gi, '');
+            const bookId = encodeURIComponent(b.path).replace(/%/g, '_');
             let statusBadge = '';
             if(b.status === 'completed') statusBadge = '<span class="li-tag done">✓ Audiobook ready</span>';
             else if(b.status === 'converting') statusBadge = `<span class="li-tag render">● Converting ${b.progress}%</span>`;
@@ -1174,9 +1157,15 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     setInterval(animateWaves, 430);
 
     async function loadHistory() {
-        const resp = await fetch('/api/history');
-        const jobs = await resp.json();
-        document.getElementById('history-content').innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:'Lora'; font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:10px;">✅ ${escapeHtml(j.book_name)} ${preBadge(j)}</div></div><div style="display:flex; gap:12px;"><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button></div></div>`).join('') || '<div class="card">History is empty.</div>';
+        const content = document.getElementById('history-content');
+        try {
+            const resp = await fetch('/api/history');
+            if(!resp.ok) throw new Error('HTTP ' + resp.status);
+            const jobs = await resp.json();
+            content.innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:var(--serif); font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:10px;">✅ ${escapeHtml(j.book_name)} ${preBadge(j)}</div></div><div style="display:flex; gap:12px;"><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button></div></div>`).join('') || '<div class="card">History is empty.</div>';
+        } catch(e) {
+            if(content) content.innerHTML = '<div class="card" style="text-align:center; color:var(--error); border-color:var(--error); font-weight:600;">⚠️ Could not reach the studio API — check the server is running, then refresh.</div>';
+        }
     }
 
     async function loadGpuStatus() {
