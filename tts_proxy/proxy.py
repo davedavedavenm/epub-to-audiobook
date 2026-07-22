@@ -56,7 +56,11 @@ def normalize_loose(s: str) -> str:
     s = _re_ws.sub(" ", s).strip()
     return s
 
+_SAFE_JOB_ID = re.compile(r'^[a-zA-Z0-9_\-]+$')
+
 def job_dir(job_id: str) -> Path:
+    if not _SAFE_JOB_ID.match(job_id):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
     d = STORE_ROOT / job_id
     d.mkdir(parents=True, exist_ok=True)
     return d

@@ -62,14 +62,20 @@ jobs:
           echo "engine never became healthy"; exit 1
 
       - name: Convert
+        env:
+          INPUT_ENGINE: ${{ inputs.engine }}
+          INPUT_EPUB_URL: ${{ inputs.epub_url }}
+          INPUT_VOICE: ${{ inputs.voice }}
+          INPUT_START: ${{ inputs.start }}
+          INPUT_END: ${{ inputs.end }}
         run: |
-          CHUNK=$([ "${{ inputs.engine }}" = "tada" ] && echo 600 || echo 280)
+          CHUNK=$([ "$INPUT_ENGINE" = "tada" ] && echo 600 || echo 280)
           python scripts/convert_book.py \
-            --epub "${{ inputs.epub_url }}" \
+            --epub "$INPUT_EPUB_URL" \
             --engine-url http://localhost:8000/v1 \
-            --voice "${{ inputs.voice }}" \
+            --voice "$INPUT_VOICE" \
             --out ./audiobook \
-            --start ${{ inputs.start }} --end ${{ inputs.end }} \
+            --start "$INPUT_START" --end "$INPUT_END" \
             --chunk-chars $CHUNK
 
       - name: Upload audiobook

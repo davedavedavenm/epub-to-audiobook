@@ -18,8 +18,8 @@ services:
       - kokoro-cache:/app/cache
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8880/v1/audio/voices"]
-      interval: 300s
-      timeout: 60s
+      interval: 60s
+      timeout: 30s
       retries: 10
       start_period: 300s
 
@@ -137,7 +137,7 @@ services:
       - CHATTERBOX_URL=${CHATTERBOX_URL:-http://chatterbox-tts:8004/v1}
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
       - UPLOAD_DIR=/data/uploads
-      - LIBRARY_DIR=${LIBRARY_DIR:-/data/uploads}
+      - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
@@ -151,7 +151,6 @@ services:
       - AUDIOBOOKSHELF_HOST=${AUDIOBOOKSHELF_HOST:-docker-vm}
       - AUDIOBOOKSHELF_USER=${AUDIOBOOKSHELF_USER:-dave}
       - AUDIOBOOKSHELF_PORT=${AUDIOBOOKSHELF_PORT:-}
-      - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - EVOLUTION_API_URL=${EVOLUTION_API_URL:-}
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
       - DEFAULT_WHATSAPP_NUMBER=${DEFAULT_WHATSAPP_NUMBER:-}
@@ -189,6 +188,14 @@ services:
       - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
       - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
       - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
+    mem_limit: 2g
+    memswap_limit: 2g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8881/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       # Use ABSOLUTE paths so it works regardless of where docker compose is run from
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/uploads:/data/uploads
@@ -203,7 +210,7 @@ services:
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
     depends_on:
       kokoro-tts:
-        condition: service_started
+        condition: service_healthy
 
   worker:
     build:
@@ -225,7 +232,7 @@ services:
       - CHATTERBOX_URL=${CHATTERBOX_URL:-http://chatterbox-tts:8004/v1}
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
       - UPLOAD_DIR=/data/uploads
-      - LIBRARY_DIR=${LIBRARY_DIR:-/data/uploads}
+      - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
@@ -238,7 +245,6 @@ services:
       - AUDIOBOOKSHELF_HOST=${AUDIOBOOKSHELF_HOST:-docker-vm}
       - AUDIOBOOKSHELF_USER=${AUDIOBOOKSHELF_USER:-dave}
       - AUDIOBOOKSHELF_PORT=${AUDIOBOOKSHELF_PORT:-}
-      - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - EVOLUTION_API_URL=${EVOLUTION_API_URL:-}
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-}
       - DEFAULT_WHATSAPP_NUMBER=${DEFAULT_WHATSAPP_NUMBER:-}
@@ -290,9 +296,17 @@ services:
       # Use explicit /home/dave paths — $HOME resolves to /root under sudo docker compose
       - /home/dave/.ssh/vastai_ed25519:/root/.ssh/vastai_ed25519:ro
       - /home/dave/.config/vastai:/root/.config/vastai:ro
+    mem_limit: 4g
+    memswap_limit: 4g
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'worker.py' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     depends_on:
       kokoro-tts:
-        condition: service_started
+        condition: service_healthy
     command: ["python", "/app/worker.py"]
 
   # Optional: sampled ASR verification ("does the audio match the book text?")

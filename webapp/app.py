@@ -67,8 +67,6 @@ _job_claim_lock = threading.Lock()
 # Minimum fraction of chapters required to mark a book complete (1.0 = 100%).
 # No more half-finished audiobooks.
 CHAPTER_COMPLETION_THRESHOLD = float(os.environ.get('CHAPTER_COMPLETION_THRESHOLD', '1.0'))
-MIN_CHAPTER_SIZE_KB = 0
-
 # Optional: sampled ASR verification (audio waveform -> transcript -> compare vs EPUB text).
 # Off by default because it can be CPU-expensive.
 AUDIO_ASR_VERIFY_ENABLED = os.environ.get('AUDIO_ASR_VERIFY_ENABLED', '0').strip().lower() in ('1', 'true', 'yes', 'on')
@@ -1168,25 +1166,6 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
 
 
 
-def verify_chapter_integrity(job_id: str) -> bool:
-    """Strictly verify that every requested chapter exists and is valid."""
-    job = get_job(job_id)
-    if not job: return False
-    
-    output_dir = OUTPUT_DIR / job['output_dirname']
-    if not output_dir.exists(): return False
-    
-    files = list(output_dir.glob('*.mp3'))
-    if not files: return False
-    
-    for f in files:
-        if f.stat().st_size < 1024:
-            app.logger.error(f"Job {job_id}: Found invalid/tiny chapter file {f.name}")
-            return False
-            
-    return True
-
-
 def verify_chapter_integrity(job_id):
     """Mark an in-flight job completed when output files prove success.
 
@@ -2001,9 +1980,6 @@ def resume_inflight_jobs():
                 f"Job {job_id} was '{current_status}' but its container is gone — marked failed to free the queue")
 
     if resumed:
-        app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
-        app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
-
         app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
 
 
@@ -3778,7 +3754,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 except Exception as e:
                     app.logger.error(f"Failed to clean up transcript directory: {e}")
         else:
-            error_msg = combined_output if combined_output.strip() else (stderr.decode()[:1000] if stderr else 'No output files created')
+            error_msg = combined_output if combined_output.strip() else 'No output files created'
             app.logger.error(f"Job {job_id} failed: {error_msg[:500]}...")
             append_job_log(job_id, f"Failed: {error_msg[:200]}")
 
