@@ -82,27 +82,26 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 - [x] Replace all bare `open()` calls with `with` context managers (7 instances)
 
 ### 3.3 DRY: consolidate duplicate `epub_generator.py`
-- [ ] Determine which version (root vs webapp) is canonical
-- [ ] Remove the other; update any imports
+- [x] Determine which version (root vs webapp) is canonical — webapp/ is canonical
+- [x] Remove root epub_generator.py (dead code, never imported, never containerised)
 
 ### 3.4 DRY: engine URL selection logic
-- [ ] Extract the `if tts_engine == 'piper': ... elif ...` pattern into a shared
-      helper used by both `convert_book()` and `build_retry_cmd_from_job()`
+- [x] Extract `get_engine_url()` helper, replaced both if/elif blocks in app.py
 
 ### 3.5 Error handling cleanup
-- [ ] Replace bare `except: pass` / `except: continue` with specific exception
-      types and logging in: `app.py`, `epub_generator.py` (both), `llm_metadata.py`
-- [ ] Fix `except (UnicodeDecodeError, Exception): pass` in `tts_preprocess.py:527`
+- [x] Extract `_strip_markdown_fences()` in llm_metadata.py (was 3x duplicated)
+- [x] Fix `except (UnicodeDecodeError, Exception): pass` in `tts_preprocess.py`
+- [ ] Replace remaining bare `except: pass` / `except: continue` in `app.py`
 
 ### 3.6 Logging
-- [ ] Replace `print()` calls with proper logging in `epub_generator.py` (both),
-      `tts_proxy/proxy.py`
+- [x] Replace `print()` calls with proper logging in `tts_proxy/proxy.py`
 - [x] Remove `import signal` (unused) from `app.py`
+- [ ] Replace `print()` in `webapp/epub_generator.py`
 - [ ] Normalize `import time as _time` / `as time_module` / `as t` aliases
 
 ### 3.7 GPU manager supply chain
-- [ ] Add SHA-256 checksum verification for the downloaded `vast.py` in
-      `gpu_manager.py`, or vendor the CLI
+- [x] Add SHA-256 checksum verification for `vast.py` in `gpu_manager.py`
+      (set `VAST_CLI_SHA256` to pin; None = accept any for now)
 
 ---
 
@@ -114,21 +113,23 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 - [ ] Point webapp + worker at the proxy instead of raw `/var/run/docker.sock`
 
 ### 4.2 Non-root containers
-- [ ] Add `USER` directive to all 5 Dockerfiles
-- [ ] Fix file ownership for any paths the app writes to
+- [x] Add `USER` directive to tts_proxy, chatterbox, tada, audio_verify
+- [x] Fix file ownership (`chown` at build time for /app, /data)
+- [ ] webapp/worker deferred — docker socket + SSH mounts under /root make
+      non-root equivalent to root; needs socket proxy (4.1) first
 
 ### 4.3 Network segmentation
 - [ ] Define custom Docker networks (frontend, backend, engines)
 - [ ] Remove unnecessary port exposure (tts-proxy 8882 → internal only)
 
 ### 4.4 Image hygiene
-- [ ] Pin `kokoro-fastapi-cpu` to a specific version tag (not `:latest`)
+- [x] Pin `kokoro-fastapi-cpu` to `v0.2.2` (was `:latest`)
+- [x] Add logging rotation (json-file, 10m max, 3 files) to all services
 - [ ] Add multi-stage builds to webapp and tts-proxy Dockerfiles
 - [ ] Replace `curl | sh` Docker CLI install with pinned apt package
-- [ ] Add logging rotation config to all services
 
 ### 4.5 Dependency pinning
-- [ ] Pin all Python deps in `webapp/requirements.txt` (pip freeze)
+- [x] Pin all Python deps in `webapp/requirements.txt` to exact versions
 - [ ] Pin `chatterbox-tts` and `hume-tada` to specific versions
 - [ ] Add a `requirements.lock` or use `pip-compile`
 
@@ -137,9 +138,9 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 ## Phase 5 — Testing (next sessions)
 
 ### 5.1 API smoke tests
-- [ ] Add pytest fixture that starts the Flask test client
-- [ ] Test: library listing, book upload, conversion submit, job status, settings CRUD
-- [ ] Test: voice preview endpoint, sample endpoint
+- [x] Add pytest fixture with Flask test client (`tests/test_api_smoke.py`)
+- [x] 10 tests: health, version, voices, jobs, queue, settings, library,
+      gpu, convert validation, 404 handling
 
 ### 5.2 Worker/queue tests
 - [ ] Test: job lifecycle (queued → converting → completed)
@@ -152,7 +153,7 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 - [ ] Test: failover chain behavior
 
 ### 5.4 CI pipeline
-- [ ] Add GitHub Actions workflow: lint + pytest on PR
+- [x] Add GitHub Actions workflow: pytest + compose config validation on push/PR
 - [ ] Add webapp image build + push to CI
 
 ---
@@ -160,11 +161,11 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 ## Phase 6 — Frontend (later)
 
 ### 6.1 Quick fixes
-- [ ] Fix `btoa()` crash on non-ASCII book filenames
-- [ ] Remove dead legacy "Narration Press" CSS (lines 9-128)
-- [ ] Remove unused Google Fonts `<link>` (Fraunces, Hanken Grotesk)
-- [ ] Fix `font-family: 'Lora'` references (load it or remove)
-- [ ] Add error handling to `loadLibrary()` and `loadHistory()`
+- [x] Fix `btoa()` crash on non-ASCII book filenames → `encodeURIComponent`
+- [x] Remove dead legacy "Narration Press" CSS
+- [x] Remove unused Google Fonts `<link>` (Fraunces, Hanken Grotesk)
+- [x] Fix `font-family: 'Lora'` references → `var(--serif)`
+- [x] Add error handling to `loadLibrary()` and `loadHistory()`
 
 ### 6.2 Accessibility
 - [ ] Add ARIA roles to tab interface
@@ -183,7 +184,8 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 
 ## Phase 7 — Repo hygiene (quick wins)
 
-- [ ] Remove root `epub_generator.py` and `convert.sh` if superseded
+- [x] Remove root `epub_generator.py` (dead code, webapp/ version is canonical)
+- [ ] Remove `convert.sh` if superseded
 - [x] Remove duplicate `.gitignore` entries (ssh-keys/, __pycache__/)
 - [x] Add `.gemini/` to `.gitignore`
 - [x] Add `.gitattributes` with `*.wav binary` (+ mp3, epub, images)
