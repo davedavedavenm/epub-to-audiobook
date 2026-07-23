@@ -106,6 +106,22 @@ reliable long-form non-fiction.
 
 ## Recommendations (priority order)
 
+### 0. CosyVoice 3 — ATTEMPTED, FAILED (2026-07-22)
+Tried to render audition samples via HF ZeroGPU spaces and Kaggle kernels.
+- **HF spaces**: all broken — FunAudioLLM official space returns 1s silence;
+  recentechstudio/CosyVoice3 throws internal errors; ZeroGPU quota blocked
+  without HF token auth, and with auth still returned silence.
+- **Kaggle kernels**: pushed 4 iterations (v1-v4). v1-v3 failed (wrong torch
+  version, missing submodules, bad prompt format). v4 uses correct official
+  deps (torch 2.3.1+cu121, recursive clone, CV3 prompt prefix) but output
+  could not be pulled — the KGAT_ token can push/list kernels but not read
+  output (`kernels.get` permission denied). Kernel may have succeeded on
+  Kaggle's side; check https://www.kaggle.com/code/davedavedavenm/cosyvoice3-uk-audition-v4
+- **Status**: UNTESTED. The engine benchmarks well (WER 1.68% EN, speaker
+  similarity 69.5%) but we have zero audio to judge. Retry when: (a) a
+  working HF space appears, (b) Kaggle auth is fixed (need kaggle.json with
+  username+key, not KGAT_ token), or (c) we build a local/Docker integration.
+
 ### 1. Listen-test Chatterbox Nano (highest leverage)
 If Nano sounds close to Turbo, it's a free 3x speedup on CPU with zero new
 infrastructure. Same MIT license, same voice cloning, same server interface.

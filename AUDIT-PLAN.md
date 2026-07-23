@@ -192,6 +192,18 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 
 ---
 
+## CosyVoice 3 audition — FAILED (2026-07-22)
+
+- HF spaces all broken (silence / internal errors / quota)
+- Kaggle kernels pushed (v4 has correct deps) but output pull blocked by
+  KGAT_ token scope (`kernels.get` denied). Kernel may have succeeded on
+  Kaggle — check the web UI manually.
+- Kernel script kept at `scripts/kaggle/run_cosyvoice3.py` for retry.
+- **Blocker**: need `kaggle.json` (username+key from kaggle.com/settings →
+  Create New Token) instead of KGAT_ access_token for read permissions.
+
+---
+
 ## Not in scope (tracked elsewhere)
 
 - `app.py` decomposition into modules — too large for a remediation pass;
