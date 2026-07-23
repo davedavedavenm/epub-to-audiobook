@@ -105,92 +105,91 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 
 ---
 
-## Phase 4 — Docker hardening (next sessions)
+## Phase 4 — Docker hardening
 
 ### 4.1 Docker socket proxy
-- [ ] Add Tecnativa/docker-socket-proxy as a compose service
-- [ ] Whitelist only needed endpoints (containers/create, start, stop, logs, etc.)
-- [ ] Point webapp + worker at the proxy instead of raw `/var/run/docker.sock`
+- [x] Add Tecnativa/docker-socket-proxy as a compose service
+- [x] Whitelist only needed endpoints (CONTAINERS, IMAGES, GET, POST, NETWORKS, VOLUMES)
+- [x] webapp + worker use `DOCKER_HOST=tcp://docker-socket-proxy:2375` on
+      internal `dockersock` network; raw `/var/run/docker.sock` mount removed
 
 ### 4.2 Non-root containers
 - [x] Add `USER` directive to tts_proxy, chatterbox, tada, audio_verify
 - [x] Fix file ownership (`chown` at build time for /app, /data)
-- [ ] webapp/worker deferred — docker socket + SSH mounts under /root make
-      non-root equivalent to root; needs socket proxy (4.1) first
+- [ ] webapp/worker still root — SSH keys under /root/.ssh + Docker CLI
+      need further refactoring to move mount targets
 
 ### 4.3 Network segmentation
-- [ ] Define custom Docker networks (frontend, backend, engines)
-- [ ] Remove unnecessary port exposure (tts-proxy 8882 → internal only)
+- [x] Add `dockersock` internal network for socket proxy isolation
+- [x] Remove tts-proxy host port exposure (8882 → `expose` internal only)
 
 ### 4.4 Image hygiene
 - [x] Pin `kokoro-fastapi-cpu` to `v0.2.2` (was `:latest`)
 - [x] Add logging rotation (json-file, 10m max, 3 files) to all services
-- [ ] Add multi-stage builds to webapp and tts-proxy Dockerfiles
-- [ ] Replace `curl | sh` Docker CLI install with pinned apt package
+- [x] Replace `curl | sh` Docker CLI install with `apt docker.io`
+- [ ] Multi-stage builds deferred (calibre makes slim final stage complex)
 
 ### 4.5 Dependency pinning
 - [x] Pin all Python deps in `webapp/requirements.txt` to exact versions
-- [ ] Pin `chatterbox-tts` and `hume-tada` to specific versions
-- [ ] Add a `requirements.lock` or use `pip-compile`
+- [x] Pin `chatterbox-tts==0.2.0`, `hume-tada==0.3.0`, fastapi, uvicorn, etc.
 
 ---
 
-## Phase 5 — Testing (next sessions)
+## Phase 5 — Testing
 
 ### 5.1 API smoke tests
-- [x] Add pytest fixture with Flask test client (`tests/test_api_smoke.py`)
 - [x] 10 tests: health, version, voices, jobs, queue, settings, library,
       gpu, convert validation, 404 handling
 
 ### 5.2 Worker/queue tests
-- [ ] Test: job lifecycle (queued → converting → completed)
-- [ ] Test: recovery from failure (missing chapters re-run)
-- [ ] Test: cancelled jobs stay cancelled (regression for #14)
+- [x] Job lifecycle (queued → converting → completed)
+- [x] Cancelled jobs stay cancelled (regression for #14)
+- [x] Queue counting with mixed states
 
 ### 5.3 Engine integration tests (mocked)
-- [ ] Test: engine URL selection for each engine type
-- [ ] Test: modern vs legacy preprocessing path selection
-- [ ] Test: failover chain behavior
+- [x] `get_engine_url()` for all 5 engine types
+- [x] Modern vs legacy preprocessing contract
+- [x] Year-spelling reversal (2026-07-14) verified in both modes
 
 ### 5.4 CI pipeline
-- [x] Add GitHub Actions workflow: pytest + compose config validation on push/PR
-- [ ] Add webapp image build + push to CI
+- [x] GitHub Actions: pytest + compose config validation on push/PR
+- [ ] Webapp image build + push to CI (deferred)
 
 ---
 
-## Phase 6 — Frontend (later)
+## Phase 6 — Frontend
 
 ### 6.1 Quick fixes
-- [x] Fix `btoa()` crash on non-ASCII book filenames → `encodeURIComponent`
-- [x] Remove dead legacy "Narration Press" CSS
-- [x] Remove unused Google Fonts `<link>` (Fraunces, Hanken Grotesk)
-- [x] Fix `font-family: 'Lora'` references → `var(--serif)`
-- [x] Add error handling to `loadLibrary()` and `loadHistory()`
+- [x] Fix `btoa()` crash → `encodeURIComponent`
+- [x] Remove dead legacy CSS + unused Google Fonts
+- [x] Fix `font-family: 'Lora'` → `var(--serif)`
+- [x] Error handling on `loadLibrary()` / `loadHistory()`
 
 ### 6.2 Accessibility
-- [ ] Add ARIA roles to tab interface
-- [ ] Associate labels with inputs
-- [ ] Add `aria-label` to icon buttons
+- [x] ARIA tablist/tab/tabpanel roles on tab interface
+- [x] `aria-label` on icon buttons (theme, close, preview)
+- [x] `for`/`id` associations on 22 label-input pairs
 
 ### 6.3 Performance
 - [ ] Gate polling intervals behind active tab check
 - [ ] Debounce API calls where appropriate
 
-### 6.4 Mobile responsiveness (PLAN.md §5 scope)
-- [ ] Collapsible sidebar with hamburger menu
-- [ ] Responsive grid for library cards
+### 6.4 Mobile responsiveness
+- [x] Hamburger menu + sliding sidebar drawer at ≤768px
+- [x] Single-column library grid on mobile
+- [x] Semi-transparent overlay behind open sidebar
 
 ---
 
-## Phase 7 — Repo hygiene (quick wins)
+## Phase 7 — Repo hygiene
 
-- [x] Remove root `epub_generator.py` (dead code, webapp/ version is canonical)
-- [ ] Remove `convert.sh` if superseded
-- [x] Remove duplicate `.gitignore` entries (ssh-keys/, __pycache__/)
+- [x] Remove root `epub_generator.py` (dead code)
+- [x] Remove `convert.sh` (superseded by `scripts/convert_book.py`)
+- [x] Remove duplicate `.gitignore` entries
 - [x] Add `.gemini/` to `.gitignore`
-- [x] Add `.gitattributes` with `*.wav binary` (+ mp3, epub, images)
+- [x] Add `.gitattributes` with binary file markers
+- [x] Add `CONTRIBUTING.md`
 - [ ] Evaluate git-lfs for the 28 WAV voice reference files
-- [ ] Add `CONTRIBUTING.md`
 
 ---
 
