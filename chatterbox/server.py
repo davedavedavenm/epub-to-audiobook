@@ -34,6 +34,7 @@ VOICES_DIR = os.environ.get("VOICES_DIR", "/app/voices")
 # boundaries (see LOW-COST-TTS.md).
 CHUNK_CHARS = int(os.environ.get("CHATTERBOX_CHUNK_CHARS", "280"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+NANO = os.environ.get("CHATTERBOX_NANO", "0") == "1"
 
 app = FastAPI()
 
@@ -56,8 +57,12 @@ def _get_model():
     global _model
     if _model is None:
         from chatterbox.tts_turbo import ChatterboxTurboTTS
-        log.info("loading Chatterbox Turbo on %s ...", DEVICE)
-        _model = ChatterboxTurboTTS.from_pretrained(device=DEVICE)
+        if NANO:
+            log.info("loading Chatterbox Nano on %s ...", DEVICE)
+            _model = ChatterboxTurboTTS.from_pretrained(device=DEVICE, nano=True)
+        else:
+            log.info("loading Chatterbox Turbo on %s ...", DEVICE)
+            _model = ChatterboxTurboTTS.from_pretrained(device=DEVICE)
     return _model
 
 
@@ -104,6 +109,7 @@ def _startup():
 @app.get("/health")
 def health():
     return {"status": "ok", "device": DEVICE,
+            "nano": NANO,
             "cuda_available": torch.cuda.is_available(),
             "torch": torch.__version__,
             "torch_cuda": getattr(torch.version, "cuda", None),
@@ -122,6 +128,8 @@ def speech(req: SpeechReq):
     if not _voice_paths:
         _load_voices()
     ref = _voice_paths.get(req.voice)
+    if ref is None and req.voice.endswith("_nano"):
+        ref = _voice_paths.get(req.voice[:-len("_nano")])
     if ref is None:
         # fall back to any voice so a bad name doesn't hard-fail a book
         if not _voice_paths:

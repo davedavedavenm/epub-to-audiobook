@@ -112,12 +112,19 @@ if not os.path.exists(ref_path):
     urllib.request.urlretrieve(url, ref_path)
     print(f"Downloaded reference voice: {ref_path}")
 
+PROMPT_TEXT = (
+    '"I know that," snapped Bertram. "Not that it would make any difference '
+    'if she stayed," pursued the relentless George. "She flies higher than '
+    'the paper trade, my boy." "Hang her!" said Bertram. "It would make it '
+    'more interesting for me," I ventured to observe.'
+)
+
 print("\n=== Pass 1: Cross-lingual synthesis (audio-only prompt) ===")
 for name, text in PARAGRAPHS.items():
     print(f"\n=== Generating {name}_cross_lingual ({len(text)} chars) ===")
     t1 = time.time()
     for i, j in enumerate(cosyvoice.inference_cross_lingual(
-        text,
+        text + "<|endofprompt|>",
         ref_path,
         stream=False,
     )):
@@ -127,19 +134,12 @@ for name, text in PARAGRAPHS.items():
         print(f"  {out}: {dur:.1f}s ({time.time()-t1:.1f}s to generate)")
         break
 
-PROMPT_TEXT = (
-    '"I know that," snapped Bertram. "Not that it would make any difference '
-    'if she stayed," pursued the relentless George. "She flies higher than '
-    'the paper trade, my boy." "Hang her!" said Bertram. "It would make it '
-    'more interesting for me," I ventured to observe.<|endofprompt|>'
-)
-
-print("\n=== Pass 2: Zero-shot synthesis with exact reference transcript + <|endofprompt|> ===")
+print("\n=== Pass 2: Zero-shot synthesis with exact reference transcript ===")
 for name, text in PARAGRAPHS.items():
     print(f"\n=== Generating {name}_zero_shot ({len(text)} chars) ===")
     t1 = time.time()
     for i, j in enumerate(cosyvoice.inference_zero_shot(
-        text,
+        text + "<|endofprompt|>",
         PROMPT_TEXT,
         ref_path,
         stream=False,

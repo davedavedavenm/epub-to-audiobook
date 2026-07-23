@@ -510,6 +510,11 @@ VOICES = {
     'uk_female_golding_tada': {'name': 'Harriet — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
     'uk_male_yearsley_tada': {'name': 'Edmund — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
     'uk_female_samuel_tada': {'name': 'Beatrice — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
+    # ============ CHATTERBOX NANO (LOCAL, SAME UK CLONES, ~3x CPU SPEED) ============
+    'uk_male_minter_nano': {'name': 'Arthur (Nano)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox_nano'},
+    'uk_female_golding_nano': {'name': 'Harriet (Nano)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox_nano'},
+    'uk_male_yearsley_nano': {'name': 'Edmund (Nano)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox_nano'},
+    'uk_female_samuel_nano': {'name': 'Beatrice (Nano)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox_nano'},
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
@@ -2237,14 +2242,14 @@ def get_voice_preview(voice_id: str) -> Path:
             ]
             app.logger.info(f"Generating EdgeTTS preview: {' '.join(cmd)}")
             subprocess.run(cmd, capture_output=True, check=True, timeout=30)
-        elif engine in ('chatterbox', 'tada'):
+        elif engine in ('chatterbox', 'chatterbox_nano', 'tada'):
             # Chatterbox/TADA preview (direct to the local service).
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
             # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
             # 180s cap was SHORTER than that, so every chatterbox sample was
             # generated, timed out, and thrown away — the cache could never fill
             # (2026-07-14). Be generous; this is a background job.
-            _url = CHATTERBOX_URL if engine == 'chatterbox' else TADA_URL
+            _url = TADA_URL if engine == 'tada' else CHATTERBOX_URL
             response = requests.post(
                 f"{_url}/audio/speech",
                 json={
@@ -2506,7 +2511,7 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
         model = 'inworld' if tts_engine == 'inworld' else 'tts-1'
         return url, model
-    elif tts_engine == 'chatterbox':
+    elif tts_engine in ('chatterbox', 'chatterbox_nano'):
         return CHATTERBOX_URL, 'tts-1'
     elif tts_engine == 'tada':
         return TADA_URL, 'tts-1'
@@ -3397,7 +3402,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # applies (bug caught running the real worker path 2026-07-08).
             _pjob = get_job(job_id)
             _pengine = (_pjob.get('tts_engine') if _pjob else None) or 'kokoro'
-            _modern = _pengine in ('chatterbox', 'tada')
+            _modern = _pengine in ('chatterbox', 'chatterbox_nano', 'tada')
             _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon, modern=_modern)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
@@ -3443,7 +3448,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # SLOW_ENGINE_MIN_TIMEOUT: chatterbox/tada on CPU run near realtime;
         # polluted ETA metrics produced absurd timeouts (375m for a ~14h book,
         # incident 2026-07-07). Floor the timeout at char_count/4 chars-per-sec.
-        if tts_engine in ('chatterbox', 'tada'):
+        if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada'):
             floor_seconds = int(char_count / 4.0)
             if timeout_seconds < floor_seconds:
                 timeout_seconds = floor_seconds
