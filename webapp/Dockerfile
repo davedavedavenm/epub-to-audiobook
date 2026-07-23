@@ -11,15 +11,13 @@ ENV APP_VERSION=$APP_VERSION
 ENV APP_GIT_SHA=$APP_GIT_SHA
 ENV APP_BUILD_TIME=$APP_BUILD_TIME
 
-# Install Docker CLI for spawning conversion containers, rsync+ssh for Audiobookshelf sync,
-# and Calibre for ebook format conversion (mobi, azw3, fb2, docx, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     rsync \
     openssh-client \
     calibre \
     ffmpeg \
-    && curl -fsSL https://get.docker.com | sh \
+    docker.io \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

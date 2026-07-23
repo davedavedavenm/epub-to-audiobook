@@ -10,6 +10,38 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: docker-socket-proxy
+    logging: *default-logging
+    restart: unless-stopped
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - POST=1
+      - GET=1
+      - NETWORKS=1
+      - VOLUMES=1
+      - PLUGINS=0
+      - SWARM=0
+      - NODES=0
+      - TASKS=0
+      - SECRETS=0
+      - CONFIGS=0
+      - AUTH=0
+      - BUILD=0
+      - COMMIT=0
+      - DISTRIBUTION=0
+      - EVENTS=0
+      - EXEC=0
+      - PING=1
+      - VERSION=1
+      - SYSTEM=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dockersock
+
   kokoro-tts:
     image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.2.2
     container_name: kokoro-tts
@@ -50,8 +82,8 @@ services:
     depends_on:
       kokoro-tts:
         condition: service_started
-    ports:
-      - "8882:8882"
+    expose:
+      - "8882"
 
   # Chatterbox Turbo — high-quality voice-cloning TTS with UK narrator voices.
   # CPU by default (works everywhere). Start with: docker compose --profile chatterbox up
@@ -172,6 +204,7 @@ services:
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - ABS_API_TOKEN=${ABS_API_TOKEN:-}
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - QUEUE_RUNNER_ENABLED=0
       # Kaggle: webapp reads the shared quota state + creds for the settings test
       - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN:-}
@@ -213,15 +246,19 @@ services:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/previews:/data/previews
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
       # SSH key for rsync to docker-vm
       - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
       - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       # OpenBooks library for browsing available EPUBs
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
+    networks:
+      - default
+      - dockersock
     depends_on:
       kokoro-tts:
         condition: service_healthy
+      docker-socket-proxy:
+        condition: service_started
 
   worker:
     build:
@@ -267,6 +304,7 @@ services:
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - ABS_API_TOKEN=${ABS_API_TOKEN:-}
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - QUEUE_RUNNER_ENABLED=1
       - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-1}
       # GPU auto-scaling (auto-provisions Vast.ai GPU when 3+ books queued)
@@ -298,7 +336,6 @@ services:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/previews:/data/previews
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
       - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
       - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
@@ -308,6 +345,9 @@ services:
       # Use explicit /home/dave paths — $HOME resolves to /root under sudo docker compose
       - /home/dave/.ssh/vastai_ed25519:/root/.ssh/vastai_ed25519:ro
       - /home/dave/.config/vastai:/root/.config/vastai:ro
+    networks:
+      - default
+      - dockersock
     mem_limit: 4g
     memswap_limit: 4g
     healthcheck:
@@ -319,6 +359,8 @@ services:
     depends_on:
       kokoro-tts:
         condition: service_healthy
+      docker-socket-proxy:
+        condition: service_started
     command: ["python", "/app/worker.py"]
 
   # Optional: sampled ASR verification ("does the audio match the book text?")
@@ -329,6 +371,11 @@ services:
     image: epub-to-audiobook-audio-verify:local
     profiles:
       - verify
+
+networks:
+  default:
+  dockersock:
+    internal: true
 
 volumes:
   kokoro-cache:
