@@ -69,7 +69,8 @@ pkgs = [
     "hydra-core", "HyperPyYAML", "inflect", "librosa", "networkx",
     "numpy", "omegaconf", "onnx", "onnxruntime", "protobuf",
     "pydantic", "soundfile", "transformers", "x-transformers",
-    "wetext", "wget", "huggingface_hub", "tqdm", "torchaudio"
+    "wetext", "wget", "huggingface_hub", "tqdm", "torchaudio",
+    "openai-whisper", "regex", "lightning"
 ]
 sh([sys.executable, "-m", "pip", "install", "-q"] + pkgs, check=True)
 
@@ -90,7 +91,19 @@ except ImportError:
 
 import torchaudio, torch, urllib.request
 
+if torch.cuda.is_available():
+    device_name = torch.cuda.get_device_name(0)
+    cap = torch.cuda.get_device_capability(0)
+    print(f"GPU detected: {device_name} (sm_{cap[0]}{cap[1]})")
+    if cap[0] < 7:
+        print(f"WARNING: {device_name} (sm_{cap[0]}{cap[1]}) is incompatible with Kaggle PyTorch CUDA build. Forcing CPU mode.")
+        torch.cuda.is_available = lambda: False
+
 cosyvoice = AutoModel(model_dir=model_dir)
+if hasattr(cosyvoice, "model") and hasattr(cosyvoice.model, "llm"):
+    print("Converting LLM weights to float32 for input tensor dtype match...")
+    cosyvoice.model.llm.to(torch.float32)
+
 print(f"Model loaded ({time.time()-t0:.0f}s), sample_rate={cosyvoice.sample_rate}")
 
 ref_path = "/kaggle/working/uk_male_minter_ref.wav"
@@ -99,18 +112,39 @@ if not os.path.exists(ref_path):
     urllib.request.urlretrieve(url, ref_path)
     print(f"Downloaded reference voice: {ref_path}")
 
-prompt_text = ""
-
+print("\n=== Pass 1: Cross-lingual synthesis (audio-only prompt) ===")
 for name, text in PARAGRAPHS.items():
-    print(f"\n=== Generating {name} ({len(text)} chars) ===")
+    print(f"\n=== Generating {name}_cross_lingual ({len(text)} chars) ===")
     t1 = time.time()
-    for i, j in enumerate(cosyvoice.inference_zero_shot(
+    for i, j in enumerate(cosyvoice.inference_cross_lingual(
         text,
-        prompt_text,
         ref_path,
         stream=False,
     )):
-        out = f"/kaggle/working/{name}.wav"
+        out = f"/kaggle/working/{name}_cross_lingual.wav"
+        torchaudio.save(out, j["tts_speech"], cosyvoice.sample_rate)
+        dur = j["tts_speech"].shape[1] / cosyvoice.sample_rate
+        print(f"  {out}: {dur:.1f}s ({time.time()-t1:.1f}s to generate)")
+        break
+
+PROMPT_TEXT = (
+    '"I know that," snapped Bertram. "Not that it would make any difference '
+    'if she stayed," pursued the relentless George. "She flies higher than '
+    'the paper trade, my boy." "Hang her!" said Bertram. "It would make it '
+    'more interesting for me," I ventured to observe.<|endofprompt|>'
+)
+
+print("\n=== Pass 2: Zero-shot synthesis with exact reference transcript + <|endofprompt|> ===")
+for name, text in PARAGRAPHS.items():
+    print(f"\n=== Generating {name}_zero_shot ({len(text)} chars) ===")
+    t1 = time.time()
+    for i, j in enumerate(cosyvoice.inference_zero_shot(
+        text,
+        PROMPT_TEXT,
+        ref_path,
+        stream=False,
+    )):
+        out = f"/kaggle/working/{name}_zero_shot.wav"
         torchaudio.save(out, j["tts_speech"], cosyvoice.sample_rate)
         dur = j["tts_speech"].shape[1] / cosyvoice.sample_rate
         print(f"  {out}: {dur:.1f}s ({time.time()-t1:.1f}s to generate)")

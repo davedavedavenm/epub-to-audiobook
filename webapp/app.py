@@ -2848,7 +2848,7 @@ def _trigger_abs_rescan(job_id: str | None = None):
 
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
     app.logger.info("DEBUG: Starting copy_to_audiobookshelf")
-    ssh_key_src = "/root/.ssh/id_ed25519"
+    ssh_key_src = os.environ.get("SSH_KEY_PATH", "/root/.ssh/id_ed25519")
     ssh_key_tmp = "/tmp/id_ed25519_tmp"
     if os.path.exists(ssh_key_src):
         app.logger.info(f"DEBUG: Found source key {ssh_key_src}")

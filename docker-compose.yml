@@ -246,9 +246,8 @@ services:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/previews:/data/previews
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
-      # SSH key for rsync to docker-vm
-      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
-      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/home/appuser/.ssh/id_ed25519:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/home/appuser/.ssh/config:ro
       # OpenBooks library for browsing available EPUBs
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
     networks:
@@ -314,9 +313,9 @@ services:
       - GPU_IDLE_TIMEOUT=${GPU_IDLE_TIMEOUT:-10}
       - VASTAI_TEMPLATE_HASH=${VASTAI_TEMPLATE_HASH:-e2588a22cf5eef43df3d444ef4f25705}
       - VASTAI_CLI=/tmp/vast.py
-      - VASTAI_SSH_KEY=/root/.ssh/vastai_ed25519
+      - VASTAI_SSH_KEY=/home/appuser/.ssh/vastai_ed25519
       - HOST_VASTAI_SSH_KEY=/home/dave/.ssh/vastai_ed25519
-      - VASTAI_API_KEY_FILE=/root/.config/vastai/vast_api_key
+      - VASTAI_API_KEY_FILE=/home/appuser/.config/vastai/vast_api_key
       # Free Kaggle GPU render (per-book "Render on: Kaggle GPU")
       - KAGGLE_API_TOKEN=${KAGGLE_API_TOKEN:-}
       - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
@@ -336,15 +335,13 @@ services:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/audiobooks:/data/audiobooks
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/previews:/data/previews
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
-      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/root/.ssh/id_ed25519:ro
-      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/root/.ssh/config:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/id_ed25519:/home/appuser/.ssh/id_ed25519:ro
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/ssh-keys/config:/home/appuser/.ssh/config:ro
       - ${LIBRARY_DIR:-/mnt/openbooks}:${LIBRARY_DIR:-/mnt/openbooks}:ro
       # Kaggle GPU render: kernel templates (credentials come from env)
       - ${STACK_PATH:-/opt/epub-to-audiobook}/scripts/kaggle:/app/kaggle_kernels:ro
-      # Vast.ai GPU access (for auto-scaling)
-      # Use explicit /home/dave paths — $HOME resolves to /root under sudo docker compose
-      - /home/dave/.ssh/vastai_ed25519:/root/.ssh/vastai_ed25519:ro
-      - /home/dave/.config/vastai:/root/.config/vastai:ro
+      - /home/dave/.ssh/vastai_ed25519:/home/appuser/.ssh/vastai_ed25519:ro
+      - /home/dave/.config/vastai:/home/appuser/.config/vastai:ro
     networks:
       - default
       - dockersock

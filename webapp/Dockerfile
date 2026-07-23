@@ -30,13 +30,19 @@ COPY webapp/ .
 # Copy conversion script
 COPY scripts/convert_book.py ./scripts/convert_book.py
 
-# Create directories
 RUN mkdir -p /data/uploads /data/audiobooks /data/previews /data/logs
 
-# Entrypoint fixes SSH permissions from bind mounts
+RUN useradd -r -m -s /bin/bash appuser \
+    && mkdir -p /home/appuser/.ssh /home/appuser/.config/vastai \
+    && chmod 700 /home/appuser/.ssh \
+    && chown -R appuser:appuser /app /data /home/appuser
+
 COPY webapp/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
+
+ENV SSH_KEY_PATH=/home/appuser/.ssh/id_ed25519
+ENV VASTAI_API_KEY_FILE=/home/appuser/.config/vastai/vast_api_key
+USER appuser
 
 EXPOSE 8881
 

@@ -14,6 +14,8 @@ on:
     paths:
       - 'chatterbox/**'
       - 'tada/**'
+      - 'webapp/**'
+      - 'scripts/convert_book.py'
       - '.github/workflows/build-engines.yml'
   workflow_dispatch: {}
 
@@ -22,7 +24,7 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  build-engines:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -48,5 +50,30 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-${{ matrix.engine }}:latest
-          # keep it simple/reliable; single-arch amd64 (Vast GPUs are x86_64)
           platforms: linux/amd64
+
+  build-webapp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push webapp
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./webapp/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-webapp:latest
+          platforms: linux/amd64
+          build-args: |
+            APP_VERSION=ci
+            APP_GIT_SHA=${{ github.sha }}
+            APP_BUILD_TIME=${{ github.event.head_commit.timestamp }}
