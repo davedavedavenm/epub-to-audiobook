@@ -1342,7 +1342,15 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const tab = localStorage.getItem('audiobook-tab') || 'library'; switchTab(tab);
         const uploadVoice = document.getElementById('upload-voice');
         if(uploadVoice) { uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural'); syncSpeedField('upload-voice','upload-speed'); }
-        setInterval(loadJobs, 5000); setInterval(loadGpuStatus, 10000);
+        setInterval(() => {
+            const qp = document.getElementById('tab-queue');
+            if (qp && qp.classList.contains('active')) loadJobs();
+        }, 5000);
+        setInterval(() => {
+            const qp = document.getElementById('tab-queue');
+            const sp = document.getElementById('tab-settings');
+            if ((qp && qp.classList.contains('active')) || (sp && sp.classList.contains('active'))) loadGpuStatus();
+        }, 10000);
         loadKaggleQuota();
     };
 </script></body></html>
