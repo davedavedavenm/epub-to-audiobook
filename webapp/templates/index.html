@@ -268,33 +268,54 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .qwave.live i.on{ background:var(--accent); opacity:.9; }
 .qwave.done i{ background:var(--success); opacity:.5; }
 .qwave.failed i{ background:var(--error); opacity:.4; }
+
+.menu-toggle{ display:none; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); padding:5px 11px; font-size:1.15rem; line-height:1.2; cursor:pointer; transition:border-color .2s, background .2s; flex:none; }
+.menu-toggle:hover{ border-color:var(--accent); background:var(--bg-hover); }
+.sidebar-overlay{ position:fixed; inset:0; background:rgba(10,12,16,.55); opacity:0; pointer-events:none; transition:opacity .3s; z-index:999; }
+.sidebar-overlay.active{ opacity:1; pointer-events:auto; }
+@media(max-width:768px){
+  .menu-toggle{ display:block; }
+  .sidebar{ position:fixed; left:-288px; transition:left 0.3s; z-index:1000; }
+  .sidebar.open{ left:0; }
+  .app-main{ margin-left:0; }
+  .library-grid{ grid-template-columns:1fr; }
+  .top-bar{ padding:14px 20px; }
+  .content-body{ padding:28px 20px 72px; }
+  .page-title{ font-size:1.35rem; }
+  .li-main{ flex-wrap:wrap; }
+  .li-actions{ width:100%; justify-content:flex-end; }
+}
 </style>
 </head><body>
 <aside class="sidebar">
     <div class="sidebar-brand">Studio</div>
     <div class="sidebar-tag">Audiobook · self-hosted</div>
-    <nav class="nav-links">
-        <button class="nav-tab active" data-tab="library" onclick="switchTab('library')"><i>📚</i> <span>Library</span></button>
-        <button class="nav-tab" data-tab="convert" onclick="switchTab('convert')"><i>📤</i> <span>Upload</span></button>
-        <button class="nav-tab" data-tab="queue" onclick="switchTab('queue')"><i>⏳</i> <span>Queue</span> <span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
-        <button class="nav-tab" data-tab="voices" onclick="switchTab('voices')"><i>🗣️</i> <span>Voices</span></button>
-        <button class="nav-tab" data-tab="history" onclick="switchTab('history')"><i>📂</i> <span>History</span></button>
-        <button class="nav-tab" data-tab="settings" onclick="switchTab('settings')"><i>⚙️</i> <span>Settings</span></button>
+    <nav class="nav-links" role="tablist" aria-label="Studio sections">
+        <button class="nav-tab active" id="tab-btn-library" role="tab" aria-selected="true" aria-controls="tab-library" data-tab="library" onclick="switchTab('library')"><i aria-hidden="true">📚</i> <span>Library</span></button>
+        <button class="nav-tab" id="tab-btn-convert" role="tab" aria-selected="false" aria-controls="tab-convert" data-tab="convert" onclick="switchTab('convert')"><i aria-hidden="true">📤</i> <span>Upload</span></button>
+        <button class="nav-tab" id="tab-btn-queue" role="tab" aria-selected="false" aria-controls="tab-queue" data-tab="queue" onclick="switchTab('queue')"><i aria-hidden="true">⏳</i> <span>Queue</span> <span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
+        <button class="nav-tab" id="tab-btn-voices" role="tab" aria-selected="false" aria-controls="tab-voices" data-tab="voices" onclick="switchTab('voices')"><i aria-hidden="true">🗣️</i> <span>Voices</span></button>
+        <button class="nav-tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="tab-history" data-tab="history" onclick="switchTab('history')"><i aria-hidden="true">📂</i> <span>History</span></button>
+        <button class="nav-tab" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" onclick="switchTab('settings')"><i aria-hidden="true">⚙️</i> <span>Settings</span></button>
     </nav>
     <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);" title="GPU Status: Automatically scales to cloud GPUs when the queue is long. See Settings for details.">
         <div style="display: flex; align-items: center;"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label" style="font-size: 0.9rem; font-weight: 600;">GPU OFFLINE</span></div>
     </div>
 </aside>
+<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 <main class="app-main">
     <header class="top-bar">
-        <h1 class="page-title" id="view-title">Library</h1>
+        <div style="display:flex; align-items:center; gap:16px; min-width:0;">
+            <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu" aria-expanded="false" onclick="toggleSidebar()">☰</button>
+            <h1 class="page-title" id="view-title">Library</h1>
+        </div>
         <div class="theme-selector">
-            <button class="theme-btn" id="btn-light" onclick="setTheme('light')">☀️</button>
-            <button class="theme-btn" id="btn-dark" onclick="setTheme('dark')">🌙</button>
+            <button class="theme-btn" id="btn-light" aria-label="Switch to light theme" onclick="setTheme('light')">☀️</button>
+            <button class="theme-btn" id="btn-dark" aria-label="Switch to dark theme" onclick="setTheme('dark')">🌙</button>
         </div>
     </header>
     <div class="content-body">
-        <div class="tab-panel active" id="tab-library">
+        <div class="tab-panel active" id="tab-library" role="tabpanel" aria-labelledby="tab-btn-library">
             <div class="card">
                 <div style="display:flex; gap:12px; align-items:center; margin-bottom:24px;">
                     <input type="text" id="library-search" class="input-control" style="flex:1;"
@@ -308,7 +329,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 <div id="library-grid" class="library-grid"></div>
             </div>
         </div>
-        <div class="tab-panel" id="tab-convert">
+        <div class="tab-panel" id="tab-convert" role="tabpanel" aria-labelledby="tab-btn-convert">
             <div class="card">
                 <h2 style="font-family: var(--serif); font-size: 2.2rem; margin-top: 0;">Upload New Book</h2>
                 <div id="upload-area" style="border: 2px dashed var(--border); padding: 100px 40px; text-align: center; border-radius: 32px; cursor: pointer; background: var(--bg-element); margin: 40px 0;" onclick="document.getElementById('file-input').click()">
@@ -318,16 +339,16 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 </div>
                 <input type="file" id="file-input" class="hidden" onchange="handleFile(event)">
                 <div class="setup-grid" style="grid-template-columns: 2fr 1fr; margin-bottom: 24px;">
-                    <div class="setup-field"><label class="setup-label">Narrator</label><select id="upload-voice" class="input-control" onchange="syncSpeedField('upload-voice','upload-speed')"></select></div>
-                    <div class="setup-field"><label class="setup-label">Speed</label><input id="upload-speed" type="number" step="0.1" value="1.0" class="input-control"></div>
+                    <div class="setup-field"><label class="setup-label" for="upload-voice">Narrator</label><select id="upload-voice" class="input-control" onchange="syncSpeedField('upload-voice','upload-speed')"></select></div>
+                    <div class="setup-field"><label class="setup-label" for="upload-speed">Speed</label><input id="upload-speed" type="number" step="0.1" value="1.0" class="input-control"></div>
                 </div>
                 <button id="convert-btn" class="btn btn-primary" style="width: 100%; height: 88px; font-size: 1.4rem;" disabled onclick="startProduction()">Create Audiobook</button>
             </div>
         </div>
-        <div class="tab-panel" id="tab-queue"><div id="queue-content"></div></div>
-        <div class="tab-panel" id="tab-voices"><div id="voices-content"></div></div>
-        <div class="tab-panel" id="tab-history"><div id="history-content"></div></div>
-                <div class="tab-panel" id="tab-settings">
+        <div class="tab-panel" id="tab-queue" role="tabpanel" aria-labelledby="tab-btn-queue"><div id="queue-content"></div></div>
+        <div class="tab-panel" id="tab-voices" role="tabpanel" aria-labelledby="tab-btn-voices"><div id="voices-content"></div></div>
+        <div class="tab-panel" id="tab-history" role="tabpanel" aria-labelledby="tab-btn-history"><div id="history-content"></div></div>
+                <div class="tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tab-btn-settings">
             <div class="card">
                 <h2 style="margin-top:0; font-family: var(--serif); margin-bottom:24px;">Setup &amp; Configuration</h2>
                 <p style="font-size:1.1rem; line-height:1.6; color:var(--text-secondary); margin-bottom:40px;">
@@ -369,13 +390,13 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                         </p>
                         <div style="display:flex; gap:16px; align-items:flex-end;">
                             <div style="flex:1;">
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Kaggle Username</label>
+                                <label for="set-KAGGLE_USERNAME" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Kaggle Username</label>
                                 <input type="text" id="set-KAGGLE_USERNAME" class="input-control" style="margin-top:8px;" placeholder="your-kaggle-username">
                             </div>
                         </div>
                         <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
                             <div style="flex:1;">
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Token (the "key" from kaggle.json)</label>
+                                <label for="set-KAGGLE_API_TOKEN" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Token (the "key" from kaggle.json)</label>
                                 <input type="password" id="set-KAGGLE_API_TOKEN" class="input-control" style="margin-top:8px;" placeholder="Paste your Kaggle API key">
                             </div>
                             <button class="btn" style="height:48px;" onclick="testSetting('kaggle', this)">Test Connection</button>
@@ -390,13 +411,13 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                         </p>
                         <div style="display:flex; gap:16px; align-items:flex-end;">
                             <div style="flex:1;">
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Server URL (e.g., http://192.168.1.100:1337)</label>
+                                <label for="set-ABS_API_URL" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Server URL (e.g., http://192.168.1.100:1337)</label>
                                 <input type="text" id="set-ABS_API_URL" class="input-control" style="margin-top:8px;">
                             </div>
                         </div>
                         <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
                             <div style="flex:1;">
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Token</label>
+                                <label for="set-ABS_API_TOKEN" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Token</label>
                                 <input type="password" id="set-ABS_API_TOKEN" class="input-control" style="margin-top:8px;">
                             </div>
                             <button class="btn" style="height:48px;" onclick="testSetting('abs', this)">Test Connection</button>
@@ -410,7 +431,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                         </p>
                         <div style="display:grid; gap:16px;">
                             <div>
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Provider</label>
+                                <label for="llm-provider-select" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Provider</label>
                                 <select id="llm-provider-select" class="input-control" style="margin-top:8px;" onchange="updateLlmProvider()">
                                     <option value="zai">Z AI (Zhipu)</option>
                                     <option value="openai">OpenAI</option>
@@ -421,11 +442,11 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                                 </select>
                             </div>
                             <div id="llm-base-url-container" style="display:none;">
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Base URL</label>
+                                <label for="set-LLM_API_BASE_URL" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Base URL</label>
                                 <input type="text" id="set-LLM_API_BASE_URL" class="input-control" style="margin-top:8px;">
                             </div>
                             <div>
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Model Name</label>
+                                <label for="llm-model-select" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Model Name</label>
                                 <div style="display:flex; gap:16px; align-items:center; margin-top:8px;">
                                     <select id="llm-model-select" class="input-control" style="flex:1;" onchange="updateLlmModel()">
                                         <!-- Populated via JS -->
@@ -435,7 +456,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             </div>
                             <div style="display:flex; gap:16px; align-items:flex-end;">
                                 <div style="flex:1;">
-                                    <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Key</label>
+                                    <label for="set-LLM_API_KEY" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">API Key</label>
                                     <input type="password" id="set-LLM_API_KEY" class="input-control" style="margin-top:8px;">
                                 </div>
                                 <button class="btn" style="height:48px;" onclick="testSetting('llm', this)">Test LLM</button>
@@ -461,16 +482,16 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                         </p>
                         <div style="display:grid; gap:16px;">
                             <div>
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Access Key ID</label>
+                                <label for="set-AWS_ACCESS_KEY_ID" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Access Key ID</label>
                                 <input type="text" id="set-AWS_ACCESS_KEY_ID" class="input-control" style="margin-top:8px;">
                             </div>
                             <div>
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Secret Access Key</label>
+                                <label for="set-AWS_SECRET_ACCESS_KEY" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Secret Access Key</label>
                                 <input type="password" id="set-AWS_SECRET_ACCESS_KEY" class="input-control" style="margin-top:8px;">
                             </div>
                             <div style="display:flex; gap:16px; align-items:flex-end;">
                                 <div style="flex:1;">
-                                    <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Region</label>
+                                    <label for="set-AWS_REGION" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">AWS Region</label>
                                     <select id="set-AWS_REGION" class="input-control" style="margin-top:8px;">
                                         <option value="us-east-1" selected>US East (N. Virginia) - us-east-1</option>
                                         <option value="us-east-2">US East (Ohio) - us-east-2</option>
@@ -497,7 +518,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                         </p>
                         <div style="display:flex; gap:16px; align-items:flex-end;">
                             <div style="flex:1;">
-                                <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Inworld API Key</label>
+                                <label for="set-INWORLD_API_KEY" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Inworld API Key</label>
                                 <input type="password" id="set-INWORLD_API_KEY" class="input-control" style="margin-top:8px;" placeholder="Paste your Inworld API key here">
                             </div>
                             <button class="btn" style="height:48px;" onclick="testSetting('inworld', this)">Test</button>
@@ -510,7 +531,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             When you add multiple books to the queue, it can take a long time to process on your local machine. If you provide a Vast.ai API key, the studio will automatically rent a cloud GPU for a few cents an hour to process the books ~15x faster, and then automatically shut it down when finished.
                         </p>
                         <div>
-                            <label style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Vast.ai API Key</label>
+                            <label for="set-VASTAI_API_KEY" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Vast.ai API Key</label>
                             <input type="password" id="set-VASTAI_API_KEY" class="input-control" style="margin-top:8px;">
                         </div>
                     </div>
@@ -528,7 +549,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             <div id="toc-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
         <div class="preview-body">
-            <button class="modal-close" onclick="closePreview()">&#10005;</button>
+            <button class="modal-close" aria-label="Close preview" onclick="closePreview()">&#10005;</button>
             <h2 id="preview-modal-title" style="font-family: var(--serif); font-size: 1.8rem; margin: 0;">Page Preview</h2>
             <div id="preview-text-container" style="margin-top: 40px;">
                 <div id="preview-text" class="preview-text"></div>
@@ -549,14 +570,23 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     let selectedFile = null;
     let currentPreviewPath = null;
 
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+
     function switchTab(tabId) {
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
         const targetId = 'tab-' + (tabId === 'convert' ? 'convert' : (tabId === 'settings' ? 'settings' : tabId));
         const target = document.getElementById(targetId);
         const nav = document.querySelector('.nav-tab[data-tab="' + tabId + '"]');
         if(target) target.classList.add('active');
-        if(nav) nav.classList.add('active');
+        if(nav) { nav.classList.add('active'); nav.setAttribute('aria-selected', 'true'); }
+        document.querySelector('.sidebar')?.classList.remove('open');
+        document.querySelector('.sidebar-overlay')?.classList.remove('active');
+        const menuBtn = document.getElementById('menu-toggle');
+        if(menuBtn) menuBtn.setAttribute('aria-expanded', 'false');
         const titleEl = document.getElementById('view-title');
         if(titleEl) {
             if (tabId === 'convert') titleEl.textContent = 'Upload';
@@ -758,10 +788,10 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
                     <div id="workspace-${bookId}" class="production-workspace">
                         <div class="setup-grid">
-                            <div class="setup-field"><label class="setup-label">Narrator</label><select id="voice-${bookId}" class="input-control" onchange="syncSpeedField('voice-${bookId}','speed-${bookId}')">${voiceOptions}</select></div>
-                            <div class="setup-field"><label class="setup-label">Start</label><select id="start-${bookId}" class="input-control"></select></div>
-                            <div class="setup-field"><label class="setup-label">End</label><select id="end-${bookId}" class="input-control"></select></div>
-                            <div class="setup-field"><label class="setup-label">Speed</label><input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control"></div>
+                            <div class="setup-field"><label class="setup-label" for="voice-${bookId}">Narrator</label><select id="voice-${bookId}" class="input-control" onchange="syncSpeedField('voice-${bookId}','speed-${bookId}')">${voiceOptions}</select></div>
+                            <div class="setup-field"><label class="setup-label" for="start-${bookId}">Start</label><select id="start-${bookId}" class="input-control"></select></div>
+                            <div class="setup-field"><label class="setup-label" for="end-${bookId}">End</label><select id="end-${bookId}" class="input-control"></select></div>
+                            <div class="setup-field"><label class="setup-label" for="speed-${bookId}">Speed</label><input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control"></div>
                         </div>
                         <div class="render-pick">
                             <label class="setup-label" style="display:block; margin-bottom:9px;">Render on</label>
@@ -788,11 +818,11 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             <summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Advanced (voice blend &amp; pronunciation)</summary>
                             <div class="setup-grid" style="grid-template-columns: 1fr 2fr; margin-top:16px;">
                                 <div class="setup-field">
-                                    <label class="setup-label">Blend Voice (Kokoro only)</label>
+                                    <label class="setup-label" for="voice2-${bookId}">Blend Voice (Kokoro only)</label>
                                     <select id="voice2-${bookId}" class="input-control"><option value="">None</option>${blendOptions}</select>
                                 </div>
                                 <div class="setup-field">
-                                    <label class="setup-label">Pronunciation fixes (regex search==replace, one per line — this book only)</label>
+                                    <label class="setup-label" for="regex-${bookId}">Pronunciation fixes (regex search==replace, one per line — this book only)</label>
                                     <textarea id="regex-${bookId}" class="input-control" rows="2" placeholder="Vartabedian==var-tuh-BEH-dee-un"></textarea>
                                 </div>
                             </div>
@@ -931,7 +961,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                                     <div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div>
                                     <div class="loading-badge">Generating sample — first play can take a few minutes…</div>
                                 </div>
-                                <button class="preview-btn" id="vb-${id}" onclick="playVoicePreview('${id}', this)" title="Listen to this voice">
+                                <button class="preview-btn" id="vb-${id}" onclick="playVoicePreview('${id}', this)" title="Listen to this voice" aria-label="Listen to ${escapeHtml(v.name)}">
                                     <span style="margin-left: 2px;">&#9654;</span>
                                 </button>
                             </div>
@@ -1103,7 +1133,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     ${j.status === 'failed' ? `
                     <div style="margin-top:24px; padding-top:24px; border-top:1px solid var(--border);">
                         <div class="setup-field" style="margin-bottom:16px;">
-                            <label class="setup-label">Switch Narrator (Fallback)</label>
+                            <label class="setup-label" for="fallback-voice-${j.id}">Switch Narrator (Fallback)</label>
                             <select id="fallback-voice-${j.id}" class="input-control">
                                 <option value="">Keep original (${j.voice_name || j.voice})</option>
                                 ${Object.entries(voices).map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}

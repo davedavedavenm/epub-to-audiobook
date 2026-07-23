@@ -16,6 +16,8 @@ os.environ.setdefault('OUTPUT_DIR', tempfile.mkdtemp())
 os.environ.setdefault('PREVIEWS_DIR', tempfile.mkdtemp())
 os.environ.setdefault('LOG_DIR', tempfile.mkdtemp())
 os.environ.setdefault('LIBRARY_DIR', tempfile.mkdtemp())
+os.environ.setdefault('TOC_CACHE_DIR', tempfile.mkdtemp())
+os.environ.setdefault('TRANSCRIPTS_DIR', tempfile.mkdtemp())
 os.environ.setdefault('QUEUE_RUNNER_ENABLED', '0')
 
 from app import app

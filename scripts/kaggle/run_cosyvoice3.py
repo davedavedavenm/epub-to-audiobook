@@ -42,17 +42,36 @@ import subprocess, sys, os, time
 
 t0 = time.time()
 
-print("=== Installing CosyVoice ===")
-subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-    "cosyvoice", "huggingface_hub", "torchaudio"],
-    check=True, capture_output=True)
+def sh(cmd, check=True):
+    print(f"+ {' '.join(cmd) if isinstance(cmd, list) else cmd}")
+    return subprocess.run(cmd, shell=isinstance(cmd, str), check=check)
 
-subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-    "git+https://github.com/FunAudioLLM/CosyVoice.git"],
-    capture_output=True)
+print("=== System dependencies ===")
+sh("apt-get update && apt-get install -y -q build-essential python3-dev g++ sox libsox-dev ffmpeg", check=False)
 
-subprocess.run(["apt-get", "install", "-y", "-q", "sox", "libsox-dev"],
-    capture_output=True)
+print("=== Python build tools & Cython ===")
+sh([sys.executable, "-m", "pip", "install", "-q", "--upgrade", "pip", "setuptools<81", "wheel", "Cython"])
+
+print("=== Installing PyWorld ===")
+sh([sys.executable, "-m", "pip", "install", "-q", "pyworld"], check=False)
+
+print("=== Cloning CosyVoice repository ===")
+cosy_dir = "/kaggle/working/CosyVoice"
+if not os.path.exists(cosy_dir):
+    sh(f"git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git {cosy_dir}")
+
+sys.path.insert(0, cosy_dir)
+sys.path.insert(0, os.path.join(cosy_dir, "third_party/Matcha-TTS"))
+
+print("=== Installing CosyVoice dependencies ===")
+pkgs = [
+    "modelscope", "conformer", "diffusers", "gdown", "grpcio",
+    "hydra-core", "HyperPyYAML", "inflect", "librosa", "networkx",
+    "numpy", "omegaconf", "onnx", "onnxruntime", "protobuf",
+    "pydantic", "soundfile", "transformers", "x-transformers",
+    "wetext", "wget", "huggingface_hub", "tqdm", "torchaudio"
+]
+sh([sys.executable, "-m", "pip", "install", "-q"] + pkgs, check=True)
 
 print("=== Downloading model ===")
 from huggingface_hub import snapshot_download
@@ -63,13 +82,10 @@ model_dir = snapshot_download(
 print(f"Model at {model_dir} ({time.time()-t0:.0f}s)")
 
 print("=== Loading model ===")
-sys.path.append("/kaggle/working/CosyVoice/third_party/Matcha-TTS")
 try:
     from cosyvoice.cli.cosyvoice import AutoModel
 except ImportError:
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-        "git+https://github.com/FunAudioLLM/CosyVoice.git"],
-        check=True)
+    # Try importing directly from CosyVoice repo path
     from cosyvoice.cli.cosyvoice import AutoModel
 
 import torchaudio, torch, urllib.request
