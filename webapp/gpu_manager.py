@@ -487,10 +487,21 @@ class GPUManager:
 
     # ── Private Methods ───────────────────────────────────────────
 
+    VAST_CLI_SHA256 = None
+
     def _ensure_cli(self) -> bool:
-        """Download vast.py if not present."""
+        """Download vast.py if not present, with integrity check."""
         if Path(VASTAI_CLI).exists():
-            return True
+            if self.VAST_CLI_SHA256:
+                import hashlib
+                actual = hashlib.sha256(Path(VASTAI_CLI).read_bytes()).hexdigest()
+                if actual != self.VAST_CLI_SHA256:
+                    logger.warning("GPU: vast.py checksum mismatch, re-downloading")
+                    Path(VASTAI_CLI).unlink(missing_ok=True)
+                else:
+                    return True
+            else:
+                return True
         logger.info("GPU: Downloading vast.py CLI")
         try:
             result = subprocess.run(
@@ -498,7 +509,16 @@ class GPUManager:
                  'https://raw.githubusercontent.com/vast-ai/vast-python/master/vast.py',
                  '-o', VASTAI_CLI],
                 capture_output=True, timeout=30)
-            return result.returncode == 0
+            if result.returncode != 0:
+                return False
+            if self.VAST_CLI_SHA256:
+                import hashlib
+                actual = hashlib.sha256(Path(VASTAI_CLI).read_bytes()).hexdigest()
+                if actual != self.VAST_CLI_SHA256:
+                    logger.error(f"GPU: vast.py checksum mismatch: expected {self.VAST_CLI_SHA256}, got {actual}")
+                    Path(VASTAI_CLI).unlink(missing_ok=True)
+                    return False
+            return True
         except Exception as e:
             logger.error(f"GPU: Failed to download vast.py: {e}")
             return False

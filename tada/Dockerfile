@@ -23,6 +23,10 @@ RUN pip install --no-cache-dir \
  && pip install --no-cache-dir -r requirements.txt
 COPY server.py .
 COPY voices/ /app/voices/
+RUN useradd -r -s /bin/false appuser \
+    && mkdir -p /data/hf \
+    && chown -R appuser:appuser /app /data
+USER appuser
 ENV VOICES_DIR=/app/voices
 ENV HF_HOME=/data/hf
 # Trigger NVIDIA container-runtime driver injection on GPU hosts (Vast etc.)

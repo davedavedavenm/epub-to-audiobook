@@ -13,4 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY verify_audio_sample.py .
 COPY verify_audio_vs_captured.py .
 
+RUN useradd -r -s /bin/false appuser && chown -R appuser:appuser /app
+USER appuser
+
 ENTRYPOINT ["python", "/app/verify_audio_sample.py"]
