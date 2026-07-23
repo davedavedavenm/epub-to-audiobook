@@ -674,6 +674,8 @@ def init_db():
 def get_db():
     """Get database connection with proper cleanup."""
     conn = sqlite3.connect(str(DB_PATH), timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     conn.row_factory = sqlite3.Row
     try:
         yield conn

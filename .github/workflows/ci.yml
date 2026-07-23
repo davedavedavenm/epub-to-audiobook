@@ -24,6 +24,11 @@ jobs:
           pip install -q flask requests gunicorn num2words nltk ebooklib \
             beautifulsoup4 lxml boto3 kaggle pytest
 
+      - name: Lint
+        run: |
+          pip install -q ruff
+          ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/
+
       - name: Run tests
         run: python -m pytest tests/ -x -q
         env:

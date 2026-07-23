@@ -261,6 +261,34 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .rt-note .muted{ color:var(--ink-3); }
 [data-theme="dark"] .rt-note .ok, :root:not([data-theme="light"]) .rt-note .ok{ color:var(--cloud); }
 [data-theme="dark"] .rt-note .warn, :root:not([data-theme="light"]) .rt-note .warn{ color:var(--accent); }
+
+.conv-flow{ counter-reset:conv-step; }
+.conv-step{ counter-increment:conv-step; border-top:1px solid var(--border); margin-top:20px; padding-top:20px; }
+.conv-step:first-child{ border-top:none; margin-top:0; padding-top:0; }
+.conv-step-label{ display:flex; align-items:center; gap:10px; margin-bottom:14px; font-family:var(--mono); font-size:.64rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--text-secondary); }
+.conv-step-label::before{ content:counter(conv-step); flex:none; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--accent-tint); color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); font-size:.66rem; letter-spacing:0; }
+.conv-voice-row{ display:flex; gap:12px; align-items:flex-end; }
+.conv-preview-btn{ height:41px; flex:none; }
+.conv-range{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.conv-more{ border-top:1px solid var(--border); margin-top:20px; padding-top:16px; }
+.conv-more summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:.64rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--text-secondary); transition:color .2s; }
+.conv-more summary::-webkit-details-marker{ display:none; }
+.conv-more summary::before{ content:'▸'; font-size:.8rem; transition:transform .2s; }
+.conv-more[open] summary::before{ transform:rotate(90deg); }
+.conv-more summary:hover{ color:var(--text-primary); }
+.conv-more-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }
+.conv-fallback{ display:flex; align-items:center; gap:8px; font-size:.85rem; color:var(--text-secondary); cursor:pointer; }
+@media(max-width:560px){ .conv-range,.conv-more-grid{ grid-template-columns:1fr; } .conv-voice-row{ flex-direction:column; align-items:stretch; } }
+.progress-detail{ font-family:var(--mono); font-size:.72rem; letter-spacing:.05em; color:var(--text-secondary); margin:0 0 12px; font-variant-numeric:tabular-nums; }
+.compare-row{ display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:flex-end; }
+.compare-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }
+.compare-cell{ border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-2); padding:16px 18px; }
+.compare-label{ display:flex; align-items:center; gap:9px; font-weight:600; font-size:.95rem; }
+.compare-tag{ font-family:var(--mono); font-size:.6rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:3px 8px; border-radius:20px; background:var(--accent-tint); color:var(--accent-ink); }
+.compare-tag.b{ background:var(--cloud-tint); color:var(--cloud-ink); }
+.compare-cell audio{ width:100%; margin-top:12px; }
+.compare-status{ margin-top:10px; font-family:var(--mono); font-size:.68rem; letter-spacing:.05em; color:var(--ink-3); min-height:1em; }
+@media(max-width:640px){ .compare-row,.compare-grid{ grid-template-columns:1fr; } }
 .tab-panel.active{ animation:fadeIn .4s ease; }
 /* queue waveform — the render-console motif */
 .qwave{ display:flex; align-items:flex-end; gap:2px; height:34px; margin:16px 0 4px; }
@@ -739,6 +767,33 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         if (lbl) lbl.textContent = ok ? 'Speed' : 'Speed (n/a)';
     }
 
+    let wsPreviewBtn = null;
+    async function previewWorkspaceVoice(bookId, btn) {
+        const voiceId = document.getElementById('voice-' + bookId)?.value;
+        if (!voiceId) return;
+        if (wsPreviewBtn && wsPreviewBtn !== btn) { wsPreviewBtn.innerHTML = wsPreviewBtn.dataset.original || wsPreviewBtn.innerHTML; wsPreviewBtn.disabled = false; }
+        const original = btn.innerHTML;
+        btn.dataset.original = original;
+        wsPreviewBtn = btn;
+        if (speakingVoiceId) { clearVoiceState(speakingVoiceId); speakingVoiceId = null; }
+        const audio = document.getElementById('preview-audio');
+        audio.pause();
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner" style="width:13px; height:13px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; display:inline-block;"></span> Rendering…';
+        const restore = () => { if (wsPreviewBtn === btn) { btn.innerHTML = original; btn.disabled = false; wsPreviewBtn = null; } };
+        try {
+            const resp = await fetch(`/api/preview/${voiceId}`);
+            if (!resp.ok) throw new Error('Preview failed');
+            audio.src = URL.createObjectURL(await resp.blob());
+            audio.onended = restore;
+            await audio.play();
+        } catch(e) {
+            console.error(e);
+            btn.innerHTML = '<span style="color:var(--error)">⚠ Preview failed</span>';
+            setTimeout(restore, 1800);
+        }
+    }
+
     function buildVoiceOptions(selectedId) {
         const engines = [...new Set(Object.values(voices).map(v => v.engine))];
         return engines.map(engine => {
@@ -787,47 +842,67 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                         </div>
                     </div>
                     <div id="workspace-${bookId}" class="production-workspace">
-                        <div class="setup-grid">
-                            <div class="setup-field"><label class="setup-label" for="voice-${bookId}">Narrator</label><select id="voice-${bookId}" class="input-control" onchange="syncSpeedField('voice-${bookId}','speed-${bookId}')">${voiceOptions}</select></div>
-                            <div class="setup-field"><label class="setup-label" for="start-${bookId}">Start</label><select id="start-${bookId}" class="input-control"></select></div>
-                            <div class="setup-field"><label class="setup-label" for="end-${bookId}">End</label><select id="end-${bookId}" class="input-control"></select></div>
-                            <div class="setup-field"><label class="setup-label" for="speed-${bookId}">Speed</label><input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control"></div>
-                        </div>
-                        <div class="render-pick">
-                            <label class="setup-label" style="display:block; margin-bottom:9px;">Render on</label>
-                            <div class="rt-row">
-                                <div class="rt-opt on" data-rt="local" onclick="pickRender('${bookId}',this)">
-                                    <div class="rt-t">This machine</div><div class="rt-s">free · cpu · slow</div>
-                                </div>
-                                <div class="rt-opt cloud" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
-                                    <span class="rt-badge">Recommended</span>
-                                    <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · gpu · fast</div>
-                                </div>
-                                <div class="rt-opt" data-rt="vast" onclick="pickRender('${bookId}',this)">
-                                    <div class="rt-t">Vast GPU</div><div class="rt-s">paid · fastest</div>
+                        <div class="conv-flow">
+                            <div class="conv-step">
+                                <div class="conv-step-label">Choose a voice</div>
+                                <div class="conv-voice-row">
+                                    <div class="setup-field" style="flex:1;">
+                                        <label class="setup-label" for="voice-${bookId}">Narrator</label>
+                                        <select id="voice-${bookId}" class="input-control" onchange="syncSpeedField('voice-${bookId}','speed-${bookId}')">${voiceOptions}</select>
+                                    </div>
+                                    <button class="btn conv-preview-btn" onclick="previewWorkspaceVoice('${bookId}', this)">&#9654; Preview</button>
                                 </div>
                             </div>
-                            <div class="rt-note" id="rt-note-${bookId}"></div>
-                            <input type="hidden" id="rt-${bookId}" value="local">
-                            <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:0.85rem; color:var(--text-secondary); cursor:pointer;">
-                                <input type="checkbox" id="fallback-${bookId}" style="width:auto;">
-                                If the chosen voice's engine is offline, auto-switch to a working engine instead of failing
-                            </label>
-                        </div>
-                        <details style="margin-bottom: 24px;">
-                            <summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Advanced (voice blend &amp; pronunciation)</summary>
-                            <div class="setup-grid" style="grid-template-columns: 1fr 2fr; margin-top:16px;">
-                                <div class="setup-field">
-                                    <label class="setup-label" for="voice2-${bookId}">Blend Voice (Kokoro only)</label>
-                                    <select id="voice2-${bookId}" class="input-control"><option value="">None</option>${blendOptions}</select>
-                                </div>
-                                <div class="setup-field">
-                                    <label class="setup-label" for="regex-${bookId}">Pronunciation fixes (regex search==replace, one per line — this book only)</label>
-                                    <textarea id="regex-${bookId}" class="input-control" rows="2" placeholder="Vartabedian==var-tuh-BEH-dee-un"></textarea>
+                            <div class="conv-step">
+                                <div class="conv-step-label">Chapters</div>
+                                <div class="conv-range">
+                                    <div class="setup-field"><label class="setup-label" for="start-${bookId}">Start</label><select id="start-${bookId}" class="input-control"></select></div>
+                                    <div class="setup-field"><label class="setup-label" for="end-${bookId}">End</label><select id="end-${bookId}" class="input-control"></select></div>
                                 </div>
                             </div>
-                        </details>
-                        <button class="btn btn-primary" style="width:100%; height: 64px;" data-path="${escapeHtml(b.path)}" onclick="convertWithSettings('${bookId}', this)">Create Audiobook</button>
+                            <div class="conv-step">
+                                <div class="conv-step-label">Convert</div>
+                                <div class="render-pick">
+                                    <label class="setup-label" style="display:block; margin-bottom:9px;">Render on</label>
+                                    <div class="rt-row">
+                                        <div class="rt-opt on" data-rt="local" onclick="pickRender('${bookId}',this)">
+                                            <div class="rt-t">This machine</div><div class="rt-s">free · cpu · slow</div>
+                                        </div>
+                                        <div class="rt-opt cloud" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
+                                            <span class="rt-badge">Recommended</span>
+                                            <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · gpu · fast</div>
+                                        </div>
+                                        <div class="rt-opt" data-rt="vast" onclick="pickRender('${bookId}',this)">
+                                            <div class="rt-t">Vast GPU</div><div class="rt-s">paid · fastest</div>
+                                        </div>
+                                    </div>
+                                    <div class="rt-note" id="rt-note-${bookId}"></div>
+                                    <input type="hidden" id="rt-${bookId}" value="local">
+                                </div>
+                                <button class="btn btn-primary" style="width:100%; height: 64px;" data-path="${escapeHtml(b.path)}" onclick="convertWithSettings('${bookId}', this)">Narrate this book</button>
+                            </div>
+                            <details class="conv-more">
+                                <summary>More options</summary>
+                                <div class="conv-more-grid">
+                                    <div class="setup-field">
+                                        <label class="setup-label" for="speed-${bookId}">Speed</label>
+                                        <input id="speed-${bookId}" type="number" step="0.1" value="1.0" class="input-control">
+                                    </div>
+                                    <div class="setup-field">
+                                        <label class="setup-label" for="voice2-${bookId}">Blend Voice (Kokoro only)</label>
+                                        <select id="voice2-${bookId}" class="input-control"><option value="">None</option>${blendOptions}</select>
+                                    </div>
+                                    <div class="setup-field" style="grid-column:1 / -1;">
+                                        <label class="setup-label" for="regex-${bookId}">Pronunciation fixes (regex search==replace, one per line — this book only)</label>
+                                        <textarea id="regex-${bookId}" class="input-control" rows="2" placeholder="Vartabedian==var-tuh-BEH-dee-un"></textarea>
+                                    </div>
+                                    <label class="conv-fallback" style="grid-column:1 / -1;">
+                                        <input type="checkbox" id="fallback-${bookId}" style="width:auto;">
+                                        If the chosen voice's engine is offline, auto-switch to a working engine instead of failing
+                                    </label>
+                                </div>
+                            </details>
+                        </div>
                     </div>
                 </div>
             `;
@@ -946,7 +1021,41 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const container = document.getElementById('voices-content');
         if(!container) return;
         const engines = [...new Set(Object.values(voices).map(v => v.engine))];
-        container.innerHTML = engines.map(engine => {
+        const online = Object.entries(voices).filter(([id, v]) => engineUp(v.engine)).map(([id]) => id);
+        const allIds = Object.keys(voices);
+        const cmpA = online[0] || allIds[0] || '';
+        const cmpB = online[1] || online[0] || allIds[1] || cmpA;
+        const compareCard = `
+            <div class="card" style="margin-bottom:32px;">
+                <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px; flex-wrap:wrap;">
+                    <div style="font-weight:700; font-size:1.08rem;">Compare two voices</div>
+                    <div style="font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);">same sample · back to back</div>
+                </div>
+                <div class="compare-row">
+                    <div class="setup-field">
+                        <label class="setup-label" for="compare-voice-a">Voice A</label>
+                        <select id="compare-voice-a" class="input-control">${buildVoiceOptions(cmpA)}</select>
+                    </div>
+                    <div class="setup-field">
+                        <label class="setup-label" for="compare-voice-b">Voice B</label>
+                        <select id="compare-voice-b" class="input-control">${buildVoiceOptions(cmpB)}</select>
+                    </div>
+                    <button class="btn btn-primary" style="height:41px;" onclick="renderComparison(this)">Render comparison</button>
+                </div>
+                <div id="compare-status" class="compare-status"></div>
+                <div id="compare-players" class="compare-grid hidden">
+                    <div class="compare-cell">
+                        <div class="compare-label"><span class="compare-tag">A</span><span id="compare-label-a">—</span></div>
+                        <audio id="compare-audio-a" controls preload="none"></audio>
+                    </div>
+                    <div class="compare-cell">
+                        <div class="compare-label"><span class="compare-tag b">B</span><span id="compare-label-b">—</span></div>
+                        <audio id="compare-audio-b" controls preload="none"></audio>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.innerHTML = compareCard + engines.map(engine => {
             const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
             return `
@@ -1025,6 +1134,37 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         }
     }
 
+    async function renderComparison(btn) {
+        const aId = document.getElementById('compare-voice-a')?.value;
+        const bId = document.getElementById('compare-voice-b')?.value;
+        if (!aId || !bId) return;
+        const status = document.getElementById('compare-status');
+        const players = document.getElementById('compare-players');
+        const original = btn.textContent;
+        btn.disabled = true;
+        if (speakingVoiceId) { document.getElementById('preview-audio').pause(); clearVoiceState(speakingVoiceId); speakingVoiceId = null; }
+        try {
+            status.textContent = `Rendering ${voices[aId]?.name || aId}… first render can take a minute.`;
+            let resp = await fetch(`/api/preview/${aId}`);
+            if (!resp.ok) throw new Error('Voice A preview failed');
+            document.getElementById('compare-label-a').textContent = `${voices[aId]?.name || aId} (${voices[aId]?.accent || ''})`;
+            document.getElementById('compare-audio-a').src = URL.createObjectURL(await resp.blob());
+            status.textContent = `Rendering ${voices[bId]?.name || bId}…`;
+            resp = await fetch(`/api/preview/${bId}`);
+            if (!resp.ok) throw new Error('Voice B preview failed');
+            document.getElementById('compare-label-b').textContent = `${voices[bId]?.name || bId} (${voices[bId]?.accent || ''})`;
+            document.getElementById('compare-audio-b').src = URL.createObjectURL(await resp.blob());
+            players.classList.remove('hidden');
+            status.textContent = 'Done — press play on each to compare.';
+        } catch(e) {
+            console.error(e);
+            status.innerHTML = '<span style="color:var(--error);">⚠ ' + escapeHtml(e.message || 'Comparison failed') + '</span>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = original;
+        }
+    }
+
     function preBadge(j) {
         if(!j.preprocess_summary) return '';
         const failed = j.preprocess_summary.startsWith('failed');
@@ -1070,6 +1210,17 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         setTimeout(loadJobs, 500);
     }
 
+    function chapterProgressText(j) {
+        if (j.current_chapter && j.total_chapters) return `Chapter ${j.current_chapter} of ${j.total_chapters}`;
+        if (j.log) {
+            let last = null, m;
+            const re = /chapter\s+(\d+)(?:\s*(?:of|\/)\s*(\d+))?/gi;
+            while ((m = re.exec(j.log)) !== null) last = m;
+            if (last) return last[2] ? `Chapter ${last[1]} of ${last[2]}` : `Chapter ${last[1]}`;
+        }
+        return '';
+    }
+
     async function loadJobs() {
         const [resp, statusResp] = await Promise.all([fetch('/api/jobs'), fetch('/api/queue/status')]);
         const jobs = await resp.json();
@@ -1112,6 +1263,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                         </div>
                     </div>
                     <div class="qwave ${j.status === 'failed' ? 'failed' : (j.status === 'completed' ? 'done' : 'live')}" data-pct="${j.progress_percent || 0}" aria-hidden="true"></div>
+                    ${chapterProgressText(j) ? `<div class="progress-detail">${chapterProgressText(j)}</div>` : ''}
                     <div class="job-detail-row">
                         <div class="job-detail-item">Narrator <b>${j.voice_name || j.voice}${j.voice2 ? ' + ' + (j.voice2_name || j.voice2) : ''}</b></div>
                         <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
