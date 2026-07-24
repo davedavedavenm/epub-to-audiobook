@@ -519,6 +519,13 @@ VOICES = {
     'uk_female_golding_nano': {'name': 'Harriet (Nano)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox_nano'},
     'uk_male_yearsley_nano': {'name': 'Edmund (Nano)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox_nano'},
     'uk_female_samuel_nano': {'name': 'Beatrice (Nano)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox_nano'},
+    # ============ COSYVOICE 3 (KAGGLE-GPU RENDER; previews pre-rendered) ============
+    # GPU-only — full-book render happens on Kaggle. Previews are pre-generated
+    # (scripts kernel cosyvoice3-previews) and cached in data/previews/.
+    'uk_male_minter_cosyvoice': {'name': 'Arthur (CosyVoice)', 'accent': 'British', 'gender': 'Male', 'engine': 'cosyvoice'},
+    'uk_female_golding_cosyvoice': {'name': 'Harriet (CosyVoice)', 'accent': 'British', 'gender': 'Female', 'engine': 'cosyvoice'},
+    'uk_male_yearsley_cosyvoice': {'name': 'Edmund (CosyVoice)', 'accent': 'British', 'gender': 'Male', 'engine': 'cosyvoice'},
+    'uk_female_samuel_cosyvoice': {'name': 'Beatrice (CosyVoice)', 'accent': 'British', 'gender': 'Female', 'engine': 'cosyvoice'},
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
@@ -2183,6 +2190,12 @@ def get_voice_preview(voice_id: str) -> Path:
     voice_info = VOICES.get(voice_id, {})
     engine = voice_info.get('engine', 'kokoro')
     ptext = _preview_text_for(engine)
+
+    # CosyVoice is GPU-only (Kaggle-render): its previews are pre-rendered and
+    # dropped into PREVIEWS_DIR, never generated on this box. If it isn't cached
+    # there's nothing to serve locally — don't fall through and mis-generate.
+    if engine == 'cosyvoice':
+        return preview_path if preview_path.exists() else None
 
     try:
         if engine == 'piper':
