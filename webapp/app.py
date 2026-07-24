@@ -43,6 +43,10 @@ app = Flask(__name__)
 KOKORO_URL = os.environ.get('KOKORO_URL', 'http://localhost:8880/v1')
 PIPER_URL = os.environ.get('PIPER_URL', 'http://piper-tts:8000/v1')
 CHATTERBOX_URL = os.environ.get('CHATTERBOX_URL', 'http://chatterbox-tts:8004/v1')
+# Nano is a SEPARATE container (chatterbox-nano, CHATTERBOX_NANO=1). One
+# chatterbox container loads Turbo XOR Nano at startup, so the two models
+# cannot share a process — hence a second service and a second URL.
+CHATTERBOX_NANO_URL = os.environ.get('CHATTERBOX_NANO_URL', 'http://chatterbox-nano:8004/v1')
 TADA_URL = os.environ.get('TADA_URL', 'http://tada-tts:8005/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
@@ -2251,7 +2255,9 @@ def get_voice_preview(voice_id: str) -> Path:
             # 180s cap was SHORTER than that, so every chatterbox sample was
             # generated, timed out, and thrown away — the cache could never fill
             # (2026-07-14). Be generous; this is a background job.
-            _url = TADA_URL if engine == 'tada' else CHATTERBOX_URL
+            _url = (TADA_URL if engine == 'tada'
+                    else CHATTERBOX_NANO_URL if engine == 'chatterbox_nano'
+                    else CHATTERBOX_URL)
             response = requests.post(
                 f"{_url}/audio/speech",
                 json={
@@ -2513,7 +2519,9 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
         model = 'inworld' if tts_engine == 'inworld' else 'tts-1'
         return url, model
-    elif tts_engine in ('chatterbox', 'chatterbox_nano'):
+    elif tts_engine == 'chatterbox_nano':
+        return CHATTERBOX_NANO_URL, 'tts-1'
+    elif tts_engine == 'chatterbox':
         return CHATTERBOX_URL, 'tts-1'
     elif tts_engine == 'tada':
         return TADA_URL, 'tts-1'
@@ -3797,6 +3805,7 @@ def check_engines_health(max_age=20):
     probes = {
         'kokoro': f"{KOKORO_URL.rstrip('/')}/audio/voices",
         'chatterbox': f"{CHATTERBOX_URL.rstrip('/')}/audio/voices",
+        'chatterbox_nano': f"{CHATTERBOX_NANO_URL.rstrip('/')}/audio/voices",
         'tada': f"{TADA_URL.rstrip('/')}/audio/voices",
         'piper': f"{PIPER_URL.rstrip('/')}/models",  # openedai-speech has no /audio/voices
     }

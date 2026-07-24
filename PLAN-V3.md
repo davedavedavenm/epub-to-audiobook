@@ -8,6 +8,16 @@ Successor to PLAN.md. Every item below was accepted by Dave on 2026-07-23.
 
 ## 1. Chatterbox Nano — new engine option (NOT default yet)
 
+> **DONE + verified 2026-07-24.** Prior state was "wired but broken": voices +
+> routing existed, but `requirements.txt` pinned `chatterbox-tts>=0.1.7` (no
+> `nano=` param), a single container can only load Turbo XOR Nano, and it was
+> never rebuilt/deployed. Fixed: git-pinned dep (`5de7a54`), a dedicated
+> `chatterbox-nano` container (profile `chatterbox-nano`, port 8006,
+> `CHATTERBOX_NANO_URL`), `NUMBA_CACHE_DIR` + HF-cache-volume chown.
+> **Measured RTF 0.83 on Zorin CPU**, ASR-verified. 1.5 samples came from the
+> HF Space; 1.6/1.7 now done on real hardware. Ear-level Turbo-vs-Nano A/B (#2)
+> still owed.
+
 Add Nano as a selectable engine alongside Turbo, with full preview voices.
 
 - [ ] 1.1 Install chatterbox from git-master in the `chatterbox/` container
@@ -102,6 +112,18 @@ Add Nano as a selectable engine alongside Turbo, with full preview voices.
 - [ ] 12.1 Add `ruff` to CI workflow (lint on PR)
 - [ ] 12.2 Fix existing violations or add per-file ignores
 - [ ] 12.3 Add `ruff.toml` config
+
+> **#13 DONE 2026-07-24; #14 revised.** CosyVoice 3 auditioned and verified:
+> a full 30-min chapter (mean ASR similarity 0.966) + a hard-normalization test.
+> Dave: "surprisingly good, listenable." **Architecture revised:** #14 assumed a
+> local `cosyvoice/` Docker service, but CPU is not viable (Kaggle Xeon: ~10–50×
+> realtime AND malformed audio), and Zorin has no GPU — so CosyVoice is a
+> **Kaggle-GPU render engine**, not a local service. `cosyvoice/server.py`
+> (OpenAI-compatible, GPU-only) is built as the engine backend the Kaggle kernel
+> drives. Remaining: `scripts/kaggle/run_cosyvoice.py` (production kernel: py3.10
+> venv + CosyVoice repo + `convert_book.py`) and webapp `_ENGINE_KERNEL` +
+> engine-gate + `TTS_ENGINES` wiring, then a verify-render. The standalone
+> `build_chapter_kernel.py` renders whole chapters today. See TTS-LANDSCAPE §Verified.
 
 ## 13. TTS: Evaluate CosyVoice 3
 

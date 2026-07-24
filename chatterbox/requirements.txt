@@ -1,4 +1,7 @@
-chatterbox-tts>=0.1.7
+# PyPI 0.1.7 has ChatterboxTurboTTS but NOT the `nano=` param on from_pretrained
+# (that landed on master post-0.1.7). Pin the master commit that added Nano so
+# CHATTERBOX_NANO=1 actually loads; unpin to chatterbox-tts>=0.2.0 once it ships.
+chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git@5de7a54aa4e5e2baadb0182dde554908b48b85c2
 fastapi>=0.110
 uvicorn>=0.27
 soundfile>=0.12

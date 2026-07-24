@@ -45,6 +45,23 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 
 ## Incident log
 
+### 2026-07-24 — Non-root migration left volumes root-owned (webapp + chatterbox down)
+- **Symptom:** after a redeploy, `epub-to-audiobook-ui` and `-worker`
+  crash-looped; later, `chatterbox-nano` 500'd on model load.
+- **Root cause (one family, three sites):** the audit's switch to a non-root
+  `appuser` (UID 999) never reconciled the bind-mounts/volumes, which were owned
+  by root or by host UID 1000:
+  1. `/data` bind-mount owned 1000 → `PermissionError: /data/toc_cache` at
+     import. Fixed: `chown -R 999:1000 data && chmod -R g+rwX data` (container
+     writes as its UID; host user keeps group access).
+  2. `chatterbox-cache` HF volume owned by root (from a Jul-6 pre-migration run)
+     → Nano couldn't create its model dir. Turbo only worked because its model
+     was already cached. Fixed: `chown -R 999:999` the volume.
+  3. `numba`/`librosa` had no writable cache dir → "cannot cache '__o_fold'".
+     Fixed: `NUMBA_CACHE_DIR=/tmp/numba` (Dockerfile + compose).
+- **Lesson:** a non-root migration must chown every bind-mount and named volume
+  to the container UID, not just `chown` inside the image (the mount shadows it).
+
 ### 2026-07-18 — Startup preview cache caused repeated TADA OOM bursts
 - **Symptom:** repeated freezes/reboots after Docker and the web app started.
 - **Trigger:** there were no queued TADA jobs. Five seconds after web-app start,

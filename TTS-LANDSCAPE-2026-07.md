@@ -8,16 +8,28 @@ Supersedes the engine tables in LOW-COST-TTS.md where they conflict.
 ## TL;DR
 
 **Your Turbo + TADA stack is still top-tier for audiobook narration.** Two
-developments matter:
+developments, both now measured (2026-07-24):
 
-1. **Chatterbox Nano** (110M params, MIT) — 3x realtime on CPU, voice cloning,
-   designed for low-resource. Could eliminate GPU dependency for Chatterbox-quality
-   audio. Needs a listening test against Turbo.
-2. **CosyVoice 3** (Alibaba, Apache 2.0) — strong new entrant, 30+ languages,
-   streaming, fine-grained prosody control. Worth an audition.
+1. **Chatterbox Nano** (110M params, MIT) — **VERIFIED WORKING** as a local
+   engine. Measured **RTF ~0.83 on Zorin CPU** (faster than realtime, no GPU),
+   ASR-confirmed correct output. Runs as its own `chatterbox-nano` container
+   (Turbo and Nano can't share a process). This genuinely eliminates the GPU
+   dependency for Chatterbox-quality audio. Still owes a Turbo-vs-Nano quality
+   A/B for the ear.
+2. **CosyVoice 3** (Alibaba, Apache 2.0) — **auditioned, verdict: keep.** Dave:
+   "surprisingly good, listenable." Strong on numbers, dates, currency,
+   acronyms, units; weak only on insider British surnames (Featherstonehaugh →
+   read literally) and spaced phone numbers. **GPU-only**: RTF ~0.85 on a
+   T4/P100, but on CPU it is ~10–50× realtime AND produces malformed audio
+   (Kaggle Xeon test) — so it is a **Kaggle-render engine**, never a local
+   Zorin service. Full webapp render integration is the remaining build; the
+   standalone kernel (`scripts/kaggle/build_chapter_kernel.py`) renders whole
+   chapters today.
 
 Nothing has dethroned TADA for peak naturalness on easy text, or Turbo for
 reliable long-form non-fiction.
+
+See **§ Verified results 2026-07-24** at the bottom for the measurements.
 
 ---
 
@@ -26,9 +38,9 @@ reliable long-form non-fiction.
 | Engine | Params | License | Clone | Long-form | CPU viable | Best for | Status in this repo |
 |--------|--------|---------|-------|-----------|------------|----------|---------------------|
 | **Chatterbox Turbo** | 350M | MIT | Yes (10s ref) | Chunked | Yes (RTF ~1.3) | Reliable narration, non-fiction | Production engine |
-| **Chatterbox Nano** | 110M | MIT | Yes (10s ref) | Chunked | Yes (~3x RT) | Same quality tier, 3x faster on CPU | **NOT EVALUATED — priority listen test** |
+| **Chatterbox Nano** | 110M | MIT | Yes (10s ref) | Chunked | **Yes (measured RTF 0.83)** | Same quality tier, no GPU needed | **WORKING — own container; ear A/B still owed** |
 | **Hume TADA-1B** | 1B | Llama 3.2 Community | Yes (ref+transcript) | No (chunked) | Marginal (RTF ~2.4) | Peak naturalness, fiction/dialogue | Built, broken (#23) |
-| **CosyVoice 3** | ~1B | Apache 2.0 | Yes (3s ref) | Streaming mode | GPU preferred | Multilingual, prosody control | **NOT EVALUATED — worth audition** |
+| **CosyVoice 3** | 0.5B | Apache 2.0 | Yes (3s ref) | Streaming mode | **No (GPU-only; CPU malformed)** | Multilingual, prosody control | **AUDITIONED — keep; Kaggle-render, see §Verified** |
 | **Kokoro** | 82M | Apache 2.0 | No (preset voices) | Chunked | Yes (fast) | Cheap bulk, fallback | Production fallback |
 | **Fish Speech 1.5** | 1.5B | Apache 2.0 | Yes | Chunked | GPU needed | Fast generation, multilingual | Not integrated |
 | **F5-TTS** | ~330M | MIT | Yes (ref) | Chunked | GPU preferred | Research, good quality | Not integrated |
@@ -146,3 +158,45 @@ narration with UK voices. Revisit if the project adds multilingual support.
 ### 6. Lemonfox remains the cheapest commercial fallback
 $5/mo for 2M chars, OpenAI-compatible API. Worth a 10-minute quality test
 if a commercial fallback is ever needed. Not a priority.
+
+---
+
+## Verified results (2026-07-24)
+
+All numbers below are **measured**, not vendor claims. Method: render, then
+ASR-transcribe the output and score word-sequence similarity to the input.
+
+### CosyVoice 3 (`Fun-CosyVoice3-0.5B-2512`)
+- **Full chapter**: "The Yellow Wallpaper" (Gilman), 30.3 min audio, 105
+  chunks, mean ASR similarity **0.966** (min 0.833, none < 0.75). Independent
+  local re-ASR of the downloaded file: English p=1.00, verbatim prose.
+- **GPU RTF**: ~0.82–0.88 on a Kaggle P100 (26.4 min to generate 30.3 min).
+- **Hard-text audition**: numbers/dates/currency/percentages/acronyms/units all
+  correct; US date `07/24/2026` → "24 July"; weak on Featherstonehaugh /
+  Cholmondeley / Menzies (read literally, need pronunciation inpainting) and on
+  spaced phone numbers. Dave's verdict: "surprisingly good, listenable."
+- **CPU**: NOT viable. Kaggle Xeon (4 vCPU): model load 48s, then ~118s of
+  compute for a single medium sentence (~10× realtime floor) AND the audio came
+  out truncated/malformed. → **Kaggle-GPU render only.**
+- **Engine, not voices**: no `spk2info.pt` in the model → no preset speakers.
+  The UK accent comes entirely from the reference clip; any voice in the roster
+  works as a reference.
+- **The pins are load-bearing**: 16 earlier runs produced fluent *multilingual
+  babble* (Mongolian/Hungarian/Arabic on English input) purely from installing
+  CosyVoice's deps unpinned on Python 3.12. Correct path: Python 3.10 +
+  `requirements.txt` pins (esp. `transformers==4.51.3` for the Qwen2 backbone).
+
+### Chatterbox Nano (`ResembleAI/chatterbox-nano`, 110M, MIT)
+- **Measured RTF ~0.83 on Zorin CPU** (i5-12400), faster than realtime — a
+  30-min chapter renders in ~25 min with no GPU. Warm synth of a 24-word
+  sentence: ~7s wall for ~8.5s audio.
+- ASR-verified correct English from the container (first non-HF-Space output).
+- **Deployment gotchas found and fixed** (all were "wired but broken"):
+  - PyPI `chatterbox-tts>=0.1.7` has `ChatterboxTurboTTS` but NOT the `nano=`
+    param → pinned the master commit `5de7a54` in `chatterbox/requirements.txt`.
+  - One container = Turbo XOR Nano (model chosen at startup by `CHATTERBOX_NANO`)
+    → Nano runs as its own `chatterbox-nano` service (profile `chatterbox-nano`,
+    port 8006), routed via `CHATTERBOX_NANO_URL`.
+  - `numba`/`librosa` need a writable cache → `NUMBA_CACHE_DIR=/tmp/numba`.
+  - The shared `chatterbox-cache` HF volume was root-owned (pre-non-root-migration)
+    so Nano couldn't download its model → chown to the container UID.

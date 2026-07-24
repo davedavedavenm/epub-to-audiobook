@@ -23,6 +23,10 @@ USER appuser
 
 ENV VOICES_DIR=/app/voices
 ENV HF_HOME=/data/hf
+# librosa (pulled by chatterbox master) JIT-compiles via numba at load; appuser
+# has no writable default cache dir, so numba raises "cannot cache function
+# '__o_fold': no locator available". Point it at a writable path.
+ENV NUMBA_CACHE_DIR=/tmp/numba
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 EXPOSE 8004

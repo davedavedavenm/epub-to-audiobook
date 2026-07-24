@@ -39,3 +39,7 @@ _tmp_*
 # local runtime artifacts
 jobs.db
 *_tts.epub
+
+# Local working artifacts (kaggle kernels, rendered audio) — not repo material
+output/
+scratch/
