@@ -254,10 +254,12 @@ services:
       # this only phrases the human explanation.
       - OLLAMA_URL=${OLLAMA_URL:-}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
-      # Voice-sample pre-caching is opt-in. It can load every configured engine,
-      # so enabling it on a memory-constrained host can trigger an OOM burst even
-      # when no conversion job is queued (incident 2026-07-18).
-      - VOICE_CACHE_ON_START=${VOICE_CACHE_ON_START:-0}
+      # Voice-sample pre-caching: ON by default so every voice previews
+      # instantly. The throttle (waits for low load, pauses between voices)
+      # plus per-engine mem_limits make it safe; the 2026-07-18 OOM incident
+      # that made it opt-in predates the 2026-07-20 box upgrade (i5-12400 /
+      # 31 GB). Set VOICE_CACHE_ON_START=0 to disable on a smaller host.
+      - VOICE_CACHE_ON_START=${VOICE_CACHE_ON_START:-1}
       - VOICE_CACHE_MAX_LOAD=${VOICE_CACHE_MAX_LOAD:-}
       - VOICE_CACHE_DELAY=${VOICE_CACHE_DELAY:-5}
       # GPU status display (webapp reads worker's status file, these are fallback)
