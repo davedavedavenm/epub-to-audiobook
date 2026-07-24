@@ -18,7 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     calibre \
     ffmpeg \
     docker.io \
+    procps \
     && rm -rf /var/lib/apt/lists/*
+# procps provides pgrep, used by the worker healthcheck (test: pgrep -f worker.py).
+# Without it the check always failed and the worker showed "unhealthy" though fine.
 
 # Install Python dependencies
 COPY webapp/requirements.txt .

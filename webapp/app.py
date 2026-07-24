@@ -3221,9 +3221,9 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
         append_job_log(job_id, "Kaggle render aborted: no credentials")
         maybe_start_next_queued_job()
         return
-    if engine not in ('chatterbox', 'tada'):
+    if engine not in KR.render_engines():
         update_job(job_id, status='failed',
-                   error=f'{engine} cannot render on Kaggle GPU (chatterbox/tada only).',
+                   error=f'{engine} cannot render on Kaggle GPU (supported: {", ".join(KR.render_engines())}).',
                    completed_at=datetime.now().isoformat())
         maybe_start_next_queued_job()
         return

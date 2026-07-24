@@ -137,7 +137,13 @@ def list_voices():
 def speech(req: SpeechReq):
     if not _voice_paths:
         _load_voices()
-    voice = req.voice.replace("cosyvoice_", "") if req.voice.startswith("cosyvoice_") else req.voice
+    # Accept bare refs ("uk_male_minter"), a "cosyvoice_" prefix, or the UI's
+    # "_cosyvoice" suffix (voice_id uk_male_minter_cosyvoice) — all map to the ref stem.
+    voice = req.voice
+    if voice.startswith("cosyvoice_"):
+        voice = voice[len("cosyvoice_"):]
+    if voice.endswith("_cosyvoice"):
+        voice = voice[:-len("_cosyvoice")]
     if voice not in _voice_paths:
         return JSONResponse({"error": f"unknown voice {voice!r}; have {list(_voice_paths)}"},
                             status_code=400)

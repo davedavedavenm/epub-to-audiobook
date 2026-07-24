@@ -36,7 +36,14 @@ MAX_RENDER_HOURS = float(os.environ.get("KAGGLE_MAX_RENDER_HOURS", "11"))
 _ENGINE_KERNEL = {
     "chatterbox": "run_chatterbox.py",
     "tada": "run.py",
+    "cosyvoice": "run_cosyvoice.py",
 }
+
+
+def render_engines():
+    """Engines that can render a full book on Kaggle GPU (the single source of
+    truth the webapp gate checks against)."""
+    return tuple(_ENGINE_KERNEL)
 
 
 def kaggle_username():
