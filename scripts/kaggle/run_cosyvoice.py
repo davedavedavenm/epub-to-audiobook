@@ -41,8 +41,10 @@ T0 = time.time()
 
 
 def sh(cmd, check=True, **kw):
-    print("+", " ".join(cmd) if isinstance(cmd, list) else cmd, flush=True)
-    return subprocess.run(cmd, check=check, **kw)
+    print("+", cmd if isinstance(cmd, str) else " ".join(cmd), flush=True)
+    # string commands use the shell (they contain && / pipes / --flags);
+    # list commands run directly.
+    return subprocess.run(cmd, check=check, shell=isinstance(cmd, str), **kw)
 
 
 def stage(m):
@@ -66,7 +68,6 @@ stage("Python 3.10 venv + pinned deps (the load-bearing part)")
 sh("pip install -q uv")
 sh("uv python install 3.10")
 sh(f"uv venv --python 3.10 --seed {VENV}")
-sh("PIP_CONSTRAINT=", check=False)
 with open(f"{SCRATCH}/constraints.txt", "w") as f:
     f.write("setuptools<81\n")
 os.environ["PIP_CONSTRAINT"] = f"{SCRATCH}/constraints.txt"
