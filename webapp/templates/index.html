@@ -72,6 +72,39 @@ select.input-control { cursor: pointer; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(20,15,10,0.72); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .modal-content { background: var(--paper-raised); width: 95%; max-width: 1180px; height: 90vh; border-radius: var(--radius-lg); padding: 0; position: relative; display: flex; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow); }
 .modal-close { position: absolute; top: 22px; right: 24px; background: transparent; border: none; font-size: 1.8rem; cursor: pointer; color: var(--text-secondary); z-index: 10; }
+
+/* ---- App dialogs (replace native confirm/alert, which look like OS popups) ---- */
+.dlg-backdrop{ position:fixed; inset:0; background:rgba(10,12,16,.62); backdrop-filter:blur(10px);
+  display:flex; align-items:center; justify-content:center; z-index:3000; padding:20px;
+  opacity:0; pointer-events:none; transition:opacity .18s ease; }
+.dlg-backdrop.open{ opacity:1; pointer-events:auto; }
+.dlg{ background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow); width:100%; max-width:460px; padding:26px 26px 22px;
+  transform:translateY(8px) scale(.985); transition:transform .18s ease; }
+.dlg-backdrop.open .dlg{ transform:none; }
+.dlg-icon{ width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  font-size:1.25rem; margin-bottom:14px; background:var(--accent-tint); color:var(--accent); }
+.dlg[data-tone="danger"] .dlg-icon{ background:rgba(232,106,106,.14); color:var(--error); }
+.dlg[data-tone="info"]   .dlg-icon{ background:var(--cloud-tint); color:var(--cloud); }
+.dlg-title{ font-family:var(--serif); font-size:1.16rem; font-weight:800; margin:0 0 8px; color:var(--text-primary); letter-spacing:-.01em; }
+.dlg-msg{ margin:0; color:var(--text-secondary); font-size:.93rem; line-height:1.55; white-space:pre-line; }
+.dlg-details{ margin:16px 0 0; padding:12px 14px; background:var(--bg-element); border:1px solid var(--border);
+  border-radius:var(--radius-sm); display:grid; gap:7px; }
+.dlg-row{ display:flex; justify-content:space-between; gap:16px; font-size:.85rem; }
+.dlg-row dt{ color:var(--ink-3); margin:0; }
+.dlg-row dd{ color:var(--text-primary); font-weight:700; margin:0; text-align:right; }
+.dlg-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:22px; flex-wrap:wrap; }
+.dlg-btn{ font:inherit; font-weight:700; font-size:.9rem; padding:11px 18px; border-radius:var(--radius-sm);
+  cursor:pointer; border:1px solid var(--border-strong); background:var(--bg-element); color:var(--text-primary);
+  transition:background .15s ease, border-color .15s ease; }
+.dlg-btn:hover{ background:var(--bg-hover); }
+.dlg-btn-primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.dlg-btn-primary:hover{ background:var(--accent-deep); border-color:var(--accent-deep); }
+.dlg[data-tone="danger"] .dlg-btn-primary{ background:var(--error); border-color:var(--error); }
+.dlg[data-tone="danger"] .dlg-btn-primary:hover{ filter:brightness(.92); }
+.dlg-btn:focus-visible{ outline:2px solid var(--accent-ink); outline-offset:2px; }
+@media (max-width:520px){ .dlg-actions{ flex-direction:column-reverse; } .dlg-btn{ width:100%; } }
+@media (prefers-reduced-motion:reduce){ .dlg-backdrop, .dlg{ transition:none; } }
 .preview-sidebar { width: 340px; background: var(--bg-element); border-right: 1px solid var(--border); padding: 44px 30px; overflow-y: auto; flex-shrink: 0; }
 .preview-body { flex: 1; padding: 48px 60px; overflow-y: auto; position: relative; }
 .preview-text { font-family: var(--serif); font-size: 1.22rem; line-height: 1.85; white-space: pre-wrap; color: var(--text-primary); font-weight: 380; }
@@ -570,6 +603,19 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         </div>
     </div>
 </main>
+<div id="app-dialog" class="dlg-backdrop" role="presentation">
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-msg" data-tone="default">
+    <div class="dlg-icon" id="dlg-icon" aria-hidden="true">?</div>
+    <h2 class="dlg-title" id="dlg-title"></h2>
+    <p class="dlg-msg" id="dlg-msg"></p>
+    <dl class="dlg-details" id="dlg-details" hidden></dl>
+    <div class="dlg-actions">
+      <button type="button" class="dlg-btn" id="dlg-cancel"></button>
+      <button type="button" class="dlg-btn dlg-btn-primary" id="dlg-ok"></button>
+    </div>
+  </div>
+</div>
+
 <div id="preview-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="preview-sidebar">
@@ -588,6 +634,79 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 <audio id="preview-audio"></audio>
 <script src="/static/llm_ui.js"></script>
 <script>
+    /* ---- App dialogs -------------------------------------------------------
+       Replaces native confirm()/alert(), which render as OS chrome and break
+       the page's look. Same call shape, but promise-based:
+           if (!await appConfirm({...})) return;
+       Keyboard: Esc = cancel, Enter = confirm. Focus moves into the dialog and
+       returns to the trigger on close; for destructive actions the SAFE button
+       is focused first so a stray Enter can't delete anything.            */
+    const _dlg = {
+        el: null, ok: null, cancel: null, title: null, msg: null, details: null,
+        icon: null, card: null, resolve: null, lastFocus: null,
+    };
+    function _dlgInit() {
+        if (_dlg.el) return;
+        _dlg.el = document.getElementById('app-dialog');
+        _dlg.card = _dlg.el.querySelector('.dlg');
+        _dlg.ok = document.getElementById('dlg-ok');
+        _dlg.cancel = document.getElementById('dlg-cancel');
+        _dlg.title = document.getElementById('dlg-title');
+        _dlg.msg = document.getElementById('dlg-msg');
+        _dlg.details = document.getElementById('dlg-details');
+        _dlg.icon = document.getElementById('dlg-icon');
+        _dlg.ok.addEventListener('click', () => _dlgClose(true));
+        _dlg.cancel.addEventListener('click', () => _dlgClose(false));
+        _dlg.el.addEventListener('mousedown', (e) => { if (e.target === _dlg.el) _dlgClose(false); });
+        _dlg.el.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); _dlgClose(false); }
+            else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); _dlgClose(true); }
+            else if (e.key === 'Tab') {                       // focus trap
+                const f = [_dlg.cancel, _dlg.ok].filter(b => !b.hidden);
+                const i = f.indexOf(document.activeElement);
+                if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+                else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+            }
+        });
+    }
+    function _dlgClose(result) {
+        if (!_dlg.resolve) return;
+        const done = _dlg.resolve; _dlg.resolve = null;
+        _dlg.el.classList.remove('open');
+        if (_dlg.lastFocus && document.contains(_dlg.lastFocus)) _dlg.lastFocus.focus();
+        done(result);
+    }
+    function _dlgOpen({ title, message = '', details = null, confirmText = 'Continue',
+                        cancelText = 'Cancel', tone = 'default', icon = '?', alertOnly = false }) {
+        _dlgInit();
+        if (_dlg.resolve) _dlgClose(false);
+        _dlg.lastFocus = document.activeElement;
+        _dlg.card.dataset.tone = tone;
+        _dlg.icon.textContent = icon;
+        _dlg.title.textContent = title;
+        _dlg.msg.textContent = message;
+        _dlg.msg.hidden = !message;
+        _dlg.details.innerHTML = '';
+        if (details && Object.keys(details).length) {
+            for (const [k, v] of Object.entries(details)) {
+                const row = document.createElement('div'); row.className = 'dlg-row';
+                const dt = document.createElement('dt'); dt.textContent = k;
+                const dd = document.createElement('dd'); dd.textContent = v;
+                row.append(dt, dd); _dlg.details.appendChild(row);
+            }
+            _dlg.details.hidden = false;
+        } else { _dlg.details.hidden = true; }
+        _dlg.ok.textContent = confirmText;
+        _dlg.cancel.textContent = cancelText;
+        _dlg.cancel.hidden = alertOnly;
+        _dlg.el.classList.add('open');
+        // Destructive? focus the safe choice. Otherwise focus the primary action.
+        (tone === 'danger' && !alertOnly ? _dlg.cancel : _dlg.ok).focus();
+        return new Promise(res => { _dlg.resolve = res; });
+    }
+    const appConfirm = (opts) => _dlgOpen(opts);
+    const appAlert = (opts) => _dlgOpen({ ...opts, alertOnly: true, confirmText: opts.confirmText || 'OK' });
+
     const voices = {{ voices | tojson }};
     let engineHealth = {};   // engine -> bool (true=up); empty until loaded
     async function loadEngineHealth() {
@@ -652,10 +771,14 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         } catch(e) {}
     }
 
-    function onRenderModeChange(sel) {
+    async function onRenderModeChange(sel) {
         const warn = document.getElementById('render-mode-warn');
         if(sel.value === '1') {
-            if(!confirm('Cloud GPU rents a PAID Vast.ai instance that bills by the hour until destroyed. It stays off unless you save this. Continue?')) {
+            if(!await appConfirm({
+                title: 'Enable paid Cloud GPU?',
+                message: 'Cloud GPU rents a Vast.ai instance that bills by the hour until it is destroyed. It stays off unless you save this setting.',
+                confirmText: 'Enable paid GPU', cancelText: 'Keep it off', tone: 'danger', icon: '⚠',
+            })) {
                 sel.value = '0'; warn.textContent = ''; return;
             }
             warn.textContent = '⚠️ Paid mode — remember to Save, and destroy instances when done.';
@@ -992,13 +1115,28 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const allowFallback = document.getElementById('fallback-' + bookId)?.checked || false;
         if (renderTarget === 'kaggle') {
             const q = kaggleQuota;
-            if (!q || !q.configured) { alert('Kaggle isn\'t set up yet. Add your free token in Settings → Free Cloud GPU, then try again.'); return; }
-            if (q.left <= 0 && !confirm(`You've used your free ${q.weekly} Kaggle GPU-hrs this week (resets weekly). Queue anyway?`)) return;
+            if (!q || !q.configured) {
+                await appAlert({ title: 'Kaggle isn\'t set up yet',
+                    message: 'Add your free Kaggle token in Settings → Free Cloud GPU, then try again.',
+                    tone: 'info', icon: 'ℹ' });
+                return;
+            }
+            if (q.left <= 0 && !await appConfirm({
+                title: 'Free Kaggle GPU hours used up',
+                message: 'Your weekly free allowance has run out. It resets each week. You can still queue this — it will run once hours are available.',
+                details: { 'Weekly allowance': `${q.weekly} GPU-hrs`, 'Remaining': '0' },
+                confirmText: 'Queue anyway', cancelText: 'Cancel', icon: '☁', tone: 'default',
+            })) return;
         }
         // Explicit confirmation — a conversion is a long job, never start one by surprise.
         const voiceName = el.closest('.production-workspace')?.querySelector('#voice-' + bookId)?.selectedOptions[0]?.text || voice;
         const where = { local: 'this computer (free, slower)', kaggle: 'free Kaggle GPU', vast: 'Vast GPU (paid)' }[renderTarget] || renderTarget;
-        if (!confirm(`Start narrating this book?\n\nVoice: ${voiceName}\nRender on: ${where}\n\nThis creates an audiobook and can take a while. You can watch or cancel it in the Queue tab.`)) return;
+        if (!await appConfirm({
+            title: 'Start narrating this book?',
+            message: 'This creates an audiobook and can take a while. You can watch progress or cancel it any time from the Queue tab.',
+            details: { 'Voice': voiceName, 'Render on': where },
+            confirmText: 'Start narration', cancelText: 'Not yet', icon: '▶', tone: 'default',
+        })) return;
         const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget, allow_engine_fallback: allowFallback }) });
         const data = await resp.json();
         if(data.status === 'success') {
@@ -1013,7 +1151,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 switchTab('queue');
             }, 1500);
         } else {
-            alert('Error: ' + (data.error || 'Failed to start conversion'));
+            appAlert({ title: 'Could not start narration', message: data.error || 'Failed to start conversion', tone: 'danger', icon: '⚠' });
         }
     }
 
@@ -1200,12 +1338,16 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     async function retryAllFailed() {
         const resp = await fetch('/api/queue/retry-failed', { method: 'POST' });
         const data = await resp.json();
-        alert(`Requeued ${(data.queued_ids || []).length} failed job(s)`);
+        appAlert({ title: 'Jobs requeued', message: `${(data.queued_ids || []).length} failed job(s) are back in the queue.`, tone: 'info', icon: '✓' });
         loadJobs();
     }
 
     async function cancelJob(jobId) {
-        if(!confirm('Cancel this conversion? Partial chapters are kept for resume.')) return;
+        if(!await appConfirm({
+            title: 'Stop this narration?',
+            message: 'Chapters already finished are kept, so you can resume from where it stopped.',
+            confirmText: 'Stop narration', cancelText: 'Keep going', tone: 'danger', icon: '⏹',
+        })) return;
         await fetch(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
         setTimeout(loadJobs, 500);
     }
@@ -1371,10 +1513,14 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         });
         const data = await resp.json();
         if(data.status === 'success') loadJobs();
-        else alert('Error: ' + data.error);
+        else appAlert({ title: 'Something went wrong', message: data.error, tone: 'danger', icon: '⚠' });
     }
     async function deleteJob(jobId) {
-        if(!confirm('Permanently delete this job and its partial files?')) return;
+        if(!await appConfirm({
+            title: 'Delete this narration?',
+            message: 'The job and any partial audio files will be permanently removed. This cannot be undone.',
+            confirmText: 'Delete', cancelText: 'Keep it', tone: 'danger', icon: '🗑',
+        })) return;
         await fetch(`/api/jobs/${jobId}/delete`, { method: 'DELETE' });
         setTimeout(loadJobs, 500); // Give backend time to delete rows
     }
@@ -1432,8 +1578,8 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             const resp = await fetch(`/api/jobs/${jobId}/sync`, { method: 'POST' });
             const data = await resp.json();
             if (resp.ok && data.status !== 'error' && !data.error) { btn.textContent = '✅ Synced'; loadJobs(); }
-            else { btn.textContent = original; alert('Sync failed: ' + (data.error || resp.status)); }
-        } catch(e) { btn.textContent = original; alert('Sync failed: ' + e); }
+            else { btn.textContent = original; appAlert({ title: 'Sync failed', message: String(data.error || resp.status), tone: 'danger', icon: '⚠' }); }
+        } catch(e) { btn.textContent = original; appAlert({ title: 'Sync failed', message: String(e), tone: 'danger', icon: '⚠' }); }
         finally { btn.disabled = false; }
     }
     
@@ -1478,7 +1624,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 btn.textContent = '❌ Failed';
                 btn.style.borderColor = 'var(--error)';
                 btn.style.color = 'var(--error)';
-                alert(data.error || 'Connection failed');
+                appAlert({ title: 'Connection failed', message: data.error || 'Could not reach the service.', tone: 'danger', icon: '⚠' });
             }
         } catch(e) {
             btn.textContent = '❌ Error';
