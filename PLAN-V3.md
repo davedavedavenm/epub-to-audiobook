@@ -78,6 +78,14 @@ Add Nano as a selectable engine alongside Turbo, with full preview voices.
 - [ ] 7.1 Default theme to dark, respect `prefers-color-scheme`
 - [ ] 7.2 Keep manual toggle, persist preference in localStorage
 
+> **Status 2026-07-24: parked, not started.** A prior agent created only
+> `webapp/db.py` + `webapp/sync.py` (2 of the ~6 modules) and wired them into
+> nothing — `app.py` still imports neither, so they were orphaned dead code.
+> They've been removed from the working tree (repo stays unified) and preserved
+> outside it pending a decision. This is a large mechanical refactor of a
+> ~5k-line file gated on "8.7 all tests still pass", so it needs its own focused
+> pass — not a loose end to finish piecemeal. Resume the whole item or drop it.
+
 ## 8. Architecture: Extract app.py into modules
 
 - [ ] 8.1 `webapp/db.py` — get_db, save_job, update_job, get_job, app_settings
