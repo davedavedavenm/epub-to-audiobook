@@ -5086,7 +5086,15 @@ def _llm_chat(messages, temperature=0, max_tokens=900, timeout=45) -> str:
     base = get_setting('LLM_API_BASE_URL') or os.environ.get('LLM_API_BASE_URL', 'https://api.openai.com/v1')
     model = get_setting('LLM_MODEL_NAME') or os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
     if not key:
-        raise RuntimeError("no LLM configured")
+        # Local Ollama is the PRIMARY path (free, private, no key). Its
+        # OpenAI-compatible /v1 endpoint ignores the bearer token, so a
+        # placeholder is fine. Only raise if neither is configured.
+        ollama = get_setting('OLLAMA_URL') or os.environ.get('OLLAMA_URL', '')
+        if not ollama:
+            raise RuntimeError("no LLM configured")
+        base = ollama
+        model = get_setting('OLLAMA_MODEL') or os.environ.get('OLLAMA_MODEL') or model
+        key = 'ollama'
     r = requests.post(
         f"{base.rstrip('/')}/chat/completions",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},

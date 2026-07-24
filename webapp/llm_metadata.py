@@ -26,9 +26,11 @@ def _get_llm_settings():
     settings = {
         'LLM_API_BASE_URL': os.environ.get('LLM_API_BASE_URL', 'https://api.openai.com/v1'),
         'LLM_API_KEY': os.environ.get('LLM_API_KEY', ''),
-        'LLM_MODEL_NAME': os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+        'LLM_MODEL_NAME': os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini'),
+        'OLLAMA_URL': os.environ.get('OLLAMA_URL', ''),
+        'OLLAMA_MODEL': os.environ.get('OLLAMA_MODEL', ''),
     }
-    
+
     try:
         if db_path.exists():
             with sqlite3.connect(str(db_path)) as conn:
@@ -39,7 +41,16 @@ def _get_llm_settings():
                         settings[key] = row['value']
     except Exception as e:
         logging.error(f"Failed to load LLM settings: {e}")
-        
+
+    # Local Ollama is the PRIMARY path: free, private, no key. Its
+    # OpenAI-compatible /v1 endpoint ignores the bearer token, so a placeholder
+    # satisfies the `if not LLM_API_KEY: skip` guards these features use.
+    if not settings['LLM_API_KEY'] and settings['OLLAMA_URL']:
+        settings['LLM_API_BASE_URL'] = settings['OLLAMA_URL']
+        settings['LLM_API_KEY'] = 'ollama'
+        if settings['OLLAMA_MODEL']:
+            settings['LLM_MODEL_NAME'] = settings['OLLAMA_MODEL']
+
     return settings
 
 def extract_sample_text(epub_path: Path, max_chars=15000) -> str:
