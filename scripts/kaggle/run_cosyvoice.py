@@ -123,6 +123,27 @@ for i in range(120):                               # model load is slow (~1 min)
         print(f"waiting[{i}] {str(e)[:60]}", flush=True)
 assert healthy, "server never became healthy"
 
+# 5b. SMOKE TEST — synthesise one short sentence before committing to the book.
+#     /health only proves the process is up; the first real request is what
+#     loads Whisper for the reference transcript and runs the model. A render
+#     died 20 min in on exactly that gap (bf6d5335, 2026-07-24). Fail in 30s
+#     with a clear message instead.
+stage("Smoke test: one sentence through /v1/audio/speech")
+_req = urllib.request.Request(
+    "http://127.0.0.1:8004/v1/audio/speech",
+    data=_json.dumps({"model": "tts-1", "input": "Testing one two three.",
+                      "voice": VOICE, "response_format": "wav"}).encode(),
+    headers={"Content-Type": "application/json"})
+try:
+    _wav = urllib.request.urlopen(_req, timeout=900).read()
+except Exception as e:
+    print("SMOKE TEST FAILED — server log tail:\n", open(LOG).read()[-3000:], flush=True)
+    raise SystemExit(f"smoke test failed: {e}")
+if len(_wav) < 8000 or _wav[:4] != b"RIFF":
+    print("server log tail:\n", open(LOG).read()[-2000:], flush=True)
+    raise SystemExit(f"smoke test returned {len(_wav)} bytes, not a usable WAV")
+print(f"smoke test OK: {len(_wav)} bytes of WAV", flush=True)
+
 # 6. convert (base python + its deps) ----------------------------------------
 stage("Install convert_book deps (base python) + convert")
 sh([sys.executable, "-m", "pip", "install", "-q",

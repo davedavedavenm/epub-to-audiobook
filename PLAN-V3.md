@@ -154,6 +154,61 @@ Add Nano as a selectable engine alongside Turbo, with full preview voices.
 - [ ] 15.3 Option in convert panel: "Output: MP3 chapters / M4B single file"
 - [ ] 15.4 ABS sync handles M4B (it already supports it natively)
 
+## 16. LLM assist — make it real (accepted 2026-07-24)
+
+Context: `OLLAMA_URL` had been configured for weeks but **no code path ever read
+it** — `_llm_chat()` and `llm_metadata._get_llm_settings()` both required
+`LLM_API_KEY` and silently skipped without it, despite a docstring claiming
+"local Ollama primary / cloud fallback". Fixed in `c30fc8b`; every LLM feature
+had been dormant until then. These items follow from that.
+
+### 16.1 Move Ollama off the Pi (highest, only guaranteed payoff)
+- [ ] 16.1.1 Install Ollama on zorin (i5-12400 / 31 GB); pull `qwen2.5:7b`
+- [ ] 16.1.2 Benchmark BOTH hosts on the same prompt, record tok/s here.
+      Baseline measured 2026-07-24: **khpi5 (Raspberry Pi 5) = ~1.9 tok/s**
+      (84 tokens in 45 s). Expect 3-5x on zorin — LLM inference is
+      memory-bandwidth-bound and the Pi has roughly a third of zorin's.
+- [ ] 16.1.3 Point `OLLAMA_URL` at the winner; keep the other as fallback
+- [ ] 16.1.4 Confirm no contention with a live TTS render (LLM work is bursty —
+      once per book at job start — so overlap should be rare, but verify)
+
+### 16.2 Right model for the right job
+- [ ] 16.2.1 Keep `qwen2.5:7b` for chapter classification + metadata (easy,
+      short-context; a 3B would likely do — try it if speed matters)
+- [ ] 16.2.2 Do NOT trust a local 7B for pronunciation: it's world-knowledge and
+      small models confidently invent answers. **A wrong lexicon entry is worse
+      than no entry** — it corrupts audio that would otherwise be merely imperfect.
+
+### 16.3 Pronunciation lexicon strategy
+- [ ] 16.3.1 Keep the hand-curated deterministic floor (`llm_metadata.py`) as the
+      trusted layer
+- [ ] 16.3.2 Optionally use cloud (`gpt-4o-mini`, well under a cent per book on a
+      30k-char sample) ONLY for the lexicon, where world knowledge actually pays
+- [ ] 16.3.3 Treat all generated entries as **suggestions to review**, never truth
+- [ ] 16.3.4 Apply per engine: CosyVoice 3 takes CMU phonemes (pronunciation
+      inpainting); Chatterbox needs respellings. Same lexicon, different rendering.
+
+### 16.4 Prove it helps before relying on it
+- [ ] 16.4.1 Run 2-3 books; compare LLM-chosen chapter ranges vs the deterministic
+      heuristic (`chapters.body_end_index`)
+- [ ] 16.4.2 Record the win/loss here. If it doesn't beat the heuristic it is just
+      latency — turn it off for that job.
+- [ ] 16.4.3 Keep the guard non-load-bearing (returns None on any problem, caller
+      falls back). This is existing design; do not regress it.
+
+### 16.5 Hold the line on scope
+- [ ] 16.5.1 No new LLM surface (chapter summaries, blurbs, tag generation) until
+      16.4 shows the three existing jobs are actually earning their keep
+
+**Engine-dependency note (measured 2026-07-24) — what needs what:**
+
+| Job | Engine-dependent? | Notes |
+|-----|-------------------|-------|
+| Chapter front/body/back selection | **No** | Picks *which text* is read. Every engine needs it equally. |
+| Metadata / narration profile | No | — |
+| Proper-noun pronunciation | Partly | *No engine escapes it* — CosyVoice mangled Featherstonehaugh/Cholmondeley; Turbo has "occasional pronunciation trips". Only the **fix format** differs per engine. |
+| Number / date / symbol normalization | **Yes** | But this is the **deterministic** pipeline, not the LLM. CosyVoice 3's built-in normalization handled `23.7%`, `07/24/2026`→"24 July", `NASA`, `km/h`, `£89.50` unaided; Kokoro/Piper lean harder on preprocessing. |
+
 ---
 
 ## Execution order
@@ -170,3 +225,11 @@ Add Nano as a selectable engine alongside Turbo, with full preview voices.
 10. **#13-14 CosyVoice** — when Kaggle auth is fixed
 11. **#9 sidecar** — replaces socket proxy, depends on #8
 12. **#15 M4B** — polish, any time
+
+**Revised order 2026-07-24** (after the CosyVoice/Nano/LLM session):
+1. **#16.1 move Ollama to zorin** — contained, only guaranteed payoff (Pi is ~1.9 tok/s)
+2. **#16.4 prove the LLM helps** — it has been dormant since day one; nothing is validated
+3. **#2 Turbo-vs-Nano A/B** — Nano now works and is faster than realtime on CPU; only the ear-test is missing
+4. **#16.3 lexicon strategy** — the direct fix for the proper-noun weakness measured in CosyVoice
+5. **#13-14 remainder** — CosyVoice full-book render is wired; needs a clean end-to-end pass
+6. everything else as originally ordered

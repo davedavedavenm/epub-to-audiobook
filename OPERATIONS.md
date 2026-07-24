@@ -45,6 +45,27 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 
 ## Incident log
 
+### 2026-07-24 — Local LLM configured for weeks, never once called
+- **Symptom:** none visible. Every LLM feature (chapter front/back-matter
+  classification, pronunciation lexicon, metadata) silently did nothing, on a
+  box with a perfectly good local model answering on the network.
+- **Root cause:** `OLLAMA_URL` was set in compose for both webapp and worker,
+  but **no code path read it**. `_llm_chat()` raised `"no LLM configured"`
+  without `LLM_API_KEY`, and `llm_metadata._get_llm_settings()` returned `{}`
+  the same way. `_llm_chat`'s own docstring claimed *"local Ollama primary /
+  cloud fallback"* — intent that was never implemented. Fixed in `c30fc8b`.
+- **Second bite:** `.env` pinned `OLLAMA_MODEL=qwen2.5:3b` but the Ollama host
+  only had `qwen2.5:7b` — so even after the code fix it would have 404'd.
+  Config pointing at a model that isn't installed fails exactly like "the LLM
+  is broken".
+- **Why it hid so long:** these features are *designed* to degrade silently
+  (the guard returns None and callers fall back to the deterministic
+  heuristic). That is good design for robustness, but it means "configured but
+  never invoked" and "working fine" look identical from the outside.
+- **Lesson:** an optional subsystem needs a positive health signal, not just a
+  silent fallback. If a feature can be off without anyone noticing, surface its
+  state (settings page / health probe) or it will be off for weeks.
+
 ### 2026-07-24 — Non-root migration left volumes root-owned (webapp + chatterbox down)
 - **Symptom:** after a redeploy, `epub-to-audiobook-ui` and `-worker`
   crash-looped; later, `chatterbox-nano` 500'd on model load.

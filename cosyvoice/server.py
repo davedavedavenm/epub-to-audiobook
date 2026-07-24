@@ -72,11 +72,19 @@ def _load_voices():
 
 
 def _get_asr():
+    """Whisper used ONCE per voice, to transcribe the ~18s reference clip.
+
+    Deliberately pinned to CPU/int8. It is a few seconds of work either way, and
+    putting it on the GPU buys nothing while importing a whole class of
+    capability bugs: ctranslate2 refuses float16 on Kaggle's P100 (sm_60, no
+    efficient fp16 path) and kills the render before a single chunk is
+    synthesised (render bf6d5335, 2026-07-24). The TTS itself still runs on GPU
+    — that is the part that actually needs it.
+    """
     global _asr
     if _asr is None:
         from faster_whisper import WhisperModel
-        _asr = WhisperModel("base", device=DEVICE,
-                            compute_type="float16" if DEVICE == "cuda" else "int8")
+        _asr = WhisperModel("base", device="cpu", compute_type="int8")
     return _asr
 
 
@@ -159,6 +167,11 @@ def speech(req: SpeechReq):
         for c in chunks:
             for o in cv.inference_zero_shot(c, prompt, ref, stream=False):
                 pieces.append(o["tts_speech"])
+        if not pieces:
+            # Fail loudly with a 500 rather than blowing up in torch.cat — the
+            # caller retries, and the log names the text that produced nothing.
+            log.error("no audio produced for %d chunk(s), first=%r", len(chunks), chunks[0][:80])
+            return JSONResponse({"error": "engine produced no audio"}, status_code=500)
         speech = torch.cat(pieces, dim=1).cpu().numpy().squeeze()
 
     buf = io.BytesIO()
