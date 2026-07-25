@@ -105,14 +105,22 @@ See **§ Verified results 2026-07-24** at the bottom for the measurements.
 
 | Path | Speed (11h book) | Cost/book | Confidence |
 |------|------------------|-----------|------------|
-| **Nano @ i5-12400 CPU** | ~15h (est) | Free | **UNMEASURED — needs RTF test** |
+| **Nano @ i5-12400 CPU** | **~9h** | Free | **MEASURED 2026-07-24 (RTF 0.83)** |
 | Turbo @ i5-12400 CPU | ~33h (est, 1.24s/word) | Free | Measured (STATUS.md) |
 | Turbo @ Kaggle T4 (free) | ~9h | Free | Measured |
 | TADA @ Kaggle T4 (free) | ~4h | Free | Measured (RTF 0.34 on 3090; T4 slower) |
 | Turbo @ Vast RTX 3060 | ~2-5h | ~GBP0.11-0.20 | Derived |
 | TADA @ Vast RTX 3060 | ~3.5-9h | ~GBP0.20-0.45 | Derived |
 | Kokoro @ Vast RTX 3060 | ~20 min | ~GBP0.01 | Measured |
-| CosyVoice 3 @ Kaggle T4 | Unknown | Free | **UNTESTED** |
+| CosyVoice 3 @ Kaggle P100 | ~10h (over 2-3 sessions) | Free | **MEASURED 2026-07-24 (RTF 0.85-0.9)** |
+| CosyVoice 3 @ Vast RTX 3060 | ~6-8h | ~$0.35-0.45 | Derived from the P100 measurement |
+| CosyVoice 3 @ Vast RTX 3090 | ~3-5h | ~$1.00-1.65 | Derived from the P100 measurement |
+
+**Note on long books:** a Kaggle session is capped (~9-12h) and commits outputs
+only on completion, so anything over ~5 GPU-h must be split into batches —
+`kaggle_render.plan_batches()` does this automatically. Vast has no such cap and
+writes chapters to disk as they finish, which is why paying ~$0.40 can be worth
+it for a 12-hour book even though Kaggle is free.
 
 ---
 
