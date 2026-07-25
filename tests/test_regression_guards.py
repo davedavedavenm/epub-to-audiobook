@@ -82,10 +82,23 @@ def test_startup_voice_cache_is_throttled():
 
 
 def test_heavy_engine_profiles_are_deploy_opt_in():
-    """The 15 GiB NUC must not auto-start the clone engines on every deploy."""
-    deploy_line = next(line for line in DEPLOY.splitlines() if 'docker compose' in line and 'up -d' in line)
-    assert '--profile chatterbox' not in deploy_line and '--profile tada' not in deploy_line, \
-        "deploy command unconditionally starts a clone engine on the 15 GiB NUC"
+    """The HEAVY clone engines must not auto-start on every deploy.
+
+    Fixed 2026-07-25: this used to inspect the `docker compose ... up -d` line,
+    which only ever contains "${PROFILE_ARGS[@]}" — the profile names live in
+    the array built above it. The assertion could therefore never fail, so it
+    guarded nothing. Check the array instead.
+
+    chatterbox-nano IS allowed to auto-start: it carries the default voice, and
+    at 110M params / RTF 0.87 it is light. Turbo and TADA stay opt-in because
+    they are heavy and slow.
+    """
+    profile_lines = '\n'.join(ln for ln in DEPLOY.splitlines() if 'PROFILE_ARGS' in ln)
+    unconditional = '\n'.join(ln for ln in profile_lines.splitlines() if 'PROFILE_ARGS=(' in ln)
+    assert not re.search(r'--profile chatterbox(?!-nano)', unconditional), \
+        "deploy unconditionally starts Chatterbox TURBO — it is heavy, keep it opt-in"
+    assert '--profile tada' not in unconditional, \
+        "deploy unconditionally starts TADA — it is heavy, keep it opt-in"
     assert 'ENABLE_CHATTERBOX_PROFILE' in DEPLOY and 'ENABLE_TADA_PROFILE' in DEPLOY, \
         "heavy engine profiles lost their explicit deploy opt-ins"
 

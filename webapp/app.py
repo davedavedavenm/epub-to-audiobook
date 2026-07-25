@@ -99,7 +99,12 @@ LOG_DIR = Path(os.environ.get('LOG_DIR', '/data/logs'))
 SUPPORTED_FORMATS = {'.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html', '.htm', '.docx'}
 
 # Default voice when none specified (George Classic - British Male)
-DEFAULT_VOICE = 'en-GB-RyanNeural'
+# Chatterbox NANO, cloned from the approved UK reference (Arthur / uk_male_minter).
+# A/B'd against Turbo on an identical passage 2026-07-25: indistinguishable in
+# quality ("as good as turbo, not worse anyway") at RTF 0.87 vs 3.33 — i.e.
+# faster than realtime on CPU, no GPU, no quota. Turbo remains fully available
+# as `uk_male_minter` and friends; this only changes what you get by default.
+DEFAULT_VOICE = 'uk_male_minter_nano'
 
 # TTS speed: 1.0 = normal, <1.0 = slower with more pauses, range 0.5-1.5
 # Default 1.0 (Kokoro's natural speed sounds good; adjust per-job if needed)

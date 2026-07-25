@@ -23,7 +23,11 @@ fi
 GIT_SHA="$(git rev-parse --short HEAD)"
 BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-PROFILE_ARGS=(--profile piper)
+# chatterbox-nano carries the DEFAULT voice, so its container has to be up or
+# the default engine is offline on a fresh deploy. It is the 110M model at
+# RTF 0.87 (measured) — light enough to run always, unlike Turbo/TADA which
+# stay opt-in because they are heavy and slow.
+PROFILE_ARGS=(--profile piper --profile chatterbox-nano)
 if [[ "${ENABLE_CHATTERBOX_PROFILE:-0}" == "1" ]]; then
   PROFILE_ARGS+=(--profile chatterbox)
 fi
