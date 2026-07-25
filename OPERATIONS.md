@@ -114,6 +114,18 @@ the wiring *between* components, where the unit suite is blind.
   stderr, not a dead binary. Redirect to a file and read the file before
   concluding the tool is broken.
 
+### Host access cheat-sheet (verified 2026-07-25)
+
+| Host | What it is | Access |
+|---|---|---|
+| **zorin** `192.168.1.41` | Acer Veriton N4690GT mini PC. Runs the whole audiobook stack from `/home/dave/ai/lab/stacks/epub-to-audiobook`. | `ssh zorin` (see the DrvFs key note above) |
+| **pve2** `192.168.1.12` | Dell OptiPlex 3000 SFF, Proxmox host for HAOS / n8n / Docker-VM. | **SSH is on port 2222, not 22.** Port 22 is refused, which reads as "host down" if you don't know. API on `:8006`. |
+
+The book **library is `/home/dave/booklib`** on zorin — *not* `<stack>/data/library`,
+which is what `LIBRARY_DIR`'s default (`/data/library`) suggests. The env var is
+overridden to point at the real folder, so dropping an epub in the stack
+directory achieves nothing and the webapp will not list it.
+
 ### 2026-07-25 — `docker.io` installed, `docker` missing: PDF + Edge previews broken
 - **Symptom:** `Failed to generate preview for en-US-AriaNeural: [Errno 2] No
   such file or directory: 'docker'`, repeating for every Edge voice.

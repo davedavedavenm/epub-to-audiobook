@@ -1,5 +1,60 @@
 # Kokoro GPU on Vast.ai — Playbook
 
+## Buying a local GPU — the constraints, measured 2026-07-25
+
+Recorded so this isn't re-researched from scratch. The question was whether a
+cheap used card could replace the Kaggle/Vast round-trip. **The candidate host
+is `pve2`, not zorin** — zorin is an Acer Veriton N4690GT, a ~1 L mini PC with
+nowhere to put a card.
+
+**pve2 (verified over SSH — note port 2222, not 22):**
+
+| Fact | Value |
+|---|---|
+| Machine | Dell **OptiPlex 3000 Small Form Factor** (service tag 4SCB6Q3) |
+| CPU | i5-12500, RAPL package limit **65 W** |
+| Free slot | `SLOT2` PCIe **x16**, available — but **half-height only** |
+| IOMMU | **Active, 11 groups** — passthrough prerequisite already met |
+| RAM | 2× DIMM (full-size, so not the Micro), 1×8 GB fitted, 64 GB max |
+| PSU | **Unknown** — Dell leaves SMBIOS type 39 blank (`Max Power Capacity: Unknown`), and the wattage sits behind a Dell login. Read the label. SFF shipped as 180 W or 300 W; with a 65 W CPU the 180 W is tight even for a 70 W card. |
+
+**The SFF constraint is what bites.** Half-height means a low-profile card, and
+low-profile carries a steep premium. UK used prices, same day:
+
+| Card | VRAM | Used £ | Note |
+|---|---|---|---|
+| Tesla P4 | 8 GB | 96–125 | **Do not buy** — see below |
+| RTX A1000 | 8 GB | 281–360 | Ampere, 50 W |
+| MSI RTX 3050 LP | 6 GB | 208 | Safe pick; 70 W slot-powered |
+| RTX A2000 | 6 GB | 281 | Same VRAM, more money |
+| RTX A2000 | 12 GB | 570 | The "stop worrying" option |
+| Tesla T4 | 16 GB | 455–950 | Literally what Kaggle lends free |
+
+**Avoid Pascal (Tesla P4, and any GTX 10-series).** CUDA 13 removed Maxwell,
+Pascal and Volta, and PyTorch is deleting those architectures from its CUDA
+12.8+ builds. A P4 pins the stack to old wheels forever, and has no tensor
+cores, so the fp16 path you'd need to fit a model into 8 GB runs badly.
+
+**Before spending anything, measure.** Run this alongside the next Kaggle or
+Vast render of TADA / CosyVoice:
+
+```bash
+nvidia-smi --query-gpu=memory.used --format=csv -l 5
+```
+
+Peak under ~5.5 GB means a 6 GB card genuinely works. Over it, and every option
+below £280 is wasted money — which is also the answer #23 needs about why TADA
+wants >10 GiB on CPU.
+
+**Worth remembering why a card is attractive at all:** it isn't speed. A T4 has
+320 GB/s against the 3050 6GB's 168 GB/s, so a cheap local card is *slower* than
+the free Kaggle GPU. What it buys is **availability** — no weekly quota, no
+`plan_batches()` session budgeting, no "kernel hit the cap and returned
+nothing", no cancel-doesn't-stop-the-GPU. That complexity exists only because
+the GPU is remote and rationed.
+
+---
+
 ## Next-gen engines (Chatterbox / TADA) — one-command GPU runbook
 
 **Do NOT pip-install engines on a bare instance** (the 2026-07-06 attempt wasted

@@ -40,10 +40,22 @@ Successor to PLAN.md. Every item below was accepted by Dave on 2026-07-23.
 >   site migrated. Not a loose end to squeeze in.
 >
 > **Still outstanding:**
-> - **#2 Turbo-vs-Nano A/B** — blocked on Dave's ears; both renders prepared
 > - **#9 last mile** — run ASR-verify in-process (faster-whisper is already a
 >   dependency), then delete the docker CLI and docker-socket-proxy
 > - **#8 app.py module split** — parked by decision (see note at #8)
+>
+> **Update 2026-07-25 (second pass).** #2 is **settled**, not outstanding — the
+> A/B was run and Dave's verdict is recorded at #1/#2 below; this list was
+> simply stale. Also closed today, outside this plan: **#24** (unusable Inworld
+> and Polly voices no longer appear in any picker) and **#25** (convert-tab
+> cleanup — the wizard had shipped; what remained was the panel recommending
+> Kaggle and calling local "slow", both written pre-Nano).
+>
+> **Correction to the #23/TADA framing.** An earlier note here implied TADA was
+> a dead end. It is not: it renders on **GPU** (Vast and Kaggle), which is where
+> the audio discussed in #21 came from. Only the **local CPU** deployment OOMs.
+> #21 is therefore not blocked by #23. See STATUS.md for the split, and
+> GPU-PLAYBOOK.md for what a local card would and would not fix.
 
 ---
 

@@ -270,6 +270,46 @@ Verified against the running stack at `192.168.1.41`, not from documentation:
 - **Hostname is still `dave-NUC8i7BEH`** — cosmetic, but it names hardware that
   was replaced in July. `free` confirms the 31 GB i5-12400.
 
+### Nano RTF 0.87 — finally measured on a whole book (2026-07-25)
+
+The RTF 0.87 figure everything above depends on came from a **single passage**.
+It had never been checked over a full book, and the job history on zorin was
+empty, so "a 12.4-hour book takes ~11 h" was arithmetic, not observation.
+
+Run: *Alice in Wonderland* (Project Gutenberg, 12 chapters, 26,781 words),
+`uk_male_minter_nano`, `render_target=local`, `output_format=m4b`, job
+`32c63813`.
+
+**Measured over the first 9 chapters** (ffprobe on the real output):
+
+| | |
+|---|---|
+| Audio produced | **6,751.65 s** (1 h 52 m 32 s) |
+| Synthesis window | 14:04:41 → 15:38:00 UTC = **5,599 s** |
+| **Measured RTF** | **0.83** |
+| Wall clock incl. LLM preprocessing | 0.85 |
+
+**The claim survives contact with a real book** — slightly better than 0.87, and
+comfortably faster than realtime. Extrapolated, a 12.4-hour book is ~10.5 h.
+
+Incidental confirmations from the same run:
+
+- **Per-chapter progress works on local renders.** The Queue reported
+  `chapter 10/12, 75%`. An earlier suspicion that PLAN-V3 #5 only worked for
+  Kaggle was wrong.
+- **The LLM chapter/metadata pass earns its place**: classified the book as
+  fiction / "children's fantasy literature" and picked all 12 body chapters with
+  no front matter, in ~90 s.
+- **The speed-control honesty fix fires in the wild**: the log records
+  `speed 0.9x requested, but chatterbox_nano has no speed control ... will
+  render at 1.0x` rather than silently ignoring it.
+- The job log still says `Using container audiobook-<id>` and the container
+  panel reports `No such container` — cosmetic, but it reads as a fault. The
+  local path runs in-process; that name is only a DB label.
+
+**Still to verify when the run finishes:** all 12 MP3s present, the M4B built
+with a correct chapter index and cover, ID3 tags, and the Audiobookshelf sync.
+
 ### TADA: separate the two questions (correction, 2026-07-25)
 
 An earlier draft of this file's advice was to drop TADA. That conflated two
