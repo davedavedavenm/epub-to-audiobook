@@ -16,19 +16,51 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 
 ## Capacity truths (zorin: i5-12400, 31 GB RAM, no GPU — upgraded 2026-07-20)
 
-- Kokoro + Piper + Chatterbox + webapp/worker fit comfortably on 31 GB.
-- **Chatterbox stays RUNNING** for voice previews and UI auditioning (previews
-  are one short paragraph — cheap on CPU). Full-book renders go to Kaggle GPU.
-- **TADA stays OFF** — it is broken (#23) and its 10 GiB cgroup was OOM-killed
-  repeatedly on the old 15 GB NUC. Re-validate on the 31 GB box only after #23
-  is fixed.
-- `scripts/deploy.sh` enables Piper only by default. Chatterbox and TADA
-  require `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`.
-- Startup voice-preview generation defaults off. Set `VOICE_CACHE_ON_START=1`
-  only for a controlled cache-fill window after confirming the enabled engines
-  and host capacity.
-- A full Chatterbox book on the i5-12400 is ~45 h (1.24 s/word measured).
-  Use Kaggle GPU (~9 h, free) for full books.
+*(Refreshed 2026-07-25 — several bullets here had gone stale.)*
+
+- Kokoro + Piper + Chatterbox (Turbo **and** Nano) + webapp/worker fit
+  comfortably on 31 GB.
+- **Chatterbox NANO is the default engine** (`DEFAULT_VOICE=uk_male_minter_nano`).
+  A/B'd against Turbo on an identical passage: indistinguishable in quality at
+  **RTF 0.87 vs 3.33**. A 12.4-hour book takes ~11 h on Nano vs ~41 h on Turbo —
+  **faster than realtime on CPU, so full books no longer need a GPU at all.**
+  Turbo remains fully selectable; it is simply no longer the default.
+- `scripts/deploy.sh` starts **Piper + chatterbox-nano** by default — Nano
+  carries the default voice, so its container must be up or the default engine
+  is offline on a fresh deploy. Turbo and TADA stay opt-in
+  (`ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`) because they are heavy.
+- **TADA stays OFF.** #23 is still open: the image builds again since the
+  `hume-tada` pin fix and it starts healthy, but the first synthesis exceeds its
+  10 GiB cgroup within ~7 s (`OOMKilled=true`). Do not simply raise the cap —
+  it consumed 10 GiB while the host had ~10 GiB free.
+- **Startup voice-preview caching now defaults ON** (`VOICE_CACHE_ON_START=1`),
+  so every voice previews instantly. What makes that safe is the throttle (wait
+  for a quiet box, pause between voices) plus per-engine `mem_limit`s, not the
+  default — the Jul-18 OOM predates the 31 GB upgrade. Set it to `0` on a
+  smaller host.
+- GPU engines are now a **quality ceiling, not a throughput answer**: reach for
+  CosyVoice 3 (Kaggle/Vast GPU) or TADA for their specific character, not for
+  speed.
+
+## Output options
+
+- **Per-chapter MP3s** (default) or a **single chaptered M4B**: choose "Output"
+  in the convert panel, or POST `output_format: "m4b"` to
+  `/api/library/convert`. The MP3s are always produced; the M4B is built from
+  them before the Audiobookshelf sync, so it ships with the book. Audiobookshelf
+  reads its chapter index natively.
+- **Narration speed** is honoured by Kokoro, Piper, Edge, Polly and CosyVoice.
+  Chatterbox (Turbo/Nano) and TADA have **no speed control** — the UI greys the
+  field out for them and the job log records that the request was ignored. For
+  Chatterbox pacing use `CHATTERBOX_EXAGGERATION` / `CHATTERBOX_CFG_WEIGHT`.
+
+## Proving the delivery chain
+
+`bash scripts/e2e_proof.sh` renders one public-domain chapter on every free
+engine and asserts MP3 → chaptered M4B → cover art → files present in
+Audiobookshelf, wiping after each success. **Run it after any change to the
+render, sync or packaging paths** — every defect it has found so far lived in
+the wiring *between* components, where the unit suite is blind.
 
 ## Common failures → responses
 

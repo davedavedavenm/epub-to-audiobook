@@ -15,6 +15,27 @@ engines "offline" when busy) and makes **local rendering with light engines
 lease transferred off the temp .34; ssh config still points at the dead .247 —
 update it).
 
+> ### SUPERSEDED 2026-07-25 — local rendering is practical again
+>
+> The decision below was correct for **Turbo**, and is now the wrong default.
+> **Chatterbox NANO** was A/B'd against Turbo on an identical passage with the
+> engine as the only variable. Dave: *"honestly nano sounds as good as turbo...
+> not worse anyway."* Measured on the same box:
+>
+> | Engine | RTF | 12.4-hour book |
+> |--------|-----|----------------|
+> | **Nano** | **0.87** | **~11 h** |
+> | Turbo | 3.33 | ~41 h |
+>
+> Nano is **faster than realtime on CPU**, so a full book is an overnight local
+> job — free, no quota, no Kaggle session caps, and chapters land on disk as
+> they finish. `DEFAULT_VOICE` is now `uk_male_minter_nano` and `deploy.sh`
+> starts the `chatterbox-nano` profile.
+>
+> **"Chatterbox = Kaggle GPU, always" no longer holds.** GPU engines are now a
+> quality ceiling (TADA naturalness, CosyVoice prosody), not a throughput
+> answer. Everything below still applies to **Turbo specifically**.
+
 **DECISION (2026-07-20, measured): do NOT render chatterbox locally.** The good
 model is still compute-bound and there is **no GPU**, so more cores barely help.
 Measured on the i5-12400: chatterbox = **1.24 sec/word** (old NUC was 1.55 — only
