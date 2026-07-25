@@ -3435,14 +3435,13 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             epub_filename = input_filename.rsplit('.', 1)[0] + '.epub'
             host_epub_path = f"{HOST_UPLOAD_DIR}/{epub_filename}"
 
-            pdf_cmd = [
-                'docker', 'run', '--rm',
-                '-v', f'{HOST_UPLOAD_DIR}:/data',
-                'linuxserver/calibre:latest',
-                'ebook-convert',
-                f'/data/{input_filename}',
-                f'/data/{epub_filename}'
-            ]
+            # Use the calibre already inside this image. Spawning
+            # linuxserver/calibre needed the docker CLI, a bind-mounted host
+            # path and an image pull — three ways to fail for a job the local
+            # `ebook-convert` does directly. (The CLI was in fact missing from
+            # the image, so every PDF upload failed here — 2026-07-25.)
+            pdf_cmd = ['ebook-convert', str(UPLOAD_DIR / input_filename),
+                       str(UPLOAD_DIR / epub_filename)]
             app.logger.info(f"Converting PDF: {' '.join(pdf_cmd)}")
             pdf_result = subprocess.run(pdf_cmd, capture_output=True, text=True, timeout=600)
 

@@ -17,11 +17,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     calibre \
     ffmpeg \
-    docker.io \
     procps \
     && rm -rf /var/lib/apt/lists/*
 # procps provides pgrep, used by the worker healthcheck (test: pgrep -f worker.py).
 # Without it the check always failed and the worker showed "unhealthy" though fine.
+
+# Debian trixie's `docker.io` package ships only the DAEMON (dockerd,
+# docker-proxy, docker-init) — NOT the `docker` client this app shells out to,
+# and trixie has no docker-cli package. So the image had dpkg saying docker.io
+# was installed while `which docker` failed, and every `docker run` path died
+# with "No such file or directory: 'docker'" (Edge previews, ASR verify).
+# Fetch the official static CLIENT only: DOCKER_HOST already points at the
+# socket proxy, so no daemon is needed (and skipping it shrinks the image).
+ARG DOCKER_CLI_VERSION=27.3.1
+RUN curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_CLI_VERSION}.tgz" -o /tmp/d.tgz \
+    && tar -xzf /tmp/d.tgz -C /tmp docker/docker \
+    && install -m 0755 /tmp/docker/docker /usr/local/bin/docker \
+    && rm -rf /tmp/d.tgz /tmp/docker \
+    && docker --version
 
 # Install Python dependencies
 COPY webapp/requirements.txt .
