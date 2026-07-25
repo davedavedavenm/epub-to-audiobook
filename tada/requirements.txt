@@ -1,4 +1,9 @@
-hume-tada==0.3.0
+# 0.3.0 does not exist on PyPI and never did (published: 0.1.0-0.1.9). The audit
+# commit f23d1c0 invented it while "pinning deps", and the TADA image has failed
+# to build on every push since 2026-07-23. The SAME commit invented
+# chatterbox-tts==0.2.0, which was caught and reverted in 141a45a — this one was
+# missed. Pin the latest version that actually exists.
+hume-tada==0.1.9
 fastapi==0.115.6
 uvicorn==0.34.0
 soundfile==0.13.1
