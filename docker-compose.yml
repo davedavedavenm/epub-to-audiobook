@@ -253,7 +253,11 @@ services:
       # quality gate diagnosis). Optional — the gate decision is deterministic;
       # this only phrases the human explanation.
       - OLLAMA_URL=${OLLAMA_URL:-}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      # Per-call LLM ceiling. MUST stay below PREPARE_GRACE_MINUTES or a slow
+      # endpoint stalls preprocessing past the watchdog and loops the render.
+      - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-60}
+      - PREPARE_GRACE_MINUTES=${PREPARE_GRACE_MINUTES:-15}
       # Voice-sample pre-caching: ON by default so every voice previews
       # instantly. The throttle (waits for low load, pauses between voices)
       # plus per-engine mem_limits make it safe; the 2026-07-18 OOM incident
@@ -362,7 +366,11 @@ services:
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gpt-4o-mini}
       # Local Ollama for the pre-sync quality-gate diagnosis (optional, background)
       - OLLAMA_URL=${OLLAMA_URL:-}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      # Per-call LLM ceiling. MUST stay below PREPARE_GRACE_MINUTES or a slow
+      # endpoint stalls preprocessing past the watchdog and loops the render.
+      - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-60}
+      - PREPARE_GRACE_MINUTES=${PREPARE_GRACE_MINUTES:-15}
       # Shared GPU-hours state (webapp reads for the quota readout, worker writes)
       - KAGGLE_RENDER_STATE=/data/kaggle_render_state.json
     volumes:
