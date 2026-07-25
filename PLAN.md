@@ -1,6 +1,15 @@
 # PLAN V2 — Path to a Flawless, Self-Checking, Complete System
 
-**Created 2026-07-06.** The authoritative execution plan. Goal: an
+> ## ⚠️ SUPERSEDED — historical record only (marked 2026-07-25)
+>
+> This file called itself "the authoritative execution plan" for three weeks
+> after it stopped being one. The live plan is **PLAN-V4.md**; **PLAN-V3.md**
+> is the immediately preceding sprint and still holds two open items (#8 module
+> split, #9 sidecar). Kept because the reasoning behind the local-OR-GPU
+> architecture and the self-checking goal originates here — but do not pick
+> work from this file.
+
+**Created 2026-07-06.** ~~The authoritative execution plan.~~ Goal: an
 end-to-end system that works **local OR via Vast GPU**, includes **both Turbo
 and TADA**, **catches book-specific issues automatically** (not hardcoded),
 and has a **polished UI**. STATUS.md tracks what's done; this is what's next.

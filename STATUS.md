@@ -389,8 +389,23 @@ work (#7, #10).
 
 ## Doc map
 
-README.md (setup/sharing) · PREPROCESSING.md (text pipeline + QA layers) ·
-LOW-COST-TTS.md (engine bake-off + GPU strategy) · PLAN.md (build plan) ·
-GPU-SAFETY.md / GPU-PLAYBOOK.md (GPU rules + runbook) · OPERATIONS.md
-(incident log + standing rules) · AGENTS.md (agent guide). This file is the
-current-state index.
+**Live plan: PLAN-V4.md** (correctness sprint). Preceding: PLAN-V3.md (two
+items still open). **PLAN.md is PLAN V2 and is superseded** — marked as such,
+kept for the reasoning only.
+
+| Doc | What it's for | State |
+|---|---|---|
+| **STATUS.md** | current-state index — this file | live |
+| **PLAN-V4.md** | active plan: correctness / making silence loud | live |
+| PLAN-V3.md | previous sprint; #8 and #9 still open | mostly done |
+| PLAN.md | PLAN V2 | **superseded** |
+| AUDIT-PLAN.md | 2026-07-22 audit remediation | 76 done / 9 open |
+| OPERATIONS.md | runbook, incident log, host access | live |
+| PREPROCESSING.md | text pipeline + QA layers | live |
+| ENGINES.md | per-engine behaviour notes | live |
+| GPU-SAFETY.md | hard money rules for Vast | live, still binding |
+| GPU-PLAYBOOK.md | GPU runbook + local-card buying constraints | live |
+| LOW-COST-TTS.md | cost tables | premise revised — Nano is free |
+| TTS-LANDSCAPE-2026-07.md | engine survey | live |
+| README.md / GETTING-STARTED.md | setup + sharing | live |
+| CONTRIBUTING.md / AGENTS.md | contributor + agent guides | live |

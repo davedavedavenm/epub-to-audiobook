@@ -2,7 +2,16 @@
 
 Goal: keep audiobook generation below GBP3/book, ideally much less.
 
-Last reviewed: 2026-07-02. Rough conversion used for quick screening: USD1 ~= GBP0.75.
+> **The premise of this document has largely been won (2026-07-25).** It was
+> written when a good local render was impractical and the question was which
+> paid or quota-limited service to lean on. **Chatterbox Nano measures RTF 0.83
+> on zorin's CPU** — verified end-to-end over a full book, not extrapolated —
+> so a book now renders overnight locally for **£0**, no GPU and no quota.
+> Cost-per-book comparisons below are still useful for judging the *paid*
+> engines, but the default answer is now "render it locally and pay nothing".
+> See STATUS.md for the measurement.
+
+Last reviewed: 2026-07-02 (cost tables); premise revised 2026-07-25. Rough conversion used for quick screening: USD1 ~= GBP0.75.
 
 ## Book Cost Assumptions
 
