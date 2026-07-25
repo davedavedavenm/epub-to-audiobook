@@ -108,6 +108,11 @@ DEFAULT_TTS_SPEED = float(os.environ.get('DEFAULT_TTS_SPEED', '0.9'))
 # Post-conversion cleanup: remove MP3 files smaller than this (catches photo captions, part dividers)
 MIN_CHAPTER_SIZE_KB = 0
 
+# How long a job may sit in preparation (lexicon/profile/PDF convert) before a
+# container exists. Generous: preprocessing legitimately takes minutes on a big
+# book. The watchdog must not mistake "no container yet" for "container died".
+PREPARE_GRACE_MINUTES = float(os.environ.get('PREPARE_GRACE_MINUTES', '15'))
+
 # Auto-retry configuration
 MAX_RETRY_COUNT = 3
 RETRY_BACKOFF_BASE = 30  # seconds (30, 60, 120 for attempts 1, 2, 3)
@@ -1796,6 +1801,29 @@ def watchdog_loop():
                     process = running_processes.get(job_id)
                     if process:
                         container_running = (process.poll() is None)
+                    elif not container_name:
+                        # Still PREPARING (lexicon / narration profile / PDF
+                        # convert): the container does not exist yet. A job that
+                        # never got a container is not a job whose container
+                        # died — treating it as death turned any slow
+                        # preprocessing into an infinite retry loop the moment
+                        # the LLM became a real (slow) dependency (2026-07-25).
+                        # Allow a generous grace window, then fail it honestly.
+                        _ref = job.get('started_at') or job.get('created_at')
+                        try:
+                            _mins = (datetime.now() - datetime.fromisoformat(_ref)).total_seconds() / 60 if _ref else 0
+                        except Exception:
+                            _mins = 0
+                        if _mins > PREPARE_GRACE_MINUTES:
+                            app.logger.warning(
+                                f"Watchdog: {book_label} stuck preparing for {_mins:.0f} min")
+                            append_job_log(job_id,
+                                           f"Watchdog: still preparing after {_mins:.0f} min "
+                                           f"(no container yet) — failing. If an LLM is configured, "
+                                           f"check it is reachable and fast enough.")
+                            handle_job_failure(job_id, 'prepare_timeout',
+                                               f'Stuck in preparation for {_mins:.0f} min without starting a container')
+                        continue
                     else:
                         container_running = check_container_running(container_name)
 
@@ -3099,10 +3127,15 @@ def parse_conversion_progress(container_name: str, job_id: str):
 
         # Count completed chapters from logs (tail-500 may undercount)
         completed = len(re.findall(r'Converted chapter \d+', logs))
-        # If current_chapter is known and higher, use it as a better estimate
-        # (current_chapter - 1 = chapters already done)
-        if current_chapter and current_chapter - 1 > completed:
-            completed = current_chapter - 1
+        # `current_chapter` is the BOOK-ABSOLUTE index, but total_chapters counts
+        # only the chapters in the requested range. Mixing the two made a range
+        # render of chapters 2-2 report "Chapter 2 of 1" at 100% while it was
+        # still synthesising (2026-07-25). Convert to a range-relative position.
+        _range_start = (job or {}).get('start_chapter') or 1
+        if current_chapter and (current_chapter - _range_start) > completed:
+            completed = current_chapter - _range_start
+        if total_chapters:
+            completed = max(0, min(completed, total_chapters))
 
         # Parse fine-grained progress (chunk X of Y)
         chunk_matches = re.findall(r'Processing chapter-(\d+)_.*?_chunk_(\d+)_of_(\d+)', logs)
@@ -3123,12 +3156,16 @@ def parse_conversion_progress(container_name: str, job_id: str):
         if total_chapters and current_chapter:
             frac = completed / total_chapters
             if chunk_chapter and chunk_idx and chunk_total and chunk_total > 0:
-                # Only count chunk progress for the currently converting chapter.
-                if (chunk_chapter == current_chapter) and (chunk_chapter == completed + 1):
+                # Only count chunk progress for the currently converting chapter
+                # (compare in absolute terms, since chunk_chapter is absolute).
+                if (chunk_chapter == current_chapter) and (chunk_chapter == _range_start + completed):
                     frac += max(0.0, (chunk_idx - 1) / chunk_total) / total_chapters
             progress_percent = int(frac * 100)
             if progress_percent == 0 and frac > 0:
                 progress_percent = 1
+            # A job that is still converting is never 100% — showing "100%" on a
+            # running render is worse than showing 99%, because it reads as done.
+            progress_percent = min(progress_percent, 99)
 
             # Get elapsed time and calculate ETA based on actual progress
             if job and job.get('started_at') and frac > 0.001:

@@ -7,6 +7,11 @@ import xml.etree.ElementTree as ET
 import zipfile
 from bs4 import BeautifulSoup
 
+# Per-call ceiling for LLM requests made during conversion. These features are
+# optional quality boosts, so they must lose fast and fall back rather than
+# delay a render. Raise only if the endpoint is genuinely fast.
+LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '25'))
+
 def _strip_markdown_fences(content: str) -> str:
     if content.startswith("```json"):
         content = content[7:]
@@ -217,7 +222,14 @@ def _call_llm_json(prompt: str, settings: dict, temperature: float = 0.1):
         "temperature": temperature,
     }
     endpoint = f"{settings['LLM_API_BASE_URL'].rstrip('/')}/chat/completions"
-    resp = requests.post(endpoint, headers=headers, json=payload, timeout=90)
+    # Fail FAST. This runs in the conversion path, before the render container
+    # exists, so a slow endpoint stalls the whole job — a 90s timeout against a
+    # too-slow host stalled preprocessing past the watchdog's patience and put
+    # renders in an infinite retry loop (2026-07-25). These features are
+    # explicitly optional: a timeout must degrade to the deterministic
+    # heuristic quickly, not hold a book hostage.
+    resp = requests.post(endpoint, headers=headers, json=payload,
+                         timeout=LLM_TIMEOUT_SECONDS)
     resp.raise_for_status()
     content = resp.json()['choices'][0]['message']['content'].strip()
     content = _strip_markdown_fences(content)

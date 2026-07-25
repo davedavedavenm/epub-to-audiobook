@@ -1353,7 +1353,22 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     }
 
     function chapterProgressText(j) {
-        if (j.current_chapter && j.total_chapters) return `Chapter ${j.current_chapter} of ${j.total_chapters}`;
+        if (j.current_chapter && j.total_chapters) {
+            // current_chapter is the book-absolute index; total_chapters counts
+            // only the requested range. For a partial range (e.g. "chapters
+            // 2-2") those are different scales and naively pairing them printed
+            // nonsense like "Chapter 2 of 1". Show the position WITHIN the range
+            // and name the absolute chapter alongside it.
+            const startCh = j.start_chapter || 1;
+            const pos = j.current_chapter - startCh + 1;
+            if (startCh > 1 && pos >= 1 && pos <= j.total_chapters) {
+                return j.total_chapters === 1
+                    ? `Chapter ${j.current_chapter}`
+                    : `Chapter ${j.current_chapter} (${pos} of ${j.total_chapters})`;
+            }
+            if (j.current_chapter > j.total_chapters) return `Chapter ${j.current_chapter}`;
+            return `Chapter ${j.current_chapter} of ${j.total_chapters}`;
+        }
         if (j.log) {
             let last = null, m;
             const re = /chapter\s+(\d+)(?:\s*(?:of|\/)\s*(\d+))?/gi;
