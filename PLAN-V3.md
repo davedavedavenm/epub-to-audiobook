@@ -4,6 +4,32 @@ Successor to PLAN.md. Every item below was accepted by Dave on 2026-07-23.
 
 **Status key:** `[ ]` not started · `[x]` done · `[~]` in progress
 
+> ## Where this plan actually stands (audited 2026-07-25)
+>
+> The per-item checkboxes below went stale — work shipped without them being
+> ticked. Verified against the code, not the boxes:
+>
+> **Done and verified in the codebase:**
+> #1 Nano engine · #4 guided convert flow · #5 chapter progress · #6 voice
+> compare · #7 dark default · #10 SQLite WAL · #12 ruff in CI · #13 CosyVoice
+> evaluated · #14 CosyVoice server + Kaggle render path · #16 LLM assist
+>
+> **#3 (git scrub) appears moot:** no `archive/` directory exists anywhere in
+> history, `-S` searches for the named keys hit only this plan's own text, and
+> no key-shaped strings remain in tracked files. Close it unless you know of a
+> specific secret still to rotate.
+>
+> **Genuinely outstanding:**
+> - **#2 Turbo-vs-Nano A/B** — blocked on Dave's ears; everything else is ready
+>   (both engines work, previews cached, Nano measured at RTF 0.83)
+> - **#15 M4B output** — not started, no code
+> - **#11 integration test** — 12 test files exist incl. `test_convert_book.py`,
+>   but not the mock-TTS end-to-end run this item describes
+> - **#9 Docker sidecar** — not started. Note it would delete the docker-CLI
+>   dependency whose absence broke PDF upload and Edge previews (2026-07-25), so
+>   it is worth more than it looks
+> - **#8 app.py module split** — parked by decision (see note at #8)
+
 ---
 
 ## 1. Chatterbox Nano — new engine option (NOT default yet)
