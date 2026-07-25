@@ -55,16 +55,30 @@ def test_engine_containers_have_memory_caps():
             f"{svc} lost its mem_limit — kernel OOM kills return (incident 2026-07-07b)"
 
 
-def test_startup_voice_cache_defaults_off():
-    """Incident 2026-07-18: startup preview generation loaded TADA without a job.
+def test_startup_voice_cache_is_throttled():
+    """Incident 2026-07-18: startup preview generation loaded TADA without a job
+    and OOM-burst the box.
 
-    Both the image default and Compose default must fail safe. Hosts that have
-    enough capacity can opt in explicitly after measuring all configured engines.
+    UPDATED 2026-07-25. This guard used to demand the feature default to OFF,
+    on a 15 GiB NUC. Zorin was upgraded on 2026-07-20 (i5-12400 / 31 GB) and
+    every voice previewing instantly is a product requirement, so caching now
+    defaults ON. What actually prevented that incident was never the default —
+    it was the THROTTLE (wait for a quiet box, pause between voices) plus the
+    per-engine mem_limits. So guard those instead: they are the mechanism.
+
+    If you turn caching on for a SMALL host, set VOICE_CACHE_ON_START=0 in .env.
     """
-    assert "VOICE_CACHE_ON_START', '0'" in APP.replace('"', "'"), \
-        "webapp default enables background voice generation — reopens the Jul-18 OOM burst"
-    assert 'VOICE_CACHE_ON_START=${VOICE_CACHE_ON_START:-0}' in COMPOSE, \
-        "Compose default enables background voice generation — reopens the Jul-18 OOM burst"
+    # The throttle must survive: without it the loop saturates the machine and
+    # engines fail their own healthchecks while merely being too busy to answer.
+    assert 'VOICE_CACHE_MAX_LOAD' in APP, \
+        "voice caching lost its load throttle — reopens the Jul-18 OOM burst"
+    assert 'getloadavg' in APP, \
+        "voice caching no longer waits for a quiet box before each voice"
+    assert 'VOICE_CACHE_DELAY' in APP, \
+        "voice caching lost the pause between voices"
+    # And it must stay switchable, so a constrained host can still opt out.
+    assert 'VOICE_CACHE_ON_START' in COMPOSE, \
+        "VOICE_CACHE_ON_START is no longer configurable from Compose"
 
 
 def test_heavy_engine_profiles_are_deploy_opt_in():
