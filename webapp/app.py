@@ -603,6 +603,12 @@ def init_db():
             conn.execute("ALTER TABLE jobs ADD COLUMN render_target TEXT DEFAULT 'local'")
         except sqlite3.OperationalError:
             pass
+        # 'mp3' = per-chapter files (default), 'm4b' = also build one chaptered
+        # M4B after the render. The MP3s are always produced either way.
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN output_format TEXT DEFAULT 'mp3'")
+        except sqlite3.OperationalError:
+            pass
         try:
             conn.execute("ALTER TABLE jobs ADD COLUMN custom_regex TEXT")
         except sqlite3.OperationalError:
@@ -757,8 +763,8 @@ def save_job(job: dict):
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
-             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target, output_format)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -803,7 +809,8 @@ def save_job(job: dict):
             job.get('custom_regex'),
             job.get('preprocess_summary'),
             job.get('narration_profile'),
-            job.get('render_target', 'local')
+            job.get('render_target', 'local'),
+            job.get('output_format', 'mp3')
         ))
         conn.commit()
 
@@ -5327,6 +5334,41 @@ def presync_quality_gate(job_id, output_path):
     return held, flags, summary
 
 
+def _maybe_build_m4b(job_id, output_path, book_name):
+    """Build a single chaptered .m4b if this job asked for one.
+
+    Runs BEFORE the Audiobookshelf sync so the .m4b ships with the chapters
+    (ABS reads m4b chapter indexes natively). Never fatal: the per-chapter MP3s
+    are the real deliverable and are left untouched, so a failure here costs a
+    convenience file, not the book.
+    """
+    job = get_job(job_id) or {}
+    if (job.get('output_format') or 'mp3').lower() != 'm4b':
+        return None
+    try:
+        from m4b import build_m4b
+        append_job_log(job_id, "Building single-file M4B with chapter markers…")
+        meta = (job.get('narration_profile') or '')
+        author = ''
+        if meta:
+            try:
+                author = (json.loads(meta) or {}).get('author') or ''
+            except Exception:
+                author = ''
+        out = build_m4b(Path(output_path), title=book_name or '', author=author)
+        if out:
+            mb = out.stat().st_size / 1e6
+            append_job_log(job_id, f"M4B ready: {out.name} ({mb:.1f} MB)")
+        else:
+            append_job_log(job_id, "M4B build skipped — keeping the MP3 chapters "
+                                   "(see server log for the reason)")
+        return out
+    except Exception as e:
+        app.logger.warning(f"M4B build failed for {job_id}: {e}")
+        append_job_log(job_id, f"M4B build failed ({e}) — MP3 chapters are unaffected")
+        return None
+
+
 def _gate_and_sync(job_id, output_path, book_name, file_count):
     """Quality-gate a finished render, then hold-for-review or sync+complete.
     Shared by every render path. Returns 'held' or 'completed'."""
@@ -5338,6 +5380,7 @@ def _gate_and_sync(job_id, output_path, book_name, file_count):
                    completed_at=datetime.now().isoformat())
         append_job_log(job_id, "Held for review — not synced to Audiobookshelf: " + reasons)
         return 'held'
+    _maybe_build_m4b(job_id, output_path, book_name)
     synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
     update_job(job_id, status='completed', file_count=file_count,
                progress_percent=100, synced_to_abs=synced,
@@ -5674,7 +5717,8 @@ def convert_from_library():
             'end_chapter': end_chapter,
             'notify_telegram': 1 if data.get('notify_telegram') else 0,
             'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0,
-            'render_target': (data.get('render_target') or 'local').lower()
+            'render_target': (data.get('render_target') or 'local').lower(),
+            'output_format': (data.get('output_format') or 'mp3').lower(),
         })
         if engine_fallback_note:
             append_job_log(job_id, f"Engine fallback: {engine_fallback_note}")

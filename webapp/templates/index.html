@@ -982,6 +982,13 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                                     <div class="setup-field"><label class="setup-label" for="start-${bookId}">Start</label><select id="start-${bookId}" class="input-control"></select></div>
                                     <div class="setup-field"><label class="setup-label" for="end-${bookId}">End</label><select id="end-${bookId}" class="input-control"></select></div>
                                 </div>
+                                <div class="setup-field" style="margin-top:12px;">
+                                    <label class="setup-label" for="fmt-${bookId}">Output</label>
+                                    <select id="fmt-${bookId}" class="input-control">
+                                        <option value="mp3">MP3 — one file per chapter</option>
+                                        <option value="m4b">M4B — single file with chapter markers</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="conv-step">
                                 <div class="conv-step-label">Convert</div>
@@ -1112,6 +1119,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const voice2 = document.getElementById('voice2-' + bookId)?.value || '';
         const customRegex = document.getElementById('regex-' + bookId)?.value || '';
         const renderTarget = document.getElementById('rt-' + bookId)?.value || 'local';
+        const outputFormat = document.getElementById('fmt-' + bookId)?.value || 'mp3';
         const allowFallback = document.getElementById('fallback-' + bookId)?.checked || false;
         if (renderTarget === 'kaggle') {
             const q = kaggleQuota;
@@ -1137,7 +1145,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             details: { 'Voice': voiceName, 'Render on': where },
             confirmText: 'Start narration', cancelText: 'Not yet', icon: '▶', tone: 'default',
         })) return;
-        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget, allow_engine_fallback: allowFallback }) });
+        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget, output_format: outputFormat, allow_engine_fallback: allowFallback }) });
         const data = await resp.json();
         if(data.status === 'success') {
             const oldText = el.textContent;
