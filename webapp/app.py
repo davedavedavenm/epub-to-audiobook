@@ -3638,6 +3638,21 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         if job and job.get('end_chapter'):
             cmd.extend(['--end', str(job['end_chapter'])])
 
+        # Per-job narration speed. This was computed above and then DROPPED —
+        # convert_book had no --speed argument at all, so the UI control did
+        # nothing on local renders (found by ruff F841, 2026-07-25).
+        # Chatterbox Turbo/Nano genuinely have no speed control and ignore the
+        # field, so say so rather than implying it worked.
+        if tts_speed and float(tts_speed) != 1.0:
+            cmd.extend(['--speed', str(tts_speed)])
+            if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada'):
+                append_job_log(job_id,
+                               f"NOTE: speed {tts_speed}x requested, but {tts_engine} has no "
+                               f"speed control and will ignore it (its pacing levers are "
+                               f"exaggeration/cfg_weight). Audio will render at 1.0x.")
+            else:
+                append_job_log(job_id, f"Narration speed: {tts_speed}x")
+
         if search_conf_path and search_conf_path.exists():
             cmd.extend(['--search-and-replace-file', str(search_conf_path)])
 

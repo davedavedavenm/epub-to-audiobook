@@ -225,7 +225,7 @@ def _ensure_wav(data: bytes) -> bytes:
     return p.stdout
 
 
-def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1'):
+def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', speed=1.0):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
     caller encodes one MP3 from that."""
@@ -240,7 +240,7 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1'):
             try:
                 r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
                                   json={"model": model, "input": c, "voice": voice,
-                                        "response_format": "wav"},
+                                        "response_format": "wav", "speed": speed},
                                   timeout=(15, 3600))
                 r.raise_for_status()
                 parts.append(_ensure_wav(r.content))
@@ -283,6 +283,12 @@ def main():
                     help='Path to a file containing search==replace rules (one per line) to apply to text')
     ap.add_argument('--model', default='tts-1',
                     help='TTS model name to send in request')
+    ap.add_argument('--speed', type=float, default=1.0,
+                    help='playback rate sent to the engine (OpenAI `speed`). '
+                         'Honoured by Kokoro, Piper, Edge and CosyVoice. '
+                         'Chatterbox Turbo/Nano IGNORE it — that model has no '
+                         'speed control; use CHATTERBOX_EXAGGERATION / '
+                         'CHATTERBOX_CFG_WEIGHT for its pacing instead.')
     a = ap.parse_args()
 
     # Load search and replace rules if specified
@@ -394,7 +400,7 @@ def main():
             meta = {'title': ctitle, 'album': book_title, 'artist': book_author,
                     'album_artist': book_author, 'genre': 'Audiobook',
                     'track': f"{done_render + 1}/{total_render}"}
-            wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx, model=a.model)
+            wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx, model=a.model, speed=a.speed)
             mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
                 fn = out / f"{idx:03d}{suffix}.mp3"

@@ -62,6 +62,9 @@ class SpeechReq(BaseModel):
     input: str
     voice: str = ""
     response_format: str = "mp3"
+    # CosyVoice's inference_zero_shot takes a real `speed` factor, so unlike
+    # Chatterbox this engine can honour the OpenAI speed field.
+    speed: float = 1.0
 
 
 def _load_voices():
@@ -165,7 +168,8 @@ def speech(req: SpeechReq):
         cv = _get_model()
         pieces = []
         for c in chunks:
-            for o in cv.inference_zero_shot(c, prompt, ref, stream=False):
+            for o in cv.inference_zero_shot(c, prompt, ref, stream=False,
+                                            speed=float(req.speed or 1.0)):
                 pieces.append(o["tts_speech"])
         if not pieces:
             # Fail loudly with a 500 rather than blowing up in torch.cat — the

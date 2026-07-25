@@ -874,7 +874,9 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     // shims ignore it — see ENGINES.md). Chatterbox pacing is cfg_weight/
     // exaggeration; TADA has none. So the Speed field is meaningful only for
     // engines whose API honours it (kokoro via FastAPI, edge).
-    const SPEED_ENGINES = ['kokoro', 'piper', 'edge', 'polly'];
+    // cosyvoice joins the list 2026-07-25: its inference_zero_shot takes a real
+    // speed factor, now plumbed through cosyvoice/server.py.
+    const SPEED_ENGINES = ['kokoro', 'piper', 'edge', 'polly', 'cosyvoice'];
     function speedSupported(engine) { return SPEED_ENGINES.includes(engine); }
     function engineOfVoice(voiceId) { return (voices[voiceId] || {}).engine; }
     // Grey out + annotate a speed input based on the currently-selected voice.
