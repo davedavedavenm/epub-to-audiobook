@@ -3733,6 +3733,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
             '--out', str(output_path),
             '--model', tts_model,
+            # THE main render path. Without --job-id the converter cannot write
+            # transcript chunks, and the book ships unverifiable (#33). A first
+            # attempt at this fix only patched the watchdog's retry builder
+            # because the two call sites are indented differently — the live
+            # render then proved it by producing no chunks at all.
+            '--job-id', str(job_id),
         ]
 
         if job and job.get('start_chapter'):

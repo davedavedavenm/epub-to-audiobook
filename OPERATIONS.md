@@ -81,6 +81,40 @@ the wiring *between* components, where the unit suite is blind.
 
 ## Incident log
 
+### 2026-07-25 — Settings could not save: WAL sidecars owned by the wrong user
+- **Symptom:** every write through the Settings page returned
+  `{"error":"attempt to write a readonly database"}`, so no API key, token or
+  option had ever persisted. `app_settings` was empty, and the app silently
+  fell back to `.env` for everything.
+- **Not the obvious causes.** `jobs.db` is owned by uid 999 — the container's
+  `appuser` — mode 644, and `/data` is a read-write bind mount that passes a
+  `touch` test from inside the container. Ownership and mount were both fine.
+- **Root cause:** SQLite runs in **WAL** mode (PLAN-V3 #10), which needs to
+  write `jobs.db-wal` and `jobs.db-shm` beside the database. Those two files
+  were owned by **`dave` (uid 1000)**, not `appuser`. SQLite cannot write its
+  own WAL, so it reports the *database* as read-only — which sends you looking
+  at the wrong file entirely.
+- **How they got that way — my own doing.** Reading `app_settings` from the
+  *host* with `python3 -c "import sqlite3..."` as `dave` is enough: opening a
+  WAL database creates the sidecars as whoever opened it. A read-only-looking
+  inspection silently broke writes for the container.
+- **Fix:** stop the app containers, delete the two sidecars (check
+  `jobs.db-wal` is 0 bytes first — a non-empty WAL holds committed
+  transactions and must be checkpointed, not deleted), restart. They are
+  recreated with the right owner.
+
+  ```bash
+  ls -la data/jobs.db-wal          # MUST be 0 bytes before deleting
+  docker stop epub-to-audiobook-ui epub-to-audiobook-worker
+  rm -f data/jobs.db-shm data/jobs.db-wal
+  docker start epub-to-audiobook-worker epub-to-audiobook-ui
+  ```
+
+- **Standing rule: never open `jobs.db` from the host.** Read it through the
+  container (`docker exec epub-to-audiobook-ui python3 ...`) or through the
+  app's own API. This is the sixth instance of the non-root migration gap, and
+  the first one caused by inspection rather than deployment.
+
 ### 2026-07-25 — SSH to zorin from Windows appears dead; it is a key-permission problem
 - **Symptom:** `ssh zorin` from the Windows box exits 255 and prints **nothing**
   — no error, no banner. `ssh -V` also prints nothing. It looks like a broken or
