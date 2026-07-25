@@ -372,3 +372,23 @@ because every one of them lived in the wiring *between* components:
 **Lesson:** a green unit suite is not evidence that a delivery path works. Each of
 these sat in the seams between components, and only an end-to-end run that
 checked the *artefacts* — not the exit codes — could see them.
+
+### 2026-07-25 — TADA: image resurrected, engine still OOMs (#23 stands)
+- The TADA image had been unbuildable since 2026-07-23 (`hume-tada==0.3.0`
+  never existed — see the build incident above). With the pin corrected to
+  0.1.9 it builds, starts, and reports healthy with all five voices.
+- **But it still cannot render.** The first synthesis request blows past the
+  10 GiB cgroup within ~7 seconds and Docker reports `OOMKilled=true`. The
+  converter sees `RemoteDisconnected` and the job fails after three retries.
+- Also fixed on the way: the `tada-cache` HF volume was root-owned while the
+  container runs as UID 999, so model files could not be cached
+  (`Permission denied ... models--HumeAI--tada-1b`). Fifth instance of the same
+  non-root migration gap. Fixed, but it was not the cause.
+- **Raising mem_limit is not the answer** on this box: it blew 10 GiB in
+  seconds while the host had ~10 GiB free, so a bigger cap risks the host
+  rather than the container. The real question for #23 is why a 1B model needs
+  >10 GiB to generate — fp32 weights (~4 GB) plus whatever the 600-char chunk
+  size costs in activations is the place to start.
+- TADA is therefore **excluded from the default E2E set** and stays behind its
+  compose profile. Run it explicitly once #23 is fixed:
+  `bash scripts/e2e_proof.sh tada`.

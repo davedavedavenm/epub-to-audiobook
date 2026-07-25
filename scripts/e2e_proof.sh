@@ -13,13 +13,34 @@ ABS_HOST=192.168.1.113
 ABS_DIR=/opt/stacks/audiobookshelf/audiobooks
 
 # engine:voice — every FREE option that is currently up
-ENGINES=(
+DEFAULT_ENGINES=(
   "chatterbox_nano:uk_male_minter_nano"
   "kokoro:bm_george"
   "piper:fable"
   "edge:en-GB-RyanNeural"
   "chatterbox:uk_male_minter"
 )
+# TADA is NOT in the default set: it OOMs within seconds of generation (issue
+# #23). Its image builds again since the hume-tada pin fix, and it starts and
+# reports healthy — but the first synthesis blows past its 10 GiB cgroup and the
+# container is OOM-killed (verified 2026-07-25, OOMKilled=true). Run it
+# explicitly once #23 is fixed:  bash scripts/e2e_proof.sh tada
+OPTIONAL_ENGINES=("tada:uk_male_minter_tada")
+# ALL = selectable by name; DEFAULT = what an unqualified run proves.
+ALL_ENGINES=("${DEFAULT_ENGINES[@]}" "${OPTIONAL_ENGINES[@]}")
+
+# Optional args select a subset:  bash scripts/e2e_proof.sh tada kokoro
+if [ "$#" -gt 0 ]; then
+  ENGINES=()
+  for want in "$@"; do
+    for e in "${ALL_ENGINES[@]}"; do
+      [ "${e%%:*}" = "$want" ] && ENGINES+=("$e")
+    done
+  done
+  [ "${#ENGINES[@]}" -gt 0 ] || { echo "no engine matched: $*"; exit 2; }
+else
+  ENGINES=("${DEFAULT_ENGINES[@]}")
+fi
 
 PASSES=(); FAILS=()
 
