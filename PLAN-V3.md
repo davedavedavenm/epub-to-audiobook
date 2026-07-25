@@ -24,13 +24,20 @@ Successor to PLAN.md. Every item below was accepted by Dave on 2026-07-23.
 >   on real audio. Opt-in per job via an "Output" selector.
 > - **#11 integration test — DONE.** `tests/test_integration_pipeline.py` runs
 >   the real converter against a real epub with a mock TTS server. 99 tests pass.
-> - **#9 — premise was wrong; mostly closed the cheap way.** The plan assumed
->   conversions shell out to Docker and proposed a sidecar to mediate that. They
->   don't — conversions run in-process. Only TWO docker calls existed; Edge
->   previews now use the `edge-tts` package directly, leaving ONE (the
->   ASR-verify image). Removing that natively is a far smaller job than building
->   a sidecar, and it is what actually unlocks 9.3/9.4 (drop the CLI and the
->   socket proxy).
+> - **#9 — partially advanced. NOTE: an earlier note here was wrong.**
+>   Conversions genuinely do NOT use Docker (they run in-process; the
+>   `container_name` is only a DB label), and Edge previews now call the
+>   `edge-tts` package directly instead of spawning a container — both real
+>   simplifications. But the claim that "only one docker call remains" was based
+>   on grepping `docker run` alone. There are ~20 CLI invocations:
+>   `docker inspect` (the watchdog's container-alive check), `docker logs` (the
+>   progress parser reads job logs through it), `docker stop`/`rm` (lifecycle and
+>   stale cleanup), `docker restart` (kokoro recovery), `docker stats` (system
+>   panel) and several in `gpu_manager.py` for the Vast tunnel.
+>   **So 9.3/9.4 (drop the CLI and the socket proxy) still require the sidecar
+>   the plan originally proposed — the plan was right.** It is a real piece of
+>   work: a small API for container lifecycle + log streaming, with every call
+>   site migrated. Not a loose end to squeeze in.
 >
 > **Still outstanding:**
 > - **#2 Turbo-vs-Nano A/B** — blocked on Dave's ears; both renders prepared
