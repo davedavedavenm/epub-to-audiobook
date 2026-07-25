@@ -1,4 +1,3 @@
-import ebooklib
 from ebooklib import epub
 
 book = epub.EpubBook()

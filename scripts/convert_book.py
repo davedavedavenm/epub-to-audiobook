@@ -262,7 +262,7 @@ def main():
     ap.add_argument('--model', default='tts-1',
                     help='TTS model name to send in request')
     a = ap.parse_args()
-    
+
     # Load search and replace rules if specified
     global _SEARCH_REPLACE_RULES
     if a.search_and_replace_file:
@@ -346,18 +346,18 @@ def main():
         idx += 1
         if idx < a.start or (a.end and idx > a.end):
             continue
-        
+
         ctitle = _title_for(z.read(name).decode('utf-8', 'ignore'), f"Chapter {idx}")
         clean_title = sanitize_filename(ctitle)
         suffix = f"_{clean_title}" if clean_title else ""
-        
+
         text = chapter_text(z, name)
         # resume: accept a prior .mp3 OR .wav for this chapter
         fn = None
         for ext in ('mp3', 'wav'):
             # Match 3-digit flat, 3-digit with name, or 4-digit with name
-            matches = (list(out.glob(f"{idx:03d}.{ext}")) + 
-                       list(out.glob(f"{idx:03d}_*.{ext}")) + 
+            matches = (list(out.glob(f"{idx:03d}.{ext}")) +
+                       list(out.glob(f"{idx:03d}_*.{ext}")) +
                        list(out.glob(f"{idx:04d}_*.{ext}")))
             if matches and matches[0].stat().st_size > 10240:
                 fn = matches[0]

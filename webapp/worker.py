@@ -5,7 +5,6 @@ Optionally manages GPU auto-scaling via gpu_manager.
 """
 
 import logging
-import os
 import sys
 import time
 

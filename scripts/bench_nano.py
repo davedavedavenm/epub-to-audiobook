@@ -142,7 +142,7 @@ def main():
 
     if len(results) == 2:
         print(f"\n{'='*60}")
-        print(f"  COMPARISON")
+        print("  COMPARISON")
         print(f"{'='*60}")
         t_rtf, t_spw = results["Turbo"]
         n_rtf, n_spw = results["Nano"]

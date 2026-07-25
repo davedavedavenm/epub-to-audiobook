@@ -4,7 +4,6 @@ Uses the Flask test client — no server, no Docker, no TTS engines needed.
 """
 import os
 import sys
-import json
 import tempfile
 import pytest
 

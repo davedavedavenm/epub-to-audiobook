@@ -11,7 +11,11 @@ reference spec — and writes it named by accent+gender to /kaggle/working.
 
 Attach dataset: kynthesis/vctk-corpus  (v0.92)
 """
-import os, glob, subprocess, sys, random
+import os
+import glob
+import subprocess
+import sys
+import random
 
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "soundfile", "numpy"], check=False)
 import soundfile as sf

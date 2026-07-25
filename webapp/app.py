@@ -446,7 +446,7 @@ VOICES = {
     'en-GB-LibbyNeural': {'name': 'Libby', 'accent': 'British', 'gender': 'Female', 'engine': 'edge'},
     'en-GB-MaisieNeural': {'name': 'Maisie', 'accent': 'British', 'gender': 'Female', 'engine': 'edge'},
     'en-GB-ThomasNeural': {'name': 'Thomas', 'accent': 'British', 'gender': 'Male', 'engine': 'edge'},
-    
+
     # American Edge Voices
     'en-US-AvaNeural': {'name': 'Ava', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
     'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
@@ -459,7 +459,7 @@ VOICES = {
     'en-US-MichelleNeural': {'name': 'Michelle', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
     'en-US-RogerNeural': {'name': 'Roger', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
     'en-US-SteffanNeural': {'name': 'Steffan', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
-    
+
     # Australian Edge Voices
     'en-AU-NatashaNeural': {'name': 'Natasha', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
     'en-AU-WilliamNeural': {'name': 'William', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
@@ -904,27 +904,27 @@ def record_conversion_metrics(job):
     """
     if not job.get('started_at') or not job.get('completed_at'):
         return
-    
+
     try:
         started = datetime.fromisoformat(job['started_at'])
         completed = datetime.fromisoformat(job['completed_at'])
         duration_seconds = (completed - started).total_seconds()
-        
+
         if duration_seconds <= 0 or not job.get('char_count'):
             return
-        
+
         chars_per_second = job['char_count'] / duration_seconds
         file_type = 'pdf' if job.get('is_pdf') else 'epub'
-        
+
         with get_db() as conn:
             conn.execute('''
                 INSERT INTO conversion_metrics 
                 (voice, engine, file_type, char_count, chapter_count, actual_duration_seconds, chars_per_second)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (job['voice'], job.get('tts_engine', 'kokoro'), file_type, job['char_count'], 
+            ''', (job['voice'], job.get('tts_engine', 'kokoro'), file_type, job['char_count'],
                   job.get('total_chapters', 1) or 1, int(duration_seconds), chars_per_second))
             conn.commit()
-        
+
         app.logger.info(f"Recorded conversion metrics: {chars_per_second:.2f} chars/sec for {job['voice']}/{file_type}")
     except Exception as e:
         app.logger.warning(f"Failed to record conversion metrics: {e}")
@@ -947,7 +947,7 @@ def estimate_eta_minutes(voice, engine, file_type, char_count):
             FROM conversion_metrics
             WHERE voice = ? AND engine = ? AND file_type = ?
         ''', (voice, engine, file_type)).fetchone()
-        
+
         if result and result['avg_rate']:
             rate = result['avg_rate']
             app.logger.debug(f"ETA using exact match rate: {rate:.2f} chars/sec")
@@ -958,7 +958,7 @@ def estimate_eta_minutes(voice, engine, file_type, char_count):
                 FROM conversion_metrics
                 WHERE engine = ? AND file_type = ?
             ''', (engine, file_type)).fetchone()
-            
+
             if result and result['avg_rate']:
                 rate = result['avg_rate']
                 app.logger.debug(f"ETA using engine+format rate: {rate:.2f} chars/sec")
@@ -966,7 +966,7 @@ def estimate_eta_minutes(voice, engine, file_type, char_count):
                 # Default: 10 chars/second (600 chars/min)
                 rate = 10.0
                 app.logger.debug(f"ETA using default rate: {rate:.2f} chars/sec")
-    
+
     # Add 50% buffer to ETA (was 20%) to prevent premature watchdog kills
     eta_seconds = (char_count / rate) * 1.5
     # Enforce a minimum ETA of 10 minutes to allow for heavy text preprocessing on large books
@@ -984,7 +984,7 @@ def calculate_price_estimate(engine: str, char_count: int) -> float:
         'openai-hd': 30.0,
         'azure': 16.0     # Neural
     }
-    
+
     rate_per_million = PRICING.get(engine, 0.0)
     return (char_count / 1_000_000) * rate_per_million
 
@@ -1015,14 +1015,14 @@ def check_disk_heartbeat(job_id: str, output_dirname: str, max_age_minutes: int 
     try:
         now = datetime.now().timestamp()
         cutoff = now - (max_age_minutes * 60)
-        
+
         # 1. Check MP3 output folder
         out_path = OUTPUT_DIR / output_dirname
         if out_path.exists():
             for f in out_path.glob('*'):
                 if f.is_file() and f.stat().st_mtime > cutoff:
                     return True
-                    
+
         # 2. Check transcript directory
         trans_path = TRANSCRIPTS_DIR / job_id
         if trans_path.exists():
@@ -1139,48 +1139,48 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
             epub_path = UPLOAD_DIR / input_filename
             if is_pdf:
                 epub_path = UPLOAD_DIR / (input_filename.rsplit('.', 1)[0] + '.epub')
-            
+
             # Prefer preprocessed EPUB if it exists
             tts_path = epub_path.parent / f"{epub_path.stem}_tts{epub_path.suffix}"
             if tts_path.exists():
                 epub_path = tts_path
-                
+
             if epub_path.exists():
                 from chapters import list_renderable_chapters
                 ch_list = list_renderable_chapters(epub_path)
-                
+
                 # Sum the word counts of chapters that were supposed to be rendered
                 start_ch = start_chapter or 1
                 end_ch = end_chapter or len(ch_list)
-                
+
                 expected_words = sum(
                     c['words'] for c in ch_list
                     if start_ch <= c['index'] <= end_ch
                 )
-                
+
                 if expected_words > 0:
                     # Calculate total duration of generated MP3 files
                     total_duration = 0.0
                     for f in output_files:
                         total_duration += get_mp3_duration(f)
-                    
+
                     # If duration couldn't be determined, fallback to estimating from file size
                     # at 192kbps (which is the default)
                     if total_duration == 0.0:
                         total_bytes = sum(f.stat().st_size for f in output_files)
                         # 192 kbps = 24,000 bytes/sec
                         total_duration = total_bytes / 24000.0
-                    
+
                     # Speech rate is typically ~130-160 WPM. Let's be very conservative.
                     speed_factor = float(job.get('tts_speed') or 1.0)
                     baseline_wps = 1.5
                     estimated_words = total_duration * (baseline_wps * speed_factor)
-                    
+
                     app.logger.info(
                         f"Job {job_id} sanity check: expected_words={expected_words}, "
                         f"estimated_words={estimated_words:.1f} (duration={total_duration:.1f}s)"
                     )
-                    
+
                     # If we got less than 30% of the expected words, fail.
                     if estimated_words < expected_words * 0.3:
                         return False, (
@@ -1247,7 +1247,7 @@ def verify_chapter_integrity(job_id):
         record_conversion_metrics(job)
         if job.get('notify_telegram'):
             send_telegram_notification(job, success=True)
-            
+
     transcript_path = Path(f"/data/transcripts/{job_id}")
     if transcript_path.exists() and transcript_path.is_dir():
         import shutil
@@ -1256,7 +1256,7 @@ def verify_chapter_integrity(job_id):
             app.logger.info(f"Cleaned up transcript directory: {transcript_path}")
         except Exception as e:
             app.logger.error(f"Failed to clean up transcript directory: {e}")
-            
+
     return True
 
 
@@ -1265,10 +1265,10 @@ def finalize_completed_job(job_id: str) -> bool:
     """Mark an in-flight job completed when output files prove success."""
     job = get_job(job_id)
     if not job: return False
-    
+
     output_dirname = job.get('output_dirname')
     if not output_dirname: return False
-    
+
     output_path = OUTPUT_DIR / output_dirname
     total_chapters = job.get('total_chapters')
 
@@ -1277,7 +1277,7 @@ def finalize_completed_job(job_id: str) -> bool:
         job_id, output_path, total_chapters,
         start_chapter=job.get('start_chapter'),
         end_chapter=job.get('end_chapter'))
-    
+
     if not is_ok:
         app.logger.info(f"Cannot finalize {job_id}: {msg}")
         return False
@@ -1307,18 +1307,18 @@ def finalize_completed_job(job_id: str) -> bool:
         app.logger.warning(f"LLM Metadata generation skipped/failed: {e}")
 
     output_files = list(output_path.glob('*.mp3'))
-    
+
 
     # pre-sync quality gate: hold a broken render for review instead of shipping it
     _gate_and_sync(job_id, output_path, job['book_name'], len(output_files))
-    
+
     app.logger.info(f"Finalized job {job_id} with {len(output_files)} files")
-    
+
     # Record metrics
     record_conversion_metrics(get_job(job_id))
     if job.get('notify_telegram'):
         send_telegram_notification(job, success=True)
-        
+
     transcript_path = Path(f"/data/transcripts/{job_id}")
     if transcript_path.exists() and transcript_path.is_dir():
         import shutil
@@ -1327,7 +1327,7 @@ def finalize_completed_job(job_id: str) -> bool:
             app.logger.info(f"Cleaned up transcript directory: {transcript_path}")
         except Exception as e:
             app.logger.error(f"Failed to clean up transcript directory: {e}")
-            
+
     return True
 
 
@@ -1991,7 +1991,7 @@ def resume_inflight_jobs():
         job_id = row['id']
         container_name = row['container_name']
         current_status = row['status']
-        
+
         if current_status == 'recovering':
             recovery_thread = threading.Thread(target=_do_recovery, args=(job_id,), daemon=True)
             recovery_thread.start()
@@ -2101,7 +2101,7 @@ def sanitize_filename(name: str) -> str:
 def get_epub_toc(epub_path: Path) -> List[Dict[str, Any]]:
     """Extract Table of Contents from EPUB with disk caching."""
     import xml.etree.ElementTree as ET
-    
+
     # Check Cache
     cache_file = TOC_CACHE_DIR / f"{epub_path.stem}.json"
     if cache_file.exists():
@@ -2122,48 +2122,48 @@ def get_epub_toc(epub_path: Path) -> List[Dict[str, Any]]:
                     break
             if rootfile is None: return []
             opf_path = rootfile.get('full-path')
-            
+
             opf_content = zf.read(opf_path).decode('utf-8')
             opf_root = ET.fromstring(opf_content)
-            
+
             manifest_node = None
             spine_node = None
             for node in opf_root.iter():
                 tag = node.tag.split('}')[-1]
                 if tag == 'manifest': manifest_node = node
                 elif tag == 'spine': spine_node = node
-            
+
             if manifest_node is None or spine_node is None: return []
 
             manifest = {item.get('id'): item.get('href') for item in manifest_node if item.tag.split('}')[-1] == 'item'}
             spine = [item.get('idref') for item in spine_node if item.tag.split('}')[-1] == 'itemref']
-            
+
             chapters = []
             for i, idref in enumerate(spine, 1):
                 href = manifest.get(idref)
                 if not href: continue
-                
+
                 opf_dir = Path(opf_path).parent
                 full_href = str(opf_dir / href).replace('\\\\', '/').replace('./', '')
-                
+
                 try:
                     content = zf.read(full_href).decode('utf-8', errors='ignore')
                     title_match = re.search(r'<title>(.*?)</title>', content, re.I | re.S)
                     title = title_match.group(1).strip() if title_match else f"Chapter {i}"
-                    
+
                     if not title or title.lower() in ['untitled', 'chapter']:
                         h_match = re.search(r'<h[12][^>]*>(.*?)</h[12]>', content, re.I | re.S)
                         if h_match:
                             title = re.sub(r'<[^>]+>', '', h_match.group(1)).strip()
-                    
+
                     chapters.append({'index': i, 'title': title[:100], 'href': full_href})
                 except:
                     chapters.append({'index': i, 'title': f"Chapter {i}", 'href': full_href})
-            
+
             # Save to Cache
             with open(cache_file, 'w', encoding='utf-8') as f:
                 json.dump(chapters, f)
-                
+
             return chapters
     except Exception:
         return []
@@ -2251,7 +2251,7 @@ def get_voice_preview(voice_id: str) -> Path:
             # Skip if AWS keys are not set
             if not (get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID')):
                 raise Exception("AWS credentials not configured for Polly")
-                
+
             # Use AWS Polly via tts-proxy
             # Map internal network alias if available, otherwise assume localhost for dev
             proxy_base = os.environ.get('TTS_PROXY_URL', 'http://tts-proxy:8882')
@@ -2400,11 +2400,11 @@ def extract_epub_cover(epub_path: Path, output_path: Path):
         return
     if (output_path / "cover.jpg").exists():
         return
-    
+
     try:
         from ebooklib import epub
         book = epub.read_epub(str(epub_path), {"ignore_ncx": True})
-        
+
         cover_item = None
         # 1. Try to find cover via metadata/properties
         for item in book.get_items():
@@ -2415,7 +2415,7 @@ def extract_epub_cover(epub_path: Path, output_path: Path):
                 if 'cover' in iid or 'cover' in ifname:
                     cover_item = item
                     break
-        
+
         # 2. Try common filenames if not found
         if not cover_item:
             for item in book.get_items():
@@ -2424,7 +2424,7 @@ def extract_epub_cover(epub_path: Path, output_path: Path):
                     if any(x in ifname for x in ['thumb', 'title', 'folder']):
                         cover_item = item
                         break
-        
+
         if cover_item:
             with open(output_path / "cover.jpg", 'wb') as f:
                 f.write(cover_item.content)
@@ -2936,8 +2936,7 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
     ]
     if AUDIOBOOKSHELF_PORT:
         ssh_args += ['-p', str(AUDIOBOOKSHELF_PORT)]
-    
-    import shlex
+
     rsync_ssh = 'ssh ' + ' '.join(shlex.quote(a) for a in ssh_args)
 
     if job_id:
@@ -2997,15 +2996,15 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         if job_id:
             update_job(job_id, sync_status='ok', sync_timestamp=datetime.now().isoformat())
             append_job_log(job_id, "Sync ok")
-            
+
             # Automatically trigger library scan in ABS
             abs_url = get_setting('ABS_API_URL') or ABS_API_URL
             abs_token = get_setting('ABS_API_TOKEN') or ABS_API_TOKEN
             if abs_url and abs_token:
                 try:
                     # 1. Get libraries
-                    resp = requests.get(f"{abs_url.rstrip('/')}/api/libraries", 
-                                        headers={'Authorization': f'Bearer {abs_token}'}, 
+                    resp = requests.get(f"{abs_url.rstrip('/')}/api/libraries",
+                                        headers={'Authorization': f'Bearer {abs_token}'},
                                         timeout=10)
                     if resp.status_code == 200:
                         libs = resp.json().get('libraries', [])
@@ -3016,7 +3015,7 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
                         append_job_log(job_id, f"Triggered ABS scan for {len(libs)} libraries")
                 except Exception as e:
                     app.logger.warning(f"Failed to trigger ABS scan: {e}")
-                    
+
         return True
     except Exception as e:
         if job_id:
@@ -3531,7 +3530,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         end_chapter = job.get('end_chapter') if job else None
         file_type = 'pdf' if is_pdf else 'epub'
         initial_eta = estimate_eta_minutes(voice, tts_engine, file_type, char_count)
-        
+
         # Bulletproof chapter range validation
         try:
             if not is_pdf:
@@ -3586,7 +3585,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 # Handle custom regex and global pronunciations
         search_conf_path = None
         host_search_conf_path = None
-        
+
         global_conf = UPLOAD_DIR / 'global_pronunciations.conf'
         global_regex = ''
         if global_conf.exists():
@@ -3595,10 +3594,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                     global_regex = gf.read() + '\n'
             except Exception as e:
                 app.logger.warning(f"Could not read global_pronunciations.conf: {e}")
-                
+
         custom_regex = job.get('custom_regex') or ''
         combined_regex = (global_regex + custom_regex).strip()
-        
+
         if combined_regex:
             try:
                 # Create temporary search.conf for this job
@@ -4022,7 +4021,7 @@ def api_settings():
         val = get_setting(key)
         if not val and key in os.environ:
             val = os.environ[key]
-            
+
         if val:
             if key in secret_keys:
                 if len(val) > 10:
@@ -4033,7 +4032,7 @@ def api_settings():
                 settings[key] = val
         else:
             settings[key] = ""
-            
+
     return jsonify(settings)
 
 @app.route('/api/settings/pronunciations', methods=['GET', 'POST'])
@@ -4107,12 +4106,12 @@ def test_abs_connection():
         data = request.json or {}
         url = data.get('url') or get_setting('ABS_API_URL') or os.environ.get('ABS_API_URL')
         token = data.get('token') or get_setting('ABS_API_TOKEN') or os.environ.get('ABS_API_TOKEN')
-        
+
         if not url or not token:
             return jsonify({'error': 'Missing URL or Token'}), 400
-            
-        resp = requests.get(f"{url.rstrip('/')}/api/libraries", 
-                            headers={'Authorization': f'Bearer {token}'}, 
+
+        resp = requests.get(f"{url.rstrip('/')}/api/libraries",
+                            headers={'Authorization': f'Bearer {token}'},
                             timeout=10)
         if resp.status_code == 200:
             return jsonify({'status': 'success', 'message': 'Connected to ABS!'})
@@ -4129,14 +4128,14 @@ def test_polly_connection():
         access_key = data.get('access_key') or get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID')
         secret_key = data.get('secret_key') or get_setting('AWS_SECRET_ACCESS_KEY') or os.environ.get('AWS_SECRET_ACCESS_KEY')
         region = data.get('region') or get_setting('AWS_REGION') or os.environ.get('AWS_REGION', 'us-east-1')
-        
+
         if not access_key or not secret_key:
             return jsonify({'error': 'Missing AWS Keys'}), 400
-            
+
         import boto3
-        client = boto3.client('polly', 
-                              aws_access_key_id=access_key, 
-                              aws_secret_access_key=secret_key, 
+        client = boto3.client('polly',
+                              aws_access_key_id=access_key,
+                              aws_secret_access_key=secret_key,
                               region_name=region)
         # describe voices to test credentials
         resp = client.describe_voices(LanguageCode='en-US')
@@ -4184,15 +4183,15 @@ def test_llm_connection():
         api_key = data.get('api_key') or get_setting('LLM_API_KEY') or os.environ.get('LLM_API_KEY')
         base_url = data.get('base_url') or get_setting('LLM_API_BASE_URL') or os.environ.get('LLM_API_BASE_URL', 'https://api.openai.com/v1')
         model = data.get('model') or get_setting('LLM_MODEL_NAME') or os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
-        
+
         if not api_key: return jsonify({'error': 'Missing API Key'}), 400
         if not base_url: return jsonify({'error': 'Missing Base URL'}), 400
-        
+
         # Test by requesting models list
-        resp = requests.get(f"{base_url.rstrip('/')}/models", 
-                            headers={'Authorization': f'Bearer {api_key}'}, 
+        resp = requests.get(f"{base_url.rstrip('/')}/models",
+                            headers={'Authorization': f'Bearer {api_key}'},
                             timeout=10)
-        
+
         try:
             resp_json = resp.json()
         except Exception:
@@ -4205,7 +4204,7 @@ def test_llm_connection():
             if model and model_ids and model not in model_ids:
                 return jsonify({'status': 'warning', 'message': f'Connected, but model {model} not found in provider list.'})
             return jsonify({'status': 'success', 'message': 'LLM API is valid!'})
-            
+
         error_msg = resp_json.get('error', {}).get('message') or resp_json.get('msg') or resp.text[:100]
         return jsonify({'error': f'Invalid API Key or URL (HTTP {resp.status_code}): {error_msg}'}), 400
     except Exception as e:
@@ -4368,13 +4367,13 @@ def resume_job(job_id):
     """Resume a failed job with intelligent recovery and optional Narrator switch."""
     data = request.get_json(silent=True) or {}
     new_voice = data.get('voice')
-    
+
     job = get_job(job_id)
     if not job: return jsonify({'error': 'Job not found'}), 404
 
     output_path = OUTPUT_DIR / job.get('output_dirname', '')
     has_partial = any(output_path.glob('*.mp3')) if output_path.exists() else False
-    
+
     with get_db() as conn:
         if new_voice and new_voice in VOICES:
             engine = VOICES[new_voice].get('engine', 'kokoro')
@@ -4399,7 +4398,7 @@ def resume_job(job_id):
         threading.Thread(target=maybe_start_next_queued_job, daemon=True).start()
 
     return jsonify({
-        'status': 'success', 
+        'status': 'success',
         'message': f'Job resumed using {new_voice if new_voice else "original voice"} (' + ('partial recovery' if has_partial else 'full retry') + ')'
     })
 
@@ -5429,7 +5428,9 @@ def _extract_epub_cover(epub_path):
     """Return (bytes, mimetype) for an epub's cover image, or (None, None).
     Detection order: OPF meta name=cover -> manifest cover-image property ->
     a manifest image whose href looks like a cover -> largest image."""
-    import zipfile, posixpath, re as _re
+    import zipfile
+    import posixpath
+    import re as _re
     try:
         with zipfile.ZipFile(epub_path) as z:
             names = z.namelist()
@@ -5507,10 +5508,10 @@ def library_preview():
     data = request.json or {}
     file_path_str = data.get('path')
     chapter_index = data.get('chapter_index')
-    
+
     if not file_path_str:
         return jsonify({'error': 'No path provided'}), 400
-    
+
     try:
         requested_path = Path(file_path_str).resolve()
         library_base = LIBRARY_DIR.resolve()
@@ -5518,15 +5519,15 @@ def library_preview():
             return jsonify({'error': 'Unauthorized path access'}), 403
     except Exception:
         return jsonify({'error': 'Invalid path'}), 400
-        
+
     file_path = Path(file_path_str)
     if not file_path.exists():
         return jsonify({'error': 'File not found'}), 404
-        
+
     try:
         preview_text = ''
         chapters = []
-        
+
         if file_path.suffix.lower() == '.epub':
             # Same renderable numbering as the convert picker so a previewed
             # "chapter 5" is the chapter that renders as 5.
@@ -5552,7 +5553,7 @@ def library_preview():
         elif file_path.suffix.lower() == '.txt':
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 preview_text = f.read(5000)
-        
+
         return jsonify({
             'preview': preview_text[:5000],
             'chapters': [{'index': c['index'], 'title': c['title']} for c in chapters]
@@ -5580,16 +5581,19 @@ def estimate_cost_api():
 
         # Estimate character count
         char_count = estimate_epub_size(file_path)
-        
+
         # Calculate engine cost (Polly, OpenAI, etc.)
         cost = calculate_price_estimate(engine, char_count)
-        
+
         gpu_info = None
         # If using Kokoro, check if a GPU scale-up would be triggered
         if engine == 'kokoro' and QUEUE_RUNNER_ENABLED:
             current_active = running_job_count() + queued_job_count()
             # If we cross the threshold, suggest GPU cost
-            is_already_active = is_gpu_active()
+            # The helper is _is_gpu_mode(); `is_gpu_active` never existed, so
+            # this raised NameError for any Kokoro cost estimate once the queue
+            # was non-empty (caught by ruff F821, 2026-07-25).
+            is_already_active = _is_gpu_mode()
             if is_already_active:
                 gpu_status = _gpu_manager.get_status() if _gpu_manager else GPUManager.load_status_from_file()
                 if gpu_status:
@@ -5641,11 +5645,11 @@ def convert_from_library():
         if voice2 and voice2 not in VOICES:
             return jsonify({'error': 'Invalid secondary voice selected'}), 400
 
-        def safe_int(v): 
+        def safe_int(v):
             try: return int(v) if v and str(v).strip() else None
             except: return None
-        
-        def safe_float(v, default): 
+
+        def safe_float(v, default):
             try: return float(v) if v and str(v).strip() else default
             except: return default
 
@@ -5665,7 +5669,7 @@ def convert_from_library():
         input_path = UPLOAD_DIR / input_filename
         shutil.copy2(file_path, input_path)
 
-        
+
         # Validate chapter range against actual book content. Use the SAME
         # renderable count the picker/converter use, so the clamp matches the
         # numbers the user saw.
@@ -5784,7 +5788,7 @@ def background_startup():
     threading.Thread(target=index_library_background, daemon=True).start()
     threading.Thread(target=_cache_all_voices_background, daemon=True).start()
 
-    
+
     if QUEUE_RUNNER_ENABLED:
         try:
             resume_inflight_jobs()
@@ -5800,6 +5804,9 @@ def background_startup():
 init_db()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8881, debug=DEBUG)
+    # `DEBUG` was never defined — running app.py directly crashed with
+    # NameError (ruff F821). Production uses gunicorn, so this stayed hidden.
+    app.run(host='0.0.0.0', port=8881,
+            debug=os.environ.get('FLASK_DEBUG', '0').lower() in ('1', 'true', 'yes'))
 
 threading.Thread(target=background_startup, daemon=True).start()

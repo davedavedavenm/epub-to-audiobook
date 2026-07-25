@@ -16,6 +16,8 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.request
+import json as _json
 
 # ---- knobs -----------------------------------------------------------------
 REPO = "https://github.com/davedavedavenm/epub-to-audiobook.git"
@@ -104,8 +106,6 @@ srv = subprocess.Popen(
     [PY, "-m", "uvicorn", "server:app", "--host", "127.0.0.1", "--port", "8004"],
     cwd=CV_DIR, env=senv, stdout=open(LOG, "w"), stderr=subprocess.STDOUT)
 
-import urllib.request
-import json as _json
 healthy = False
 for i in range(120):                               # model load is slow (~1 min)
     time.sleep(5)

@@ -698,7 +698,7 @@ class GPUManager:
             '-N',
             f'root@{self.instance_addr}'
         ]
-        logger.info(f"GPU: Creating tunnel container")
+        logger.info("GPU: Creating tunnel container")
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:

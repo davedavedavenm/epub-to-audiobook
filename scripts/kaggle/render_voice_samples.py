@@ -12,7 +12,12 @@ being challenged.
 
 Outputs -> /kaggle/working/samples/<voice_id>.mp3  (+ ab_1997_raw/spelled.mp3)
 """
-import os, sys, time, glob, shutil, subprocess
+import os
+import sys
+import time
+import glob
+import shutil
+import subprocess
 
 REPO   = "https://github.com/davedavedavenm/epub-to-audiobook.git"
 BRANCH = "master"
@@ -46,7 +51,7 @@ sh(["git", "-C", REPO_DIR, "log", "--oneline", "-1"])
 os.makedirs(OUT, exist_ok=True)
 sys.path.insert(0, f"{REPO_DIR}/webapp")
 
-from voice_sample import sample_text_for, SAMPLE_TEXT, SAMPLE_LEXICON   # noqa: E402
+from voice_sample import sample_text_for, SAMPLE_LEXICON   # noqa: E402
 from tts_preprocess import normalize_text_for_tts                        # noqa: E402
 
 TEXT = sample_text_for("chatterbox")     # identical to what the web app sends

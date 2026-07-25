@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 import tempfile
 import re
@@ -37,7 +36,7 @@ def test_find_missing_chapters_3_digit():
         (tmp_path / "001.mp3").write_bytes(b"dummy audio")
         (tmp_path / "002_Chapter_2.mp3").write_bytes(b"dummy audio")
         (tmp_path / "004.mp3").write_bytes(b"dummy audio")
-        
+
         # total 4 chapters, start=1, end=4
         missing = find_missing_chapters(tmp_path, total_chapters=4, start_chapter=1, end_chapter=4)
         assert missing == [3]  # Only chapter 3 is missing
@@ -48,7 +47,7 @@ def test_find_missing_chapters_4_digit():
         # Create some mock 4-digit MP3 files (p0n1 style)
         (tmp_path / "0001_intro.mp3").write_bytes(b"dummy audio")
         (tmp_path / "0003_story.mp3").write_bytes(b"dummy audio")
-        
+
         # total 3 chapters
         missing = find_missing_chapters(tmp_path, total_chapters=3)
         assert missing == [2]  # Only chapter 2 is missing
@@ -60,7 +59,7 @@ def test_find_missing_chapters_mixed():
         (tmp_path / "001.mp3").write_bytes(b"dummy audio")
         (tmp_path / "0002_chapter.mp3").write_bytes(b"dummy audio")
         (tmp_path / "004_chapter.mp3").write_bytes(b"dummy audio")
-        
+
         missing = find_missing_chapters(tmp_path, total_chapters=4)
         assert missing == [3]  # Only chapter 3 is missing
 

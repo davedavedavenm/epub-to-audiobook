@@ -5,8 +5,6 @@ import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from datetime import datetime
-import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import nltk
@@ -68,38 +66,37 @@ def instrument_html(html_content, chunk_iterator):
     soup = BeautifulSoup(html_content, 'html.parser')
     counter = 1
     durations = []
-    
+
     # Find all text nodes in the document
-    from bs4 import NavigableString
-    
+
     # We only want text inside the body
     body = soup.find('body') or soup
-    
+
     # Get all text nodes recursively
     text_nodes = [node for node in body.find_all(string=True) if node.parent.name not in ['script', 'style']]
-    
+
     for node in text_nodes:
         text = str(node)
         if not text.strip(): continue
-        
+
         # Split text into words and whitespace
         # Match tags (though shouldn't be in text nodes) or non-whitespace characters, plus trailing whitespace
         pattern = r'(\S+\s*)'
         words = re.findall(pattern, text)
-        
+
         if not words: continue
-        
+
         # Create a fragment to replace the text node
         new_content = []
         for word in words:
             span = soup.new_tag("span", id=f"s{counter}")
             span.string = word
             new_content.append(span)
-            
+
             # Estimate duration for this word
             durations.append(chunk_iterator.next_duration(word.strip()))
             counter += 1
-            
+
         # Replace the original text node with the list of spans
         for i, span in enumerate(new_content):
             if i == 0:
@@ -110,12 +107,12 @@ def instrument_html(html_content, chunk_iterator):
                 last_node = span
 
     print(f"DEBUG: Instrumented {counter-1} words across {len(text_nodes)} text nodes")
-    
+
     # Ensure html tag has epub namespace
     html_tag = soup.find('html')
     if html_tag and not html_tag.has_attr('xmlns:epub'):
         html_tag['xmlns:epub'] = "http://www.idpf.org/2007/ops"
-        
+
     return str(soup), durations
 
 def generate_smil(html_file_name, audio_file_name, durations):
@@ -130,13 +127,13 @@ def generate_smil(html_file_name, audio_file_name, durations):
         end_time = current_time + dur
         begin_str = format_smil_time(current_time)
         end_str = format_smil_time(end_time)
-        
+
         smil.append(f'      <par id="par{i}">')
         smil.append(f'        <text src="../{html_file_name}#s{i}"/>')
         smil.append(f'        <audio src="../Audio/{audio_file_name}" clipBegin="{begin_str}" clipEnd="{end_str}"/>')
         smil.append('      </par>')
         current_time = end_time
-        
+
     smil.extend(['    </seq>', '  </body>', '</smil>'])
     return "\n".join(smil), current_time
 
@@ -168,7 +165,7 @@ def _fix_uids(book):
         return new_toc, counter
 
     book.toc, _ = _fix_toc(book.toc)
-    
+
     # Also check book.spine
     for i, item_ref in enumerate(book.spine):
         if isinstance(item_ref, tuple):
@@ -186,10 +183,10 @@ def package_epub3_with_audio(input_epub_path, output_epub_path, audio_dir, chunk
         audio_files = _get_audio_files(audio_dir)
         book.version = 3.0
         _fix_uids(book)
-        
+
         chunks = _read_chunks(chunks_jsonl_path)
         chunk_iter = ChunkIterator(chunks)
-        
+
         audio_items = {}
         for ch_idx, mp3_path in audio_files.items():
             item = epub.EpubItem(f"audio_{ch_idx}", f"Audio/{mp3_path.name}", "audio/mpeg", mp3_path.read_bytes())
@@ -202,24 +199,24 @@ def package_epub3_with_audio(input_epub_path, output_epub_path, audio_dir, chunk
             if iid == 'nav': continue
             item = book.get_item_with_id(iid)
             if item: spine_items.append(item)
-            
+
         html_items = [item for item in spine_items if isinstance(item, epub.EpubHtml)]
         smil_items = []
         total_book_duration = 0.0
-        
+
         for idx, html_item in enumerate(html_items):
             ch_idx = idx + 1
             print(f"DEBUG: Checking chapter {ch_idx} (file: {html_item.file_name})")
             if ch_idx in audio_items:
                 audio_item = audio_items[ch_idx]
                 print(f"DEBUG: Instrumenting chapter {ch_idx} using audio {audio_item.file_name}")
-                
+
                 new_html, durations = instrument_html(html_item.content, chunk_iter)
                 html_item.content = new_html.encode('utf-8')
-                
+
                 smil_content, chap_duration = generate_smil(html_item.file_name, audio_item.file_name, durations)
                 total_book_duration += chap_duration
-                
+
                 smil_item = epub.EpubItem(f"smil_{ch_idx}", f"SMIL/chapter_{ch_idx}.smil", "application/smil+xml", smil_content.encode('utf-8'))
                 book.add_item(smil_item)
                 smil_items.append(smil_item)
@@ -245,11 +242,11 @@ def _post_process_opf(epub_path, html_items, smil_items, total_duration):
                 if f.endswith('.opf'):
                     opf_path = os.path.join(root, f); break
             if opf_path: break
-            
+
         if opf_path:
             with open(opf_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
+
             for idx, html in enumerate(html_items):
                 ch_idx = idx + 1
                 smil_id = f"smil_{ch_idx}"
@@ -257,13 +254,13 @@ def _post_process_opf(epub_path, html_items, smil_items, total_duration):
                 if not hid: continue
                 if any(getattr(s, 'id', None) == smil_id for s in smil_items):
                     content = content.replace(f'id="{hid}"', f'id="{hid}" media-overlay="{smil_id}"')
-                    
+
             formatted_duration = format_smil_time(total_duration)
             content = content.replace('</metadata>', f'    <meta property="media:duration">{formatted_duration}</meta>\n    <meta property="media:active-class">-epub-media-overlay-active</meta>\n  </metadata>')
-            
+
             with open(opf_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-                
+
             with zipfile.ZipFile(epub_path, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
                 for root, _, files in os.walk(temp_dir):
                     for file in files:

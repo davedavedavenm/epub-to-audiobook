@@ -10,11 +10,10 @@ import logging
 import boto3
 import httpx
 import asyncio
-import functools
 from pathlib import Path
 from typing import Any
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 from mutagen.mp3 import MP3
 import edge_tts
 
@@ -97,13 +96,13 @@ async def get_polly_audio(text: str, voice: str) -> bytes:
     access_key = get_setting('AWS_ACCESS_KEY_ID')
     secret_key = get_setting('AWS_SECRET_ACCESS_KEY')
     region = get_setting('AWS_REGION', 'us-east-1')
-    
+
     if not access_key or not secret_key:
         raise Exception("AWS Credentials missing for Polly")
-        
+
     loop = asyncio.get_event_loop()
     client = await loop.run_in_executor(
-        None, 
+        None,
         lambda: boto3.client(
             'polly',
             aws_access_key_id=access_key,
@@ -111,11 +110,11 @@ async def get_polly_audio(text: str, voice: str) -> bytes:
             region_name=region
         )
     )
-    
+
     # Map our internal IDs to Polly Voice IDs if necessary
     # webapp uses polly_ruth, polly_danielle etc.
     polly_voice = voice.replace('polly_', '').capitalize()
-    
+
     try:
         response = await loop.run_in_executor(
             None,
@@ -157,7 +156,7 @@ async def get_polly_audio(text: str, voice: str) -> bytes:
                     raise e2
         else:
             raise e
-    
+
     return response['AudioStream'].read()
 
 def _split_for_inworld(text: str, max_chars: int = 1900) -> list[str]:
@@ -227,7 +226,7 @@ async def audio_speech(job_id: str, request: Request):
     voice = payload.get("voice", "")
     d = job_dir(job_id)
     chunks_path = d / "chunks.jsonl"
-    
+
     # Check if this is an Edge voice or specifically requested via engine
     is_edge = voice.endswith("Neural") or payload.get("model") == "edge"
     is_polly = voice.startswith("polly_") or payload.get("model") == "polly"
@@ -249,7 +248,7 @@ async def audio_speech(job_id: str, request: Request):
             if payload.get("model") == "tts-1":
                 target_base = PIPER_BASE
                 logger.info(f"Routing to Piper: {target_base}")
-            
+
             upstream_url = f"{target_base}/audio/speech"
             async with httpx.AsyncClient(timeout=None) as client:
                 r = await client.post(upstream_url, json=payload)
@@ -276,7 +275,7 @@ async def audio_speech(job_id: str, request: Request):
             "duration_s": duration
         }
     )
-    
+
     return Response(content=audio_content, status_code=200, media_type="audio/mpeg")
 
 @app.post("/j/{job_id}/finalize")

@@ -3,8 +3,42 @@ line-length = 120
 
 [lint]
 select = ["E", "F", "W"]
-ignore = ["E501"]
+# CI has been red on EVERY push since the lint gate was added (2026-07-23)
+# because it landed on top of 266 pre-existing violations — PLAN-V3 12.2
+# ("fix existing violations or add per-file ignores") was never done. A gate
+# that is always red teaches everyone to ignore CI, so it catches nothing.
+#
+# The bug-finding rules stay ON and are now clean — they earned their keep
+# immediately, catching two genuine NameErrors (F821: a call to a function that
+# never existed, and an undefined DEBUG) plus a silently-dropped speed setting.
+# What is ignored below is cosmetic house style, not correctness.
+ignore = [
+    "E501",  # line length — 120 is already generous
+    "E701",  # `if x: return` on one line — used deliberately for short guards
+    "E702",  # statements separated by semicolons
+    "E731",  # lambda assignment
+    "E741",  # ambiguous names (l/I/O)
+    "W291",  # trailing whitespace — remaining cases are inside raw strings
+    "W293",  #   that are executed verbatim on Kaggle; "fixing" them edits code
+]
 
 [lint.per-file-ignores]
-"webapp/app.py" = ["E402", "F401"]
+# RATCHET, not amnesty. E722 (bare except) and F841 (unused variable) stay ON
+# repo-wide because they hide exactly the class of silent failure that cost this
+# project days — F841 has already surfaced a real one (the per-job tts_speed is
+# computed and then dropped, so the UI speed control does nothing on local
+# renders; convert_book.py has no --speed argument at all). They are switched
+# off ONLY for the files that already carried them on 2026-07-25, so the debt is
+# frozen and visible instead of growing: any NEW file, or a new violation in any
+# file not listed here, fails CI.
+"webapp/app.py" = ["E402", "F401", "E722", "F841"]
+"webapp/llm_metadata.py" = ["E722"]
+"webapp/epub_generator.py" = ["E722"]
+"tada/server.py" = ["E722", "E402"]
+"scripts/wanted/wanted_monitor.py" = ["E722", "F841"]
+# Kaggle drivers pip-install their dependencies at RUNTIME, so those imports
+# physically cannot sit at the top of the file — E402 is the correct shape here.
+"scripts/kaggle/extract_vctk_voices.py" = ["E722", "E402"]
+"scripts/kaggle/run.py" = ["E722", "E402"]
+"scripts/kaggle/run_chatterbox.py" = ["E722", "E402"]
 "tests/*" = ["E402"]

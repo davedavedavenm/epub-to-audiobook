@@ -37,7 +37,7 @@ def _strip_markdown_fences(content: str) -> str:
 
 
 def _get_llm_settings():
-    # We need to import get_setting from app.py, but to avoid circular imports, 
+    # We need to import get_setting from app.py, but to avoid circular imports,
     # we can just read from the DB or let the caller pass the settings.
     # Alternatively, we can use the same approach as in app.py
     import sqlite3
@@ -80,17 +80,17 @@ def extract_sample_text(epub_path: Path, max_chars=15000) -> str:
             container_xml = zf.read('META-INF/container.xml').decode('utf-8')
             root = ET.fromstring(container_xml)
             opf_path = next(rf.get('full-path') for rf in root.iter() if rf.tag.endswith('rootfile'))
-            
+
             # 2. Parse OPF to get reading order (spine)
             opf_content = zf.read(opf_path).decode('utf-8')
             opf_root = ET.fromstring(opf_content)
-            
+
             ns = {'opf': 'http://www.idpf.org/2007/opf'}
             manifest = {item.get('id'): item.get('href') for item in opf_root.findall('.//opf:item', ns)}
             spine = [itemref.get('idref') for itemref in opf_root.findall('.//opf:itemref', ns)]
-            
+
             opf_dir = Path(opf_path).parent
-            
+
             sample_text = ""
             for item_id in spine:
                 if len(sample_text) > max_chars:
@@ -113,11 +113,11 @@ def extract_sample_text(epub_path: Path, max_chars=15000) -> str:
 def generate_metadata(epub_path: Path) -> dict:
     """Use configured LLM to generate metadata based on EPUB content."""
     settings = _get_llm_settings()
-    
+
     if not settings['LLM_API_KEY']:
         logging.info("LLM_API_KEY not set. Skipping automated metadata generation.")
         return {}
-        
+
     sample_text = extract_sample_text(epub_path)
     if not sample_text:
         return {}
@@ -140,7 +140,7 @@ Here is the book sample:
         "Authorization": f"Bearer {settings['LLM_API_KEY']}",
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "model": settings['LLM_MODEL_NAME'],
         "messages": [
@@ -149,13 +149,13 @@ Here is the book sample:
         ],
         "temperature": 0.3
     }
-    
+
     try:
         endpoint = f"{settings['LLM_API_BASE_URL'].rstrip('/')}/chat/completions"
         logging.info(f"Requesting LLM metadata from {endpoint} using model {settings['LLM_MODEL_NAME']}...")
         resp = requests.post(endpoint, headers=headers, json=payload, timeout=60)
         resp.raise_for_status()
-        
+
         data = resp.json()
         content = data['choices'][0]['message']['content'].strip()
         content = _strip_markdown_fences(content)
@@ -402,11 +402,11 @@ BOOK SAMPLE:
 def generate_lexicon(epub_path: Path) -> dict:
     """Use configured LLM to generate a pronunciation lexicon for complex names in the EPUB."""
     settings = _get_llm_settings()
-    
+
     if not settings['LLM_API_KEY']:
         logging.info("LLM_API_KEY not set. Skipping automated lexicon generation.")
         return {}
-        
+
     sample_text = extract_sample_text(epub_path, max_chars=30000)
     if not sample_text:
         return {}
@@ -430,7 +430,7 @@ Here is the book sample:
         "Authorization": f"Bearer {settings['LLM_API_KEY']}",
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "model": settings['LLM_MODEL_NAME'],
         "messages": [
@@ -439,13 +439,13 @@ Here is the book sample:
         ],
         "temperature": 0.1
     }
-    
+
     try:
         endpoint = f"{settings['LLM_API_BASE_URL'].rstrip('/')}/chat/completions"
         logging.info(f"Requesting LLM lexicon from {endpoint} using model {settings['LLM_MODEL_NAME']}...")
         resp = requests.post(endpoint, headers=headers, json=payload, timeout=60)
         resp.raise_for_status()
-        
+
         data = resp.json()
         content = data['choices'][0]['message']['content'].strip()
         content = _strip_markdown_fences(content)

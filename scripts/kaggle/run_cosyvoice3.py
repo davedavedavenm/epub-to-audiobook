@@ -21,7 +21,6 @@ only the rendered audio + transcripts are written to /kaggle/working.
 """
 import os
 import subprocess
-import sys
 import time
 
 T0 = time.time()
