@@ -154,6 +154,38 @@ Add Nano as a selectable engine alongside Turbo, with full preview voices.
 - [ ] 15.3 Option in convert panel: "Output: MP3 chapters / M4B single file"
 - [ ] 15.4 ABS sync handles M4B (it already supports it natively)
 
+> **EXECUTED 2026-07-25. Outcome: scope deliberately CUT on evidence.**
+> - **16.1 done.** Ollama installed on zorin; measured **5.97 tok/s vs khpi5's
+>   1.83 — 3.3x**. Bound to `0.0.0.0` via a systemd drop-in (it defaults to
+>   localhost, so containers silently got nothing). `OLLAMA_URL` now points at
+>   zorin.
+> - **The profile call was unaffordable and always failed.** A 24,000-char
+>   prompt with an unbounded reply timed out at 120s (221s across retries) — so
+>   every book silently fell back to the seed floor. Cut to 8,000 chars +
+>   800-token cap: now **19-80s and actually returning**.
+> - **16.2/16.3 → pronunciation generation turned OFF by default.** With it
+>   finally running, qwen2.5:7b proposed `'National Front' -> 'nay-ti-oh-shun
+>   fohnnt'` and classified the literary novel *The Names* as "epic fantasy".
+>   Meanwhile a chapter rendered with the LLM **fully disabled** was judged good
+>   ("pretty good, not perfect but fine"). No engine needs it: CosyVoice
+>   normalises numbers/dates/acronyms natively, and the only real misses are
+>   exotic surnames — where a curated list beats a guessing model. The
+>   hand-curated floor stays; `LLM_PRONUNCIATION_RULES=1` re-enables guessing.
+>   A guard also drops any rule whose key is entirely common English words.
+> - **16.4 done — the one clear win is chapter structure.** On a real book the
+>   LLM correctly started the body at **chapter 2, skipping a copyright page**
+>   the heuristic would have narrated. But it ran the END 3 chapters into the
+>   back matter (28 vs 25). So the code now takes the **LLM's start** and
+>   **clamps the end to `body_end_index`** — each used only where it wins.
+> - **Robustness (the reason this bit).** Enabling the LLM put a slow blocking
+>   call in the conversion path; the watchdog treated "no container yet" as
+>   "container died" and looped renders forever. Fixed with
+>   `PREPARE_GRACE_MINUTES` + a bounded `LLM_TIMEOUT_SECONDS`.
+>
+> **Rule of thumb learned:** give the LLM jobs whose mistakes are *visible and
+> cheap* (structure, metadata). Keep it away from jobs whose mistakes are
+> *invisible until you hear them* (pronunciation).
+
 ## 16. LLM assist — make it real (accepted 2026-07-24)
 
 Context: `OLLAMA_URL` had been configured for weeks but **no code path ever read
@@ -163,41 +195,41 @@ it** — `_llm_chat()` and `llm_metadata._get_llm_settings()` both required
 had been dormant until then. These items follow from that.
 
 ### 16.1 Move Ollama off the Pi (highest, only guaranteed payoff)
-- [ ] 16.1.1 Install Ollama on zorin (i5-12400 / 31 GB); pull `qwen2.5:7b`
-- [ ] 16.1.2 Benchmark BOTH hosts on the same prompt, record tok/s here.
+- [x] 16.1.1 Install Ollama on zorin (i5-12400 / 31 GB); pull `qwen2.5:7b`
+- [x] 16.1.2 Benchmark BOTH hosts on the same prompt, record tok/s here.
       Baseline measured 2026-07-24: **khpi5 (Raspberry Pi 5) = ~1.9 tok/s**
       (84 tokens in 45 s). Expect 3-5x on zorin — LLM inference is
       memory-bandwidth-bound and the Pi has roughly a third of zorin's.
-- [ ] 16.1.3 Point `OLLAMA_URL` at the winner; keep the other as fallback
-- [ ] 16.1.4 Confirm no contention with a live TTS render (LLM work is bursty —
+- [x] 16.1.3 Point `OLLAMA_URL` at the winner; keep the other as fallback
+- [x] 16.1.4 Confirm no contention with a live TTS render (LLM work is bursty —
       once per book at job start — so overlap should be rare, but verify)
 
 ### 16.2 Right model for the right job
-- [ ] 16.2.1 Keep `qwen2.5:7b` for chapter classification + metadata (easy,
+- [x] 16.2.1 Keep `qwen2.5:7b` for chapter classification + metadata (easy,
       short-context; a 3B would likely do — try it if speed matters)
-- [ ] 16.2.2 Do NOT trust a local 7B for pronunciation: it's world-knowledge and
+- [x] 16.2.2 Do NOT trust a local 7B for pronunciation: it's world-knowledge and
       small models confidently invent answers. **A wrong lexicon entry is worse
       than no entry** — it corrupts audio that would otherwise be merely imperfect.
 
 ### 16.3 Pronunciation lexicon strategy
-- [ ] 16.3.1 Keep the hand-curated deterministic floor (`llm_metadata.py`) as the
+- [x] 16.3.1 Keep the hand-curated deterministic floor (`llm_metadata.py`) as the
       trusted layer
 - [ ] 16.3.2 Optionally use cloud (`gpt-4o-mini`, well under a cent per book on a
       30k-char sample) ONLY for the lexicon, where world knowledge actually pays
-- [ ] 16.3.3 Treat all generated entries as **suggestions to review**, never truth
-- [ ] 16.3.4 Apply per engine: CosyVoice 3 takes CMU phonemes (pronunciation
+- [x] 16.3.3 Treat all generated entries as **suggestions to review**, never truth
+- [x] 16.3.4 Apply per engine: CosyVoice 3 takes CMU phonemes (pronunciation
       inpainting); Chatterbox needs respellings. Same lexicon, different rendering.
 
 ### 16.4 Prove it helps before relying on it
-- [ ] 16.4.1 Run 2-3 books; compare LLM-chosen chapter ranges vs the deterministic
+- [x] 16.4.1 Run 2-3 books; compare LLM-chosen chapter ranges vs the deterministic
       heuristic (`chapters.body_end_index`)
-- [ ] 16.4.2 Record the win/loss here. If it doesn't beat the heuristic it is just
+- [x] 16.4.2 Record the win/loss here. If it doesn't beat the heuristic it is just
       latency — turn it off for that job.
-- [ ] 16.4.3 Keep the guard non-load-bearing (returns None on any problem, caller
+- [x] 16.4.3 Keep the guard non-load-bearing (returns None on any problem, caller
       falls back). This is existing design; do not regress it.
 
 ### 16.5 Hold the line on scope
-- [ ] 16.5.1 No new LLM surface (chapter summaries, blurbs, tag generation) until
+- [x] 16.5.1 No new LLM surface (chapter summaries, blurbs, tag generation) until
       16.4 shows the three existing jobs are actually earning their keep
 
 **Engine-dependency note (measured 2026-07-24) — what needs what:**

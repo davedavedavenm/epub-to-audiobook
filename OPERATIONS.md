@@ -45,6 +45,28 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 
 ## Incident log
 
+### 2026-07-25 — `docker.io` installed, `docker` missing: PDF + Edge previews broken
+- **Symptom:** `Failed to generate preview for en-US-AriaNeural: [Errno 2] No
+  such file or directory: 'docker'`, repeating for every Edge voice.
+- **Root cause:** Debian **trixie**'s `docker.io` package ships only the DAEMON
+  (`dockerd`, `docker-proxy`, `docker-init`) — not the `docker` client — and
+  trixie has no `docker-cli` package. So `dpkg -l docker.io` said *installed*
+  while `which docker` failed. Every path shelling out to `docker run` died.
+- **Why it hid for so long:** book conversion doesn't use Docker at all. It runs
+  `convert_book.py` in-process via `sys.executable`; the `audiobook-<job>`
+  `container_name` is just a label written to the DB. So the main path worked
+  perfectly while PDF upload (`docker run linuxserver/calibre`), Edge previews
+  and ASR-verify were all silently broken.
+- **Fix:** install the official **static docker client** (DOCKER_HOST already
+  points at the socket proxy, so no daemon is needed and the image shrinks).
+  Separately, PDF→EPUB now uses the `ebook-convert` **already inside the image**
+  instead of spawning `linuxserver/calibre` — that call needed the missing CLI,
+  a bind-mounted host path and an image pull to do what a local binary does.
+- **Lesson:** "the package is installed" is not "the command exists". When a
+  feature shells out to a binary, assert the binary at build time — the
+  Dockerfile now ends that layer with `docker --version`, which would have
+  failed the build instead of shipping a broken image.
+
 ### 2026-07-25 — Long Kaggle renders could burn the whole quota and return nothing
 Two independent faults found while rendering a 142,759-word book (~15.4 h of
 audio ≈ **13 GPU-hours** for CosyVoice at RTF 0.9):
