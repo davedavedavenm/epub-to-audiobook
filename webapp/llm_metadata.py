@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 from pathlib import Path
 import requests
 import xml.etree.ElementTree as ET
@@ -175,6 +176,47 @@ SEED_RULES = {
 }
 
 
+# Words a TTS engine already says correctly. A "pronunciation" rule whose key is
+# made up ENTIRELY of these is respelling something that was never broken, and
+# small local models do exactly that: qwen2.5:7b offered
+# 'National Front' -> 'nay-ti-oh-shun fohnnt' (2026-07-25), which would make the
+# narrator mispronounce a word it had right. A wrong lexicon entry is worse than
+# no entry, so drop those. Proper nouns — the legitimate target — survive,
+# because at least one of their words is not ordinary English.
+_COMMON_WORDS = set("""
+a about after all also an and any are as at back be because been before being but by
+can come could day do down each even first for from get give go good great has have he
+her here him his how i if in into is it its just know like little long look make man
+many may me more most my new no not now of off old on one only or other our out over
+people say see she so some take than that the their them then there these they thing
+think this those time to two up us use very want way we well what when which who will
+with work would year you your
+british english national front north south east west market meat street road city town
+council party union club house school church river bridge park square hall college
+government office service centre center company group family world war king queen lord
+police court prison station airport hospital university library museum hotel bank
+""".split())
+
+
+def _drop_unsafe_rules(rules: dict) -> dict:
+    """Drop pronunciation rules that respell ordinary English.
+
+    Keeps anything containing a word outside the common-English set (i.e. real
+    proper nouns), which is what these rules are for.
+    """
+    safe, dropped = {}, []
+    for k, v in rules.items():
+        words = [w for w in re.findall(r"[A-Za-z']+", str(k).lower()) if w]
+        if words and all(w in _COMMON_WORDS for w in words):
+            dropped.append(f"{k!r}->{v!r}")
+            continue
+        safe[k] = v
+    if dropped:
+        logging.warning("Dropped %d unsafe pronunciation rule(s) that respell "
+                        "ordinary English: %s", len(dropped), "; ".join(dropped[:5]))
+    return safe
+
+
 def _seed_profile(reason: str) -> dict:
     return {'domain': 'general', 'form': 'nonfiction', 'is_fiction': False,
             'rules': dict(SEED_RULES), 'notes': [f'seed-only ({reason})']}
@@ -317,6 +359,7 @@ BOOK SAMPLE:
         rules = obj.get('rules', {}) if isinstance(obj, dict) else {}
         # sanitize: keep only str->str, drop empties
         rules = {str(k): str(v) for k, v in rules.items() if k and v and str(k) != str(v)}
+        rules = _drop_unsafe_rules(rules)
         # merge the deterministic floor so the profile never regresses below the
         # known-hard names (LLM rules win on conflict).
         for k, v in SEED_RULES.items():
