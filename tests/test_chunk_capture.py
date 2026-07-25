@@ -56,6 +56,30 @@ class TestCapture:
         assert [r['chapter'] for r in recs] == [1, 1, 2, 2]
 
 
+class TestPathResolution:
+    """The worker sets TRANSCRIPTS_DIR to an EMPTY STRING.
+
+    os.environ.get('TRANSCRIPTS_DIR', '/data/transcripts') returns '' in that
+    case, not the fallback, and Path('') / job_id is relative — so records land
+    in the process cwd and the verifier never finds them. Caught on a live
+    render after the flag itself was already fixed.
+    """
+
+    def test_empty_env_var_falls_back_to_absolute_default(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('TRANSCRIPTS_DIR', '')
+        monkeypatch.chdir(tmp_path)
+        _capture_chunk('jobX', 1, 'text', 'v', 'm')
+        # Must NOT have written a relative dir under cwd.
+        assert not (tmp_path / 'jobX').exists(), \
+            'wrote to a relative path; TRANSCRIPTS_DIR="" was not handled'
+
+    def test_unset_env_var_also_falls_back(self, monkeypatch, tmp_path):
+        monkeypatch.delenv('TRANSCRIPTS_DIR', raising=False)
+        monkeypatch.chdir(tmp_path)
+        _capture_chunk('jobY', 1, 'text', 'v', 'm')
+        assert not (tmp_path / 'jobY').exists()
+
+
 class TestNeverFatal:
     """A verification record must never be able to fail a render."""
 

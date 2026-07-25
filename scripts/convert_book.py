@@ -247,7 +247,13 @@ def _capture_chunk(job_id, chapter_idx, text, voice, model):
         return
     try:
         import hashlib
-        d = Path(os.environ.get('TRANSCRIPTS_DIR', '/data/transcripts')) / job_id
+        # `or` rather than a get() default: the worker sets TRANSCRIPTS_DIR to
+        # an EMPTY STRING, and os.environ.get returns '' for that, not the
+        # fallback. Path('') / job_id is a *relative* path, so the records
+        # would land in the process's cwd and the verifier would never see
+        # them — a silent no-op that looked exactly like the bug being fixed.
+        base = os.environ.get('TRANSCRIPTS_DIR') or '/data/transcripts'
+        d = Path(base) / job_id
         d.mkdir(parents=True, exist_ok=True)
         rec = {
             "ts": datetime.now(timezone.utc).isoformat(),
