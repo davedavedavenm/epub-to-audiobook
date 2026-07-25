@@ -3770,6 +3770,16 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 _review = _gsum or '; '.join("chapter %s %s" % (f['chapter'], f['issue']) for f in _gf)
                 append_job_log(job_id, "Held for review — not synced to Audiobookshelf: " + _review)
             else:
+                # Build the M4B BEFORE syncing, so the single-file edition ships
+                # with the book instead of arriving in a second sync a minute
+                # after the job already said "completed".
+                #
+                # NOTE this path duplicates _gate_and_sync instead of calling it,
+                # so anything added there does NOT apply to local renders — the
+                # most common path. The E2E proof caught exactly that: the m4b
+                # only appeared because the watchdog later re-finalised the job
+                # through the shared helper (2026-07-25). Worth unifying.
+                _maybe_build_m4b(job_id, output_path, job['book_name'])
                 # Sync to Audiobookshelf
                 synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
 

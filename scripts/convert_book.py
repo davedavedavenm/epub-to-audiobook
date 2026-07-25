@@ -203,6 +203,28 @@ def _to_mp3(wav_bytes, denoise=False, meta=None):
     return p.stdout if p.returncode == 0 and p.stdout else None
 
 
+def _ensure_wav(data: bytes) -> bytes:
+    """Return WAV bytes, transcoding if the engine ignored response_format=wav.
+
+    We ask every engine for WAV so chunks join losslessly at the sample level,
+    but not all of them honour it — the Edge path returns MP3 regardless, which
+    made `_concat_wav` die with "file does not start with RIFF id" and meant
+    Edge could never render a book at all, only previews (found by the E2E
+    proof, 2026-07-25). Rather than special-case one engine, normalise whatever
+    comes back: any engine that returns a non-WAV container now works.
+    """
+    if data[:4] == b'RIFF':
+        return data
+    ff = shutil.which('ffmpeg')
+    if not ff:
+        raise RuntimeError('engine returned non-WAV audio and ffmpeg is unavailable to convert it')
+    p = subprocess.run([ff, '-v', 'error', '-i', 'pipe:0', '-f', 'wav', 'pipe:1'],
+                       input=data, capture_output=True)
+    if p.returncode != 0 or p.stdout[:4] != b'RIFF':
+        raise RuntimeError(f'could not convert engine audio to WAV: {p.stderr[:200]!r}')
+    return p.stdout
+
+
 def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1'):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
@@ -221,7 +243,7 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1'):
                                         "response_format": "wav"},
                                   timeout=(15, 3600))
                 r.raise_for_status()
-                parts.append(r.content)
+                parts.append(_ensure_wav(r.content))
                 break
             except (requests.ConnectionError, requests.Timeout) as e:
                 if attempt == 2:
