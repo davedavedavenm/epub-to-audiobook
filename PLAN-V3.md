@@ -66,6 +66,16 @@ Add Nano as a selectable engine alongside Turbo, with full preview voices.
 - [ ] 1.7 Run `scripts/bench_nano.py` on zorin — record measured RTF in
       LOW-COST-TTS.md and TTS-LANDSCAPE-2026-07.md
 
+> **SETTLED 2026-07-25.** A/B rendered on the identical passage (Prologue of
+> *London Falling*, same `uk_female_golding` reference, engine the only
+> variable). Dave: *"honestly nano sounds as good as turbo... not worse anyway"*.
+> Measured: **Nano RTF 0.87 vs Turbo 3.33 — 3.8x faster for equal quality**, and
+> faster than realtime on CPU. Nano is therefore the sensible default for local
+> rendering, and GPU engines are now about quality ceilings rather than speed.
+> The remaining 2.3 question (do "natural respellings" beat SHOW-mee style) is
+> moot for now: LLM-generated pronunciation rules are off by default (see #16),
+> and the curated floor is what ships.
+
 ## 2. Settle #27 — proper noun A/B with Nano
 
 - [ ] 2.1 Render canonical passage + one non-fiction chapter with:

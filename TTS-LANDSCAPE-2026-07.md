@@ -194,6 +194,33 @@ ASR-transcribe the output and score word-sequence similarity to the input.
   CosyVoice's deps unpinned on Python 3.12. Correct path: Python 3.10 +
   `requirements.txt` pins (esp. `transformers==4.51.3` for the Qwen2 backbone).
 
+### VERDICT: Nano ties Turbo on quality at ~4x the speed (2026-07-25)
+
+Dave, after an A/B on the identical passage (Prologue of *London Falling*, same
+`uk_female_golding` reference, only the engine differing):
+
+> "honestly nano sounds as good as turbo... not worse anyway"
+
+Measured on zorin (i5-12400, no GPU) for the same 10-minute chapter:
+
+| Engine | Render | RTF | A 12.4-hour book |
+|--------|--------|-----|------------------|
+| **Nano** | ~9 min | **0.87** | **~11 h** |
+| Turbo | ~35 min | 3.33 | ~41 h |
+
+**Nano is 3.8x faster for equal quality**, and *faster than realtime on CPU*.
+This is the single biggest change to the cost model in this document:
+Chatterbox-grade narration no longer needs a GPU, a quota, or a Kaggle session
+at all. A full book goes from a two-day job to an overnight one, free and
+unlimited, with chapters written to disk as they finish (no session cap, no
+commit-on-completion trap).
+
+Consequences worth acting on:
+- Nano is the obvious default for local rendering; Turbo's only remaining claim
+  is being the longer-tested path.
+- The GPU engines are now for *quality ceilings* (TADA naturalness, CosyVoice
+  prosody), not for throughput.
+
 ### Chatterbox Nano (`ResembleAI/chatterbox-nano`, 110M, MIT)
 - **Measured RTF ~0.83 on Zorin CPU** (i5-12400), faster than realtime — a
   30-min chapter renders in ~25 min with no GPU. Warm synth of a 24-word
