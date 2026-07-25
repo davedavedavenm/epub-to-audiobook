@@ -12,6 +12,7 @@ Usage:
 """
 import argparse
 import io
+import json
 import os
 import re
 import sys
@@ -20,6 +21,7 @@ import shutil
 import zipfile
 import subprocess
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 from html.parser import HTMLParser
 
@@ -226,7 +228,45 @@ def _ensure_wav(data: bytes) -> bytes:
     return p.stdout
 
 
-def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', speed=1.0):
+def _capture_chunk(job_id, chapter_idx, text, voice, model):
+    """Record the text we are about to voice, for post-flight verification.
+
+    This used to be written ONLY by tts-proxy, so it existed only for engines
+    routed through it. `get_engine_url()` returns direct URLs for
+    chatterbox_nano, chatterbox and tada — the quality engines — which meant no
+    Chatterbox book had ever been ASR-verified, and Nano is the default voice.
+    The quality gate then wrote a clean result because it had nothing to
+    inspect (#33).
+
+    Capturing here, at the one place every render passes through, makes the
+    record engine-independent. Same path and same schema as the proxy's writer,
+    so `_read_captured_chunks()` needs no changes. Never fatal: a verification
+    record must not be able to fail a render.
+    """
+    if not job_id:
+        return
+    try:
+        import hashlib
+        d = Path(os.environ.get('TRANSCRIPTS_DIR', '/data/transcripts')) / job_id
+        d.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "job_id": job_id,
+            "chapter": chapter_idx,
+            "text": text,
+            "text_sha256": hashlib.sha256((text or '').encode('utf-8', 'replace')).hexdigest(),
+            "model": model,
+            "voice": voice,
+            "source": "converter",
+        }
+        with (d / 'chunks.jsonl').open('a', encoding='utf-8') as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"  (chunk capture failed, non-fatal: {e})", flush=True)
+
+
+def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', speed=1.0,
+          job_id=None):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
     caller encodes one MP3 from that."""
@@ -236,6 +276,9 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', sp
     total_chunks = len(chunks)
     for chunk_idx, c in enumerate(chunks, 1):
         print(f"Processing chapter-{chapter_idx}_chunk_{chunk_idx}_of_{total_chunks}", flush=True)
+        # Record BEFORE synthesis: what we asked to be voiced is the thing the
+        # verifier compares the audio against.
+        _capture_chunk(job_id, chapter_idx, c, voice, model)
         # per-chunk retry: long CPU generations can drop the connection
         for attempt in range(3):
             try:
@@ -284,6 +327,11 @@ def main():
                     help='Path to a file containing search==replace rules (one per line) to apply to text')
     ap.add_argument('--model', default='tts-1',
                     help='TTS model name to send in request')
+    ap.add_argument('--job-id', default='',
+                    help='job id; when set, the text sent to the engine is recorded to '
+                         '$TRANSCRIPTS_DIR/<job-id>/chunks.jsonl so the post-flight ASR '
+                         'check has something to compare against. Without it a render '
+                         'cannot be verified (#33).')
     ap.add_argument('--speed', type=float, default=1.0,
                     help='playback rate sent to the engine (OpenAI `speed`). '
                          'Honoured by Kokoro, Piper, Edge and CosyVoice. '
@@ -395,7 +443,8 @@ def main():
             meta = {'title': ctitle, 'album': book_title, 'artist': book_author,
                     'album_artist': book_author, 'genre': 'Audiobook',
                     'track': f"{done_render + 1}/{total_render}"}
-            wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx, model=a.model, speed=a.speed)
+            wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx,
+                        model=a.model, speed=a.speed, job_id=a.job_id)
             mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
                 fn = out / f"{idx:03d}{suffix}.mp3"

@@ -2631,6 +2631,10 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
         '--out', str(output_path),
         '--model', tts_model,
+        # Without this the render cannot be verified afterwards: the converter
+        # is the only place every engine passes through, so it is where the
+        # transcript record has to be written (#33).
+        '--job-id', str(job_id),
     ]
 
     conf_filename = f"search_{job_id}.conf"
