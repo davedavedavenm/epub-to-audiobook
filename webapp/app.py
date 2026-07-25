@@ -2822,28 +2822,15 @@ def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
         return
     append_job_log(job_id, f"Verification passed: {verify_msg}")
 
-    held, gate_flags, gate_summary = presync_quality_gate(job_id, output_path)
-    if held:
-        reasons = gate_summary or '; '.join("chapter %s %s" % (f['chapter'], f['issue']) for f in gate_flags)
-        update_job(
-            job_id, status='review needed', progress_percent=100,
-            file_count=len(output_files), total_chapters=total_chapters,
-            error=reasons, completed_at=datetime.now().isoformat())
-        append_job_log(job_id, "Held for review — not synced to Audiobookshelf: " + reasons)
-    else:
-        synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
-        update_job(
-            job_id,
-            status='completed',
-            file_count=len(output_files),
-            progress_percent=100,
-            synced_to_abs=synced,
-            completed_at=datetime.now().isoformat(),
-            total_chapters=total_chapters,
-        )
-        app.logger.info(
-            f"Recovery {job_id}: Completed with {len(output_files)} files, synced={synced}")
-        append_job_log(job_id, f"Completed with {len(output_files)} chapters (recovery path)")
+    # Same shared completion helper as every other path. This was the THIRD
+    # inline re-implementation of gate -> sync -> status, and like the local one
+    # it predated the M4B step — so a RECOVERED book shipped without its M4B
+    # (2026-07-25). total_chapters is recovery-specific, applied on top.
+    outcome = _gate_and_sync(job_id, output_path, book_name, len(output_files))
+    update_job(job_id, total_chapters=total_chapters)
+    app.logger.info(f"Recovery {job_id}: {outcome} with {len(output_files)} files")
+    append_job_log(job_id, f"{'Completed' if outcome == 'completed' else 'Held for review'} "
+                           f"with {len(output_files)} chapters (recovery path)")
 
     job = get_job(job_id)
     if job:
@@ -3783,26 +3770,18 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 return
             append_job_log(job_id, f"Verification passed: {verify_msg}")
 
-            # pre-sync quality gate: hold a broken render for review, don't ship it
-            _held, _gf, _gsum = presync_quality_gate(job_id, output_path)
-            _review = None
-            if _held:
-                synced = False
-                _review = _gsum or '; '.join("chapter %s %s" % (f['chapter'], f['issue']) for f in _gf)
-                append_job_log(job_id, "Held for review — not synced to Audiobookshelf: " + _review)
-            else:
-                # Build the M4B BEFORE syncing, so the single-file edition ships
-                # with the book instead of arriving in a second sync a minute
-                # after the job already said "completed".
-                #
-                # NOTE this path duplicates _gate_and_sync instead of calling it,
-                # so anything added there does NOT apply to local renders — the
-                # most common path. The E2E proof caught exactly that: the m4b
-                # only appeared because the watchdog later re-finalised the job
-                # through the shared helper (2026-07-25). Worth unifying.
-                _maybe_build_m4b(job_id, output_path, job['book_name'])
-                # Sync to Audiobookshelf
-                synced = copy_to_audiobookshelf(output_path, job['book_name'], job_id=job_id)
+            # Quality gate -> M4B -> Audiobookshelf sync -> final status, via the
+            # SHARED helper every other render path uses.
+            #
+            # This block used to re-implement _gate_and_sync inline, so anything
+            # added to the shared helper silently skipped local renders — the
+            # most common path. The M4B hook landed there and never ran here, so
+            # the file only appeared when the watchdog later re-finalised the
+            # job, producing a second sync a minute after the book already
+            # reported "completed" (caught by the E2E proof, 2026-07-25).
+            _outcome = _gate_and_sync(job_id, output_path, job['book_name'], len(output_files))
+            _review = _outcome == 'held'
+            synced = _outcome == 'completed'
 
             # Best-effort transcript verification (only meaningful if TTS_PROXY_URL is enabled).
             try:
@@ -3821,14 +3800,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             except Exception:
                 pass
 
-            update_job(job_id,
-                status='review needed' if _review else 'completed',
-                error=_review,
-                file_count=len(output_files),
-                progress_percent=100,
-                synced_to_abs=synced,
-                completed_at=datetime.now().isoformat()
-            )
+            # Status/file_count/completed_at are set by _gate_and_sync above.
             app.logger.info(f"Job {job_id} completed with {len(output_files)} files")
             append_job_log(job_id, f"Completed with {len(output_files)} files")
 

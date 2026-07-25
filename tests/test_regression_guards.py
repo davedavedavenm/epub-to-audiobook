@@ -384,3 +384,22 @@ def test_no_local_import_shadows_an_earlier_use():
     assert not offenders, (
         "a function-local import shadows the module-level name for the WHOLE "
         "function, leaving earlier uses unbound at runtime: " + "; ".join(sorted(set(offenders))))
+
+
+def test_single_completion_path():
+    """Every render path must finish through _gate_and_sync.
+
+    The completion sequence (quality gate -> M4B -> ABS sync -> final status)
+    was re-implemented inline in THREE places: the local render, the recovery
+    path, and the shared helper. So post-processing added to the helper silently
+    skipped the two busiest paths — the M4B shipped late on local renders and
+    not at all on recovered ones (2026-07-25).
+
+    presync_quality_gate is the tell: if it is called anywhere but inside
+    _gate_and_sync, someone has grown a second completion path again.
+    """
+    callers = [ln for ln in APP.splitlines()
+               if 'presync_quality_gate(' in ln and 'def presync_quality_gate' not in ln]
+    assert len(callers) == 1, (
+        "the completion sequence has been duplicated again — presync_quality_gate "
+        "should only be called by _gate_and_sync, found:\n  " + "\n  ".join(callers))
