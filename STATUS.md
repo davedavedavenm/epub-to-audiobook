@@ -241,6 +241,8 @@ validation, the startup-recovery bug and the ABS sync bug) is **closed**.
 | [#24](../../issues/24) | enhancement | Inworld's 12 voices are selectable but cannot work without an API key — gate or hide them | Confirmed live: `inworld:false`, `polly:false` in `/api/engines/health` |
 | [#25](../../issues/25) | enhancement | Convert tab visual cleanup (hierarchy, spacing, demote advanced controls) | PLAN-V3 #4 shipped the 3-step wizard; **check whether this cosmetic remainder is still real before working it** |
 | [#27](../../issues/27) | bug | Does chatterbox need pronunciation help at all? (the modern-engine lexicon filter) | Partly overtaken by PLAN-V3 #16 — LLM pronunciation is now off by default, so this is about the *curated* lexicon |
+| [#32](../../issues/32) | bug | M4B has no `artist` and a folder-derived title, while the MP3s get correct epub metadata | Found by the full-book verification below |
+| [#33](../../issues/33) | bug | ASR verification silently skipped — book synced with no post-flight check | Found by the full-book verification below. The more serious of the two |
 
 Not yet an issue but the biggest lever: **GPU auto-provision for TADA/Chatterbox
 from the UI** so quality engines don't run on CPU (the "one-click" goal).
@@ -280,17 +282,49 @@ Run: *Alice in Wonderland* (Project Gutenberg, 12 chapters, 26,781 words),
 `uk_male_minter_nano`, `render_target=local`, `output_format=m4b`, job
 `32c63813`.
 
-**Measured over the first 9 chapters** (ffprobe on the real output):
+**COMPLETED. Final measurement** (ffprobe on the real output):
 
 | | |
 |---|---|
-| Audio produced | **6,751.65 s** (1 h 52 m 32 s) |
-| Synthesis window | 14:04:41 → 15:38:00 UTC = **5,599 s** |
-| **Measured RTF** | **0.83** |
-| Wall clock incl. LLM preprocessing | 0.85 |
+| Audio produced | **8,829.67 s** (2 h 27 m 10 s), 12 files |
+| Synthesis window | 14:04:41 → 16:07:00 UTC = **7,339 s** |
+| **Measured synthesis RTF** | **0.83** |
+| End-to-end wall clock | 14:02:10 → 16:10:31 = 7,701 s = **RTF 0.87** |
 
-**The claim survives contact with a real book** — slightly better than 0.87, and
-comfortably faster than realtime. Extrapolated, a 12.4-hour book is ~10.5 h.
+**The claim survives contact with a real book.** Pure synthesis is 0.83; add the
+LLM preprocessing pass, the M4B build and two Audiobookshelf syncs and the
+end-to-end figure lands on **exactly the 0.87** that was previously only ever
+extrapolated from one passage. A 12.4-hour book is therefore ~10.8 h end to end.
+
+**Delivery chain verified, not assumed:**
+
+- 12 MP3s, correctly ordered and named.
+- **M4B duration 8,829.648 s vs 8,829.67 s of source MP3** — nothing lost or
+  duplicated in the concat.
+- **12 chapter markers** with exact boundaries (ch2 starts at 681.168 s, which
+  is ch1's exact duration) and real titles.
+- Cover art embedded in the M4B (mjpeg 800×1104).
+- Full ID3 on every MP3: title, `album="Alice's Adventures in Wonderland"`,
+  `artist="Lewis Carroll"`, album_artist, `genre="Audiobook"`, `track="1/12"`
+  through `"12/12"`.
+- Files present in Audiobookshelf on docker-vm, plus `cover.jpg` and
+  `metadata.json`.
+
+**Three defects this run exposed** (none block the book; all are real):
+
+1. **The M4B carries worse metadata than the MP3s.** It has title/album/genre
+   but **no `artist` or `album_artist`**, and its title is the folder-derived
+   *"Alice in Wonderland - Lewis Carroll"* rather than the epub's actual
+   *"Alice's Adventures in Wonderland"* + *"Lewis Carroll"* that the MP3 path
+   correctly extracted. An M4B-only library therefore loses the author.
+2. **MP3s have no embedded cover.** The M4B does, and `cover.jpg` sits beside
+   them, so Audiobookshelf copes — but the per-file art the MP3 path claims to
+   write isn't there.
+3. **The ASR quality layer never ran.** The log says
+   `Verification skipped: no captured transcript chunks`, and the gate wrote
+   `{"held": false, "flags": [], "summary": null}` — i.e. it passed by default
+   because it had nothing to inspect. A book completed and synced with **zero**
+   post-flight verification. Worth knowing before trusting "closed-loop QA".
 
 Incidental confirmations from the same run:
 
@@ -306,9 +340,6 @@ Incidental confirmations from the same run:
 - The job log still says `Using container audiobook-<id>` and the container
   panel reports `No such container` — cosmetic, but it reads as a fault. The
   local path runs in-process; that name is only a DB label.
-
-**Still to verify when the run finishes:** all 12 MP3s present, the M4B built
-with a correct chapter index and cover, ID3 tags, and the Audiobookshelf sync.
 
 ### TADA: separate the two questions (correction, 2026-07-25)
 
