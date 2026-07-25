@@ -5216,6 +5216,19 @@ def guard_refine_chapters(epub_path, chapters):
     if not rng:
         return None
     first_body, last_body = rng
+    # Measured 2026-07-25 on a real book: the LLM correctly moved the START past
+    # a copyright page the heuristic would have narrated (2 vs 1), but ran the
+    # END three chapters into the back matter (28 vs 25). So trust each where it
+    # is actually better — take the LLM's start, but never extend the end past
+    # the deterministic body_end_index.
+    try:
+        det_end = body_end_index(chapters)
+        if det_end and last_body > det_end:
+            app.logger.info(
+                f"Guard: clamping LLM last_body {last_body} -> {det_end} (deterministic)")
+            last_body = det_end
+    except Exception:
+        pass
     back = sorted(c['index'] for c in chapters if c['index'] < first_body or c['index'] > last_body)
     result = {'back': back, 'first_body': first_body, 'last_body': last_body}
     try:

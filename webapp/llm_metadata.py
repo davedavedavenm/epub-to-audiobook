@@ -19,6 +19,10 @@ LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '60'))
 # fell back to the seed floor (2026-07-25). Excerpts are spread across the
 # spine, so a smaller window still samples the whole book.
 PROFILE_SAMPLE_CHARS = int(os.environ.get('LLM_PROFILE_SAMPLE_CHARS', '8000'))
+# Let the LLM invent pronunciation respellings? OFF by default. See the note at
+# the discard site: it is the one LLM job whose mistakes silently damage the
+# audio, and books render well without it. Set to 1 to experiment.
+LLM_PRONUNCIATION_RULES = os.environ.get('LLM_PRONUNCIATION_RULES', '0').lower() in ('1', 'true', 'yes')
 # Bound the reply too: an unbounded JSON answer can ramble for minutes on CPU.
 LLM_MAX_TOKENS = int(os.environ.get('LLM_MAX_TOKENS', '800'))
 
@@ -360,6 +364,19 @@ BOOK SAMPLE:
         # sanitize: keep only str->str, drop empties
         rules = {str(k): str(v) for k, v in rules.items() if k and v and str(k) != str(v)}
         rules = _drop_unsafe_rules(rules)
+        if not LLM_PRONUNCIATION_RULES:
+            # OFF by default, on evidence (2026-07-25). Pronunciation is the
+            # LLM's weakest job here: a small local model hallucinates
+            # ('The Names' -> "epic fantasy") and proposes actively harmful
+            # respellings, and a bad entry is invisible until you HEAR it.
+            # Meanwhile a chapter rendered with the LLM fully disabled was
+            # judged good. Keep the hand-curated floor, drop the guesses.
+            # Classification (form/domain) below is kept — it is checkable and
+            # a mistake there is cheap.
+            if rules:
+                logging.info("LLM pronunciation rules disabled — discarding %d "
+                             "generated rule(s), keeping the curated floor", len(rules))
+            rules = {}
         # merge the deterministic floor so the profile never regresses below the
         # known-hard names (LLM rules win on conflict).
         for k, v in SEED_RULES.items():
