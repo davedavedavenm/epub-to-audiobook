@@ -65,7 +65,7 @@ as the priority order.
 | Aim (as stated) | State | Evidence |
 |---|---|---|
 | "I go to the web UI, choose narrate, and it'll **just work**, all automatic" | ✅ | Kaggle and Local render both proven end-to-end (Chapters -> Preprocessing -> Subprocess -> Verify -> ID3 Tags -> ABS Sync). |
-| Everything **checked automatically** — no blind trust | ✅ | Word-count and duration verification sanity checks ensure no contentless books ever pass as complete. |
+| Everything **checked automatically** — no blind trust | ⚠️ | Word-count and duration sanity checks do run. But the **ASR layer never runs on Chatterbox or TADA** — `chunks.jsonl` is written only by tts-proxy, and those engines connect direct (see #33). Nano is the default, so the default path ships unverified, and it fails *silently clean*. Downgraded from ✅ on 2026-07-25 evidence. |
 | Accurate progress/ETA, no fake numbers | ✅ | Real per-chapter progress (ntfy call-home); honest "chapter X/N"; no ETA before evidence. Was elapsed-guesswork before. |
 | Chapter selection = the actual book, by title | ✅ | Both local and Kaggle paths unified on `chapters.py` numbering. |
 | Covers + metadata land in ABS, chapters navigable | ✅ | Full ID3 tagging implemented for both rendering paths. |
@@ -320,11 +320,21 @@ extrapolated from one passage. A 12.4-hour book is therefore ~10.8 h end to end.
 2. **MP3s have no embedded cover.** The M4B does, and `cover.jpg` sits beside
    them, so Audiobookshelf copes — but the per-file art the MP3 path claims to
    write isn't there.
-3. **The ASR quality layer never ran.** The log says
-   `Verification skipped: no captured transcript chunks`, and the gate wrote
-   `{"held": false, "flags": [], "summary": null}` — i.e. it passed by default
-   because it had nothing to inspect. A book completed and synced with **zero**
-   post-flight verification. Worth knowing before trusting "closed-loop QA".
+3. **The ASR quality layer never ran — and structurally cannot, for this
+   engine.** The log says `Verification skipped: no captured transcript
+   chunks`, and the gate wrote `{"held": false, "flags": [], "summary": null}`
+   — it passed by default because it had nothing to inspect.
+
+   Root cause: `chunks.jsonl`, the only input the verifier has, is written by
+   **tts-proxy**. `get_engine_url()` routes piper/edge/polly/inworld/kokoro
+   through the proxy, but returns `CHATTERBOX_NANO_URL`, `CHATTERBOX_URL` and
+   `TADA_URL` **directly**. So no Chatterbox book has ever been ASR-verified,
+   and since Nano is the default voice, **the default path ships unverified**
+   and says nothing about it.
+
+**Root causes for 1 and 3 are recorded on the issues** with suggested fixes.
+Both are the same shape as the bug `chapters.py` was created to kill: two code
+paths deriving the same fact independently, and one of them drifting.
 
 Incidental confirmations from the same run:
 
