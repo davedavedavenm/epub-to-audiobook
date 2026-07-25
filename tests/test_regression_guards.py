@@ -332,3 +332,55 @@ def test_modern_skips_phonetic_lexicon():
     # legacy engines (Kokoro/Piper) still get the respelling — they need it
     leg = tp.normalize_text_for_tts("We flew to Beijing.", lexicon=lex, modern=False)
     assert 'Bay-JING' in leg, "legacy lexicon respelling broken"
+
+
+def test_no_local_import_shadows_an_earlier_use():
+    """A local `import x` makes x local to the WHOLE function, so any use of x
+    EARLIER in that function is unbound at runtime.
+
+    copy_to_audiobookshelf had `import shlex` twice while shlex was also a
+    module-level import. Ruff's F401 autofix removed the first as redundant —
+    correct in isolation, fatal in combination: the surviving local import still
+    made the name function-local, so the earlier shlex.quote() had nothing bound
+    and EVERY Audiobookshelf sync died with "cannot access free variable
+    'shlex'" (2026-07-25). No unit test touched that path.
+
+    Only the genuinely broken shape is flagged: a local import of a
+    module-level name that the function already used above it. Late-but-unused-
+    before imports are a style choice, not a bug.
+    """
+    import ast
+    src = (ROOT / 'webapp' / 'app.py').read_text(encoding='utf-8')
+    tree = ast.parse(src)
+    module_names = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                module_names.add((a.asname or a.name).split('.')[0])
+        elif isinstance(node, ast.ImportFrom):
+            for a in node.names:
+                module_names.add(a.asname or a.name)
+
+    offenders = []
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        local_imports = {}
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Import):
+                for a in node.names:
+                    nm = (a.asname or a.name).split('.')[0]
+                    if nm in module_names:
+                        local_imports.setdefault(nm, node.lineno)
+        if not local_imports:
+            continue
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                imp_line = local_imports.get(node.id)
+                if imp_line and node.lineno < imp_line:
+                    offenders.append(
+                        f"{fn.name}(): uses '{node.id}' at line {node.lineno} but "
+                        f"imports it locally at line {imp_line}")
+    assert not offenders, (
+        "a function-local import shadows the module-level name for the WHOLE "
+        "function, leaving earlier uses unbound at runtime: " + "; ".join(sorted(set(offenders))))

@@ -2955,7 +2955,13 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         append_job_log(job_id, f"Sync start -> {target}:{dest_path}")
 
     try:
-        import shlex
+        # NO local `import shlex` here. shlex is imported at module level, and a
+        # function-local import makes the name local for the WHOLE function —
+        # which left the earlier shlex.quote() in rsync_ssh unbound and broke
+        # every Audiobookshelf sync with "cannot access free variable 'shlex'".
+        # (This function had two duplicate local imports; ruff's F401 autofix
+        # removed the first as redundant, which was correct in isolation and
+        # fatal in combination. 2026-07-25.)
         remote_mkdir = ' '.join(shlex.quote(x) for x in ['mkdir', '-p', '--', dest_path])
         mkdir_cmd = ['ssh', *ssh_args, target, remote_mkdir]
         mkdir_result = subprocess.run(mkdir_cmd, capture_output=True, text=True, timeout=30)
