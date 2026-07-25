@@ -1623,6 +1623,19 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     <div style="font-size:0.8rem; color:#7a5300; margin-top:8px;">Re-render the affected chapter(s), or use <b>Sync anyway</b> to publish as-is.</div>
                 </div>`;
             }
+            // "Nothing was checked" must never look like "checked and clean".
+            // The gate writes verified=false when it had no ASR data at all,
+            // which is every Chatterbox/TADA render today (#33).
+            if (g && g.verified === false) {
+                gateHtml += `<div style="background:var(--surface-2); border:1px dashed var(--border); border-radius:12px; padding:14px 16px; margin-bottom:12px;">
+                    <div style="font-weight:800; margin-bottom:6px;">⚠️ Shipped without verification</div>
+                    <div style="font-size:0.86rem; color:var(--text-secondary);">
+                        The quality gate ran but had nothing to inspect, so this book was
+                        <b>not</b> checked against its source. That is not the same as passing.
+                    </div>
+                    ${g.unverified_reason ? `<div style="font-family:var(--mono); font-size:0.75rem; color:var(--ink-3); margin-top:8px;">${escapeHtml(g.unverified_reason)}</div>` : ''}
+                </div>`;
+            }
             if (!q.available) { panel.innerHTML = gateHtml || '<div style="color:var(--text-secondary); font-size:0.85rem;">No QA report for this render (QA runs on Kaggle renders and sampled local checks).</div>'; return; }
             const werColor = q.worst_wer > 0.15 ? 'var(--accent-ink)' : 'var(--cloud-ink)';
             let html = `<div style="background:var(--surface-2); border-radius:12px; padding:16px;">

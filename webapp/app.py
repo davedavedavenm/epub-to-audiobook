@@ -618,6 +618,14 @@ def init_db():
             conn.execute("ALTER TABLE jobs ADD COLUMN custom_regex TEXT")
         except sqlite3.OperationalError:
             pass
+        # 1 = the quality gate actually inspected ASR data for this render.
+        # 0 = it ran but had nothing to look at, so the book shipped UNVERIFIED.
+        # NULL = predates the column. The distinction matters because the two
+        # states used to be written identically as a clean gate (#33).
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN qa_verified INTEGER")
+        except sqlite3.OperationalError:
+            pass
 
         # Add preprocess_summary column (migration — UI preprocessing badge)
         try:
@@ -768,8 +776,8 @@ def save_job(job: dict):
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
-             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target, output_format)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target, output_format, qa_verified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -815,7 +823,8 @@ def save_job(job: dict):
             job.get('preprocess_summary'),
             job.get('narration_profile'),
             job.get('render_target', 'local'),
-            job.get('output_format', 'mp3')
+            job.get('output_format', 'mp3'),
+            job.get('qa_verified')
         ))
         conn.commit()
 
@@ -2871,36 +2880,138 @@ def cleanup_small_files(output_dir: Path, min_size_kb: int = 0) -> int:
     return removed
 
 
+def _abs_credentials():
+    """Return (url, token) for the ABS API, DB setting first, env as fallback.
+
+    Settings written through the UI live in app_settings and survive restarts;
+    the module-level constants only ever see the environment. Reading the env
+    directly is a bug that makes a token saved in Settings do nothing, which is
+    exactly what `_trigger_abs_rescan` used to do (#35).
+    """
+    url = (get_setting('ABS_API_URL') or ABS_API_URL or '').rstrip('/')
+    token = get_setting('ABS_API_TOKEN') or ABS_API_TOKEN or ''
+    return url, token
+
+
+def _abs_auth_failed(job_id, where, status):
+    """Report an ABS credential failure loudly, once, in the place people look.
+
+    A 401 used to go only to app.logger, so a dead token was invisible: the
+    file sync is rsync over SSH and keeps working, the badge stays green, and
+    every API-backed feature silently does nothing. If the credential is bad,
+    say so on the job (#35).
+    """
+    msg = (f"ABS {where} FAILED: HTTP {status}. "
+           f"The Audiobookshelf API token is rejected — regenerate it in ABS "
+           f"(Settings → Users → API token) and save it in Settings here. "
+           f"File sync is unaffected (it uses SSH), but covers, rescans and "
+           f"library cleanup will not work until this is fixed.")
+    app.logger.error(msg)
+    if job_id:
+        append_job_log(job_id, msg)
+
+
 def _trigger_abs_rescan(job_id: str | None = None):
     """Trigger an Audiobookshelf library rescan via the ABS API.
 
-    This ensures chapter metadata is regenerated after files are synced.
-    Failures are logged but do not affect job status.
+    Ensures chapter metadata is regenerated after files are synced, and is the
+    only thing that prunes items whose files have gone. Failures never affect
+    job status — but they are no longer silent.
     """
-    if not ABS_API_TOKEN:
-        return
+    url, token = _abs_credentials()
+    if not token:
+        if job_id:
+            append_job_log(job_id, "ABS rescan skipped: no API token configured "
+                                   "(set one in Settings to enable rescans).")
+        return False
     try:
-        # First get library ID
         resp = requests.get(
-            f"{ABS_API_URL}/api/libraries",
-            headers={"Authorization": f"Bearer {ABS_API_TOKEN}"},
+            f"{url}/api/libraries",
+            headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
+        if resp.status_code in (401, 403):
+            _abs_auth_failed(job_id, "rescan", resp.status_code)
+            return False
         if resp.status_code != 200:
-            app.logger.warning(f"ABS: Could not list libraries: {resp.status_code}")
-            return
+            msg = f"ABS rescan: could not list libraries (HTTP {resp.status_code})"
+            app.logger.warning(msg)
+            if job_id:
+                append_job_log(job_id, msg)
+            return False
         libraries = resp.json().get('libraries', [])
         for lib in libraries:
             scan_resp = requests.post(
-                f"{ABS_API_URL}/api/libraries/{lib['id']}/scan",
-                headers={"Authorization": f"Bearer {ABS_API_TOKEN}"},
+                f"{url}/api/libraries/{lib['id']}/scan",
+                headers={"Authorization": f"Bearer {token}"},
                 timeout=10,
             )
             app.logger.info(f"ABS: Triggered rescan for library '{lib['name']}': {scan_resp.status_code}")
             if job_id:
                 append_job_log(job_id, f"ABS rescan triggered for library '{lib['name']}'")
+        return True
     except Exception as e:
         app.logger.warning(f"ABS rescan failed (non-fatal): {e}")
+        if job_id:
+            append_job_log(job_id, f"ABS rescan failed (non-fatal): {e}")
+        return False
+
+
+def abs_purge_missing_items(job_id: str | None = None):
+    """Delete ABS library items whose media files are gone.
+
+    Because the sync is filesystem-level (rsync over SSH), removing a render
+    deletes files but leaves ABS's database row behind, flagged isMissing.
+    Nothing ever cleaned those up, so every `e2e_proof.sh` run left a ghost —
+    seven "The Raven" entries had accumulated by 2026-07-25 (#35).
+
+    Returns (removed, errors). Never raises.
+    """
+    url, token = _abs_credentials()
+    if not token:
+        return 0, ['no ABS API token configured']
+    hdr = {"Authorization": f"Bearer {token}"}
+    removed, errors = 0, []
+    try:
+        libs = requests.get(f"{url}/api/libraries", headers=hdr, timeout=15)
+        if libs.status_code in (401, 403):
+            _abs_auth_failed(job_id, "purge", libs.status_code)
+            return 0, [f'auth rejected (HTTP {libs.status_code})']
+        if libs.status_code != 200:
+            return 0, [f'could not list libraries (HTTP {libs.status_code})']
+
+        for lib in libs.json().get('libraries', []):
+            items = requests.get(
+                f"{url}/api/libraries/{lib['id']}/items",
+                headers=hdr, timeout=30,
+            )
+            if items.status_code != 200:
+                errors.append(f"library {lib.get('name')}: HTTP {items.status_code}")
+                continue
+            for item in items.json().get('results', []):
+                # ABS marks an item isMissing when its files vanish from disk.
+                if not item.get('isMissing'):
+                    continue
+                iid = item.get('id')
+                rel = item.get('relPath') or iid
+                d = requests.delete(f"{url}/api/items/{iid}", headers=hdr, timeout=15)
+                if d.status_code in (200, 204):
+                    removed += 1
+                    app.logger.info(f"ABS: removed missing item {rel}")
+                    if job_id:
+                        append_job_log(job_id, f"ABS: removed missing item '{rel}'")
+                else:
+                    errors.append(f"{rel}: HTTP {d.status_code}")
+    except Exception as e:
+        errors.append(str(e))
+    return removed, errors
+
+
+@app.route('/api/abs/purge-missing', methods=['POST'])
+def api_abs_purge_missing():
+    """Remove Audiobookshelf items whose files no longer exist."""
+    removed, errors = abs_purge_missing_items()
+    return jsonify({'removed': removed, 'errors': errors}), (200 if not errors else 207)
 
 
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
@@ -4152,7 +4263,20 @@ def test_abs_connection():
                             headers={'Authorization': f'Bearer {token}'},
                             timeout=10)
         if resp.status_code == 200:
-            return jsonify({'status': 'success', 'message': 'Connected to ABS!'})
+            libs = resp.json().get('libraries', [])
+            names = ', '.join(li.get('name', '?') for li in libs) or 'none'
+            return jsonify({'status': 'success',
+                            'message': f'Connected to ABS. Libraries: {names}'})
+        if resp.status_code in (401, 403):
+            # Be specific: a rejected token is invisible elsewhere, because the
+            # file sync uses SSH and keeps working regardless (#35).
+            return jsonify({'error':
+                            f'ABS rejected the token (HTTP {resp.status_code}). '
+                            f'Generate a new one in Audiobookshelf under '
+                            f'Settings → Users → API token, then save it here. '
+                            f'Note: book files will still sync without it — the '
+                            f'copy is over SSH — but covers, rescans and library '
+                            f'cleanup will not work.'}), 400
         return jsonify({'error': f'ABS returned status {resp.status_code}: {resp.text[:100]}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -5365,11 +5489,47 @@ def presync_quality_gate(job_id, output_path):
     summary = None
     if held and _ollama_available():
         summary = guard.explain_gate(flags, _ollama_chat)   # fail-open, non-deciding
+
+    # Did anything actually get INSPECTED? A gate that had no ASR data to look
+    # at is not a pass — it is an absence of evidence, and until now the two
+    # were written identically as `held: false` (#33). ASR data only exists for
+    # engines routed via tts-proxy, so every Chatterbox/TADA book lands here.
+    verified = bool(wer)
+    unverified_reason = None
+    if not verified:
+        unverified_reason = (
+            'no ASR data for this render — transcript chunks are written by '
+            'tts-proxy, and this engine connects directly, so nothing was '
+            'available to check'
+        )
+        append_job_log(
+            job_id,
+            f"WARNING — QUALITY GATE COULD NOT VERIFY THIS BOOK: {unverified_reason}. "
+            f"The book was NOT checked against its source; it is being shipped "
+            f"unverified. This is not the same as passing."
+        )
+        app.logger.warning(f"job {job_id}: presync gate ran unverified ({unverified_reason})")
+
     try:
         (output_path / '_presync_gate.json').write_text(
-            json.dumps({'held': held, 'flags': flags, 'summary': summary}), encoding='utf-8')
+            json.dumps({
+                'held': held,
+                'flags': flags,
+                'summary': summary,
+                # Explicit, so a consumer can never mistake "nothing to inspect"
+                # for "inspected and clean".
+                'verified': verified,
+                'unverified_reason': unverified_reason,
+                'chapters_inspected': len(wer),
+            }), encoding='utf-8')
     except Exception:
         pass
+
+    try:
+        update_job(job_id, qa_verified=1 if verified else 0)
+    except Exception:
+        pass
+
     return held, flags, summary
 
 
@@ -5386,15 +5546,28 @@ def _maybe_build_m4b(job_id, output_path, book_name):
         return None
     try:
         from m4b import build_m4b
+        from book_meta import read_book_meta
         append_job_log(job_id, "Building single-file M4B with chapter markers…")
-        meta = (job.get('narration_profile') or '')
-        author = ''
-        if meta:
-            try:
-                author = (json.loads(meta) or {}).get('author') or ''
-            except Exception:
-                author = ''
-        out = build_m4b(Path(output_path), title=book_name or '', author=author)
+
+        # Read the epub, exactly as the MP3 tagger does. This used to take the
+        # title from the job's filename-derived book_name and the author from
+        # the LLM narration profile (which has no author field, so it was
+        # always empty) — leaving the M4B strictly worse tagged than the MP3s
+        # built from the same source in the same job (#32).
+        title, author = book_name or '', ''
+        epub_name = job.get('input_filename') or ''
+        if epub_name:
+            src = UPLOAD_DIR / epub_name
+            if src.exists():
+                bm = read_book_meta(src)
+                title = bm.get('title') or title
+                author = bm.get('author') or ''
+                if author:
+                    append_job_log(job_id, f"M4B metadata from epub: '{title}' by {author}")
+        if not author:
+            append_job_log(job_id, "M4B metadata: no author found in the epub — "
+                                   "tagging title only.")
+        out = build_m4b(Path(output_path), title=title, author=author)
         if out:
             mb = out.stat().st_size / 1e6
             append_job_log(job_id, f"M4B ready: {out.name} ({mb:.1f} MB)")

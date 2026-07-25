@@ -230,6 +230,79 @@ def normalize_unicode_for_tts(text: str) -> str:
     return text
 
 
+# Roman numerals are all-caps but are neither emphasis nor acronyms. Leaving
+# them alone keeps "Chapter VIII" working; sentence-casing would give "Viii".
+_ROMAN = re.compile(r'^[IVXLCDM]+$')
+
+# All-caps tokens that really are read as words, not spelled out. Kept short
+# and deliberate — this is a floor, not an attempt at completeness.
+_CAPS_WORD_ACRONYMS = {'NASA', 'ASCII', 'NATO', 'LASER', 'RADAR', 'SCUBA', 'UNICEF'}
+
+
+def _keep_as_is(core: str) -> bool:
+    """True if this all-caps token should survive a run untouched.
+
+    Three ways to earn that: a known word-acronym (NASA), a roman numeral
+    (VIII), or no vowels at all (JPL, BBC, NHS). The vowel test is the useful
+    one — an unpronounceable token is an initialism and *should* be spelled
+    out, whereas anything with vowels is a word being shouted.
+    """
+    if not core:
+        return False
+    if core in _CAPS_WORD_ACRONYMS or _ROMAN.match(core):
+        return True
+    return len(core) <= 5 and not set(core) & set('AEIOU')
+
+
+def _sentence_case_run(run: str) -> str:
+    """'ORANGE MARMALADE' -> 'Orange marmalade', per word.
+
+    Acronyms embedded in a run are preserved individually, so 'NASA JPL' does
+    not become 'Nasa jpl'. A genuinely unknown vowel-bearing acronym inside a
+    run will still be downcased — that ambiguity needs world knowledge and is
+    the job of the LLM classifier in #34, not of a regex.
+    """
+    words = run.split()
+    out, first_done = [], False
+    for w in words:
+        core = re.sub(r'[^A-Z]', '', w)
+        if _keep_as_is(core):
+            out.append(w)
+        elif not first_done:
+            out.append(w.capitalize())
+            first_done = True
+        else:
+            out.append(w.lower())
+    return ' '.join(out)
+
+
+def _normalize_caps_runs(text: str) -> str:
+    """Downcase runs of 2+ all-caps words; leave lone acronyms untouched.
+
+    Why a *run* is the right unit: an acronym is a single token embedded in
+    normal-case prose ("the CEO said"), whereas emphasis and signage come in
+    stretches ("ORANGE MARMALADE", "DRINK ME", "THE FULL PROJECT GUTENBERG
+    LICENSE"). Requiring two consecutive tokens means CEO, BBC and FBI cannot
+    be hit by this rule at all, which is what makes it safe to apply to every
+    engine.
+
+    Single all-caps tokens are deliberately NOT touched here: distinguishing
+    "WHO" the organisation from "WHO" the shouted question needs world
+    knowledge, and that belongs in the LLM classifier (#34), not a regex.
+    """
+    def repl(m):
+        run = m.group(0)
+        # If every token independently earns preservation (all acronyms, all
+        # roman numerals, or a mix), leave the run exactly as written.
+        if all(_keep_as_is(re.sub(r'[^A-Z]', '', w)) for w in run.split()):
+            return run
+        return _sentence_case_run(run)
+
+    # Two or more consecutive words of 2+ capitals, allowing internal
+    # apostrophes and hyphens (DON'T, WELL-KNOWN).
+    return re.sub(r"\b[A-Z][A-Z'’\-]{1,}(?:\s+[A-Z][A-Z'’\-]{1,})+\b", repl, text)
+
+
 def _is_letter_spacing(word: str, repl: str) -> bool:
     """True if `repl` is just `word`'s letters spaced out (an acronym reading:
     "CEO" -> "C E O", "U.S." -> "U S"). The only lexicon class safe for modern
@@ -275,6 +348,18 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             flags = 0 if modern else re.IGNORECASE
             pattern = r'\b' + re.escape(word) + r'\b'
             text = re.sub(pattern, phonetic, text, flags=flags)
+
+    # === All-caps emphasis -> normal case (helps EVERY engine) ===
+    # Modern TTS treats an all-caps token as an initialism. Books use capitals
+    # for labels, signage and emphasis, so "ORANGE MARMALADE" was rendered as
+    # something between a spelling-out and a mangling (#34, heard by ear in
+    # Alice in Wonderland).
+    #
+    # The signal that separates the two cases: ACRONYMS APPEAR AS SINGLE TOKENS
+    # in normal-case surroundings, EMPHASIS APPEARS AS RUNS. So a run of two or
+    # more capitalised words is emphasis and gets sentence case, while a lone
+    # CEO / NASA / BBC is left completely alone.
+    text = _normalize_caps_runs(text)
 
     # === Abbreviations (must come before period-related rules) ===
     # Acronyms read letter-by-letter — helps EVERY engine (else "U.S." -> "us").

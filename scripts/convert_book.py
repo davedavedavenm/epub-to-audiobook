@@ -29,6 +29,7 @@ from tts_preprocess import sanitize_html, normalize_text_for_tts  # noqa: E402
 # Shared chapter numbering — the SAME function the web UI's picker uses, so the
 # chapter number a user selects is exactly the chapter that renders here.
 from chapters import spine_docs, renderable_wordcount, _title_for  # noqa: E402
+from book_meta import read_book_meta  # noqa: E402
 import requests  # noqa: E402
 
 # Optional adaptive pronunciation (QA Layer 1) — same as the app. Needs an LLM
@@ -324,17 +325,11 @@ def main():
     # number and per-file title) to group the files as one book and order/name
     # the chapters. Without them chapter navigation is broken (the files carry no
     # metadata otherwise).
-    def _book_meta():
-        try:
-            opf = [n for n in z.namelist() if n.endswith('.opf')][0]
-            t = z.read(opf).decode('utf-8', 'ignore')
-            ti = re.search(r'<dc:title[^>]*>([^<]+)', t)
-            au = re.search(r'<dc:creator[^>]*>([^<]+)', t)
-            return (ti.group(1).strip() if ti else Path(a.epub).stem,
-                    au.group(1).strip() if au else '')
-        except Exception:
-            return Path(a.epub).stem, ''
-    book_title, book_author = _book_meta()
+    # ONE reader for this, shared with the webapp's M4B builder. When these
+    # were two separate implementations the M4B silently lost the author (#32).
+    book_meta = read_book_meta(a.epub)
+    book_title = book_meta.get('title') or Path(a.epub).stem
+    book_author = book_meta.get('author', '')
 
     def _post_progress(done, total, current):
         if not a.progress_url:
