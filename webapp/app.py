@@ -3927,6 +3927,36 @@ def check_engines_health(max_age=20):
     return out
 
 
+# Engines that need a credential before they can ever synthesise. This is a
+# DIFFERENT failure from "offline": an offline engine is a container you can
+# start, whereas these cannot work at all until a key is supplied — so the UI
+# must not offer their voices as if selecting one might work (#24).
+ENGINE_CREDENTIALS = {
+    'inworld': ('INWORLD_API_KEY', 'Needs an Inworld API key (Settings → API keys)'),
+    'polly': ('AWS_ACCESS_KEY_ID', 'Needs AWS credentials (Settings → API keys)'),
+}
+
+
+def engines_unconfigured():
+    """Return {engine: human reason} for engines missing required credentials.
+
+    Kept separate from check_engines_health() on purpose: health answers "is it
+    reachable right now", this answers "could it ever work". The UI needs both,
+    because the honest message differs — "start the container" vs "add a key".
+    """
+    missing = {}
+    for engine, (setting_key, reason) in ENGINE_CREDENTIALS.items():
+        if not (get_setting(setting_key) or os.environ.get(setting_key)):
+            missing[engine] = reason
+    return missing
+
+
+@app.route('/api/engines/unconfigured')
+def api_engines_unconfigured():
+    """Engines that cannot work until credentials are added, with the reason."""
+    return jsonify(engines_unconfigured())
+
+
 # Ordered preference for conversion failover: the human-cloned clone engines
 # first (best quality), then the always-local guaranteed-completes engines so a
 # book NEVER strands just because a GPU engine is down.
@@ -5707,6 +5737,13 @@ def convert_from_library():
                     return jsonify({'error': f'The {tts_engine} engine is offline and no fallback engine is healthy. '
                                     f'Start an engine (e.g. docker compose --profile {tts_engine} up -d).'}), 409
             else:
+                # "Offline" and "never configured" need different advice —
+                # telling someone to start a container when the real problem is
+                # a missing API key sends them down the wrong path (#24).
+                _missing = engines_unconfigured().get(tts_engine)
+                if _missing:
+                    return jsonify({'error': f'The {tts_engine} engine is not configured. {_missing} '
+                                    f'Until then its voices cannot render — pick a voice from another engine.'}), 409
                 return jsonify({'error': f'The {tts_engine} engine is offline — its service is not running. '
                                 f'Start it (e.g. docker compose --profile {tts_engine} up -d), pick a voice from another engine, '
                                 f'or resend with allow_engine_fallback to auto-substitute a healthy engine.'}), 409

@@ -236,8 +236,8 @@ validation, the startup-recovery bug and the ABS sync bug) is **closed**.
 
 | Issue | Kind | What | Note |
 |---|---|---|---|
-| [#21](../../issues/21) | enhancement | TADA: path to production-ready (parked — capability high, control missing) | Overlaps #23; #23 is the blocker, #21 is the quality work behind it |
-| [#23](../../issues/23) | bug | TADA engine unusable | **Symptom changed 2026-07-25** — the meta-tensor load error is fixed; it now builds, starts healthy, and OOMs on first synthesis |
+| [#21](../../issues/21) | enhancement | TADA: path to production-ready (parked — capability high, control missing) | The quality work. **Not blocked by #23** — see the note below |
+| [#23](../../issues/23) | bug | TADA OOMs on **local CPU** | **Symptom changed 2026-07-25** — the meta-tensor load error is fixed; it now builds, starts healthy, and OOMs on first synthesis against its 10 GiB cgroup |
 | [#24](../../issues/24) | enhancement | Inworld's 12 voices are selectable but cannot work without an API key — gate or hide them | Confirmed live: `inworld:false`, `polly:false` in `/api/engines/health` |
 | [#25](../../issues/25) | enhancement | Convert tab visual cleanup (hierarchy, spacing, demote advanced controls) | PLAN-V3 #4 shipped the 3-step wizard; **check whether this cosmetic remainder is still real before working it** |
 | [#27](../../issues/27) | bug | Does chatterbox need pronunciation help at all? (the modern-engine lexicon filter) | Partly overtaken by PLAN-V3 #16 — LLM pronunciation is now off by default, so this is about the *curated* lexicon |
@@ -269,6 +269,27 @@ Verified against the running stack at `192.168.1.41`, not from documentation:
   question worth answering first.
 - **Hostname is still `dave-NUC8i7BEH`** — cosmetic, but it names hardware that
   was replaced in July. `free` confirms the 31 GB i5-12400.
+
+### TADA: separate the two questions (correction, 2026-07-25)
+
+An earlier draft of this file's advice was to drop TADA. That conflated two
+different things and was wrong:
+
+1. **Does TADA work?** Yes — on **GPU**. It has rendered real chapters on Vast
+   and Kaggle; the v8 audio discussed in #21 (including the moment it
+   spontaneously voiced a quotation *impeccably*) came from those runs. Its
+   ceiling is the reason the issue was never closed.
+2. **Does TADA work on zorin?** No. It exceeds a 10 GiB cgroup within ~7 s of
+   the first synthesis. That is a **local CPU deployment** problem, and it does
+   not tell you anything about the engine's quality.
+
+So the sequence is: **use TADA where it already works (GPU) whenever its
+character is what you want**, and treat #23 as a separate, optional piece of
+work to make it viable locally too. With ~18 GB free on the box that is worth
+attempting — the useful first experiments are loading fp16/bf16 instead of
+fp32, and checking whether peak memory scales with the 600-char chunk size
+(activations) or not (weights/caching). Raising the cap alone would confirm the
+consumption without explaining it.
 
 ## Robustness backlog (not blocking, no issue yet)
 

@@ -709,10 +709,20 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 
     const voices = {{ voices | tojson }};
     let engineHealth = {};   // engine -> bool (true=up); empty until loaded
+    // engine -> reason string, for engines that can NEVER work without a
+    // credential. Distinct from "offline": offline is a container you can
+    // start; these need a key, so their voices must not look selectable (#24).
+    let engineUnconfigured = {};
     async function loadEngineHealth() {
         try { engineHealth = await (await fetch('/api/engines/health')).json(); } catch(e) {}
+        try { engineUnconfigured = await (await fetch('/api/engines/unconfigured')).json(); } catch(e) {}
     }
     function engineUp(e) { return engineHealth[e] !== false; }
+    function engineConfigured(e) { return !engineUnconfigured[e]; }
+    // Voices we are willing to offer as a choice at all.
+    function selectableVoices() {
+        return Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine));
+    }
     let libraryBooks = [];
     let selectedFile = null;
     let currentPreviewPath = null;
@@ -890,6 +900,11 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         sp.style.opacity = ok ? '1' : '0.45';
         const lbl = sp.closest('.setup-field')?.querySelector('.setup-label');
         if (lbl) lbl.textContent = ok ? 'Speed' : 'Speed (n/a)';
+        // The local-render note quotes a per-engine speed, so it has to follow
+        // the voice choice — otherwise it keeps quoting the previous engine.
+        const bookId = voiceSelectId.replace(/^voice-/, '');
+        const rt = document.getElementById('rt-' + bookId);
+        if (rt && rt.value === 'local') renderTargetNote(bookId, 'local');
     }
 
     let wsPreviewBtn = null;
@@ -920,10 +935,14 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     }
 
     function buildVoiceOptions(selectedId) {
-        const engines = [...new Set(Object.values(voices).map(v => v.engine))];
+        // Unconfigured engines are omitted entirely — a voice you cannot
+        // possibly render is not a choice, and listing it only invites a job
+        // that fails at queue time (#24).
+        const usable = selectableVoices();
+        const engines = [...new Set(usable.map(([id, v]) => v.engine))];
         return engines.map(engine => {
             const up = engineUp(engine);
-            const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
+            const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const label = engine.toUpperCase() + (up ? ' ENGINE' : ' ENGINE — OFFLINE');
             return `<optgroup label="${label}">${engineVoices.map(([id, v]) => `<option value="${id}" ${up ? '' : 'disabled'} ${id === selectedId && up ? 'selected' : ''}>${v.name} (${v.accent})${up ? '' : ' — offline'}</option>`).join('')}</optgroup>`;
         }).join('');
@@ -998,11 +1017,11 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                                     <label class="setup-label" style="display:block; margin-bottom:9px;">Render on</label>
                                     <div class="rt-row">
                                         <div class="rt-opt on" data-rt="local" onclick="pickRender('${bookId}',this)">
-                                            <div class="rt-t">This machine</div><div class="rt-s">free · cpu · slow</div>
+                                            <span class="rt-badge">Recommended</span>
+                                            <div class="rt-t">This machine</div><div class="rt-s">free · no quota</div>
                                         </div>
                                         <div class="rt-opt cloud" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
-                                            <span class="rt-badge">Recommended</span>
-                                            <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · gpu · fast</div>
+                                            <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · gpu · weekly quota</div>
                                         </div>
                                         <div class="rt-opt" data-rt="vast" onclick="pickRender('${bookId}',this)">
                                             <div class="rt-t">Vast GPU</div><div class="rt-s">paid · fastest</div>
@@ -1101,8 +1120,26 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         } else if (target === 'vast') {
             note.innerHTML = '<span class="warn">Vast.ai is <b>paid</b> (a few pence/book, billed by the hour). Enable it in Settings first.</span>';
         } else {
-            note.innerHTML = '<span class="muted">Renders on this computer. Free, but a full book can take hours.</span>';
+            note.innerHTML = '<span class="muted">' + localSpeedNote(bookId) + '</span>';
         }
+    }
+
+    // Measured real-time factors on this box (render time / audio duration),
+    // recorded in STATUS.md. Below 1.0 means faster than realtime. Only local
+    // CPU figures belong here — TADA's number is a GPU one and it cannot
+    // render locally at all, so listing it would mislead.
+    const ENGINE_RTF_LOCAL = { chatterbox_nano: 0.87, chatterbox: 3.33 };
+    function localSpeedNote(bookId) {
+        const voiceId = document.getElementById('voice-' + bookId)?.value;
+        const eng = (voiceId && voices[voiceId]) ? voices[voiceId].engine : null;
+        const rtf = eng ? ENGINE_RTF_LOCAL[eng] : undefined;
+        if (rtf === undefined) {
+            return 'Renders on this computer. Free, and this engine is light enough to keep up comfortably.';
+        }
+        if (rtf < 1) {
+            return `Renders on this computer. Free — measured faster than realtime here (RTF ${rtf}), so a 12-hour book is about an overnight job. No quota, and chapters land on disk as they finish.`;
+        }
+        return `Renders on this computer, but this engine measured RTF ${rtf} here — a 12-hour book would take roughly ${Math.round(12 * rtf)} hours. A GPU target is far quicker for this voice.`;
     }
     function pickRender(bookId, el) {
         el.parentElement.querySelectorAll('.rt-opt').forEach(o => o.classList.remove('on'));
@@ -1168,9 +1205,10 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     function renderVoices() {
         const container = document.getElementById('voices-content');
         if(!container) return;
-        const engines = [...new Set(Object.values(voices).map(v => v.engine))];
-        const online = Object.entries(voices).filter(([id, v]) => engineUp(v.engine)).map(([id]) => id);
-        const allIds = Object.keys(voices);
+        const usable = selectableVoices();
+        const engines = [...new Set(usable.map(([id, v]) => v.engine))];
+        const online = usable.filter(([id, v]) => engineUp(v.engine)).map(([id]) => id);
+        const allIds = usable.map(([id]) => id);
         const cmpA = online[0] || allIds[0] || '';
         const cmpB = online[1] || online[0] || allIds[1] || cmpA;
         const compareCard = `
@@ -1203,8 +1241,27 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 </div>
             </div>
         `;
+        // Engines missing credentials are listed once, at the bottom, as a
+        // plain statement of what they'd need — not as playable cards. They
+        // used to render as full voice cards with no sample and no way to
+        // work, which read as "broken" rather than "not set up" (#24).
+        const unconfiguredSection = Object.entries(engineUnconfigured).map(([engine, reason]) => {
+            const names = Object.entries(voices).filter(([id, v]) => v.engine === engine);
+            if (!names.length) return '';
+            return `
+                <div class="engine-section" style="opacity:0.5;">
+                    <div class="engine-header">${engine.toUpperCase()} ENGINE
+                        <span style="color:var(--ink-3); font-size:0.8rem;">● NOT CONFIGURED — ${escapeHtml(reason)}</span>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--ink-3); padding:6px 0 2px;">
+                        ${names.length} voice${names.length === 1 ? '' : 's'} hidden from the voice pickers until this is set up.
+                    </div>
+                </div>
+            `;
+        }).join('');
+
         container.innerHTML = compareCard + engines.map(engine => {
-            const engineVoices = Object.entries(voices).filter(([id, v]) => v.engine === engine);
+            const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
             return `
                 <div class="engine-section" style="${up ? '' : 'opacity:0.45;'}">
@@ -1226,7 +1283,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                     </div>
                 </div>
             `;
-        }).join('');
+        }).join('') + unconfiguredSection;
     }
 
     // Which voice is currently speaking (only ever one).
@@ -1455,7 +1512,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                             <label class="setup-label" for="fallback-voice-${j.id}">Switch Narrator (Fallback)</label>
                             <select id="fallback-voice-${j.id}" class="input-control">
                                 <option value="">Keep original (${j.voice_name || j.voice})</option>
-                                ${Object.entries(voices).map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                                ${selectableVoices().map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
                             </select>
                         </div>
                         <div style="display:flex; gap:16px;">
