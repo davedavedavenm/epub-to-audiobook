@@ -10,7 +10,16 @@ from bs4 import BeautifulSoup
 # Per-call ceiling for LLM requests made during conversion. These features are
 # optional quality boosts, so they must lose fast and fall back rather than
 # delay a render. Raise only if the endpoint is genuinely fast.
-LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '25'))
+LLM_TIMEOUT_SECONDS = float(os.environ.get('LLM_TIMEOUT_SECONDS', '60'))
+
+# How much book text to send for the narration profile. This was 24,000 chars
+# (~6k tokens), which a local CPU model cannot read AND answer inside any sane
+# timeout — on a 6 tok/s box the call timed out at 120s and every book silently
+# fell back to the seed floor (2026-07-25). Excerpts are spread across the
+# spine, so a smaller window still samples the whole book.
+PROFILE_SAMPLE_CHARS = int(os.environ.get('LLM_PROFILE_SAMPLE_CHARS', '8000'))
+# Bound the reply too: an unbounded JSON answer can ramble for minutes on CPU.
+LLM_MAX_TOKENS = int(os.environ.get('LLM_MAX_TOKENS', '800'))
 
 def _strip_markdown_fences(content: str) -> str:
     if content.startswith("```json"):
@@ -220,6 +229,7 @@ def _call_llm_json(prompt: str, settings: dict, temperature: float = 0.1):
             {"role": "user", "content": prompt},
         ],
         "temperature": temperature,
+        "max_tokens": LLM_MAX_TOKENS,
     }
     endpoint = f"{settings['LLM_API_BASE_URL'].rstrip('/')}/chat/completions"
     # Fail FAST. This runs in the conversion path, before the render container
@@ -265,7 +275,7 @@ def generate_narration_profile(epub_path: Path) -> dict:
     if not settings['LLM_API_KEY'] and not _fallback_settings():
         logging.info("No LLM configured. Using seed narration profile floor.")
         return _seed_profile('no LLM configured')
-    sample = extract_spread_sample(epub_path)
+    sample = extract_spread_sample(epub_path, max_chars=PROFILE_SAMPLE_CHARS)
     if not sample:
         return _seed_profile('no sample text extracted')
 
