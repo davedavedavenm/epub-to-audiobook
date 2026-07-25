@@ -45,6 +45,35 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 
 ## Incident log
 
+### 2026-07-25 — Long Kaggle renders could burn the whole quota and return nothing
+Two independent faults found while rendering a 142,759-word book (~15.4 h of
+audio ≈ **13 GPU-hours** for CosyVoice at RTF 0.9):
+
+- **A session that hits Kaggle's cap yields NOTHING.** Kaggle commits kernel
+  outputs only when the kernel *finishes*: `kaggle kernels output` against a
+  running kernel returned **zero files** (tested live, mid-render). A book
+  needing more than one session would therefore consume ~12 h of the 30 h
+  weekly quota and produce no MP3s at all.
+  **Fix:** `kaggle_render.plan_batches()` packs chapters into contiguous
+  batches sized by real per-chapter word counts (`chapters.list_renderable_chapters`)
+  against `KAGGLE_SESSION_BUDGET_HOURS` (default 5). `convert_book_kaggle`
+  loops the batches; each kernel completes and banks its chapters, and a
+  failure mid-way keeps everything already pulled (Resume covers the rest).
+  Note the units: the budget is GPU-hours of *audio*, and `ENGINE_RTF` differs
+  sharply per engine (tada 0.45 vs cosyvoice 0.9) — halve the RTF and a book
+  that needed 3 sessions needs 2.
+- **Cancel never stopped the GPU.** `cancel_job()` stopped the container and
+  the local process but did nothing about the kernel, so a cancelled Kaggle
+  render kept billing quota while the UI said "cancelled". The Kaggle CLI has
+  no stop verb; pushing a **new version to the same slug supersedes the running
+  one**, which is what `kaggle_render.stop_kernel()` now does (no-op script,
+  CPU, no internet). `kernel_slug()` is now the single source of truth for the
+  kernel name so cancel targets the same kernel the render created.
+
+**Lesson:** for any batch job on a capped external runner, ask two questions
+before trusting it — *when do results become durable?* and *does our stop button
+actually stop it?* Both answers here were the bad one.
+
 ### 2026-07-24 — Local LLM configured for weeks, never once called
 - **Symptom:** none visible. Every LLM feature (chapter front/back-matter
   classification, pronunciation lexicon, metadata) silently did nothing, on a

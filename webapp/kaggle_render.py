@@ -46,6 +46,86 @@ def render_engines():
     return tuple(_ENGINE_KERNEL)
 
 
+# --- session planning ------------------------------------------------------
+# Kaggle caps a session (~9-12h) AND commits outputs only when the kernel
+# FINISHES: `kaggle kernels output` returns zero files for a kernel that is
+# still running, and a session killed at the cap therefore yields nothing at
+# all (verified 2026-07-25 against a live render). A book too big for one
+# session must be split into several kernels, each of which completes and
+# commits its own chapters.
+SESSION_BUDGET_HOURS = float(os.environ.get("KAGGLE_SESSION_BUDGET_HOURS", "5"))
+WORDS_PER_MINUTE = 155.0        # narration pace
+SETUP_HOURS = 0.3               # per-session install + model download overhead
+# Measured realtime factors on Kaggle GPUs (gen seconds per audio second).
+ENGINE_RTF = {"cosyvoice": 0.9, "chatterbox": 0.85, "tada": 0.45}
+
+
+def estimate_hours(words, rtf=0.9):
+    """GPU hours needed to narrate `words` at this engine's realtime factor."""
+    return (float(words) / WORDS_PER_MINUTE / 60.0) * rtf
+
+
+def plan_batches(chapters, start=1, end=0, rtf=0.9, budget_hours=None):
+    """Pack chapters [start..end] into contiguous batches that each fit a session.
+
+    `chapters` is [{'index': int, 'words': int}, ...] (chapters.list_renderable_chapters).
+    Returns [(start_index, end_index, est_hours), ...] — always at least one batch,
+    so callers can loop unconditionally. An oversized single chapter still gets
+    its own batch: splitting below chapter granularity isn't possible here.
+    """
+    budget = float(budget_hours or SESSION_BUDGET_HOURS)
+    sel = [c for c in (chapters or [])
+           if c.get('index', 0) >= (start or 1) and (not end or c.get('index', 0) <= end)]
+    if not sel:
+        return [((start or 1), end or 0, 0.0)]
+    batches, cur, cur_h = [], [], 0.0
+    for c in sel:
+        h = estimate_hours(c.get('words', 0), rtf)
+        if cur and (cur_h + h + SETUP_HOURS) > budget:
+            batches.append((cur[0]['index'], cur[-1]['index'], cur_h))
+            cur, cur_h = [], 0.0
+        cur.append(c)
+        cur_h += h
+    if cur:
+        batches.append((cur[0]['index'], cur[-1]['index'], cur_h))
+    return batches
+
+
+def kernel_slug(epub_path):
+    """Kernel slug for a book's render. Single source of truth so `cancel` can
+    find the same kernel `render_on_kaggle` created."""
+    book = os.path.splitext(os.path.basename(epub_path))[0]
+    return _slug(f"render-{book}")
+
+
+def stop_kernel(slug, log=print):
+    """Actually halt a running Kaggle kernel.
+
+    The Kaggle CLI has no stop/cancel verb, and cancelling a job in the webapp
+    only stopped our *polling* — the GPU kept billing against the weekly quota
+    while the user believed they had stopped it (found 2026-07-25). Pushing a
+    new version to the same slug supersedes the running one, so push a no-op
+    (CPU, no internet) to end the session.
+    """
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            with open(os.path.join(td, "run.py"), "w", encoding="utf-8") as f:
+                f.write('print("superseded: render stopped by operator")\n')
+            with open(os.path.join(td, "kernel-metadata.json"), "w", encoding="utf-8") as f:
+                json.dump({"id": slug, "title": slug.split("/")[-1], "code_file": "run.py",
+                           "language": "python", "kernel_type": "script", "is_private": True,
+                           "enable_gpu": False, "enable_internet": False,
+                           "dataset_sources": [], "competition_sources": [],
+                           "kernel_sources": []}, f)
+            r = _kaggle("kernels", "push", "-p", td, timeout=180)
+        ok = r is not None and getattr(r, "returncode", 1) == 0
+        log(f"Kaggle: {'stopped' if ok else 'FAILED to stop'} kernel {slug}")
+        return ok
+    except Exception as e:
+        log(f"Kaggle: error stopping kernel {slug}: {e}")
+        return False
+
+
 def kaggle_username():
     """Resolve the Kaggle username from kaggle.json or env (needed for the
     dataset/kernel slug). Returns None if unresolvable."""
@@ -254,7 +334,7 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
 
     book = os.path.splitext(os.path.basename(epub_path))[0]
     ds_slug = _slug(f"epub-{book}")
-    kslug = _slug(f"render-{book}")
+    kslug = kernel_slug(epub_path)
     dataset_id = f"{user}/{ds_slug}"
     os.makedirs(out_dir, exist_ok=True)
     # Stable per-render ntfy topic (deterministic so resume tracks the same one).

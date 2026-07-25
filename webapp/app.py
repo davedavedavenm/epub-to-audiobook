@@ -3291,22 +3291,53 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
             pct = min(95, max(2, int(mins / proj_min * 100)))
             update_job(job_id, status=base, progress_percent=pct, eta_minutes=max(0, proj_min - mins))
 
+    # Split the requested range into per-session batches. A Kaggle session is
+    # capped (~9-12h) and commits its outputs ONLY when the kernel finishes —
+    # `kaggle kernels output` returns zero files for a running or killed kernel
+    # (verified 2026-07-25). So one oversized run burns the weekly quota and
+    # returns NOTHING. Each batch completes and banks its chapters instead.
     try:
-        ok, msg = KR.render_on_kaggle(
-            str(epub_path), voice, engine, start, end, str(output_path),
-            KAGGLE_KERNELS_DIR, log=lambda m: append_job_log(job_id, m),
-            on_status=on_status, resume=resume)
+        import chapters as _ch
+        _chapters = _ch.list_renderable_chapters(str(epub_path))
     except Exception as e:
-        current = get_job(job_id)
-        if current and current.get('status') == 'cancelled':
-            append_job_log(job_id, "Kaggle render loop aborted: job cancelled by user.")
+        append_job_log(job_id, f"Kaggle: chapter scan failed ({e}); running as a single session")
+        _chapters = []
+    batches = KR.plan_batches(_chapters, start or 1, end or 0,
+                              rtf=KR.ENGINE_RTF.get(engine, 0.9))
+    if len(batches) > 1:
+        append_job_log(job_id,
+                       f"Kaggle: ~{sum(b[2] for b in batches):.1f} GPU-h of audio — splitting into "
+                       f"{len(batches)} sessions so each one banks its chapters")
+
+    ok, msg = False, 'no batches planned'
+    for _i, (_bs, _be, _bh) in enumerate(batches, 1):
+        _cur = get_job(job_id)
+        if _cur and _cur.get('status') == 'cancelled':
+            append_job_log(job_id, "Kaggle render stopped: cancelled by user.")
             maybe_start_next_queued_job()
             return
-        update_job(job_id, status='failed', error=f'Kaggle render error: {e}',
-                   completed_at=datetime.now().isoformat())
-        append_job_log(job_id, f"Kaggle render error: {e}")
-        maybe_start_next_queued_job()
-        return
+        if len(batches) > 1:
+            append_job_log(job_id,
+                           f"Kaggle: session {_i}/{len(batches)} — chapters {_bs}-{_be} (~{_bh:.1f} GPU-h)")
+        try:
+            ok, msg = KR.render_on_kaggle(
+                str(epub_path), voice, engine, _bs, _be, str(output_path),
+                KAGGLE_KERNELS_DIR, log=lambda m: append_job_log(job_id, m),
+                on_status=on_status, resume=(resume and _i == 1))
+        except Exception as e:
+            current = get_job(job_id)
+            if current and current.get('status') == 'cancelled':
+                append_job_log(job_id, "Kaggle render loop aborted: job cancelled by user.")
+                maybe_start_next_queued_job()
+                return
+            update_job(job_id, status='failed', error=f'Kaggle render error: {e}',
+                       completed_at=datetime.now().isoformat())
+            append_job_log(job_id, f"Kaggle render error: {e}")
+            maybe_start_next_queued_job()
+            return
+        if not ok:
+            # Earlier batches already banked their chapters; Resume picks up the rest.
+            break
 
     if not ok:
         update_job(job_id, status='failed', error=f'Kaggle render failed: {msg}',
@@ -4821,6 +4852,22 @@ def cancel_job(job_id: str):
         running_processes.pop(job_id, None)
 
     running_containers.pop(job_id, None)
+
+    # Stop the Kaggle kernel too. Cancelling used to end only our polling loop
+    # while the GPU kept billing against the weekly quota — the user believed
+    # they had stopped it, and nothing had (found 2026-07-25).
+    if str(job.get('status', '')).startswith(('rendering on Kaggle GPU', 'queued on Kaggle')):
+        try:
+            import kaggle_render as KR
+            user = KR.kaggle_username()
+            slug = KR.kernel_slug(job.get('input_filename') or '')
+            if user and slug:
+                KR.stop_kernel(f"{user}/{slug}",
+                               log=lambda m: append_job_log(job_id, m))
+        except Exception as e:
+            app.logger.warning(f"Could not stop Kaggle kernel for {job_id}: {e}")
+            append_job_log(job_id, f"WARNING: could not stop the Kaggle kernel ({e}) — "
+                                   f"it may still be using GPU quota.")
 
     update_job(job_id,
         status='cancelled',
