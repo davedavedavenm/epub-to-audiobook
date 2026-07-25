@@ -19,15 +19,23 @@ Successor to PLAN.md. Every item below was accepted by Dave on 2026-07-23.
 > no key-shaped strings remain in tracked files. Close it unless you know of a
 > specific secret still to rotate.
 >
-> **Genuinely outstanding:**
-> - **#2 Turbo-vs-Nano A/B** — blocked on Dave's ears; everything else is ready
->   (both engines work, previews cached, Nano measured at RTF 0.83)
-> - **#15 M4B output** — not started, no code
-> - **#11 integration test** — 12 test files exist incl. `test_convert_book.py`,
->   but not the mock-TTS end-to-end run this item describes
-> - **#9 Docker sidecar** — not started. Note it would delete the docker-CLI
->   dependency whose absence broke PDF upload and Edge previews (2026-07-25), so
->   it is worth more than it looks
+> **Closed since this audit (2026-07-25):**
+> - **#15 M4B — DONE.** `webapp/m4b.py`; verified chapter index, tags and cover
+>   on real audio. Opt-in per job via an "Output" selector.
+> - **#11 integration test — DONE.** `tests/test_integration_pipeline.py` runs
+>   the real converter against a real epub with a mock TTS server. 99 tests pass.
+> - **#9 — premise was wrong; mostly closed the cheap way.** The plan assumed
+>   conversions shell out to Docker and proposed a sidecar to mediate that. They
+>   don't — conversions run in-process. Only TWO docker calls existed; Edge
+>   previews now use the `edge-tts` package directly, leaving ONE (the
+>   ASR-verify image). Removing that natively is a far smaller job than building
+>   a sidecar, and it is what actually unlocks 9.3/9.4 (drop the CLI and the
+>   socket proxy).
+>
+> **Still outstanding:**
+> - **#2 Turbo-vs-Nano A/B** — blocked on Dave's ears; both renders prepared
+> - **#9 last mile** — run ASR-verify in-process (faster-whisper is already a
+>   dependency), then delete the docker CLI and docker-socket-proxy
 > - **#8 app.py module split** — parked by decision (see note at #8)
 
 ---
