@@ -2284,18 +2284,20 @@ def get_voice_preview(voice_id: str) -> Path:
             with open(preview_path, 'wb') as f:
                 f.write(response.content)
         elif engine == 'edge':
-            # Use edge-tts directly via the p0n1 container
-            cmd = [
-                'docker', 'run', '--rm',
-                '-v', f"{HOST_DATA_DIR}/previews:/output",
-                '--entrypoint', 'edge-tts',
-                'ghcr.io/p0n1/epub_to_audiobook:latest',
-                '--voice', voice_id,
-                '--text', ptext,
-                '--write-media', f"/output/{voice_id}.mp3"
-            ]
-            app.logger.info(f"Generating EdgeTTS preview: {' '.join(cmd)}")
-            subprocess.run(cmd, capture_output=True, check=True, timeout=30)
+            # edge-tts as a LIBRARY. This used to spawn
+            # ghcr.io/p0n1/epub_to_audiobook purely to run its `edge-tts`
+            # binary: a container, an image pull and a working docker CLI for
+            # what is one HTTP call. It broke completely when the CLI turned out
+            # to be missing from the image (2026-07-25). Calling the package
+            # directly removes the whole chain.
+            import asyncio
+            import edge_tts
+            app.logger.info(f"Generating EdgeTTS preview for {voice_id}")
+
+            async def _edge():
+                await edge_tts.Communicate(ptext, voice_id).save(str(preview_path))
+
+            asyncio.run(_edge())
         elif engine in ('chatterbox', 'chatterbox_nano', 'tada'):
             # Chatterbox/TADA preview (direct to the local service).
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs

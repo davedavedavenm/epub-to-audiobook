@@ -8,6 +8,11 @@ beautifulsoup4==4.13.4
 lxml==5.4.0
 boto3==1.39.4
 kaggle==2.2.3
+# Edge voice previews. Used as a LIBRARY: previews previously spawned
+# ghcr.io/p0n1/epub_to_audiobook just to run its `edge-tts` binary, which meant
+# a container + image pull + a working docker CLI for one HTTP call — and it
+# broke outright when the CLI turned out to be missing (2026-07-25).
+edge-tts==7.2.8
 # Optional — QA Layer 2 (ASR verification, webapp/qa_asr.py). Heavy (~200MB
 # model on first use), CPU-friendly. Install where you want the self-checking
 # loop: pip install faster-whisper
