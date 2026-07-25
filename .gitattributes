@@ -1,6 +1,27 @@
+# Line endings.
+#
+# This repo is edited from Windows (C:\Users\Dave\repos) and from Linux hosts
+# (khpi5, zorin). Without a rule here, Git stored whatever each machine wrote,
+# so the same file flipped between CRLF and LF and showed as "modified" with a
+# whole-file diff containing no actual change. On 2026-07-25 that was 18 files
+# and 2,940 changed lines, all of it noise — and noise that hides real edits.
+#
+# text=auto: Git decides text vs binary by content.
+# eol=lf:    text files are normalised to LF in the repo AND in the working
+#            tree. LF (not native) is deliberate — shell scripts and Dockerfiles
+#            in here are executed on Linux, where a CRLF shebang fails.
+* text=auto eol=lf
+
+# Explicitly binary — never touch these.
 *.wav filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
 *.epub filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
 *.webp filter=lfs diff=lfs merge=lfs -text
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.onnx binary
+*.pt binary
+*.bin binary

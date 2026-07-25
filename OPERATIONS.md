@@ -29,6 +29,10 @@ documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
   carries the default voice, so its container must be up or the default engine
   is offline on a fresh deploy. Turbo and TADA stay opt-in
   (`ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`) because they are heavy.
+  **That describes a fresh deploy, not necessarily the running box.** A live
+  check on 2026-07-25 found Turbo *and* kokoro up alongside nano and piper
+  (opt-ins from earlier sessions, never brought down). Harmless on 31 GB, but
+  read engine state from `/api/engines/health`, not from this paragraph.
 - **TADA stays OFF.** #23 is still open: the image builds again since the
   `hume-tada` pin fix and it starts healthy, but the first synthesis exceeds its
   10 GiB cgroup within ~7 s (`OOMKilled=true`). Do not simply raise the cap —
@@ -76,6 +80,39 @@ the wiring *between* components, where the unit suite is blind.
   price for CPU speed.
 
 ## Incident log
+
+### 2026-07-25 — SSH to zorin from Windows appears dead; it is a key-permission problem
+- **Symptom:** `ssh zorin` from the Windows box exits 255 and prints **nothing**
+  — no error, no banner. `ssh -V` also prints nothing. It looks like a broken or
+  blocked binary.
+- **What it is not:** `C:\Windows\System32\OpenSSH\ssh.exe` is present and
+  intact, the `zorin` host entry is correct (`192.168.1.41`, which pings), and
+  `ssh` is not in any blocklist. The silence is an artefact of the tooling
+  swallowing native **stderr** — every real error message goes there, so the
+  failure looks like nothing at all.
+- **Root cause (seen once stderr was recoverable, via WSL):**
+
+  ```
+  Permissions 0777 for '/mnt/d/Nextcloud/.ssh/dave_pi_key' are too open.
+  Load key ...: bad permissions
+  dave@192.168.1.41: Permission denied (publickey,keyboard-interactive).
+  ```
+
+  The key lives on a **DrvFs mount** (`D:`), which reports 0777 for everything.
+  SSH refuses to use a world-readable private key, so it never authenticates.
+- **Workaround (same pattern already used for the NAS):** copy the key to the
+  Linux filesystem with correct permissions first.
+
+  ```bash
+  install -m 600 /mnt/d/Nextcloud/.ssh/dave_pi_key /tmp/zorin_key
+  ssh -o BatchMode=yes -i /tmp/zorin_key dave@192.168.1.41 'hostname'
+  ```
+
+  For anything multi-line, write the commands to a file and pipe them
+  (`ssh ... 'bash -s' < script.sh`) rather than fighting nested quoting.
+- **Lesson:** a command that produces *no output at all* is usually a swallowed
+  stderr, not a dead binary. Redirect to a file and read the file before
+  concluding the tool is broken.
 
 ### 2026-07-25 — `docker.io` installed, `docker` missing: PDF + Edge previews broken
 - **Symptom:** `Failed to generate preview for en-US-AriaNeural: [Errno 2] No

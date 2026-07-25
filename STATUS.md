@@ -1,9 +1,13 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-18.** Honest single source of truth. "Verified" = it
+**Last updated: 2026-07-25.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
+
+> **Read the issue list from GitHub, not from here.** On 2026-07-25 this file's
+> issue table still listed #7–#15 as open; every one of them had been closed.
+> The table below was rebuilt by querying the API. If it looks old, re-query.
 
 ## Hardware transformed (2026-07-20)
 
@@ -225,22 +229,46 @@ can drive, and self-service configuration.
 
 ## Open work → GitHub issues
 
-Milestone: **Audio quality + closed-loop QA**.
+**Queried from the API 2026-07-25 — these five are the entire open backlog.**
+Everything previously listed here (#7–#15: the QA auto-fix loop, the TADA hiss
+A/B, the Vast memory cap, the failover toggle, the Kaggle clean-audio
+validation, the startup-recovery bug and the ABS sync bug) is **closed**.
 
-| Issue | What |
-|---|---|
-| [#7](../../issues/7) | QA Layer 2: auto-apply high-confidence fixes + auto re-render flagged spans |
-| [#8](../../issues/8) | Eliminate TADA background hiss (denoise default policy + engine A/B) |
-| [#9](../../issues/9) | bug: Vast engine has no memory cap — OOM mid-render |
-| [#10](../../issues/10) | Wire QA Layer 2 into the web UI (auto-run + report surface) |
-| [#11](../../issues/11) | Engine failover toggle in the UI |
-| [#12](../../issues/12) | Validation: clean-audio A/B on free Kaggle |
-| [#13](../../issues/13) | Finish Inside Apple audiobook (CPU vs GPU re-render) |
-| [#14](../../issues/14) | bug: startup recovery resurrects cancelled jobs, blocks queue |
-| [#15](../../issues/15) | bug: ABS sync broken (docker-vm unresolvable + token) — partially fixed |
+| Issue | Kind | What | Note |
+|---|---|---|---|
+| [#21](../../issues/21) | enhancement | TADA: path to production-ready (parked — capability high, control missing) | Overlaps #23; #23 is the blocker, #21 is the quality work behind it |
+| [#23](../../issues/23) | bug | TADA engine unusable | **Symptom changed 2026-07-25** — the meta-tensor load error is fixed; it now builds, starts healthy, and OOMs on first synthesis |
+| [#24](../../issues/24) | enhancement | Inworld's 12 voices are selectable but cannot work without an API key — gate or hide them | Confirmed live: `inworld:false`, `polly:false` in `/api/engines/health` |
+| [#25](../../issues/25) | enhancement | Convert tab visual cleanup (hierarchy, spacing, demote advanced controls) | PLAN-V3 #4 shipped the 3-step wizard; **check whether this cosmetic remainder is still real before working it** |
+| [#27](../../issues/27) | bug | Does chatterbox need pronunciation help at all? (the modern-engine lexicon filter) | Partly overtaken by PLAN-V3 #16 — LLM pronunciation is now off by default, so this is about the *curated* lexicon |
 
 Not yet an issue but the biggest lever: **GPU auto-provision for TADA/Chatterbox
 from the UI** so quality engines don't run on CPU (the "one-click" goal).
+
+## Live deployment check (2026-07-25)
+
+Verified against the running stack at `192.168.1.41`, not from documentation:
+
+- **Deployed commit is `a34be70`** — current `origin/main`. The working tree on
+  zorin is clean apart from untracked `data/` and one `.bak` compose file.
+  (`/api/health` reports `git_sha: "local"`, which is the build label, not
+  evidence of a live patch — don't read it as one.)
+- **Engines live:** chatterbox (Turbo), chatterbox_nano, kokoro, piper, edge
+  all `true`; tada, inworld, polly `false`.
+- **Turbo and kokoro are both running** even though OPERATIONS.md describes the
+  default deploy as Piper + chatterbox-nano with Turbo opt-in. The box has more
+  up than the documented default — fine on 31 GB, but the doc and the box
+  disagree.
+- **`tada-tts` does not exist as a container** (`no such object`), so the OOM
+  could not be reproduced this session. It remains a report from the 07-25
+  build session, not a live measurement.
+- **Memory: 31 GB total, ~12 GB used, ~18 GB available.** This matters for #23:
+  the "do not raise the 10 GiB cap, the host only has ~10 GiB free" reasoning
+  was recorded when the box was busier. With ~18 GB free the experiment is at
+  least *available* — though "why does a 1B model need >10 GiB" is still the
+  question worth answering first.
+- **Hostname is still `dave-NUC8i7BEH`** — cosmetic, but it names hardware that
+  was replaced in July. `free` confirms the 31 GB i5-12400.
 
 ## Robustness backlog (not blocking, no issue yet)
 
