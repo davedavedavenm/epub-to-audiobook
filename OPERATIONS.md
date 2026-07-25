@@ -330,3 +330,45 @@ ran the conversion — webapp jobs, standalone `convert_book.py`, and the
 `scripts/sample.sh` harness (samples go to `data/audiobooks/_samples/`).
 AudioBookShelf is the unified listening library the webapp syncs to. Do NOT
 add new ad-hoc output dirs.
+
+## End-to-end delivery proof (scripts/e2e_proof.sh)
+
+Renders one public-domain chapter (Poe, *The Raven*) on **every free engine** and
+asserts the whole delivery chain per engine — MP3 → chaptered M4B → cover art →
+files actually present in Audiobookshelf — wiping local output, the ABS copy and
+the job record after each success (failures are left in place for inspection).
+
+Run it on zorin after any change to the render, sync or packaging paths:
+
+```bash
+bash scripts/e2e_proof.sh          # ~35 min for all five engines
+```
+
+**Result 2026-07-25 — PASS 5/5:** chatterbox_nano, kokoro, piper, edge, chatterbox.
+
+It earned its keep immediately. Four defects it found that 99 unit tests did not,
+because every one of them lived in the wiring *between* components:
+
+1. **Audiobookshelf sync was entirely broken.** The SSH key was owned by UID 1000
+   while the container runs as 999 → `Permission denied`. The fourth instance of
+   the same non-root migration gap (after `/data`, the HF cache volume, numba).
+2. **Edge could never render a book.** `convert_book` asks every engine for WAV so
+   chunks join losslessly; the Edge path returns MP3 regardless, so `_concat_wav`
+   died with "file does not start with RIFF id". Only previews had ever worked.
+   Fixed generally with `_ensure_wav()` — any engine that ignores
+   `response_format` now works.
+3. **The M4B arrived after the job said "completed".** The local render path
+   duplicates `_gate_and_sync` rather than calling it, so the M4B hook added
+   there never ran locally; the file only appeared because the watchdog later
+   re-finalised the job, producing a second sync a minute later. **The
+   duplication itself is still there** — anything added to `_gate_and_sync` still
+   silently skips local renders. Worth unifying.
+4. **A lint autofix broke every sync.** Ruff's F401 pass removed one of two
+   duplicate `import shlex` statements inside `copy_to_audiobookshelf`; the
+   survivor still made the name function-local, leaving the earlier
+   `shlex.quote()` unbound. Guarded now by
+   `test_no_local_import_shadows_an_earlier_use`.
+
+**Lesson:** a green unit suite is not evidence that a delivery path works. Each of
+these sat in the seams between components, and only an end-to-end run that
+checked the *artefacts* — not the exit codes — could see them.
