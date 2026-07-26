@@ -3097,7 +3097,21 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             if job_id:
                 append_job_log(job_id, f"Cover extract skipped: {_ce}")
 
-        cmd = ['rsync', '-av', '-s', '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
+        # Do NOT ship the EPUB3-with-embedded-audio artefact to Audiobookshelf.
+        # It is a third copy of the same audio — a 2.5-hour book produced 12
+        # MP3s (166 MB), a 76 MB M4B and a 169 MB epub, so the library folder
+        # was 401 MB for 2.5 hours of listening. Audiobookshelf has no use for
+        # it either: it is an audiobook library, and the epub only gives the
+        # scanner an ebook to parse. Keep it in the working directory for
+        # anyone who wants it; don't sync it (#38).
+        #
+        # Internal bookkeeping files are excluded for the same reason — they
+        # are ours, not the listener's.
+        cmd = ['rsync', '-av', '-s',
+               '--exclude', '*.epub',
+               '--exclude', '_presync_gate.json',
+               '--exclude', '_verification/',
+               '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()
