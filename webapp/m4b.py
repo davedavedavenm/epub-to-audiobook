@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -93,11 +94,15 @@ def chapter_title(path: Path) -> str:
 
 
 def build_ffmetadata(entries: list[tuple[str, float]], title: str = '',
-                     author: str = '') -> str:
+                     author: str = '', extra: dict | None = None) -> str:
     """FFMETADATA1 text with one [CHAPTER] per file.
 
     `entries` is [(chapter_title, duration_seconds), ...] in order. Chapter
     marks are cumulative and expressed in milliseconds (TIMEBASE 1/1000).
+
+    `extra` carries whatever else the epub gave us — year, publisher, series,
+    description, language. Audiobookshelf reads these, and there is no reason
+    the single-file output should be poorer than the per-chapter MP3s (#32).
     """
     lines = [';FFMETADATA1']
     if title:
@@ -107,6 +112,9 @@ def build_ffmetadata(entries: list[tuple[str, float]], title: str = '',
         lines.append(f'artist={_esc(author)}')
         lines.append(f'album_artist={_esc(author)}')
     lines.append('genre=Audiobook')
+    for key, val in (extra or {}).items():
+        if val:
+            lines.append(f'{key}={_esc(val)}')
     start_ms = 0
     for name, dur in entries:
         end_ms = start_ms + max(1, int(round(dur * 1000)))
@@ -131,7 +139,7 @@ def find_cover(src_dir: Path) -> Path | None:
 
 def build_m4b(src_dir: Path, out_path: Path | None = None, title: str = '',
               author: str = '', bitrate: str = DEFAULT_BITRATE,
-              cover: Path | None = None) -> Path | None:
+              cover: Path | None = None, extra: dict | None = None) -> Path | None:
     """Concatenate a job's MP3s into one chaptered .m4b. Returns the path, or
     None if there is nothing to do or ffmpeg is unavailable.
 
@@ -158,6 +166,16 @@ def build_m4b(src_dir: Path, out_path: Path | None = None, title: str = '',
         log.warning('m4b: could not probe every chapter duration — skipping')
         return None
 
+    # Write to a sibling temp name and rename into place at the end.
+    #
+    # Audiobookshelf watches the library folder. Writing the .m4b directly to
+    # its final path let the watcher scan it MID-WRITE: on 2026-07-26 it read a
+    # partial file, logged "Invalid data found when processing input", and
+    # marked the book invalid permanently — nothing re-checks after the write
+    # completes. The file itself was perfectly good. rename(2) within a
+    # filesystem is atomic, so the watcher now sees either no file or the
+    # finished one, never a half of one (#38).
+    tmp_out = out_path.with_name(out_path.name + '.part')
     with tempfile.TemporaryDirectory() as td:
         listing = Path(td) / 'files.txt'
         # concat demuxer: single-quote the path and escape embedded quotes.
@@ -165,7 +183,8 @@ def build_m4b(src_dir: Path, out_path: Path | None = None, title: str = '',
             '\n'.join("file '{}'".format(str(f).replace("'", r"'\''"))
                       for f in files) + '\n', encoding='utf-8')
         meta = Path(td) / 'meta.txt'
-        meta.write_text(build_ffmetadata(entries, title, author), encoding='utf-8')
+        meta.write_text(build_ffmetadata(entries, title, author, extra),
+                        encoding='utf-8')
 
         cmd = [ffmpeg, '-v', 'error', '-y',
                '-f', 'concat', '-safe', '0', '-i', str(listing),
@@ -177,16 +196,28 @@ def build_m4b(src_dir: Path, out_path: Path | None = None, title: str = '',
             cmd += ['-map', '2:v', '-c:v', 'copy',
                     '-disposition:v:0', 'attached_pic']
         cmd += ['-c:a', 'aac', '-b:a', bitrate, '-movflags', '+faststart',
-                '-f', 'mp4', str(out_path)]
+                '-f', 'mp4', str(tmp_out)]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
 
-    if r.returncode != 0 or not out_path.exists() or out_path.stat().st_size == 0:
+    if r.returncode != 0 or not tmp_out.exists() or tmp_out.stat().st_size == 0:
         log.error('m4b: ffmpeg failed (%s): %s', r.returncode, (r.stderr or '')[:400])
-        if out_path.exists():
+        for p in (tmp_out, out_path):
             try:
-                out_path.unlink()
+                if p.exists():
+                    p.unlink()
             except Exception:
                 pass
+        return None
+
+    # Atomic publish. os.replace overwrites silently and never leaves a gap.
+    try:
+        os.replace(tmp_out, out_path)
+    except Exception as e:
+        log.error('m4b: could not publish %s: %s', out_path, e)
+        try:
+            tmp_out.unlink()
+        except Exception:
+            pass
         return None
 
     total = sum(d for _, d in entries)

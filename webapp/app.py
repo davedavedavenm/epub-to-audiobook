@@ -5578,7 +5578,7 @@ def _maybe_build_m4b(job_id, output_path, book_name):
         # the LLM narration profile (which has no author field, so it was
         # always empty) — leaving the M4B strictly worse tagged than the MP3s
         # built from the same source in the same job (#32).
-        title, author = book_name or '', ''
+        title, author, extra = book_name or '', '', {}
         epub_name = job.get('input_filename') or ''
         if epub_name:
             src = UPLOAD_DIR / epub_name
@@ -5586,12 +5586,20 @@ def _maybe_build_m4b(job_id, output_path, book_name):
                 bm = read_book_meta(src)
                 title = bm.get('title') or title
                 author = bm.get('author') or ''
+                # Everything else the epub gave us. Audiobookshelf reads these,
+                # and Dave asked for as much per-book metadata as possible.
+                for src_key, tag in (('year', 'date'), ('publisher', 'publisher'),
+                                     ('language', 'language'), ('description', 'comment'),
+                                     ('series', 'show'), ('series_index', 'episode_id')):
+                    if bm.get(src_key):
+                        extra[tag] = bm[src_key]
                 if author:
-                    append_job_log(job_id, f"M4B metadata from epub: '{title}' by {author}")
+                    append_job_log(job_id, f"M4B metadata from epub: '{title}' by {author}"
+                                           + (f" ({', '.join(extra)})" if extra else ''))
         if not author:
             append_job_log(job_id, "M4B metadata: no author found in the epub — "
                                    "tagging title only.")
-        out = build_m4b(Path(output_path), title=title, author=author)
+        out = build_m4b(Path(output_path), title=title, author=author, extra=extra)
         if out:
             mb = out.stat().st_size / 1e6
             append_job_log(job_id, f"M4B ready: {out.name} ({mb:.1f} MB)")
@@ -5618,6 +5626,13 @@ def _gate_and_sync(job_id, output_path, book_name, file_count):
         return 'held'
     _maybe_build_m4b(job_id, output_path, book_name)
     synced = copy_to_audiobookshelf(output_path, book_name, job_id=job_id)
+    if synced:
+        # Tell ABS explicitly rather than leaving it to its filesystem watcher.
+        # The watcher fires as soon as the first files land and can read the
+        # M4B before it is finished; an explicit scan AFTER everything is in
+        # place is both correct and faster to appear (#38). Harmless no-op if
+        # no API token is configured — it says so in the job log.
+        _trigger_abs_rescan(job_id)
     update_job(job_id, status='completed', file_count=file_count,
                progress_percent=100, synced_to_abs=synced,
                completed_at=datetime.now().isoformat())
@@ -6044,6 +6059,41 @@ def background_startup():
 
 
 init_db()
+
+
+def _assert_settings_writable():
+    """Fail LOUDLY at startup if settings cannot be persisted.
+
+    On 2026-07-26 every Settings save had been returning "attempt to write a
+    readonly database" and nothing said so: `app_settings` was empty, the app
+    silently fell back to `.env`, and the UI reported a 400 per attempt with no
+    hint of the cause. The actual fault was SQLite's WAL sidecars
+    (`jobs.db-wal`, `jobs.db-shm`) being owned by a different uid — the
+    database file itself was fine, which is exactly why the error misleads
+    (#37).
+
+    One write at boot turns a silent, permanent misconfiguration into a log
+    line.
+    """
+    try:
+        with get_db() as conn:
+            conn.execute('CREATE TABLE IF NOT EXISTS app_settings '
+                         '(key TEXT PRIMARY KEY, value TEXT)')
+            conn.execute("INSERT OR REPLACE INTO app_settings (key, value) "
+                         "VALUES ('_startup_write_check', ?)",
+                         (datetime.now().isoformat(),))
+            conn.commit()
+        app.logger.info('settings store: writable')
+    except Exception as e:
+        app.logger.error(
+            'SETTINGS STORE IS NOT WRITABLE: %s. Nothing saved through the '
+            'Settings page will persist and the app will silently fall back to '
+            '.env. If this says "readonly database", check the OWNER of '
+            'jobs.db-wal and jobs.db-shm - SQLite reports a WAL it cannot '
+            'write as a read-only database. See OPERATIONS.md.', e)
+
+
+_assert_settings_writable()
 
 if __name__ == '__main__':
     # `DEBUG` was never defined — running app.py directly crashed with
