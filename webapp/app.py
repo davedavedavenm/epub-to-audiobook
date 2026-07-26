@@ -2236,7 +2236,7 @@ def get_voice_preview(voice_id: str) -> Path:
         return preview_path
 
     # Determine TTS engine from voice definition
-    voice_info = VOICES.get(voice_id, {})
+    voice_info = all_voices().get(voice_id, {})
     engine = voice_info.get('engine', 'kokoro')
     ptext = _preview_text_for(engine)
 
@@ -4020,7 +4020,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 @app.route('/')
 def index():
     """Main upload page."""
-    return render_template('index.html', voices=VOICES, engines=TTS_ENGINES)
+    return render_template('index.html', voices=all_voices(), engines=TTS_ENGINES)
 
 
 
@@ -4092,6 +4092,130 @@ def api_engines_unconfigured():
     return jsonify(engines_unconfigured())
 
 
+# Uploaded reference voices live here; the chatterbox containers bind-mount it
+# at /app/voices/custom, so a new WAV is usable without rebuilding the image.
+CUSTOM_VOICES_DIR = Path(os.environ.get('CUSTOM_VOICES_DIR', '/data/voices'))
+
+# Chatterbox clones from a short reference. Too short and it has nothing to
+# work from; too long wastes conditioning and slows every chunk. These bounds
+# are advisory — the upload warns rather than refuses, because the only real
+# arbiter is how the preview sounds.
+REF_MIN_SECONDS = 8
+REF_MAX_SECONDS = 45
+
+
+def _probe_wav(path: Path) -> dict:
+    """Return {seconds, rate, channels} for a WAV, or {} if unreadable."""
+    try:
+        import wave
+        with wave.open(str(path), 'rb') as w:
+            frames, rate = w.getnframes(), w.getframerate()
+            return {'seconds': round(frames / float(rate), 1) if rate else 0,
+                    'rate': rate, 'channels': w.getnchannels()}
+    except Exception:
+        return {}
+
+
+def all_voices() -> dict:
+    """VOICES plus any uploaded reference voices, as one dict.
+
+    Uploaded voices are offered on BOTH chatterbox engines because the two
+    containers share the same image and the same voices directory — one WAV
+    gives you a Turbo narrator and a Nano one. Nano is the default, so it is
+    listed first.
+    """
+    merged = dict(VOICES)
+    if not CUSTOM_VOICES_DIR.exists():
+        return merged
+    for p in sorted(CUSTOM_VOICES_DIR.glob('*.wav')):
+        pretty = p.stem.replace('_', ' ').title()
+        merged[f'{p.stem}_nano'] = {
+            'name': f'{pretty} (your clone, fast)', 'accent': 'Custom',
+            'gender': 'Custom', 'engine': 'chatterbox_nano'}
+        merged[p.stem] = {
+            'name': f'{pretty} (your clone, Turbo)', 'accent': 'Custom',
+            'gender': 'Custom', 'engine': 'chatterbox'}
+    return merged
+
+
+@app.route('/api/voices/custom', methods=['GET'])
+def list_custom_voices():
+    """Reference voices uploaded through the UI."""
+    out = []
+    if CUSTOM_VOICES_DIR.exists():
+        for p in sorted(CUSTOM_VOICES_DIR.glob('*.wav')):
+            out.append({'id': p.stem, 'bytes': p.stat().st_size, **_probe_wav(p)})
+    return jsonify({'voices': out, 'dir': str(CUSTOM_VOICES_DIR)})
+
+
+@app.route('/api/voices/custom', methods=['POST'])
+def upload_custom_voice():
+    """Accept a reference WAV and make it available as a cloned narrator.
+
+    Deliberately strict about the container format: chatterbox reads the file
+    with `wave`, so an mp3 renamed to .wav fails at synthesis time with an
+    error that points nowhere near the upload. Better to refuse it here.
+    """
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    raw_name = request.form.get('voice_id') or Path(f.filename).stem
+    # Voice ids become filenames and URL fragments; keep them boring.
+    voice_id = re.sub(r'[^a-z0-9_]+', '_', raw_name.strip().lower()).strip('_')
+    if not voice_id:
+        return jsonify({'error': 'Could not derive a usable voice id from that name'}), 400
+
+    CUSTOM_VOICES_DIR.mkdir(parents=True, exist_ok=True)
+    dest = CUSTOM_VOICES_DIR / f'{voice_id}.wav'
+
+    tmp = dest.with_suffix('.wav.part')
+    try:
+        f.save(str(tmp))
+        info = _probe_wav(tmp)
+        if not info:
+            tmp.unlink(missing_ok=True)
+            return jsonify({'error': 'That file is not a readable WAV. Export as '
+                                     'WAV (PCM) — an MP3 renamed to .wav will not '
+                                     'work.'}), 400
+
+        warnings = []
+        if info['seconds'] < REF_MIN_SECONDS:
+            warnings.append(f"only {info['seconds']}s of audio — {REF_MIN_SECONDS}s or "
+                            f"more clones far more reliably")
+        if info['seconds'] > REF_MAX_SECONDS:
+            warnings.append(f"{info['seconds']}s is longer than needed; "
+                            f"{REF_MAX_SECONDS}s is plenty and shorter is faster")
+        if info.get('channels', 1) > 1:
+            warnings.append('stereo — mono is the safer choice for a voice reference')
+        if info.get('rate', 0) < 16000:
+            warnings.append(f"{info['rate']} Hz is low; 22 kHz or above is better")
+
+        os.replace(tmp, dest)          # atomic, same reasoning as the M4B (#38)
+    except Exception as e:
+        tmp.unlink(missing_ok=True)
+        return jsonify({'error': f'Could not save the reference: {e}'}), 500
+
+    app.logger.info('custom voice uploaded: %s (%ss, %sHz)',
+                    voice_id, info.get('seconds'), info.get('rate'))
+    return jsonify({'status': 'ok', 'voice_id': voice_id, **info,
+                    'warnings': warnings,
+                    'note': 'Preview it in the Voices tab before rendering a book.'})
+
+
+@app.route('/api/voices/custom/<voice_id>', methods=['DELETE'])
+def delete_custom_voice(voice_id: str):
+    safe = re.sub(r'[^a-z0-9_]+', '_', voice_id.lower())
+    p = CUSTOM_VOICES_DIR / f'{safe}.wav'
+    if not p.exists():
+        return jsonify({'error': 'No such custom voice'}), 404
+    try:
+        p.unlink()
+        return jsonify({'status': 'deleted', 'voice_id': safe})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # Ordered preference for conversion failover: the human-cloned clone engines
 # first (best quality), then the always-local guaranteed-completes engines so a
 # book NEVER strands just because a GPU engine is down.
@@ -4140,7 +4264,7 @@ def engines_health():
 def list_voices():
     """Return available voices grouped by engine."""
     return jsonify({
-        'voices': VOICES,
+        'voices': all_voices(),
         'engines': TTS_ENGINES
     })
 
@@ -4561,9 +4685,9 @@ def resume_job(job_id):
     has_partial = any(output_path.glob('*.mp3')) if output_path.exists() else False
 
     with get_db() as conn:
-        if new_voice and new_voice in VOICES:
-            engine = VOICES[new_voice].get('engine', 'kokoro')
-            name = VOICES[new_voice]['name']
+        if new_voice and new_voice in all_voices():
+            engine = all_voices()[new_voice].get('engine', 'kokoro')
+            name = all_voices()[new_voice]['name']
             conn.execute("""
                 UPDATE jobs 
                 SET voice = ?, voice_name = ?, tts_engine = ?, 
@@ -4617,7 +4741,7 @@ def audition_sample(name: str):
 @app.route('/api/preview/<voice_id>')
 def voice_preview(voice_id: str):
     """Stream voice preview audio."""
-    if voice_id not in VOICES:
+    if voice_id not in all_voices():
         return jsonify({'error': 'Voice not found'}), 404
 
     preview_path = get_voice_preview(voice_id)
@@ -4667,10 +4791,10 @@ def start_conversion():
     is_pdf = file_ext == '.pdf'
     needs_conversion = file_ext not in {'.epub', '.pdf'}  # PDF handled separately by Docker
 
-    if voice not in VOICES:
+    if voice not in all_voices():
         return jsonify({'error': 'Invalid voice selected'}), 400
 
-    if voice2 and voice2 not in VOICES:
+    if voice2 and voice2 not in all_voices():
         return jsonify({'error': 'Invalid secondary voice selected'}), 400
 
     # Create job
@@ -4709,16 +4833,16 @@ def start_conversion():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Determine TTS engine from voice
-    tts_engine = VOICES[voice].get('engine', 'kokoro')
+    tts_engine = all_voices()[voice].get('engine', 'kokoro')
 
     # Save job to database
     job = {
         'id': job_id,
         'book_name': book_name,
         'voice': voice,
-        'voice_name': VOICES[voice]['name'],
+        'voice_name': all_voices()[voice]['name'],
         'voice2': voice2,
-        'voice2_name': VOICES.get(voice2, {}).get('name') if voice2 else None,
+        'voice2_name': all_voices().get(voice2, {}).get('name') if voice2 else None,
         'tts_engine': tts_engine,
         'status': 'queued',
         'created_at': datetime.now().isoformat(),
@@ -5826,7 +5950,7 @@ def estimate_cost_api():
             return jsonify({'error': 'File not found'}), 404
 
         # Get engine from voice_id
-        voice_info = VOICES.get(voice_id, {})
+        voice_info = all_voices().get(voice_id, {})
         engine = voice_info.get('engine', 'kokoro')
 
         # Estimate character count
@@ -5892,7 +6016,7 @@ def convert_from_library():
         custom_regex = (data.get('custom_regex') or '').strip() or None
         newline_mode = data.get('newline_mode', 'double')
         title_mode = data.get('title_mode', 'auto')
-        if voice2 and voice2 not in VOICES:
+        if voice2 and voice2 not in all_voices():
             return jsonify({'error': 'Invalid secondary voice selected'}), 400
 
         def safe_int(v):
@@ -5934,7 +6058,7 @@ def convert_from_library():
         except: pass
 
         output_dirname = f"{safe_name}_{job_id}"
-        tts_engine = VOICES.get(voice, {}).get('engine', 'kokoro')
+        tts_engine = all_voices().get(voice, {}).get('engine', 'kokoro')
         engine_fallback_note = None
         health = check_engines_health()
         if health.get(tts_engine) is False:
@@ -5966,11 +6090,11 @@ def convert_from_library():
             'input_filename': input_filename,
             'output_dirname': output_dirname,
             'voice': voice,
-            'voice_name': VOICES.get(voice, {}).get('name', voice),
+            'voice_name': all_voices().get(voice, {}).get('name', voice),
             'tts_engine': tts_engine,
             'tts_speed': tts_speed,
             'voice2': voice2,
-            'voice2_name': VOICES.get(voice2, {}).get('name') if voice2 else None,
+            'voice2_name': all_voices().get(voice2, {}).get('name') if voice2 else None,
             'custom_regex': custom_regex,
             'newline_mode': newline_mode,
             'title_mode': title_mode,
@@ -6018,7 +6142,9 @@ def _cache_all_voices_background():
     delay = float(os.environ.get('VOICE_CACHE_DELAY', '5'))
     app.logger.info(
         f"Starting background voice caching (throttled: max_load={max_load}, delay={delay}s)")
-    for voice_id in VOICES.keys():
+    # all_voices() so an uploaded clone gets a cached preview too — hearing
+    # your own reference back is the whole point of uploading it.
+    for voice_id in all_voices().keys():
         preview_path = PREVIEWS_DIR / f"{voice_id}.mp3"
         if preview_path.exists() and preview_path.stat().st_size > 5000:
             continue                                   # already cached

@@ -105,6 +105,11 @@ services:
       - NUMBA_CACHE_DIR=/tmp/numba
     volumes:
       - chatterbox-cache:/data/hf
+      # Custom cloned voices, uploaded through the UI. Overlaid on top of the
+      # voices baked into the image, so a new reference WAV is usable without
+      # a rebuild — the server rescans the directory when it meets an unknown
+      # voice id.
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/voices:/app/voices/custom
     profiles:
       - chatterbox
     healthcheck:
@@ -135,6 +140,11 @@ services:
       - NUMBA_CACHE_DIR=/tmp/numba
     volumes:
       - chatterbox-cache:/data/hf
+      # Custom cloned voices, uploaded through the UI. Overlaid on top of the
+      # voices baked into the image, so a new reference WAV is usable without
+      # a rebuild — the server rescans the directory when it meets an unknown
+      # voice id.
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/voices:/app/voices/custom
     profiles:
       - chatterbox-nano
     healthcheck:

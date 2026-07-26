@@ -47,9 +47,18 @@ _voice_paths = {}
 
 
 def _load_voices():
+    """Scan the built-in voices, then overlay any uploaded ones.
+
+    `custom/` is a bind mount, so a reference WAV uploaded through the UI is
+    usable without rebuilding the image. Scanning it SECOND is deliberate: a
+    custom voice with the same stem as a baked-in one wins, which is how you
+    replace a stock voice without touching the image.
+    """
     _voice_paths.clear()
-    for p in glob.glob(os.path.join(VOICES_DIR, "*.wav")):
-        _voice_paths[os.path.splitext(os.path.basename(p))[0]] = p
+    for pattern in (os.path.join(VOICES_DIR, "*.wav"),
+                    os.path.join(VOICES_DIR, "custom", "*.wav")):
+        for p in glob.glob(pattern):
+            _voice_paths[os.path.splitext(os.path.basename(p))[0]] = p
     log.info("voices: %s", list(_voice_paths))
 
 
