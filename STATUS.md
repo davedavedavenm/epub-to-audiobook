@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-25.** Honest single source of truth. "Verified" = it
+**Last updated: 2026-07-26.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
@@ -8,6 +8,14 @@ this file is the narrative index, the issues are the live backlog.
 > **Read the issue list from GitHub, not from here.** On 2026-07-25 this file's
 > issue table still listed #7–#15 as open; every one of them had been closed.
 > The table below was rebuilt by querying the API. If it looks old, re-query.
+
+## Notification credential restored (2026-07-26)
+
+The deployed Zorin `.env` still held an older revoked Evolution global key. A timestamped backup
+was taken, only `EVOLUTION_API_KEY` was changed, and `webapp` plus `worker` were recreated. Both
+containers returned healthy with the current fingerprint. The repository's real
+`wanted_monitor.py --send-test --notify-whatsapp` path succeeded and its labelled message appeared
+in Evolution logs. No queue, TTS engine, model, audiobook or Telegram setting changed.
 
 ## Hardware transformed (2026-07-20)
 

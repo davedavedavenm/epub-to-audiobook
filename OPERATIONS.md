@@ -4,6 +4,15 @@ How the system behaves under failure, what the states mean, how to respond,
 and the honest record of incidents found during hardening. **This file is the
 documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
 
+## 2026-07-26 — Revoked Evolution notification key repaired
+
+The active Zorin webapp and worker inherited an older revoked global key from the deployed `.env`,
+so optional WhatsApp notification attempts authenticated as `401`. The env was backed up and
+updated, both consumers were recreated and became healthy, and the exact wanted-monitor test path
+logged `WhatsApp notify ok`. Evolution server logs contained the labelled message with no new auth
+error. Restore the adjacent timestamped `.env` backup and recreate only `webapp`/`worker` to roll
+back. This incident did not touch conversion state or generated media.
+
 ## Job states and what they actually mean
 
 | State | Meaning | Action needed |
