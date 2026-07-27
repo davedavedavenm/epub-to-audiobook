@@ -108,6 +108,31 @@ class TestExtraction:
             fetch_article('ftp://example.com/x')
 
 
+class TestTitle:
+    """The title becomes the book title, the filename and the ID3 tag."""
+
+    def test_site_suffix_is_dropped(self):
+        from article import _strip_site_suffix
+        assert _strip_site_suffix('Audiobook - Wikipedia', 'en.wikipedia.org') == 'Audiobook'
+        assert _strip_site_suffix('My Post | Site', 'site.com') == 'My Post'
+
+    def test_subdomains_and_cctlds_resolve(self):
+        """split('.')[0] gave "en" for en.wikipedia.org, so the suffix stayed."""
+        from article import _strip_site_suffix
+        assert _strip_site_suffix('Lewis Carroll - Wikipedia', 'en.wikipedia.org') == 'Lewis Carroll'
+        assert _strip_site_suffix('Some story | BBC', 'www.bbc.co.uk') == 'Some story'
+
+    def test_a_real_dash_in_a_title_survives(self):
+        from article import _strip_site_suffix
+        t = 'A piece about dashes - and more'
+        assert _strip_site_suffix(t, 'theguardian.com') == t
+
+    def test_partial_site_match_is_not_stripped(self):
+        from article import _strip_site_suffix
+        t = 'Some story - BBC News'          # tail is "BBC News", not "bbc"
+        assert _strip_site_suffix(t, 'www.bbc.co.uk') == t
+
+
 class TestEpubHandoff:
     """The point of generating an epub is that nothing downstream changes."""
 

@@ -65,6 +65,35 @@ def _meta(soup, *names) -> str:
     return ''
 
 
+def _title_from_tag(soup) -> str:
+    return soup.title.get_text(strip=True) if soup.title else ''
+
+
+def _strip_site_suffix(title: str, site: str) -> str:
+    """Drop a trailing " - Wikipedia" style suffix, but only if it IS the site.
+
+    Matching on the site name rather than guessing by length is what makes this
+    safe: "A piece about dashes - and more" keeps its dash, while "Audiobook -
+    Wikipedia" loses a suffix that is already recorded separately and only
+    makes for a worse library entry.
+    """
+    if not title or not site:
+        return title
+    # Match against EVERY part of the domain, not just the first. Taking
+    # split('.')[0] gave "en" for en.wikipedia.org, so "Audiobook - Wikipedia"
+    # kept its suffix; ccTLDs like bbc.co.uk break a "second-to-last" rule just
+    # as easily. Dropping the boilerplate parts and matching any remainder
+    # handles both.
+    _BOILER = {'www', 'com', 'org', 'net', 'co', 'uk', 'io', 'edu', 'gov', 'news'}
+    names = {site.strip().lower()}
+    names |= {p for p in site.lower().split('.') if p and p not in _BOILER}
+    for sep in (' | ', ' - ', ' — ', ' – ', ' · ', ' :: '):
+        head, found, tail = title.rpartition(sep)
+        if found and head.strip() and tail.strip().lower() in names:
+            return head.strip()
+    return title
+
+
 def _json_ld(soup) -> dict:
     """Article metadata from JSON-LD, which is often better than og: tags."""
     for tag in soup.find_all('script', attrs={'type': 'application/ld+json'}):
@@ -202,8 +231,13 @@ def fetch_article(url: str, timeout: int = 25) -> dict:
     soup = BeautifulSoup(r.content, 'lxml')
     ld = _json_ld(soup)
 
-    title = (ld.get('headline') or _meta(soup, 'og:title', 'twitter:title')
-             or (soup.title.get_text(strip=True) if soup.title else '') or 'Untitled')
+    # og:title FIRST. JSON-LD `headline` looks authoritative and often isn't:
+    # Wikipedia puts the one-line description there, so preferring it gave
+    # "British author and scholar (1832-1898)" as the title of the Lewis
+    # Carroll article. og:title is what the site intends as the headline.
+    title = (_meta(soup, 'og:title', 'twitter:title')
+             or ld.get('headline')
+             or _title_from_tag(soup) or 'Untitled')
     author = (_author_from(ld) or _meta(soup, 'article:author', 'author', 'byl')
               or '')
     site = (_meta(soup, 'og:site_name')
@@ -211,6 +245,8 @@ def fetch_article(url: str, timeout: int = 25) -> dict:
     date = (ld.get('datePublished')
             or _meta(soup, 'article:published_time', 'date', 'pubdate') or '')
     image = _meta(soup, 'og:image', 'twitter:image')
+
+    title = _strip_site_suffix(title, site)
 
     text = _extract_body(soup)
     words = len(text.split())
