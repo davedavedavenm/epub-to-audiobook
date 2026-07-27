@@ -476,9 +476,19 @@ VOICES = {
     'en-US-RogerNeural': {'name': 'Roger', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
     'en-US-SteffanNeural': {'name': 'Steffan', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
 
-    # Australian Edge Voices
-    'en-AU-NatashaNeural': {'name': 'Natasha', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
-    'en-AU-WilliamNeural': {'name': 'William', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
+    # Australian Edge Voices.
+    #
+    # These are the ONLY working Australian FEMALE narrator in the system, and
+    # the best Australian male. VCTK — which supplies every other native accent
+    # here — contains just two Australians and both are male, so the corpus
+    # cannot cover this and no Piper model exists for en_AU at all (checked:
+    # rhasspy/piper-voices ships en_GB and en_US only).
+    #
+    # Verified rendering English correctly 2026-07-27. Caveat worth knowing:
+    # Edge is a Microsoft cloud service, so unlike Piper and Chatterbox these
+    # two are NOT local and need internet.
+    'en-AU-NatashaNeural': {'name': 'Australian female — Natasha (Edge)', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
+    'en-AU-WilliamNeural': {'name': 'Australian male — William (Edge)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
 
     # ============ AWS POLLY LONG-FORM VOICES ============
     'polly_ruth': {'name': 'Ruth', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
