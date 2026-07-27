@@ -266,11 +266,19 @@ def test_years_are_spelled_for_every_engine():
 
     So: years are spelled for EVERY engine. Currency/percent/large ints are still
     raw for modern — NOT yet judged by ear, do not extend without an A/B (#26).
+
+    AMENDED 2026-07-27: this guard asserted `'seventy-six' in out`, pinning the
+    HYPHEN num2words happens to emit. That is a separator, not the requirement.
+    The requirement is that a year is spoken as words and never leaks as raw
+    digits, and that still holds exactly. Modern engines now also get the
+    intra-word hyphen removed ("ninety seven"), because they read such a hyphen
+    as a pause — the daisy-chain defect. Legacy output is unchanged.
     """
     tp = _load_tp()
     for modern in (True, False):
         out = tp.normalize_text_for_tts("founded in 1976, returned in 1997.", modern=modern)
-        assert 'seventy-six' in out and 'ninety-seven' in out, \
+        sep = ' ' if modern else '-'
+        assert f'seventy{sep}six' in out and f'ninety{sep}seven' in out, \
             f"year spelling broken (modern={modern}): {out}"
         assert '1976' not in out, f"raw year leaked (modern={modern}): {out}"
 

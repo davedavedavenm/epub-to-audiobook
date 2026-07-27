@@ -414,6 +414,16 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     #
     # Modern engines still keep raw currency/percent/large ints (untested by ear —
     # do NOT extend this without an A/B; see #26).
+    # A year RANGE is read "to", not as two years jammed together. This has to
+    # happen while they are still digits, before the line below turns them into
+    # words. Found while adding the hyphenated-compound rule: "1914-1918" was
+    # becoming "nineteen fourteen-nineteen eighteen", i.e. a hyphen the engine
+    # pauses at and no "to" anywhere — so the range read as two bare years.
+    # Deliberately narrow: four-digit year to four-digit year only, so phone
+    # numbers, scores and part numbers are untouched.
+    text = re.sub(r'\b(1[0-9]{3}|20[0-9]{2})\s*[-–—]\s*(1[0-9]{3}|20[0-9]{2})\b',
+                  r'\1 to \2', text)
+
     text = re.sub(r'\b(1[0-9]{3}|20[0-9]{2})\b', lambda m: _year_to_words(m.group(0)), text)
 
     # === Currency (before general number handling) ===
@@ -545,6 +555,30 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     # spacing only.
     text = re.sub(r'\s*[—–]\s*', ' — ', text)
     text = re.sub(r'\s*--\s*', ' — ', text)
+
+    # === Hyphenated compounds: join the word, don't pause inside it ===
+    # Dave, on a TADA render of the rabbit-hole paragraph (2026-07-27):
+    # *"'daisychain' was 'daisy.....chain'"*. The engine reads an intra-word
+    # hyphen as a clause break, so a single compound word comes out as two words
+    # with a gap between them.
+    #
+    # This is the SAME failure this file already documents one screen above —
+    # "feeding them a human pronunciation guide like Coo-per-TEE-no makes them
+    # read the hyphens as pauses". That finding was only ever acted on for
+    # lexicon respellings; the identical hyphen arriving in the SOURCE TEXT was
+    # never guarded, and ordinary English prose is full of them (daisy-chain,
+    # half-hearted, ill-tempered — Alice alone has dozens).
+    #
+    # Modern engines only, and deliberately so: the non-modern lexicon path
+    # *uses* hyphens as syllable separators ("Coo-per-TEE-no"), and this rule
+    # runs after that substitution, so applying it universally would flatten
+    # every respelling the dumb-engine path depends on. MODERN-ENGINE CONTRACT.
+    #
+    # Letter-to-letter only. A digit hyphen ("1914-1918", "COVID-19") is a range
+    # or an identifier, not a compound, and "1914 1918" would lose the "to" that
+    # makes it mean anything.
+    if modern:
+        text = re.sub(r'(?<=[A-Za-z])-(?=[A-Za-z])', ' ', text)
 
     # Standardize ellipses (real pause) without forcing spaces mid-word.
     text = re.sub(r'\.{2,}', '… ', text)

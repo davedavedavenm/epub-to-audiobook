@@ -5029,7 +5029,10 @@ def audition_sample(name: str):
     # the FORMAT rather than the concept. Settled by ear, not argument.
     if name not in ('ab_1997_raw', 'ab_1997_spelled',
                     'ab27_raw', 'ab27_caps', 'ab27_natural',
-                    'ab_tada_cpu', 'ab_tada_bf16'):
+                    'ab_tada_cpu', 'ab_tada_bf16',
+                    'ab_daisy_before', 'ab_daisy_after',
+                    'ab_alice_plain', 'ab_alice_aliss', 'ab_alice_alliss',
+                    'ab_alice_nano_raw', 'ab_alice_nano_fixed'):
         return jsonify({'error': 'Unknown sample'}), 404
     p = PREVIEWS_DIR / f"{name}.mp3"
     if not p.exists():

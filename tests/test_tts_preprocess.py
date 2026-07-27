@@ -162,7 +162,9 @@ def test_year_reads_naturally_for_dumb_engines():
 def test_years_are_spelled_for_modern_engines_too():
     from tts_preprocess import normalize_text_for_tts
     out = normalize_text_for_tts("In the spring of 1997, and again in 2001.", modern=True)
-    assert 'nineteen ninety-seven' in out, out
+    # No hyphen on modern from 2026-07-27 — the engine pauses at one. Spelled is
+    # still spelled, which is what this test exists to protect.
+    assert 'nineteen ninety seven' in out, out
     assert 'two thousand one' in out, out
     assert '1997' not in out, out
 

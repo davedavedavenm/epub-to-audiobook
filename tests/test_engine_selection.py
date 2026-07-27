@@ -71,9 +71,12 @@ def test_legacy_spells_numbers_and_expands_abbreviations():
 
 
 def test_years_spelled_for_both_modern_and_legacy():
+    # The separator differs by engine class from 2026-07-27: modern engines read
+    # an intra-word hyphen as a pause, so "sixty-two" would come out
+    # "sixty ... two". The requirement — spelled, never raw digits — is identical.
     for modern in (True, False):
         out = normalize_text_for_tts('It happened in 1962 and 2003.', modern=modern)
-        assert 'nineteen sixty-two' in out
+        assert f"nineteen sixty{' ' if modern else '-'}two" in out
         assert '1962' not in out
         assert 'two thousand three' in out
         assert '2003' not in out
