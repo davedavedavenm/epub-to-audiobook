@@ -291,11 +291,20 @@ def test_modern_contract_skips_all_plain_number_spelling():
     """MODERN-ENGINE CONTRACT: modern engines read plain numbers/years/decades/
     large integers natively. Every plain-number spelling transform must sit
     under the single `if not modern:` guard so we stop discovering these one
-    incident at a time (2026-07-08). Symbol/abbrev expansion still applies."""
+    incident at a time (2026-07-08). Symbol/abbrev expansion still applies.
+
+    AMENDED 2026-07-27, narrowly: the comma-number case asserted the literal
+    "2,905", which pinned the SEPARATOR as well as the digits. A thousands
+    comma is not a number — it is a comma, and this codebase's own finding is
+    that engines read a comma as a PAUSE. The 2026-07-08 fix stripped the comma
+    num2words emits and never the one already in the source, so "2,905" still
+    read as "two thousand… nine hundred" on the engines that render every book.
+    The digits are still asserted, which is what the contract is actually about;
+    only the separator is now allowed to go."""
     tp = _load_tp()
     cases = {
         "It was the 1990s.":        ('1990s', 'nineties'),   # decade
-        "a crowd of 2,905 people":  ('2,905', 'nine hundred'),  # comma-number
+        "a crowd of 2,905 people":  ('2905', 'nine hundred'),  # digits kept, comma dropped
         "the figure hit 45000":     ('45000', 'forty-five thousand'),  # large int
     }
     for text, (keep, must_not) in cases.items():

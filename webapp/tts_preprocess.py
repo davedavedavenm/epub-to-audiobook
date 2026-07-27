@@ -120,6 +120,39 @@ def _ordinal_to_words(n: int, lang: str = 'en') -> str:
     return f"{n}th"
 
 
+def _pluralise_number_word(w: str) -> str:
+    """'eighty' -> 'eighties', 'hundred' -> 'hundreds'.
+
+    Naive `+ 's'` gave "nineteen eightys" for `1980s` on every book that
+    mentioned a decade. English pluralises a terminal -y to -ies.
+    """
+    return w[:-1] + 'ies' if w.endswith('y') else w + 's'
+
+
+def _decade_to_words(year_str: str) -> str:
+    """`1980` (from '1980s'/"1980's") -> 'nineteen eighties'."""
+    year = int(year_str)
+    if not (1000 <= year <= 2099):
+        return _pluralise_number_word(_number_to_words(year)) if HAS_NUM2WORDS else year_str + 's'
+    prefix, suffix = int(year_str[:2]), int(year_str[2:])
+    if suffix == 0:
+        return f"{_number_to_words(prefix)} hundreds"
+    return f"{_number_to_words(prefix)} {_pluralise_number_word(_number_to_words(suffix))}"
+
+
+def _decimal_to_words(num_str: str) -> str:
+    """'12.5' -> 'twelve point five'. Digits after the point are read one by
+    one, which is how a decimal is actually spoken."""
+    if not HAS_NUM2WORDS:
+        return num_str
+    whole, _, frac = num_str.partition('.')
+    words = _number_to_words(int(whole or 0))
+    if frac:
+        digits = ' '.join(_number_to_words(int(d)) for d in frac)
+        words = f"{words} point {digits}"
+    return words
+
+
 def _year_to_words(year_str: str) -> str:
     """Convert a 4-digit year to its spoken word equivalent (e.g., 1962 -> nineteen sixty-two)."""
     try:
@@ -414,6 +447,44 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     #
     # Modern engines still keep raw currency/percent/large ints (untested by ear —
     # do NOT extend this without an A/B; see #26).
+    # === Decades: 1990s, 1800s, and the apostrophe form 1980's ===
+    # MUST run before the year rule below, not after. "1980's" puts a non-word
+    # character after the digits, so the year regex matched it and produced
+    # "nineteen eighty's" — a possessive, which is not what the text said. And
+    # the naive plural gave "nineteen eightys" for "1980s" on every book that
+    # mentioned a decade.
+    #
+    # The APOSTROPHE form is fixed for every engine, because it is not decade
+    # spelling — it is repairing damage the YEAR rule does, and modern engines
+    # run the year rule. Left alone, modern output says "nineteen eighty's".
+    #
+    # The BARE form stays legacy-only. Spelling "1990s" for modern would be a
+    # plain-number transform, which the MODERN-ENGINE CONTRACT forbids without
+    # an ear test — and a regression guard enforces exactly that. I changed it
+    # on inference and the guard caught me; it was right and I was wrong.
+    text = re.sub(r"\b(\d{4})'s\b", lambda m: _decade_to_words(m.group(1)), text)
+    if not modern:
+        text = re.sub(r'\b(\d{4})s\b', lambda m: _decade_to_words(m.group(1)), text)
+
+    # === "50k" -> "fifty thousand" (Dave, 2026-07-27) ===
+    # Unhandled on every engine, so it was read as "fifty kay".
+    #
+    # Guarded against the two things that look identical and are not numbers:
+    # screen resolutions (4K, 8K) and distances (10km). Requiring the value to
+    # be >= 10 excludes the resolutions without needing to enumerate them, and
+    # the negative lookahead for "m" keeps kilometres intact.
+    def _k_suffix(m):
+        num = m.group(1)
+        try:
+            val = float(num)
+        except ValueError:
+            return m.group(0)
+        if val < 10:
+            return m.group(0)
+        return f"{_decimal_to_words(num)} thousand"
+
+    text = re.sub(r'(?<![\w.])(\d+(?:\.\d+)?)[kK]\b(?!m)', _k_suffix, text)
+
     # A year RANGE is read "to", not as two years jammed together. This has to
     # happen while they are still digits, before the line below turns them into
     # words. Found while adding the hyphenated-compound rule: "1914-1918" was
@@ -459,7 +530,9 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             n = float(num_str)
             if n == int(n):
                 return f"{_number_to_words(int(n))} percent"
-            return f"{num_str} percent"
+            # Decimals were left as digits ("12.5 percent"), so the engine got a
+            # bare numeral in the middle of otherwise-spelled text.
+            return f"{_decimal_to_words(num_str)} percent"
         except ValueError:
             return m.group(0)
 
@@ -476,24 +549,6 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     if not modern:  # modern reads "1st"/"21st" natively (MODERN CONTRACT)
         text = re.sub(r'\b(\d+)(?:st|nd|rd|th)\b', replace_ordinal, text)
 
-    # === Decades: 1990s, 1800s ===
-    # Plain date number -> skip for modern (see MODERN-ENGINE CONTRACT).
-    def replace_decade(m):
-        year_str = m.group(1)
-        year = int(year_str)
-        if 1000 <= year <= 2099:
-            # Handle 1860s as "eighteen sixties"
-            prefix = int(year_str[:2])
-            suffix = int(year_str[2:])
-            if suffix == 0:
-                return f"{_number_to_words(prefix)} hundreds"
-            return f"{_number_to_words(prefix)} {_number_to_words(suffix)}s"
-        if HAS_NUM2WORDS:
-            return _number_to_words(year) + 's'
-        return m.group(0)
-
-    if not modern:
-        text = re.sub(r'\b(\d{4})s\b', replace_decade, text)
 
     # === Chapter/Part/Volume headings ===
     def replace_heading_number(m):
@@ -586,6 +641,22 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     # makes it mean anything.
     if modern:
         text = re.sub(r'(?<=[A-Za-z])-(?=[A-Za-z])', ' ', text)
+
+    # === Thousands separators, for modern engines ===
+    # Modern engines keep raw numbers by contract, but a THOUSANDS COMMA is not
+    # a number — it is a comma, and this file already establishes that engines
+    # read a comma as a pause. That is the exact defect behind the 2026-07-08
+    # "stilted and weird" incident; it was fixed for the comma num2words emits
+    # and never for the comma the source text already contained, so "3,400"
+    # still reads as "three thousand… four hundred" on the engines that render
+    # every book.
+    #
+    # Removing the separator is the minimal fix: "3400" is read correctly and
+    # keeps the MODERN-ENGINE CONTRACT (no spelling-out, which remains unjudged
+    # by ear). Requires a digit on both sides, so dates and lists are untouched.
+    if modern:
+        for _ in range(3):          # 1,250,000 needs more than one pass
+            text = re.sub(r'(?<=\d),(?=\d{3}\b)', '', text)
 
     # Standardize ellipses (real pause) without forcing spaces mid-word.
     text = re.sub(r'\.{2,}', '… ', text)
