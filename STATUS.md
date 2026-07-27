@@ -1,5 +1,38 @@
 # Project Status & Remaining Tasks
 
+> ## Where things stand, 2026-07-27 (end of day)
+>
+> **Read next:** [VOICES.md](VOICES.md) for accents and engines — including the
+> mistakes, which are the useful part. [PLAN-V5.md](PLAN-V5.md) for what is next.
+>
+> **Shipped today**
+>
+> | | |
+> |---|---|
+> | Numbers | `50k` → "fifty thousand"; `1980s` no longer "nineteen eightys"; `1980's` no longer a possessive; decimal percents spoken; **the thousands comma stripped for modern engines** — `3,400` was still read as "three thousand… four hundred" because the 2026-07-08 comma-pause fix only ever touched the comma *we* generated |
+> | Hyphens | `daisy-chain` no longer read with a gap inside it. Graded better by ear on Nano |
+> | Articles | Land in an ABS **podcast** library grouped by source site, not on the audiobook shelf (#36 closed) |
+> | TADA | Runs locally on CPU for the first time — fp32→bf16, peak 15.99 GiB → 10.00 GiB, RTF 1.68 (#23 closed) |
+> | Accents | Native-accent Piper VCTK voices installed; twelve bad Chatterbox clones removed; Edge Australian voices labelled |
+>
+> **The finding that matters most:** an accent lives in the **model**, not the
+> reference clip. Cloning carries timbre and not phonetics. Chatterbox's
+> `cfg_weight` is the one lever that moves this — default `0.5` fights the
+> accent, `0` lets it through — and every clip rendered today until the very end
+> used the default. Nano at `cfg_weight=0` is the best Chatterbox result so far;
+> the Piper natives still beat it.
+>
+> **Failures worth knowing about**, in full in VOICES.md: never read the
+> Chatterbox docs; re-researched three things the repo already contained;
+> shipped nine voices without listening to them and had to revert; blamed TADA
+> for our own un-trimmed lead-in; invented a measurement from file sizes;
+> deployed only `webapp` and left `worker` on stale code.
+>
+> **Not done, and honest about it:** no Welsh male voice exists in any open
+> model. Chatterbox Multilingual V3 — the only one in the family claiming accent
+> preservation — is not installed.
+
+
 > ## TADA runs locally now (2026-07-27, measured) — #23 root-caused and fixed
 >
 > TADA was recorded for months as "broken, engine fails to load". It was never

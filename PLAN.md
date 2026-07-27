@@ -3,7 +3,7 @@
 > ## ⚠️ SUPERSEDED — historical record only (marked 2026-07-25)
 >
 > This file called itself "the authoritative execution plan" for three weeks
-> after it stopped being one. The live plan is **PLAN-V4.md**; **PLAN-V3.md**
+> after it stopped being one. The live plan is **PLAN-V5.md**; **PLAN-V3.md**
 > is the immediately preceding sprint and still holds two open items (#8 module
 > split, #9 sidecar). Kept because the reasoning behind the local-OR-GPU
 > architecture and the self-checking goal originates here — but do not pick

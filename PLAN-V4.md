@@ -1,5 +1,8 @@
 # PLAN V4 — Correctness sprint (2026-07-25)
 
+> **COMPLETE. Superseded by [PLAN-V5.md](PLAN-V5.md) on 2026-07-27.**
+> Kept as the record of the correctness sprint; every item below is closed.
+
 > ## Status 2026-07-27 — the sprint is essentially done
 >
 > **Closed on evidence from job `f83170d2`** (Alice, Nano, v1.5.0+):

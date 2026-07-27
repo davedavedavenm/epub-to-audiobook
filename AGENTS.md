@@ -15,7 +15,9 @@ Read these before changing anything TTS- or text-related:
 | [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off, listening verdicts, cost model, UK reference voices. |
 | [TTS-LANDSCAPE-2026-07.md](TTS-LANDSCAPE-2026-07.md) | Mid-2026 state-of-the-art review: new engines, cost updates, what to evaluate next. |
 | [ENGINES.md](ENGINES.md) | Official engine facts + listening outcomes — the baseline for all engine claims. |
-| [PLAN.md](PLAN.md) | **Forward plan**: adaptive QA system, TADA/GPU completion, UI. |
+| [VOICES.md](VOICES.md) | **Read before ANY voice or accent work.** Which voice to use for which accent, why cloning cannot carry an accent, the `cfg_weight` lever, and a list of wrong turns already taken. |
+| [PLAN-V5.md](PLAN-V5.md) | **Current forward plan** (2026-07-27): automatic re-render, article RSS + Telegram capture, Chatterbox V3. |
+| [PLAN.md](PLAN.md) | Superseded. Historical forward plan. |
 | [GPU-SAFETY.md](GPU-SAFETY.md) | **READ FIRST for any GPU work.** Default-local rules; how to not drain the Vast balance. |
 | [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern + operational steps. |
 
@@ -59,10 +61,27 @@ playbook but skips these is a net negative.
 8. **Status must distinguish claim-levels.** STATUS.md separates *verified* /
    *unverified* / *open* — GitHub issues carry measured evidence. Never move an
    item up a level without the measurement in hand.
+9. **Read this repo, and the vendor's docs, BEFORE researching anything.**
+   *Violations, all on 2026-07-27:* the VCTK accent voices, the Edge Australian
+   voices and TADA's `LEADIN` cold-start fix were each "discovered" by research
+   while already present in the codebase; and a full day of accent work ran at
+   Chatterbox's default `cfg_weight=0.5` — the exact setting Resemble's README
+   tells you to change for that problem — because the README was never opened.
+   Check `VOICES` in `app.py`, `git log`, and the upstream README first.
+10. **Never hand over a URL, path or clip you have not opened yourself.**
+    *Violation: `/api/sample/ab_tada_cpu` was given to the user and 404'd —
+    the file existed, the endpoint allowlist did not have the name.*
+11. **Deploy the whole stack, not one service.** `webapp` and `worker` are two
+    containers built from the same Dockerfile sharing `app.py`; rebuilding one
+    leaves the other on old code, and `/api/health` reports only the webapp's
+    version so it looks current. Use `scripts/deploy.sh`. See OPERATIONS.md.
+12. **A regression guard that fires is right until proven otherwise.** They
+    encode decisions that were paid for, often by ear. If one blocks a change,
+    the default is that the change is wrong — not the guard.
 
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
-- The deployed stack is currently a Git checkout on Zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook` (the older `/opt/epub-to-audiobook` documentation was stale). Deploy **from git only**; never patch application source live. The default deploy enables Piper only. Chatterbox and TADA require the explicit `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1` opt-ins. Zorin was upgraded to an i5-12400 / 31 GB (2026-07-20); Chatterbox now runs comfortably for previews. TADA stays off (broken, #23).
+- The deployed stack is currently a Git checkout on Zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook` (the older `/opt/epub-to-audiobook` documentation was stale). Deploy **from git only**; never patch application source live. The default deploy enables Piper only. Chatterbox and TADA require the explicit `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1` opt-ins. Zorin was upgraded to an i5-12400 / 31 GB (2026-07-20); Chatterbox now runs comfortably for previews. TADA is opt-in and **works** as of 2026-07-27 (#23 closed — the OOM was fp32 on CPU; bf16 fits the cap, RTF 1.68). Piper now also serves the native-accent VCTK voices and needs its bind mounts — see VOICES.md before touching `piper/`.
 - Two custom engines are BUILT and containerised: `chatterbox/` (Turbo) and `tada/` (TADA), both OpenAI-compatible, UK human-cloned voices baked in. Adding an engine = VOICES entries + a branch at the three `tts_engine ==` sites in app.py.
 
 ## Scope
