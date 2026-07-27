@@ -5032,7 +5032,8 @@ def audition_sample(name: str):
                     'ab_tada_cpu', 'ab_tada_bf16',
                     'ab_daisy_before', 'ab_daisy_after',
                     'ab_alice_plain', 'ab_alice_aliss', 'ab_alice_alliss',
-                    'ab_alice_nano_raw', 'ab_alice_nano_fixed'):
+                    'ab_alice_nano_raw', 'ab_alice_nano_fixed',
+                    'ab_pos_first', 'ab_pos_mid', 'ab_pos_other', 'ab_pos_second'):
         return jsonify({'error': 'Unknown sample'}), 404
     p = PREVIEWS_DIR / f"{name}.mp3"
     if not p.exists():
