@@ -808,8 +808,9 @@ def save_job(job: dict):
              progress_percent, eta_minutes, file_count, error, synced_to_abs, container_name,
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
-             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target, output_format, qa_verified)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target, output_format, qa_verified,
+             source_kind, source_url, source_site, source_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -856,7 +857,17 @@ def save_job(job: dict):
             job.get('narration_profile'),
             job.get('render_target', 'local'),
             job.get('output_format', 'mp3'),
-            job.get('qa_verified')
+            job.get('qa_verified'),
+            # Adding a column to the schema is only half the job: this INSERT
+            # names its columns explicitly, so a field missing from THIS list is
+            # silently dropped on every save. The end-to-end run caught it —
+            # the API answered destination=podcast while the stored row said
+            # source_kind='book'. Two sources of truth disagreeing, which is the
+            # exact failure shape PLAN-V4 was written about.
+            job.get('source_kind', 'book'),
+            job.get('source_url'),
+            job.get('source_site'),
+            job.get('source_date'),
         ))
         conn.commit()
 
