@@ -6340,7 +6340,35 @@ def _assert_settings_writable():
             'write as a read-only database. See OPERATIONS.md.', e)
 
 
+def _assert_writable_dirs():
+    """Fail loudly at startup if a directory we must write to isn't ours.
+
+    URL ingest shipped broken because `data/articles` had been created on the
+    host as uid 1000 while the container runs as 999 — every article render
+    died with "Permission denied", but only at CONVERT time, so a preview
+    looked perfectly healthy and the feature seemed fine. Same class of fault
+    as the WAL sidecars in #37, and the third time ownership has bitten.
+
+    Checked at boot rather than discovered by a user mid-feature.
+    """
+    for name, d in (('articles (URL ingest)', ARTICLES_DIR),
+                    ('custom voices', CUSTOM_VOICES_DIR),
+                    ('uploads', UPLOAD_DIR),
+                    ('output', OUTPUT_DIR)):
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+            probe = d / '.write_check'
+            probe.write_text('ok', encoding='utf-8')
+            probe.unlink()
+        except Exception as e:
+            app.logger.error(
+                'DIRECTORY NOT WRITABLE - %s (%s): %s. Whatever uses it will '
+                'fail at the point of use, not here. Fix with: docker exec -u 0 '
+                '<container> chown -R 999:999 %s', name, d, e, d)
+
+
 _assert_settings_writable()
+_assert_writable_dirs()
 
 if __name__ == '__main__':
     # `DEBUG` was never defined — running app.py directly crashed with
