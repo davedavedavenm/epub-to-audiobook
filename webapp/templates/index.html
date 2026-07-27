@@ -391,6 +391,27 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             </div>
         </div>
         <div class="tab-panel" id="tab-convert" role="tabpanel" aria-labelledby="tab-btn-convert">
+            <div class="card" style="margin-bottom:28px;">
+                <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:6px; flex-wrap:wrap;">
+                    <h2 style="font-family: var(--serif); font-size: 1.9rem; margin:0;">Listen to a link</h2>
+                    <div style="font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);">article · blog post · short story</div>
+                </div>
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                    Paste a URL and it becomes audio in your library. You'll see what was
+                    extracted before anything is narrated.
+                </div>
+                <div class="conv-voice-row">
+                    <div class="setup-field" style="flex:1;">
+                        <label class="setup-label" for="url-input">URL</label>
+                        <input id="url-input" class="input-control" placeholder="https://example.com/an-article"
+                               onkeydown="if(event.key==='Enter'){previewUrl(this);}">
+                    </div>
+                    <button class="btn" onclick="previewUrl(this)">Preview</button>
+                </div>
+                <div id="url-status" class="compare-status"></div>
+                <div id="url-result" class="hidden" style="margin-top:16px;"></div>
+            </div>
+
             <div class="card">
                 <h2 style="font-family: var(--serif); font-size: 2.2rem; margin-top: 0;">Upload New Book</h2>
                 <div id="upload-area" style="border: 2px dashed var(--border); padding: 100px 40px; text-align: center; border-radius: 32px; cursor: pointer; background: var(--bg-element); margin: 40px 0;" onclick="document.getElementById('file-input').click()">
@@ -1312,6 +1333,86 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             `;
         }).join('') + unconfiguredSection;
         loadCloneList();
+    }
+
+    let _urlPreview = null;
+
+    async function previewUrl(btn) {
+        const url = document.getElementById('url-input').value.trim();
+        const status = document.getElementById('url-status');
+        const result = document.getElementById('url-result');
+        if (!url) { status.innerHTML = '<span class="warn">Paste a URL first.</span>'; return; }
+        btn.disabled = true;
+        status.textContent = 'Reading the page…';
+        result.classList.add('hidden');
+        try {
+            const r = await fetch('/api/url/preview', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ url })
+            });
+            const d = await r.json();
+            if (!r.ok) {
+                status.innerHTML = `<span class="warn">${escapeHtml(d.error || 'Could not read that page')}</span>`;
+                return;
+            }
+            _urlPreview = d;
+            status.innerHTML = '';
+            // Show what would actually be narrated. Extraction is the failure
+            // mode here, so the excerpt is the point, not decoration.
+            result.innerHTML = `
+                <div style="background:var(--surface-2); border-radius:12px; padding:16px;">
+                    <div style="font-weight:800; font-size:1.05rem; margin-bottom:4px;">${escapeHtml(d.title)}</div>
+                    <div style="font-size:.85rem; color:var(--text-secondary); margin-bottom:10px;">
+                        ${escapeHtml(d.author || '')}${d.site ? ' · ' + escapeHtml(d.site) : ''}${d.date ? ' · ' + escapeHtml(d.date) : ''}
+                    </div>
+                    <div style="font-family:var(--mono); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;">
+                        ${d.word_count.toLocaleString()} words · about ${d.estimated_minutes} min of audio
+                    </div>
+                    <div style="font-size:.88rem; line-height:1.55; max-height:190px; overflow:auto; white-space:pre-wrap; border-left:3px solid var(--border); padding-left:12px; color:var(--text-secondary);">${escapeHtml(d.excerpt)}${d.truncated ? '\\n\\n…' : ''}</div>
+                    <div class="conv-voice-row" style="margin-top:14px;">
+                        <div class="setup-field" style="flex:1;">
+                            <label class="setup-label" for="url-voice">Narrator</label>
+                            <select id="url-voice" class="input-control">${buildVoiceOptions(null)}</select>
+                        </div>
+                        <button class="btn btn-primary" onclick="convertUrl(this)">Narrate this</button>
+                    </div>
+                    <div style="font-size:.8rem; color:var(--ink-3); margin-top:8px;">
+                        If that excerpt looks like navigation or a cookie notice rather than the
+                        article, the page is probably paywalled or built by JavaScript — try a
+                        reader-mode or print URL.
+                    </div>
+                </div>`;
+            result.classList.remove('hidden');
+        } catch (e) {
+            status.innerHTML = `<span class="warn">${escapeHtml(String(e))}</span>`;
+        } finally { btn.disabled = false; }
+    }
+
+    async function convertUrl(btn) {
+        if (!_urlPreview) return;
+        const status = document.getElementById('url-status');
+        btn.disabled = true;
+        status.textContent = 'Queueing…';
+        try {
+            const r = await fetch('/api/url/convert', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    url: _urlPreview.url,
+                    voice: document.getElementById('url-voice').value
+                })
+            });
+            const d = await r.json();
+            if (!r.ok) {
+                status.innerHTML = `<span class="warn">${escapeHtml(d.error || 'Could not queue that')}</span>`;
+            } else {
+                status.innerHTML = `<span class="ok">Queued — about ${_urlPreview.estimated_minutes} min of audio. Track it on the Queue tab.</span>`;
+                document.getElementById('url-result').classList.add('hidden');
+                document.getElementById('url-input').value = '';
+                _urlPreview = null;
+            }
+        } catch (e) {
+            status.innerHTML = `<span class="warn">${escapeHtml(String(e))}</span>`;
+        } finally { btn.disabled = false; }
     }
 
     async function loadCloneList() {

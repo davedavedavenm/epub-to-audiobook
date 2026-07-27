@@ -3755,6 +3755,20 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '--job-id', str(job_id),
         ]
 
+        # Post-flight ASR check. OFF by default and deliberately so: Whisper
+        # transcribing a 2.5-hour book on this CPU roughly doubles the wall
+        # clock, which is a real cost to impose on every render. But the switch
+        # has to EXIST -- until now there was none, so no local render could be
+        # verified at all and the gate quietly passed on no evidence (#33).
+        _asr = str(get_setting('ASR_VERIFY') or os.environ.get('ASR_VERIFY', '')).strip().lower()
+        if _asr in ('1', 'true', 'yes', 'on'):
+            qa_model = (get_setting('ASR_VERIFY_MODEL')
+                        or os.environ.get('ASR_VERIFY_MODEL') or 'base').strip()
+            cmd.extend(['--qa', '--qa-model', qa_model])
+            append_job_log(job_id, f"ASR verification ENABLED (whisper '{qa_model}') - "
+                                   f"roughly doubles render time, but the audio will "
+                                   f"be checked against the source text.")
+
         if job and job.get('start_chapter'):
             cmd.extend(['--start', str(job['start_chapter'])])
         if job and job.get('end_chapter'):
@@ -4096,6 +4110,11 @@ def api_engines_unconfigured():
 # at /app/voices/custom, so a new WAV is usable without rebuilding the image.
 CUSTOM_VOICES_DIR = Path(os.environ.get('CUSTOM_VOICES_DIR', '/data/voices'))
 
+# Generated epubs for URL-ingested articles. Writable, unlike LIBRARY_DIR
+# (read-only, and an rsync mirror), and kept out of the ebook library so a
+# narrated article never looks like a book you own (#36).
+ARTICLES_DIR = Path(os.environ.get('ARTICLES_DIR', '/data/articles'))
+
 # Chatterbox clones from a short reference. Too short and it has nothing to
 # work from; too long wastes conditioning and slows every chunk. These bounds
 # are advisory — the upload warns rather than refuses, because the only real
@@ -4114,6 +4133,85 @@ def _probe_wav(path: Path) -> dict:
                     'rate': rate, 'channels': w.getnchannels()}
     except Exception:
         return {}
+
+
+@app.route('/api/url/preview', methods=['POST'])
+def api_url_preview():
+    """Extract a web article and show what WOULD be narrated, without rendering.
+
+    A preview step rather than straight-to-render because extraction quality is
+    the failure mode users actually hit — paywalls, JS-built pages, hostile
+    markup. Twenty minutes of CPU spent narrating a cookie banner helps nobody,
+    and this is the same "never blind trust" principle the rest of the pipeline
+    follows (#36).
+    """
+    from article import fetch_article, ExtractionError
+    url = (request.json or {}).get('url', '').strip()
+    if not url:
+        return jsonify({'error': 'No URL provided'}), 400
+    try:
+        meta = fetch_article(url)
+    except ExtractionError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Unexpected failure reading that page: {e}'}), 500
+    # Send back a readable excerpt, not the whole article.
+    excerpt = meta['text'][:1200]
+    return jsonify({**{k: v for k, v in meta.items() if k != 'text'},
+                    'excerpt': excerpt,
+                    'truncated': len(meta['text']) > len(excerpt)})
+
+
+@app.route('/api/url/convert', methods=['POST'])
+def api_url_convert():
+    """Render a web article as audio, via the ordinary book pipeline.
+
+    The article is written to a real epub first. That is the whole trick: every
+    downstream stage already understands an epub, so an article is a one-chapter
+    book and needs no special case in chaptering, preprocessing, tagging, M4B
+    or the Audiobookshelf sync.
+    """
+    from article import fetch_article, article_to_epub, ExtractionError
+    data = request.json or {}
+    url = (data.get('url') or '').strip()
+    if not url:
+        return jsonify({'error': 'No URL provided'}), 400
+    try:
+        meta = fetch_article(url)
+    except ExtractionError as e:
+        return jsonify({'error': str(e)}), 400
+
+    try:
+        safe = sanitize_filename(meta['title'])[:80] or 'article'
+        # NOT LIBRARY_DIR: that is mounted read-only, and it is an rsync mirror
+        # of the OpenBooks download folder, so anything written there would
+        # either fail outright or be clobbered within fifteen minutes. Articles
+        # get their own writable home under /data.
+        ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
+        epub_path = ARTICLES_DIR / f'{safe}.epub'
+        article_to_epub(meta, epub_path)
+    except Exception as e:
+        return jsonify({'error': f'Could not build an epub from that article: {e}'}), 500
+
+    # Hand off to the existing convert endpoint's logic by forwarding the same
+    # shape it expects. Reusing it (rather than duplicating job creation) is
+    # what keeps this a front door rather than a second pipeline.
+    forwarded = {
+        'path': str(epub_path),
+        'voice': data.get('voice') or DEFAULT_VOICE,
+        'render_target': data.get('render_target') or 'local',
+        # Articles are short and single-chapter: one file is the sensible
+        # default, and an M4B chapter index over one chapter is noise.
+        'output_format': data.get('output_format') or 'mp3',
+    }
+    with app.test_request_context('/api/library/convert', method='POST', json=forwarded):
+        resp = convert_from_library()
+    body = resp[0].get_json() if isinstance(resp, tuple) else resp.get_json()
+    status = resp[1] if isinstance(resp, tuple) else 200
+    if status == 200:
+        body['article'] = {k: meta[k] for k in ('title', 'author', 'site',
+                                                'word_count', 'estimated_minutes')}
+    return jsonify(body), status
 
 
 def all_voices() -> dict:
@@ -5645,11 +5743,26 @@ def presync_quality_gate(job_id, output_path):
     verified = bool(wer)
     unverified_reason = None
     if not verified:
-        unverified_reason = (
-            'no ASR data for this render — transcript chunks are written by '
-            'tts-proxy, and this engine connects directly, so nothing was '
-            'available to check'
-        )
+        # Be precise about WHICH half is missing. Since transcript capture moved
+        # into the converter, chunks now exist for every engine — so blaming
+        # tts-proxy (as this message used to) is no longer true and would send
+        # someone to the wrong place. What is still missing is the ASR pass:
+        # Whisper has to transcribe the rendered audio to produce qa_report.json,
+        # and that only happens when the converter is given --qa.
+        chunks_exist = bool(_read_captured_chunks(job_id))
+        if chunks_exist:
+            unverified_reason = (
+                'the text sent to the engine was recorded, but no ASR pass ran, '
+                'so the AUDIO was never compared against it. Enable ASR_VERIFY '
+                'to transcribe each chapter and check it (slower — Whisper runs '
+                'on CPU here).'
+            )
+        else:
+            unverified_reason = (
+                'nothing was recorded for this render, so there is no source '
+                'text to compare against — check that the converter was given '
+                '--job-id'
+            )
         append_job_log(
             job_id,
             f"WARNING — QUALITY GATE COULD NOT VERIFY THIS BOOK: {unverified_reason}. "

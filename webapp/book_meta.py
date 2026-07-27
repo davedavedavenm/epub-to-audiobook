@@ -22,6 +22,7 @@ fallback policy, both callers use it.
 
 from __future__ import annotations
 
+import html
 import re
 import zipfile
 from pathlib import Path
@@ -49,7 +50,11 @@ def _first(pattern: str, text: str) -> str:
 
 
 def _strip_tags(s: str) -> str:
-    return ' '.join(re.sub(r'<[^>]+>', ' ', s).split())
+    # Unescape entities as well as stripping tags. OPF metadata is XML, so a
+    # title containing an ampersand is stored as `&amp;` — reading it raw put
+    # "Alice &amp; the Rabbit" into the ID3 tags and the M4B. Affects every
+    # epub with punctuation in its title, not just generated ones.
+    return ' '.join(html.unescape(re.sub(r'<[^>]+>', ' ', s)).split())
 
 
 def read_book_meta(epub_path: str | Path) -> dict:
