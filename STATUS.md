@@ -36,6 +36,34 @@
 > for full books; this makes TADA **auditionable locally**, which is what #21
 > needs. Clip: `/api/sample/ab_tada_bf16`. **Not yet graded by ear.**
 
+> ## Articles are podcasts now (2026-07-27) — #36 follow-up
+>
+> Dave, after running an article through: *"it seemed decent. but not sure it
+> should land in ABS as a book?"* Correct — the render was fine, the filing was
+> wrong. A 12-minute piece on the shelf next to a novel is a spurious book with
+> meaningless progress tracking.
+>
+> Articles now go to an Audiobookshelf **podcast** library, grouped by source
+> site. `Ars Technica` and `Wired` each show as a podcast with their episodes;
+> the audiobook shelf is back to four real books. One field (`source_kind`)
+> decides the destination and nothing else — the render path is untouched.
+>
+> **Three bugs, all found by running it, none by reading it:**
+>
+> 1. `save_job`'s INSERT names its columns explicitly, so the new fields were
+>    silently dropped on every save. The API said `destination: podcast` while
+>    the stored row said `book`. A generic round-trip test now guards this.
+> 2. **The deploy rebuilt only `webapp`.** `worker` is a second container from
+>    the same Dockerfile sharing `app.py`; the stale worker's old `save_job`
+>    reverted the field mid-render. `/api/health` reports the *webapp's*
+>    version, so it looked current. See OPERATIONS.md.
+> 3. ABS names a podcast from the audio's **album** tag, not the folder — so
+>    the first episode produced a podcast named after itself. Episodes are now
+>    retagged with the site as album.
+>
+> A podcast folder also needs the audio **flat** inside it; a per-article
+> subfolder is simply never scanned. Caught before it shipped.
+
 **Last updated: 2026-07-27.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
