@@ -87,6 +87,17 @@ HOST_DATA_DIR = f"{HOST_STACK_DIR}/data"
 
 # Audiobookshelf integration - copy completed books here
 AUDIOBOOKSHELF_DIR = os.environ.get('AUDIOBOOKSHELF_DIR', '')
+
+# ...and completed ARTICLES here instead. Audiobookshelf serves a podcast
+# library from its own folder, and the two must not be mixed: the book scanner
+# reads a folder as one audiobook, so a shelf of ten-minute articles is ten
+# spurious "books" with broken progress tracking and a cluttered Continue
+# Listening row. Defaults to the sibling `podcasts` folder, which the ABS
+# container already mounts (verified live 2026-07-27) — so this needs no
+# container restart on the ABS host.
+AUDIOBOOKSHELF_PODCAST_DIR = os.environ.get(
+    'AUDIOBOOKSHELF_PODCAST_DIR',
+    (AUDIOBOOKSHELF_DIR.rsplit('/', 1)[0] + '/podcasts') if AUDIOBOOKSHELF_DIR else '')
 AUDIOBOOKSHELF_HOST = os.environ.get('AUDIOBOOKSHELF_HOST', 'audiobookshelf-host')
 AUDIOBOOKSHELF_USER = os.environ.get('AUDIOBOOKSHELF_USER', 'dave')
 AUDIOBOOKSHELF_PORT = os.environ.get('AUDIOBOOKSHELF_PORT', '')
@@ -659,6 +670,27 @@ def init_db():
             conn.execute('ALTER TABLE jobs ADD COLUMN tts_speed REAL DEFAULT 0.9')
         except sqlite3.OperationalError:
             pass  # Column already exists
+
+        # Where this job came from, and — for a URL ingest — enough about the
+        # source to file it as a podcast episode rather than a book.
+        #
+        # An article is NOT a book. It goes through the book pipeline because
+        # that machinery is already correct (chaptering, preprocessing, tagging,
+        # sync), but a 12-minute Ars Technica piece sitting on the shelf next to
+        # a novel is wrong at the destination, not in the pipeline. ABS has a
+        # podcast media type built for exactly this shape — short items, listened
+        # to once, grouped by source — so the fix is one column and a different
+        # target folder, not a second pipeline (#36).
+        for col, col_type in [
+            ('source_kind', "TEXT DEFAULT 'book'"),   # 'book' | 'article'
+            ('source_url', 'TEXT'),
+            ('source_site', 'TEXT'),
+            ('source_date', 'TEXT'),
+        ]:
+            try:
+                conn.execute(f'ALTER TABLE jobs ADD COLUMN {col} {col_type}')
+            except sqlite3.OperationalError:
+                pass
 
         # Add sync metadata columns if they don't exist
         for col, col_type in [
@@ -3018,6 +3050,39 @@ def api_abs_purge_missing():
     return jsonify({'removed': removed, 'errors': errors}), (200 if not errors else 207)
 
 
+def _podcast_folder_name(site: str) -> str:
+    """The ABS podcast a given source site's articles belong to.
+
+    Grouping by site rather than dumping everything into one "Articles" bucket
+    is what makes the podcast library readable: ABS shows each folder as a
+    podcast with its own cover and episode count, so "Ars Technica — 4 episodes"
+    behaves like a feed you subscribed to. A single mixed folder would show one
+    podcast whose episodes have nothing to do with each other.
+    """
+    name = sanitize_filename(site or 'Articles').strip() or 'Articles'
+    return name[:60]
+
+
+def _abs_destination(output_dir: Path, job_id: str | None) -> tuple[str, bool]:
+    """Return (remote path, is_article) for this render's Audiobookshelf copy.
+
+    Articles land in the podcast library, under a folder per source site;
+    books keep the existing per-book folder in the audiobook library. Falls
+    back to the book path whenever anything is unknown — a misfiled article is
+    a nuisance, but a book that fails to sync because a podcast folder could
+    not be derived is a real loss.
+    """
+    dest_folder = output_dir.name
+    book_dest = f"{AUDIOBOOKSHELF_DIR}/{dest_folder}"
+    if not job_id or not AUDIOBOOKSHELF_PODCAST_DIR:
+        return book_dest, False
+    job = get_job(job_id) or {}
+    if (job.get('source_kind') or 'book') != 'article':
+        return book_dest, False
+    podcast = _podcast_folder_name(job.get('source_site') or '')
+    return f"{AUDIOBOOKSHELF_PODCAST_DIR}/{podcast}/{dest_folder}", True
+
+
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
     app.logger.info("DEBUG: Starting copy_to_audiobookshelf")
     ssh_key_src = os.environ.get("SSH_KEY_PATH", "/root/.ssh/id_ed25519")
@@ -3033,7 +3098,7 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
 
     target = f"{AUDIOBOOKSHELF_USER}@{AUDIOBOOKSHELF_HOST}"
     dest_folder = output_dir.name
-    dest_path = f"{AUDIOBOOKSHELF_DIR}/{dest_folder}"
+    dest_path, is_article = _abs_destination(output_dir, job_id)
 
     ssh_args = [
         '-o', 'StrictHostKeyChecking=no',
@@ -3054,7 +3119,10 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             sync_error='',
             sync_timestamp=datetime.now().isoformat()
         )
-        append_job_log(job_id, f"Sync start -> {target}:{dest_path}")
+        append_job_log(
+            job_id,
+            f"Sync start -> {target}:{dest_path}"
+            + (" (podcast library — this is an article, not a book)" if is_article else ""))
 
     try:
         # NO local `import shlex` here. shlex is imported at module level, and a
@@ -4211,6 +4279,14 @@ def api_url_convert():
         # Articles are short and single-chapter: one file is the sensible
         # default, and an M4B chapter index over one chapter is noise.
         'output_format': data.get('output_format') or 'mp3',
+        # Everything above this line is identical to a book. These four fields
+        # are the whole difference, and they only change the DESTINATION: an
+        # article is delivered to the Audiobookshelf podcast library, grouped
+        # under its source site, instead of onto the audiobook shelf (#36).
+        'source_kind': 'article',
+        'source_url': meta.get('url', ''),
+        'source_site': meta.get('site', ''),
+        'source_date': meta.get('date', ''),
     }
     with app.test_request_context('/api/library/convert', method='POST', json=forwarded):
         resp = convert_from_library()
@@ -4219,6 +4295,8 @@ def api_url_convert():
     if status == 200:
         body['article'] = {k: meta[k] for k in ('title', 'author', 'site',
                                                 'word_count', 'estimated_minutes')}
+        body['destination'] = 'podcast'
+        body['podcast_folder'] = _podcast_folder_name(meta.get('site', ''))
     return jsonify(body), status
 
 
@@ -6250,6 +6328,14 @@ def convert_from_library():
             'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0,
             'render_target': (data.get('render_target') or 'local').lower(),
             'output_format': (data.get('output_format') or 'mp3').lower(),
+            # Set HERE, at creation, not patched on afterwards. The queue runner
+            # is kicked off on the next line, so a caller that saved the job and
+            # then updated it would be racing its own render — and the field
+            # decides where the finished audio is delivered.
+            'source_kind': (data.get('source_kind') or 'book').lower(),
+            'source_url': data.get('source_url') or '',
+            'source_site': data.get('source_site') or '',
+            'source_date': data.get('source_date') or '',
         })
         if engine_fallback_note:
             append_job_log(job_id, f"Engine fallback: {engine_fallback_note}")
