@@ -4836,7 +4836,13 @@ def audition_sample(name: str):
     """Serve a one-off audition clip — currently the 1997 A/B pair (#26), so the
     modern-engine number question is settled by ear rather than by argument.
     Allowlisted names only; never an arbitrary path."""
-    if name not in ('ab_1997_raw', 'ab_1997_spelled'):
+    # #27: does chatterbox want pronunciation help at all? Three renders of one
+    # sentence — raw, the current SHOUTY-CAPS seed style, and a natural
+    # lowercase respelling. The filter that drops respellings for modern
+    # engines was justified by "Bay-JING sounded wrong", which may have been
+    # the FORMAT rather than the concept. Settled by ear, not argument.
+    if name not in ('ab_1997_raw', 'ab_1997_spelled',
+                    'ab27_raw', 'ab27_caps', 'ab27_natural'):
         return jsonify({'error': 'Unknown sample'}), 404
     p = PREVIEWS_DIR / f"{name}.mp3"
     if not p.exists():
@@ -5683,6 +5689,22 @@ def _ollama_chat(messages, timeout=40, max_tokens=200) -> str:
     return r.json()["choices"][0]["message"]["content"]
 
 
+# Word-error rate above which a chapter is called garbled.
+#
+# This was 0.7, which is close to unreachable: at 70% wrong the audio would be
+# essentially noise. The FIRST real ASR report (Alice ch1-3, 2026-07-27)
+# measured a healthy baseline of 7.8-9.0% WER, and much of that turned out to
+# be the apostrophe bug in normalize_words rather than anything audible. So a
+# genuinely broken chapter — wrong text, truncated audio, a stuck engine —
+# would plausibly sit at 30-40% and sail straight through a 0.7 gate.
+#
+# 0.35 is set as roughly 4x the measured clean baseline: comfortably above
+# normal ASR noise on archaic prose and proper nouns, comfortably below what a
+# real failure looks like. Tune with GARBLED_WER once there are more samples;
+# this is a first calibration against one book, not a law.
+GARBLED_WER = float(os.environ.get('GARBLED_WER', '0.35'))
+
+
 def presync_quality_gate(job_id, output_path):
     """Before syncing a finished render to Audiobookshelf, catch chapters that
     rendered broken so a bad book is HELD for review instead of shipped.
@@ -5735,7 +5757,7 @@ def presync_quality_gate(job_id, output_path):
             flags.append({'chapter': ch, 'issue': 'truncated', 'words': w,
                           'detail': f'audio is far too short for {w} words of text '
                                     f'({bpw[ch]:.0f} vs median {med:.0f} bytes/word)'})
-        elif e is not None and e > 0.7:
+        elif e is not None and e > GARBLED_WER:
             flags.append({'chapter': ch, 'issue': 'garbled', 'wer': round(e, 3),
                           'detail': f'ASR word-error {e:.0%} — audio does not match the text'})
 

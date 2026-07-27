@@ -76,8 +76,26 @@ def normalize_words(text: str) -> list[str]:
     list suitable for alignment. Numbers are canonicalised so digit vs spelled
     forms don't register as differences."""
     text = (text or "").lower().replace('&', ' and ')
+
+    # Unicode punctuation -> ASCII, BEFORE tokenising.
+    #
+    # This was inflating WER on every contraction in the book. Epub source uses
+    # curly apostrophes (U+2019); Whisper emits straight ones. `_WORD_RE` only
+    # accepts straight, so "I’m" tokenised as ["i", "m"] while the transcript
+    # gave ["i'm"] — scored as a substitution plus an insertion, on text that
+    # was narrated perfectly. Measured on Alice ch1-3 it accounted for a large
+    # share of an apparent ~8-9% WER (`i m -> i'm`, `shan t -> shall`,
+    # `dears i m -> dear i'm`).
+    for a, b in (('’', "'"), ('‘', "'"), ('ʼ', "'"), ('`', "'"),
+                 ('“', ' '), ('”', ' '), ('–', ' '), ('—', ' ')):
+        text = text.replace(a, b)
+
     out: list[str] = []
     for tok in _WORD_RE.findall(text):
+        # Compare contractions by their letters. We are looking for
+        # MISPRONUNCIATION, and whether the transcriber wrote "shan't" or
+        # "shant" says nothing about how the audio sounded.
+        tok = tok.replace("'", "") or tok
         m = _ORD_RE.match(tok)
         if tok.isdigit():
             out.extend(_expand_number(tok))
@@ -157,6 +175,43 @@ def suggest_lexicon(divergences: list[dict], min_len: int = 5) -> dict:
                 if difflib.SequenceMatcher(a=w, b=got).ratio() < 0.8:
                     sugg[w] = got  # {misread source word: what it sounded like}
     return sugg
+
+
+# Words the ASR routinely mangles but the engine says correctly. Applying a
+# "fix" for these would corrupt audio that is already right.
+_ASR_ARTEFACT = re.compile(r'^(dinah|lory|gryphon|mock|caucus|eaglet)$', re.I)
+
+
+def annotate_suggestions(sugg: dict) -> list[dict]:
+    """Wrap raw suggestions with a warning and a confidence, never as fixes.
+
+    The first live report proposed `saucer -> sorcerer`, `flashed -> fletched`
+    and `dinah -> diner`. Those are the TRANSCRIBER mishearing archaic prose
+    and proper nouns; the narration of all three was fine. Applying any of them
+    would take correct audio and break it — which is exactly the trap recorded
+    in PLAN-V3 #16: *a wrong lexicon entry is worse than no entry*, because it
+    corrupts audio that was merely imperfect into audio that is wrong.
+
+    So suggestions are presented as "the transcriber struggled here, go and
+    listen", not as "apply this". Anything that looks like a proper noun or a
+    known ASR artefact is marked lower confidence still.
+    """
+    out = []
+    for word, heard in sorted(sugg.items()):
+        artefact = bool(_ASR_ARTEFACT.match(word))
+        # A capitalised source word is usually a name — Whisper's weakest case,
+        # and the least safe thing to "correct".
+        proper = word[:1].isupper()
+        out.append({
+            'word': word,
+            'asr_heard': heard,
+            'confidence': 'low' if (artefact or proper) else 'review',
+            'note': ('the transcriber commonly mishears this word — very likely '
+                     'the audio is fine' if artefact else
+                     'listen before changing anything; this may be an ASR error '
+                     'rather than a narration error'),
+        })
+    return out
 
 
 def transcribe(audio_path: str | Path, model_size: str = "base", device: str = "cpu") -> str:
