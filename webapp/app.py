@@ -4842,7 +4842,8 @@ def audition_sample(name: str):
     # engines was justified by "Bay-JING sounded wrong", which may have been
     # the FORMAT rather than the concept. Settled by ear, not argument.
     if name not in ('ab_1997_raw', 'ab_1997_spelled',
-                    'ab27_raw', 'ab27_caps', 'ab27_natural'):
+                    'ab27_raw', 'ab27_caps', 'ab27_natural',
+                    'ab_tada_cpu'):
         return jsonify({'error': 'Unknown sample'}), 404
     p = PREVIEWS_DIR / f"{name}.mp3"
     if not p.exists():
