@@ -6,6 +6,41 @@ worst listening problems were text defects, not voice defects.
 
 ---
 
+## ✅ SETTLED BY EAR 2026-07-27 — modern engines get RAW text
+
+The single most-litigated question in this pipeline is closed. Three clips, one
+sentence, identical voice and engine, the respelling the only variable:
+
+```
+A  The Xiaomi factory in Shenzhen produces components for Huawei.
+B  The SHOW-mee factory in SHEN-jen produces components for HWAH-way.
+C  The shaow-mee factory in shun-jen produces components for hwah-way.
+```
+
+**Verdict: "A better by far."** Raw wins decisively. Both respelling styles are
+worse.
+
+So the modern-engine lexicon filter in `normalize_text_for_tts` is **correct and
+must stay**:
+
+```python
+active = lexicon if not modern else {
+    k: v for k, v in lexicon.items() if _is_letter_spacing(k, v)}
+```
+
+**Do not reopen this without a new ear test.** The issue that prompted the test
+(#27) argued the *format* was to blame — shouty caps and hyphens — by analogy
+with the comma bug below, where a similar-looking ban turned out to be a
+misdiagnosis. That analogy did not hold. A natural lowercase respelling lost
+too. Chatterbox does not want pronunciation help; it wants the text.
+
+**What follows from it:** the LLM per-book lexicon and the QA loop's
+pronunciation suggestions earn nothing on Chatterbox — their output is
+correctly discarded. The QA layer's value on modern engines is catching
+**dropped, truncated or garbled** audio, not fixing pronunciation.
+
+---
+
 ## ⚠️ Read this first: two hard-won lessons (2026-07-14)
 
 ### 1. A comma is a pause. This one bug caused two wrong conclusions.

@@ -248,7 +248,7 @@ validation, the startup-recovery bug and the ABS sync bug) is **closed**.
 | [#23](../../issues/23) | bug | TADA OOMs on **local CPU** | **Symptom changed 2026-07-25** — the meta-tensor load error is fixed; it now builds, starts healthy, and OOMs on first synthesis against its 10 GiB cgroup |
 | [#24](../../issues/24) | enhancement | Inworld's 12 voices are selectable but cannot work without an API key — gate or hide them | Confirmed live: `inworld:false`, `polly:false` in `/api/engines/health` |
 | [#25](../../issues/25) | enhancement | Convert tab visual cleanup (hierarchy, spacing, demote advanced controls) | PLAN-V3 #4 shipped the 3-step wizard; **check whether this cosmetic remainder is still real before working it** |
-| [#27](../../issues/27) | bug | Does chatterbox need pronunciation help at all? (the modern-engine lexicon filter) | Partly overtaken by PLAN-V3 #16 — LLM pronunciation is now off by default, so this is about the *curated* lexicon |
+| ~~#27~~ | — | **Settled by ear 2026-07-27: raw text wins.** "A better by far." The modern-engine filter is correct and stays; see PREPROCESSING.md |
 | [#36](../../issues/36) | enhancement | URL → audio. **Shipped v1.7.0** | paste a link, preview, narrate |
 | ~~#39~~ | — | iGPU for Whisper — **closed unnecessary**. CPU measured fast enough, and faster-whisper cannot use OpenVINO anyway |
 
