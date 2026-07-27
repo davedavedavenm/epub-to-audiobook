@@ -124,6 +124,34 @@ the wiring *between* components, where the unit suite is blind.
   app's own API. This is the sixth instance of the non-root migration gap, and
   the first one caused by inspection rather than deployment.
 
+### 2026-07-27 — deploying only `webapp` leaves the worker running old code
+
+- **Symptom:** the API returned `destination: podcast` and wrote
+  `source_kind='article'` to the job, and moments later the same row read back
+  as `'book'`. Nothing errored. The render then filed itself as an audiobook.
+- **Cause:** `webapp` and `worker` are **two containers built from the same
+  `webapp/Dockerfile` and sharing `webapp/app.py`.** A hand-rolled
+  `docker compose up -d --build webapp` rebuilt only the first. The stale worker
+  picked the job up, called `update_job` → `save_job` with its *old* column
+  list, and silently dropped the field the new webapp had just written.
+- **Why it is nasty:** the health endpoint reports the **webapp's** version, so
+  `/api/health` said `9eb4e59` while the code doing the work was older. The
+  version banner cannot detect this class of failure.
+
+  ```bash
+  # Confirm what each container is actually running:
+  docker inspect epub-to-audiobook-ui     --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+  docker inspect epub-to-audiobook-worker --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+  ```
+
+- **Rule: use `scripts/deploy.sh`.** It runs
+  `docker compose up -d --build --remove-orphans` across the stack and does not
+  have this hole. Naming individual services is the shortcut that caused this.
+- **Lesson (a repeat, in a new costume):** two components deriving one fact
+  independently, and the second one drifting — the same shape as the `chapters.py`
+  bug and the `_book_meta()` bug in PLAN-V4 §4. Here the two components were two
+  *deployments of the same file*.
+
 ### 2026-07-25 — SSH to zorin from Windows appears dead; it is a key-permission problem
 - **Symptom:** `ssh zorin` from the Windows box exits 255 and prints **nothing**
   — no error, no banner. `ssh -V` also prints nothing. It looks like a broken or
