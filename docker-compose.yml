@@ -165,10 +165,19 @@ services:
     ports:
       - "8005:8005"
     restart: unless-stopped
-    mem_limit: 10g
-    memswap_limit: 10g
+    # Measured 2026-07-27 on zorin: bf16 peaks at exactly 10.00 GiB — it
+    # survives the old 10g cap but with zero headroom, i.e. it is reclaiming at
+    # the ceiling rather than sitting comfortably. The cap is the CONTAINER's
+    # limit, not the host's: zorin has 31 GB with ~21 GB available, and this is
+    # transient (idle RSS is ~487 MiB — the model loads lazily on first
+    # request). Raising the cap therefore costs nothing when idle and removes
+    # the cliff where a slightly longer chunk gets OOM-killed mid-render.
+    mem_limit: 14g
+    memswap_limit: 14g
     environment:
       - TADA_CHUNK_CHARS=${TADA_CHUNK_CHARS:-600}
+      # f32 doubles weights to ~16 GB and will not fit the cap — see #23.
+      - TADA_CPU_DTYPE=${TADA_CPU_DTYPE:-bf16}
       - HF_TOKEN=${HF_TOKEN:-}
     volumes:
       - tada-cache:/data/hf

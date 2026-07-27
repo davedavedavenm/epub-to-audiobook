@@ -1,6 +1,42 @@
 # Project Status & Remaining Tasks
 
-**Last updated: 2026-07-26.** Honest single source of truth. "Verified" = it
+> ## TADA runs locally now (2026-07-27, measured) — #23 root-caused and fixed
+>
+> TADA was recorded for months as "broken, engine fails to load". It was never
+> broken. `tada/server.py` gave **bfloat16 to CUDA and float32 to CPU**, and a
+> 1B model at fp32 plus the codec encoder wants **~16 GB** — against a 10 GiB
+> container cap. It died ~7 s into the first request, which is exactly when the
+> lazy model load fires. The 7 seconds looked like a generation bug and was not.
+>
+> Two plausible theories tested and **both wrong**, recorded so nobody re-runs
+> them: it is **not a leak** (idle RSS is 487 MiB — nothing is loaded until the
+> first request) and it is **not chunk size** (at `TADA_CHUNK_CHARS=200` instead
+> of 600 it died identically). The autoregressive KV cache was the obvious
+> suspect and was not the cause.
+>
+> **Measured after the fix, on zorin (i5-12400, no GPU):**
+>
+> | | fp32 (before) | bf16 (after) |
+> |---|---|---|
+> | One sentence | 28.3 s | **20.7 s** |
+> | Full 588-char chunk | OOM-killed | **63.2 s → 37.6 s audio** |
+> | Peak memory | 15.99 GiB (uncapped probe) | **10.00 GiB** |
+> | Outcome under a 10 GiB cap | killed | **survives, `oom=false`** |
+>
+> **RTF 1.68** — so a 10-hour book is ~17 h against Nano's ~8.3 h. bf16 is
+> *faster* than fp32 here, not slower: the caveat I wrote on #23 (that Alder
+> Lake lacking AVX-512/AMX might make emulated bf16 slower) was worth checking
+> and turned out not to bite.
+>
+> **Honest limits.** Peak sits *exactly* on the old 10 GiB cap — survival with
+> zero headroom, reclaiming at the ceiling. That cap is the **container's**, not
+> the host's: zorin has 31 GB with ~21 GB free, and the spike is transient. So
+> `mem_limit` is now **14g**, which costs nothing at idle and removes the cliff
+> where a slightly longer chunk gets killed mid-render. Nano stays the default
+> for full books; this makes TADA **auditionable locally**, which is what #21
+> needs. Clip: `/api/sample/ab_tada_bf16`. **Not yet graded by ear.**
+
+**Last updated: 2026-07-27.** Honest single source of truth. "Verified" = it
 was actually run; "unverified" = the code exists but hasn't been proven
 end-to-end by ear/measurement. Open work is tracked as **GitHub issues** —
 this file is the narrative index, the issues are the live backlog.
@@ -61,8 +97,9 @@ engine off".** The chatterbox container must stay **RUNNING** so its voices show
 online and are **previewable in the UI** (previews are one short paragraph — cheap
 on CPU — and the render still goes to Kaggle). `fe37fb5` made heavy engines
 opt-in; on the 31GB box that was over-cautious for chatterbox — keep chatterbox up
-(restart policy `unless-stopped`) for auditioning. Only TADA stays off (it's
-broken, #23).
+(restart policy `unless-stopped`) for auditioning. TADA stays **off by default**
+— not because it is broken (it isn't; see the 2026-07-27 note at the top) but
+because it is an explicit opt-in that wants 10 GiB while it runs.
 
 ## Aims vs reality — the owner's scorecard (updated 2026-07-20)
 
@@ -127,8 +164,10 @@ correct, but the gap remains) and **#27** (chatterbox pronunciation ear-test).
 - **MP3s now carry ID3 tags** (title/album/artist/track), so Audiobookshelf can
   group a book and order/name its chapters — chapter navigation was broken without
   them.
-- **Voices that cannot work are documented, not silently broken:** TADA (engine
-  fails to load, **#23**), Inworld (no API key) and Polly (no AWS creds) — **#24**.
+- **Voices that cannot work are documented, not silently broken:** Inworld (no
+  API key) and Polly (no AWS creds) — **#24**. TADA was on this list as "engine
+  fails to load (#23)"; that was a memory-cap bug, fixed and measured
+  2026-07-27.
 
 ## Stability containment (2026-07-18)
 
@@ -137,7 +176,9 @@ correct, but the gap remains) and **#27** (chatterbox pronunciation ear-test).
   engine. The default cache switch is now off.
 - TADA and Chatterbox profiles are no longer enabled by the default deploy.
   Both remain available as explicit opt-ins. On the upgraded 31 GB box,
-  Chatterbox runs comfortably for previews; TADA stays off (broken, #23).
+  Chatterbox runs comfortably for previews. TADA is opt-in and now works
+  (#23 fixed 2026-07-27); the cgroup kill described above was the fp32 load,
+  and the cap is now 14g.
 - Kokoro, Piper, the UI/worker, and Nango remain the local service set. The
   high-quality clone engines should run on a separately validated target.
 
