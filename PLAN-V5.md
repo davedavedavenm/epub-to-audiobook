@@ -22,7 +22,14 @@ detects and corrects itself over one that exposes another knob.
 
 ---
 
-## 1. Automatic re-render of chunks that fail verification
+**Tracked as GitHub issues** — the issues are the live backlog, this file is the
+narrative: **#41** (auto re-render) · **#42** (article RSS + Telegram) ·
+**#43** (Chatterbox V3, `cfg_weight`, native warm-up) · **#21** (TADA quality,
+incl. the `_trim_leadin` bug) · **#40** (duplicate-book naming).
+
+---
+
+## 1. Automatic re-render of chunks that fail verification — #41
 
 The highest-value item, and the direct answer to the constraint above.
 
@@ -48,7 +55,7 @@ a clearly-wrong "Alice" as "Alice", and a deliberately mis-spelled "Aliss" as
 "Alice" too. So this catches drops, insertions and gross substitutions, **not**
 pronunciation. Do not let a clean WER report imply a clean render.
 
-## 2. Articles: RSS feed, so any podcast app works
+## 2. Articles: RSS feed, so any podcast app works — #42
 
 Dave, on the current Audiobookshelf podcast library: *"not very elegant… maybe
 it's worth considering whether there's a better app."*
@@ -62,7 +69,7 @@ it's worth considering whether there's a better app."*
 Casts, Overcast, AntennaPod and ABS all subscribe to a URL. The second-library
 awkwardness stops being a decision.
 
-## 3. Articles: Telegram capture
+## 3. Articles: Telegram capture — #42
 
 Dave: *"probably also worth deciding whether the web UI is best suited to
 articles at the moment. My suggestion is it isn't."*
@@ -74,7 +81,7 @@ articles at the moment. My suggestion is it isn't."*
 **Why:** opening a web UI to save a link is the wrong shape for "as and when I
 come across something". Telegram already works from phone and desktop.
 
-## 4. Chatterbox Multilingual V3 for accents
+## 4. Chatterbox Multilingual V3 for accents — #43
 
 - [ ] 4.1 Install V3 (500M) and A/B against Nano `cfg_weight=0` on identical
       references.
@@ -85,7 +92,7 @@ come across something". Telegram already works from phone and desktop.
 V3 is the only model in the Chatterbox family that claims **accent
 preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 
-## 5. Fix `_trim_leadin()` properly
+## 5. Fix `_trim_leadin()` properly — #21
 
 - [ ] 5.1 Measure the lead-in's real duration once at startup for the loaded
       voice and cut that, instead of hunting a silence gap and falling back to a
@@ -95,7 +102,7 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [ ] 5.3 Assert it: the first chunk's transcript must not begin with the
       lead-in word. That test would have caught this immediately.
 
-## 6. Warm up the Piper native accents
+## 6. Warm up the Piper native accents — #43
 
 - [ ] 6.1 Gentle EQ plus a little room on the VCTK natives. Dave: *"some sound a
       bit tinny or distant"* — VCTK was recorded anechoic on a headset mic and
