@@ -3063,24 +3063,64 @@ def _podcast_folder_name(site: str) -> str:
     return name[:60]
 
 
+def _episode_filename(job: dict, book_name: str) -> str:
+    """`YYYY-MM-DD - Title.mp3` — an episode name that sorts by date."""
+    date = (job.get('source_date') or '')[:10]
+    title = sanitize_filename(book_name or 'Article').strip() or 'Article'
+    stem = f"{date} - {title}" if date else title
+    return f"{stem[:120]}.mp3"
+
+
 def _abs_destination(output_dir: Path, job_id: str | None) -> tuple[str, bool]:
     """Return (remote path, is_article) for this render's Audiobookshelf copy.
 
-    Articles land in the podcast library, under a folder per source site;
-    books keep the existing per-book folder in the audiobook library. Falls
-    back to the book path whenever anything is unknown — a misfiled article is
-    a nuisance, but a book that fails to sync because a podcast folder could
-    not be derived is a real loss.
+    The two libraries want two different SHAPES, which is the part that is easy
+    to get wrong. A book library reads one folder as one audiobook, so a book
+    syncs to `<audiobooks>/<Book Folder>/` and its chapter MP3s go inside. A
+    podcast library reads one folder as one podcast and every audio file
+    directly inside it as an episode — so an article syncs its single MP3
+    *flat* into `<podcasts>/<Site>/`, with no per-article subfolder. Nesting
+    one level deeper looks tidier and is simply not scanned.
+
+    Falls back to the book path whenever anything is unknown — a misfiled
+    article is a nuisance, but a book that fails to sync because a podcast
+    folder could not be derived is a real loss.
     """
-    dest_folder = output_dir.name
-    book_dest = f"{AUDIOBOOKSHELF_DIR}/{dest_folder}"
+    book_dest = f"{AUDIOBOOKSHELF_DIR}/{output_dir.name}"
     if not job_id or not AUDIOBOOKSHELF_PODCAST_DIR:
         return book_dest, False
     job = get_job(job_id) or {}
     if (job.get('source_kind') or 'book') != 'article':
         return book_dest, False
     podcast = _podcast_folder_name(job.get('source_site') or '')
-    return f"{AUDIOBOOKSHELF_PODCAST_DIR}/{podcast}/{dest_folder}", True
+    return f"{AUDIOBOOKSHELF_PODCAST_DIR}/{podcast}", True
+
+
+def _stage_episode(output_dir: Path, job: dict, book_name: str) -> Path | None:
+    """Copy the render's audio into a staging dir as a single named episode.
+
+    Articles are rendered as one chapter, so the output folder holds one MP3
+    with a chapter-ish name plus the bookkeeping files a book needs (cover,
+    verification, gate). None of that belongs in a podcast folder, where every
+    audio file present becomes an episode. Staging one correctly-named file is
+    simpler and safer than a pile of rsync excludes.
+    """
+    mp3s = sorted(p for p in output_dir.glob('*.mp3') if p.is_file())
+    if not mp3s:
+        return None
+    staging = Path('/tmp') / f"podcast_{job.get('id') or 'ep'}"
+    if staging.exists():
+        shutil.rmtree(staging, ignore_errors=True)
+    staging.mkdir(parents=True, exist_ok=True)
+    if len(mp3s) == 1:
+        shutil.copy2(mp3s[0], staging / _episode_filename(job, book_name))
+    else:
+        # A long article can still split. Keep them ordered and grouped, since
+        # ABS will list each as its own episode.
+        base = _episode_filename(job, book_name)[:-4]
+        for i, p in enumerate(mp3s, 1):
+            shutil.copy2(p, staging / f"{base} ({i:02d}).mp3")
+    return staging
 
 
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:
@@ -3097,8 +3137,17 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         app.logger.warning(f"DEBUG: Source key {ssh_key_src} NOT FOUND")
 
     target = f"{AUDIOBOOKSHELF_USER}@{AUDIOBOOKSHELF_HOST}"
-    dest_folder = output_dir.name
     dest_path, is_article = _abs_destination(output_dir, job_id)
+    # An article syncs one flat, named MP3 into the podcast folder; a book
+    # syncs its whole folder. `source_dir` is what actually gets rsynced.
+    source_dir = output_dir
+    if is_article:
+        staged = _stage_episode(output_dir, get_job(job_id) or {'id': job_id}, book_name)
+        if staged is None:
+            app.logger.warning("No MP3 to publish as an episode; syncing as a book")
+            dest_path, is_article = f"{AUDIOBOOKSHELF_DIR}/{output_dir.name}", False
+        else:
+            source_dir = staged
 
     ssh_args = [
         '-o', 'StrictHostKeyChecking=no',
@@ -3175,11 +3224,15 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         #
         # Internal bookkeeping files are excluded for the same reason — they
         # are ours, not the listener's.
+        #
+        # For an article, `source_dir` is the staging folder holding exactly one
+        # named MP3, so these excludes are a no-op there — the filtering already
+        # happened when the episode was staged.
         cmd = ['rsync', '-av', '-s',
                '--exclude', '*.epub',
                '--exclude', '_presync_gate.json',
                '--exclude', '_verification/',
-               '-e', rsync_ssh, f'{output_dir}/', f"{target}:{dest_path}/"]
+               '-e', rsync_ssh, f'{source_dir}/', f"{target}:{dest_path}/"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()

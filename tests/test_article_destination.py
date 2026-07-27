@@ -50,7 +50,20 @@ class TestDestination:
         _jobs(app_mod, monkeypatch,
               {'source_kind': 'article', 'source_site': 'Ars Technica'})
         path, _ = app_mod._abs_destination(Path('/out/Some Article'), 'j1')
-        assert '/podcasts/Ars Technica/' in path
+        assert path.endswith('/podcasts/Ars Technica')
+
+    def test_podcast_path_is_flat_not_nested(self, app_mod, monkeypatch):
+        """The shape difference that is easy to get wrong and silent when wrong.
+
+        A book library reads one FOLDER as one audiobook. A podcast library
+        reads one folder as one podcast and the audio files directly inside it
+        as episodes — so an extra per-article subfolder is simply not scanned,
+        and the episode never appears.
+        """
+        _jobs(app_mod, monkeypatch,
+              {'source_kind': 'article', 'source_site': 'Ars Technica'})
+        path, _ = app_mod._abs_destination(Path('/out/Some Article'), 'j1')
+        assert 'Some Article' not in path
 
     def test_book_is_untouched(self, app_mod, monkeypatch):
         _jobs(app_mod, monkeypatch, {'source_kind': 'book'})
@@ -82,6 +95,52 @@ class TestDestination:
         path, is_article = app_mod._abs_destination(Path('/out/Some Article'), 'j1')
         assert not is_article
         assert path.endswith('/audiobooks/Some Article')
+
+
+class TestEpisodeStaging:
+    """Only the audio, exactly once, under a name a human can read."""
+
+    def _render(self, tmp_path, names):
+        out = tmp_path / 'Some Article_abc123'
+        out.mkdir()
+        for n in names:
+            (out / n).write_bytes(b'\xff\xfb' + b'0' * 64)
+        return out
+
+    def test_stages_only_the_audio(self, app_mod, tmp_path, monkeypatch):
+        """A book folder's furniture — cover art, the gate, verification data —
+        must not follow an article into a podcast folder, where every audio file
+        present becomes an episode and every stray file is clutter."""
+        out = self._render(tmp_path, ['0001 - Some Article.mp3'])
+        (out / 'cover.jpg').write_bytes(b'x')
+        (out / '_presync_gate.json').write_text('{}')
+        monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
+        staged = app_mod._stage_episode(
+            out, {'id': 'j1', 'source_date': '2026-07-27'}, 'Some Article')
+        assert staged is not None
+        files = sorted(p.name for p in staged.iterdir())
+        assert files == ['2026-07-27 - Some Article.mp3']
+
+    def test_episode_name_leads_with_the_date(self, app_mod, monkeypatch):
+        monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
+        name = app_mod._episode_filename({'source_date': '2026-07-27'}, 'A Title')
+        assert name == '2026-07-27 - A Title.mp3'
+
+    def test_missing_date_still_produces_a_valid_name(self, app_mod, monkeypatch):
+        monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
+        assert app_mod._episode_filename({}, 'A Title') == 'A Title.mp3'
+
+    def test_multi_part_article_stays_ordered(self, app_mod, tmp_path, monkeypatch):
+        out = self._render(tmp_path, ['0001 - A.mp3', '0002 - B.mp3'])
+        monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
+        staged = app_mod._stage_episode(out, {'id': 'j2'}, 'Long Read')
+        assert sorted(p.name for p in staged.iterdir()) == \
+            ['Long Read (01).mp3', 'Long Read (02).mp3']
+
+    def test_no_audio_returns_none_so_the_caller_can_fall_back(self, app_mod, tmp_path):
+        out = tmp_path / 'empty'
+        out.mkdir()
+        assert app_mod._stage_episode(out, {'id': 'j3'}, 'Nothing') is None
 
 
 class TestPodcastFolderName:
