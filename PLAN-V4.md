@@ -10,14 +10,14 @@
 > DB · **#38** M4B published atomically, epub no longer synced (401 MB → 242 MB
 > per book).
 >
-> **#33 is half-closed and the honest position is worth stating.** Transcript
-> capture now works on every engine — it was previously impossible for
-> Chatterbox and TADA, so no book had ever been verifiable. But the ASR pass
-> that compares *audio* to that text still does not run by default: Whisper on
-> this CPU roughly doubles wall-clock. There is now an `ASR_VERIFY` switch, and
-> the gate reports precisely which half is missing rather than claiming a pass.
-> **#39** proposes making it cheap enough to default on, using the idle Intel
-> iGPU both hosts already have.
+> **#33 is closed.** Transcript capture now works on every engine — it was
+> previously impossible for Chatterbox and TADA, so no book had ever been
+> verifiable — and the ASR pass that compares *audio* to that text is **on by
+> default**. It was briefly opt-in on my claim that "Whisper roughly doubles
+> render time"; that was never measured and was wrong. Measured: **20×
+> realtime, about 6% of a render**. #39, which existed only to make it cheaper,
+> is closed as unnecessary — and was technically wrong too, since
+> faster-whisper cannot use OpenVINO.
 >
 > **Three bugs were introduced and caught during this sprint**, all by running
 > the system rather than reading it: `--job-id` reaching only the watchdog path,

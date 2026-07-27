@@ -73,7 +73,7 @@ as the priority order.
 | Aim (as stated) | State | Evidence |
 |---|---|---|
 | "I go to the web UI, choose narrate, and it'll **just work**, all automatic" | ✅ | Kaggle and Local render both proven end-to-end (Chapters -> Preprocessing -> Subprocess -> Verify -> ID3 Tags -> ABS Sync). |
-| Everything **checked automatically** — no blind trust | ⚠️ | **Improved 2026-07-27, still not a ✅.** Transcript capture now works on every engine (it was impossible for Chatterbox/TADA, so no book had ever been verifiable), and a gate that inspected nothing now says so loudly instead of writing a clean pass. But the ASR comparison of *audio* against that text is opt-in (`ASR_VERIFY`), because Whisper on this CPU roughly doubles render time. Becomes a ✅ when #39 makes it cheap enough to default on. |
+| Everything **checked automatically** — no blind trust | ✅ | **Restored 2026-07-27.** Transcript capture works on every engine (it was impossible for Chatterbox/TADA, so no book had ever been verifiable), a gate that inspected nothing says so instead of writing a clean pass, and **ASR verification is now ON by default**. The reason it was opt-in — "Whisper roughly doubles render time" — was my assumption and was wrong: measured 20× realtime, ~6% of a render. See below. |
 | Accurate progress/ETA, no fake numbers | ✅ | Real per-chapter progress (ntfy call-home); honest "chapter X/N"; no ETA before evidence. Was elapsed-guesswork before. |
 | Chapter selection = the actual book, by title | ✅ | Both local and Kaggle paths unified on `chapters.py` numbering. |
 | Covers + metadata land in ABS, chapters navigable | ✅ | Full ID3 tagging implemented for both rendering paths. |
@@ -249,9 +249,8 @@ validation, the startup-recovery bug and the ABS sync bug) is **closed**.
 | [#24](../../issues/24) | enhancement | Inworld's 12 voices are selectable but cannot work without an API key — gate or hide them | Confirmed live: `inworld:false`, `polly:false` in `/api/engines/health` |
 | [#25](../../issues/25) | enhancement | Convert tab visual cleanup (hierarchy, spacing, demote advanced controls) | PLAN-V3 #4 shipped the 3-step wizard; **check whether this cosmetic remainder is still real before working it** |
 | [#27](../../issues/27) | bug | Does chatterbox need pronunciation help at all? (the modern-engine lexicon filter) | Partly overtaken by PLAN-V3 #16 — LLM pronunciation is now off by default, so this is about the *curated* lexicon |
-| [#33](../../issues/33) | bug | ASR verification: capture fixed for all engines; the Whisper comparison is now opt-in via `ASR_VERIFY` | **half done** — see #39 |
 | [#36](../../issues/36) | enhancement | URL → audio. **Shipped v1.7.0** | paste a link, preview, narrate |
-| [#39](../../issues/39) | enhancement | Run Whisper on the idle Intel iGPU so ASR verification can be default-on | unblocks the rest of #33 |
+| ~~#39~~ | — | iGPU for Whisper — **closed unnecessary**. CPU measured fast enough, and faster-whisper cannot use OpenVINO anyway |
 
 Not yet an issue but the biggest lever: **GPU auto-provision for TADA/Chatterbox
 from the UI** so quality engines don't run on CPU (the "one-click" goal).
@@ -359,6 +358,32 @@ Incidental confirmations from the same run:
 - The job log still says `Using container audiobook-<id>` and the container
   panel reports `No such container` — cosmetic, but it reads as a fault. The
   local path runs in-process; that name is only a DB label.
+
+### Whisper ASR is 20× realtime — measured, 2026-07-27
+
+I wrote "Whisper roughly doubles render time" into the code, an issue and this
+file, and shipped ASR verification as opt-in because of it. It was never
+measured. Measured on zorin's i5-12400, `faster-whisper` `base` at int8:
+
+| | |
+|---|---|
+| Audio transcribed | **675.2 s** (Alice chapter 1) |
+| Model load | 5.8 s (once) |
+| Transcription | **33.4 s** |
+| **Speed** | **~20× realtime** |
+| Cost on the full 8,829 s book | **~7 min against a ~2 h render — about 6%** |
+
+Transcription quality was good: *"Alice was beginning to get very tired of
+sitting by her sister on the bank and of having nothing to do…"*
+
+**So ASR verification is on by default**, and #39 (move Whisper to the Intel
+iGPU) is closed as unnecessary — it was also technically wrong, since
+faster-whisper runs on CTranslate2, which supports CPU and CUDA only, not
+OpenVINO.
+
+The lesson is the one this project keeps relearning: an unmeasured performance
+claim is not a reason to disable a correctness check. Six percent buys every
+book being checked against its source.
 
 ### TADA: separate the two questions (correction, 2026-07-25)
 

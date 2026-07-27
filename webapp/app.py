@@ -3755,19 +3755,27 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '--job-id', str(job_id),
         ]
 
-        # Post-flight ASR check. OFF by default and deliberately so: Whisper
-        # transcribing a 2.5-hour book on this CPU roughly doubles the wall
-        # clock, which is a real cost to impose on every render. But the switch
-        # has to EXIST -- until now there was none, so no local render could be
-        # verified at all and the gate quietly passed on no evidence (#33).
-        _asr = str(get_setting('ASR_VERIFY') or os.environ.get('ASR_VERIFY', '')).strip().lower()
-        if _asr in ('1', 'true', 'yes', 'on'):
+        # Post-flight ASR check. ON by default.
+        #
+        # It was written as opt-in on my assumption that Whisper "roughly
+        # doubles render time". That was never measured and was wrong.
+        # MEASURED on zorin's i5-12400: faster-whisper `base` at int8
+        # transcribed 675 s of audio in 33.4 s — 20x realtime. Alice's full
+        # 8,829 s costs about 7 minutes against a ~2-hour render, i.e. ~6%.
+        #
+        # At that price there is no argument for shipping books unverified,
+        # which is what #33 was about. Set ASR_VERIFY=0 to opt out.
+        _asr = str(get_setting('ASR_VERIFY')
+                   if get_setting('ASR_VERIFY') is not None
+                   else os.environ.get('ASR_VERIFY', '1')).strip().lower()
+        if _asr not in ('0', 'false', 'no', 'off'):
             qa_model = (get_setting('ASR_VERIFY_MODEL')
                         or os.environ.get('ASR_VERIFY_MODEL') or 'base').strip()
             cmd.extend(['--qa', '--qa-model', qa_model])
-            append_job_log(job_id, f"ASR verification ENABLED (whisper '{qa_model}') - "
-                                   f"roughly doubles render time, but the audio will "
-                                   f"be checked against the source text.")
+            append_job_log(job_id, f"ASR verification on (whisper '{qa_model}') - "
+                                   f"the audio will be transcribed and compared against "
+                                   f"the source text. Measured ~20x realtime, so this "
+                                   f"adds roughly 6% to the render.")
 
         if job and job.get('start_chapter'):
             cmd.extend(['--start', str(job['start_chapter'])])
@@ -5753,9 +5761,9 @@ def presync_quality_gate(job_id, output_path):
         if chunks_exist:
             unverified_reason = (
                 'the text sent to the engine was recorded, but no ASR pass ran, '
-                'so the AUDIO was never compared against it. Enable ASR_VERIFY '
-                'to transcribe each chapter and check it (slower — Whisper runs '
-                'on CPU here).'
+                'so the AUDIO was never compared against it. ASR_VERIFY appears '
+                'to be switched off — it is on by default and costs about 6% of '
+                'render time.'
             )
         else:
             unverified_reason = (
