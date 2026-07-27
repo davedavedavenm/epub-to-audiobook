@@ -73,7 +73,7 @@ as the priority order.
 | Aim (as stated) | State | Evidence |
 |---|---|---|
 | "I go to the web UI, choose narrate, and it'll **just work**, all automatic" | ✅ | Kaggle and Local render both proven end-to-end (Chapters -> Preprocessing -> Subprocess -> Verify -> ID3 Tags -> ABS Sync). |
-| Everything **checked automatically** — no blind trust | ⚠️ | Word-count and duration sanity checks do run. But the **ASR layer never runs on Chatterbox or TADA** — `chunks.jsonl` is written only by tts-proxy, and those engines connect direct (see #33). Nano is the default, so the default path ships unverified, and it fails *silently clean*. Downgraded from ✅ on 2026-07-25 evidence. |
+| Everything **checked automatically** — no blind trust | ⚠️ | **Improved 2026-07-27, still not a ✅.** Transcript capture now works on every engine (it was impossible for Chatterbox/TADA, so no book had ever been verifiable), and a gate that inspected nothing now says so loudly instead of writing a clean pass. But the ASR comparison of *audio* against that text is opt-in (`ASR_VERIFY`), because Whisper on this CPU roughly doubles render time. Becomes a ✅ when #39 makes it cheap enough to default on. |
 | Accurate progress/ETA, no fake numbers | ✅ | Real per-chapter progress (ntfy call-home); honest "chapter X/N"; no ETA before evidence. Was elapsed-guesswork before. |
 | Chapter selection = the actual book, by title | ✅ | Both local and Kaggle paths unified on `chapters.py` numbering. |
 | Covers + metadata land in ABS, chapters navigable | ✅ | Full ID3 tagging implemented for both rendering paths. |
@@ -249,8 +249,9 @@ validation, the startup-recovery bug and the ABS sync bug) is **closed**.
 | [#24](../../issues/24) | enhancement | Inworld's 12 voices are selectable but cannot work without an API key — gate or hide them | Confirmed live: `inworld:false`, `polly:false` in `/api/engines/health` |
 | [#25](../../issues/25) | enhancement | Convert tab visual cleanup (hierarchy, spacing, demote advanced controls) | PLAN-V3 #4 shipped the 3-step wizard; **check whether this cosmetic remainder is still real before working it** |
 | [#27](../../issues/27) | bug | Does chatterbox need pronunciation help at all? (the modern-engine lexicon filter) | Partly overtaken by PLAN-V3 #16 — LLM pronunciation is now off by default, so this is about the *curated* lexicon |
-| [#32](../../issues/32) | bug | M4B has no `artist` and a folder-derived title, while the MP3s get correct epub metadata | Found by the full-book verification below |
-| [#33](../../issues/33) | bug | ASR verification silently skipped — book synced with no post-flight check | Found by the full-book verification below. The more serious of the two |
+| [#33](../../issues/33) | bug | ASR verification: capture fixed for all engines; the Whisper comparison is now opt-in via `ASR_VERIFY` | **half done** — see #39 |
+| [#36](../../issues/36) | enhancement | URL → audio. **Shipped v1.7.0** | paste a link, preview, narrate |
+| [#39](../../issues/39) | enhancement | Run Whisper on the idle Intel iGPU so ASR verification can be default-on | unblocks the rest of #33 |
 
 Not yet an issue but the biggest lever: **GPU auto-provision for TADA/Chatterbox
 from the UI** so quality engines don't run on CPU (the "one-click" goal).

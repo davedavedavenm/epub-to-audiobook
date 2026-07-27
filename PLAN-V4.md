@@ -1,5 +1,34 @@
 # PLAN V4 — Correctness sprint (2026-07-25)
 
+> ## Status 2026-07-27 — the sprint is essentially done
+>
+> **Closed on evidence from job `f83170d2`** (Alice, Nano, v1.5.0+):
+> **#32** M4B carries real epub metadata (`artist="Lewis Carroll"`, widened to
+> year/publisher/language/series) · **#34** `ORANGE MARMALADE` → `Orange
+> marmalade` in the text actually voiced · **#35** ABS reconnected, 7 orphans
+> purged, 401s now loud · **#37** startup self-check for a read-only settings
+> DB · **#38** M4B published atomically, epub no longer synced (401 MB → 242 MB
+> per book).
+>
+> **#33 is half-closed and the honest position is worth stating.** Transcript
+> capture now works on every engine — it was previously impossible for
+> Chatterbox and TADA, so no book had ever been verifiable. But the ASR pass
+> that compares *audio* to that text still does not run by default: Whisper on
+> this CPU roughly doubles wall-clock. There is now an `ASR_VERIFY` switch, and
+> the gate reports precisely which half is missing rather than claiming a pass.
+> **#39** proposes making it cheap enough to default on, using the idle Intel
+> iGPU both hosts already have.
+>
+> **Three bugs were introduced and caught during this sprint**, all by running
+> the system rather than reading it: `--job-id` reaching only the watchdog path,
+> `TRANSCRIPTS_DIR` being set to an empty string so the fallback never applied,
+> and reading `jobs.db` from the host — which created WAL sidecars under the
+> wrong uid and silently broke every Settings write. That last one is #37 and
+> was self-inflicted. The lesson is recorded in OPERATIONS.md.
+>
+> **Shipped beyond this plan:** voice cloning by WAV upload (v1.6.0) and URL →
+> audio (v1.7.0, #36).
+
 Successor to PLAN-V3, which is essentially complete. Where V3 was about
 **capability** (engines, UI, output formats), V4 is about **truth**: several
 subsystems report success while doing nothing, and today's first end-to-end
