@@ -22,6 +22,49 @@ complete escape from the rule.
 
 ---
 
+## The local-vs-cloud problem, and what is being done about it
+
+Dave, 2026-07-27, on the Edge voices: *"those voices are decent. how do we get
+those on a local model? did you check? we can't be the only ones to want this."*
+
+He was right that I hadn't checked. The actual landscape for **local** accented
+English:
+
+| Model | English accents | Local | Status here |
+|---|---|---|---|
+| **Kokoro** | US, UK **only** | yes | running — checked live, no Irish/Australian |
+| **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speakers | yes | installed — real accents, but dry and close-mic'd |
+| **MeloTTS** | US, UK, Indian, **Australian**, default | yes | **not installed**; no Irish |
+| **XTTS-v2** | clones from a reference; reported to carry accent | yes | **being tested** — see below |
+| **Chatterbox** Nano/Turbo | none. English-only, American phonetics | yes | proven twice not to hold an accent |
+| **Edge** | IE, AU, NZ, GB, ZA, IN, CA, HK, KE, NG, PH, SG, TZ, US | **no** | works, graded good, needs internet |
+
+Edge's full English list was checked live and is worth knowing: it has **Irish
+male and female** (Connor, Emily), Australian, New Zealand, South African and
+five British voices. **No Welsh anywhere**, on any engine, cloud or local.
+
+### XTTS-v2 — the local candidate under test
+
+The Piper container was running `openedai-speech-**min**`, which is Piper-only.
+The **full** `openedai-speech` image also ships **XTTS-v2**, and
+`voice_to_speaker.yaml` already had `tts-1-hd` XTTS entries waiting for it. One
+image tag.
+
+XTTS is a different architecture from Chatterbox and clones from a reference
+clip while reportedly keeping the accent. That is precisely the property
+Chatterbox lacks, so it is the honest local answer to *"can I have the Edge
+voices without the cloud"*.
+
+Under test (`tts-1-hd` model): `xtts_irish_m`, `xtts_scottish_m`,
+`xtts_southafrican_m`. References are ~16–21 s of continuous prose — Irish and
+South African cloned from the Edge locale voices, Scottish from Piper's native
+VCTK p272 **because Edge has no Scottish English voice at all**.
+
+**Licence:** XTTS-v2 is Coqui Public Model License, **non-commercial**. Fine for
+a personal library; revisit before any commercial use.
+
+---
+
 ## What to use
 
 | Accent | Voice | Engine | Local? |
