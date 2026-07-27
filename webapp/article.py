@@ -110,14 +110,39 @@ def _score(el) -> float:
     return text_len * (1 - min(link_ratio, 0.9)) * penalty
 
 
-def _extract_body(soup) -> str:
-    """Best-scoring container's paragraphs, as plain text."""
+def _strip_noise(soup) -> None:
+    """Remove furniture, without ever removing the article with it.
+
+    The naive version of this deleted whole pages. Wikipedia puts
+    `vector-feature-language-in-header-enabled` on the <html> element — which
+    contains "header", so the noise pattern matched the ROOT and decompose()
+    took the entire document with it. Extraction returned zero words on one of
+    the most ordinary pages on the web.
+
+    Two guards, both of which express the same idea: furniture does not contain
+    the article.
+      1. Never touch html/body/head, whatever classes they carry.
+      2. Never remove an element holding a large share of the page's
+         paragraphs — that is a wrapper, not a sidebar.
+    """
     for tag in soup(_STRIP_TAGS):
         tag.decompose()
-    for el in soup.find_all(attrs={'class': _NOISE}):
-        el.decompose()
-    for el in soup.find_all(attrs={'id': _NOISE}):
-        el.decompose()
+
+    total_paras = len(soup.find_all('p')) or 1
+    for attr in ('class', 'id'):
+        for el in soup.find_all(attrs={attr: _NOISE}):
+            if el.name in ('html', 'body', 'head'):
+                continue
+            if not el.parent:                       # already detached
+                continue
+            if len(el.find_all('p')) > total_paras * 0.4:
+                continue
+            el.decompose()
+
+
+def _extract_body(soup) -> str:
+    """Best-scoring container's paragraphs, as plain text."""
+    _strip_noise(soup)
 
     candidates = soup.find_all(['article', 'main', 'div', 'section'])
     best, best_score = None, 0.0
@@ -169,7 +194,12 @@ def fetch_article(url: str, timeout: int = 25) -> dict:
         raise ExtractionError(f'That URL is {ctype or "not HTML"}, not a web page. '
                               f'For a PDF, upload it on the Library tab instead.')
 
-    soup = BeautifulSoup(r.text, 'lxml')
+    # Pass BYTES, not r.text. requests falls back to ISO-8859-1 for text/*
+    # when the response header carries no charset, which mangles UTF-8 into
+    # mojibake — and curly quotes and em dashes are exactly what a narrator
+    # then reads aloud as gibberish. lxml honours the document's own meta
+    # charset, which is what the page actually declared.
+    soup = BeautifulSoup(r.content, 'lxml')
     ld = _json_ld(soup)
 
     title = (ld.get('headline') or _meta(soup, 'og:title', 'twitter:title')

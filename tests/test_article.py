@@ -44,6 +44,35 @@ class TestExtraction:
         soup = _page(f'<article><p>{PROSE*6}</p><h2>A subheading</h2><p>{PROSE*6}</p></article>')
         assert 'A subheading' in _extract_body(soup)
 
+    def test_noise_pattern_never_eats_the_whole_document(self):
+        """The bug that returned zero words on Wikipedia.
+
+        Wikipedia puts `vector-feature-language-in-header-enabled` on <html>.
+        That contains "header", so the noise pattern matched the ROOT element
+        and decompose() deleted the entire page. Guarding html/body is the
+        fix; this test is the reason it must stay.
+        """
+        soup = BeautifulSoup(
+            '<html class="vector-feature-language-in-header-enabled">'
+            f'<body class="page-header-thing"><article><p>{PROSE*6}</p></article></body></html>',
+            'lxml')
+        assert 'harbour road' in _extract_body(soup)
+
+    def test_a_wrapper_holding_the_article_is_not_stripped(self):
+        """Furniture does not contain the article. A div named like furniture
+        but holding most of the paragraphs is a wrapper, and must survive."""
+        soup = _page(f'<div class="page-header"><p>{PROSE*6}</p><p>{PROSE*6}</p></div>')
+        assert 'harbour road' in _extract_body(soup)
+
+    def test_genuine_furniture_is_still_stripped(self):
+        """The guard must not have disarmed the whole mechanism."""
+        soup = _page(f"""
+            <div class="sidebar"><p>Related stories you might enjoy reading later on</p></div>
+            <article><p>{PROSE*6}</p><p>{PROSE*6}</p><p>{PROSE*6}</p></article>""")
+        body = _extract_body(soup)
+        assert 'harbour road' in body
+        assert 'Related stories' not in body
+
     def test_link_heavy_blocks_lose_to_prose(self):
         soup = _page(f"""
             <div><p><a href=/1>One</a> <a href=/2>Two</a> <a href=/3>Three</a>
@@ -54,7 +83,9 @@ class TestExtraction:
     def test_short_pages_are_refused_with_a_useful_message(self, monkeypatch):
         class R:
             status_code, headers = 200, {'Content-Type': 'text/html'}
-            text = '<html><body><p>Too short.</p></body></html>'
+            # bytes, not text: fetch_article parses r.content so that lxml can
+            # honour the document's own charset instead of requests guessing.
+            content = b'<html><body><p>Too short.</p></body></html>'
             def raise_for_status(self): pass
         monkeypatch.setattr('article.requests.get', lambda *a, **k: R())
         with pytest.raises(ExtractionError) as e:
@@ -65,7 +96,7 @@ class TestExtraction:
     def test_non_html_is_refused(self, monkeypatch):
         class R:
             status_code, headers = 200, {'Content-Type': 'application/pdf'}
-            text = ''
+            content = b''
             def raise_for_status(self): pass
         monkeypatch.setattr('article.requests.get', lambda *a, **k: R())
         with pytest.raises(ExtractionError) as e:
