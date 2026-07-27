@@ -517,7 +517,29 @@ VOICES = {
     'tadhg_hynes': {'name': 'Tadhg Hynes (rich, Hardy/Dickens)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'chatterbox'},
     'martin_geeson': {'name': 'Martin Geeson (British male, classic prose)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'nigel_boydell': {'name': 'Nigel Boydell (British male, characterful)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
-    # --- VCTK accent-labelled speakers (studio, verified accents) ---
+    # --- VCTK accent-labelled speakers, NATIVE (Piper, accent trained in) ---
+    # Dave, 2026-07-27: "those accents are shit" — of the CLONES below. The
+    # reference clips audited clean (right speakers, ~18s each, all distinct),
+    # so the speakers were never the problem. Zero-shot cloning transfers
+    # timbre well and phonetics poorly, so an Irish reference lands as
+    # vaguely-Irish. Piper's en_GB-vctk-medium was TRAINED on these exact
+    # speakers, so the accent is in the weights instead of being transferred.
+    # More synthetic voice, real accent — settle it by ear.
+    'vctk_irish_m_p364_native': {'name': 'Irish male — Donegal (native)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_irish_m_p245_native': {'name': 'Irish male — Dublin (native)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_irish_f_p288_native': {'name': 'Irish female — Dublin (native)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_irish_f_p283_native': {'name': 'Irish female — Cork (native)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_northernirish_m_p292_native': {'name': 'Northern Irish male — Belfast (native)', 'accent': 'Northern Irish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_northernirish_f_p293_native': {'name': 'Northern Irish female — Belfast (native)', 'accent': 'Northern Irish', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_australian_m_p326_native': {'name': 'Australian male — Sydney (native)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_australian_m_p374_native': {'name': 'Australian male (native)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_welsh_f_p253_native': {'name': 'Welsh female — Cardiff (native)', 'accent': 'Welsh', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_scottish_m_p272_native': {'name': 'Scottish male — Edinburgh (native)', 'accent': 'Scottish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_scottish_f_p262_native': {'name': 'Scottish female — Edinburgh (native)', 'accent': 'Scottish', 'gender': 'Female', 'engine': 'piper'},
+
+    # --- VCTK accent-labelled speakers, CLONED (Chatterbox) ---
+    # Kept for A/B rather than deleted: the timbre is better than Piper's even
+    # though the accent is weaker, and that trade is Dave's to make per book.
     'vctk_australian_m_p374': {'name': 'Australian male (VCTK)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'chatterbox'},
     'vctk_scottish_m_p272': {'name': 'Scottish male (VCTK)', 'accent': 'Scottish', 'gender': 'Male', 'engine': 'chatterbox'},
     'vctk_scottish_f_p262': {'name': 'Scottish female (VCTK)', 'accent': 'Scottish', 'gender': 'Female', 'engine': 'chatterbox'},
@@ -5033,7 +5055,8 @@ def audition_sample(name: str):
                     'ab_daisy_before', 'ab_daisy_after',
                     'ab_alice_plain', 'ab_alice_aliss', 'ab_alice_alliss',
                     'ab_alice_nano_raw', 'ab_alice_nano_fixed',
-                    'ab_pos_first', 'ab_pos_mid', 'ab_pos_other', 'ab_pos_second'):
+                    'ab_pos_first', 'ab_pos_mid', 'ab_pos_other', 'ab_pos_second') \
+       and not (name.startswith('ac_') and re.fullmatch(r'[a-z0-9_]+', name)):
         return jsonify({'error': 'Unknown sample'}), 404
     p = PREVIEWS_DIR / f"{name}.mp3"
     if not p.exists():
