@@ -42,7 +42,30 @@ transformers.AutoTokenizer.from_pretrained = _tok_patch
 VOICES_DIR = os.environ.get("VOICES_DIR", "/app/voices")
 CHUNK_CHARS = int(os.environ.get("TADA_CHUNK_CHARS", "600"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DTYPE = torch.bfloat16 if DEVICE == "cuda" else torch.float32
+
+# bfloat16 on CPU too, not just CUDA.
+#
+# MEASURED 2026-07-27 on zorin: loading TADA-1B in float32 on CPU peaks at
+# **15.99 GiB**, against a 10 GiB container cap — which is precisely why every
+# local synthesis died about 7 seconds in with OOMKilled (#23). It was never a
+# leak or a chunk-size problem; the weights simply do not fit at fp32. Raising
+# the cap to 16 GB+ "works" but is antisocial on a 31 GB box that also runs
+# Chatterbox, Kokoro, Piper and the webapp.
+#
+# bf16 halves the weights to roughly 8 GB, which fits the existing cap with
+# headroom. Same dtype the CUDA path has always used, so this is not a novel
+# numeric regime for the model.
+#
+# CAVEAT, and it needs measuring: Alder Lake has no AVX-512/AMX, so PyTorch
+# emulates bf16 on this CPU and arithmetic may be SLOWER even though memory
+# drops. fp32 already took 28 s for one short sentence, so the comparison is
+# between slow and slower — but do not assume, time it. Set TADA_CPU_DTYPE=f32
+# to go back.
+_CPU_DTYPE = os.environ.get("TADA_CPU_DTYPE", "bf16").lower()
+if DEVICE == "cuda":
+    DTYPE = torch.bfloat16
+else:
+    DTYPE = torch.float32 if _CPU_DTYPE in ("f32", "float32", "fp32") else torch.bfloat16
 SR = 24000
 
 app = FastAPI()
