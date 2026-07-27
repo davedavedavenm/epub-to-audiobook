@@ -3124,14 +3124,58 @@ def _stage_episode(output_dir: Path, job: dict, book_name: str) -> Path | None:
         shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True, exist_ok=True)
     if len(mp3s) == 1:
-        shutil.copy2(mp3s[0], staging / _episode_filename(job, book_name))
+        _copy_as_episode(mp3s[0], staging / _episode_filename(job, book_name),
+                         job, book_name)
     else:
         # A long article can still split. Keep them ordered and grouped, since
         # ABS will list each as its own episode.
         base = _episode_filename(job, book_name)[:-4]
         for i, p in enumerate(mp3s, 1):
-            shutil.copy2(p, staging / f"{base} ({i:02d}).mp3")
+            _copy_as_episode(p, staging / f"{base} ({i:02d}).mp3", job, book_name)
     return staging
+
+
+def _copy_as_episode(src: Path, dst: Path, job: dict, book_name: str) -> None:
+    """Copy an MP3, retagging it as a podcast episode.
+
+    Audiobookshelf names a podcast from the audio's **album** tag, not from the
+    folder. The converter tags every render `album=<book title>`, so the first
+    live run produced a podcast literally called "Roku raises streaming stick
+    prices by up to 60 percent" containing one episode of itself — and the next
+    Ars piece would have created another one-episode podcast beside it, which is
+    exactly the clutter this change existed to remove.
+
+    So the episode is retagged here, on the copy, rather than by plumbing
+    article-awareness down into the converter: `album` becomes the site (the
+    podcast), `title` stays the headline (the episode), and the date carries
+    across. The book render is left completely untouched.
+
+    Stream-copies the audio, so this is a tag rewrite, not a re-encode.
+    """
+    site = job.get('source_site') or 'Articles'
+    tags = {
+        'album': site,
+        'artist': site,
+        'album_artist': site,
+        'title': book_name,
+        'genre': 'Podcast',
+        'date': (job.get('source_date') or '')[:10],
+        'comment': job.get('source_url') or '',
+    }
+    cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-i', str(src), '-c', 'copy']
+    for k, v in tags.items():
+        if v:
+            cmd += ['-metadata', f'{k}={v}']
+    cmd.append(str(dst))
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        if r.returncode == 0 and dst.exists() and dst.stat().st_size > 1024:
+            return
+        app.logger.warning(f"Episode retag failed ({r.returncode}); copying untagged")
+    except Exception as e:
+        app.logger.warning(f"Episode retag unavailable ({e}); copying untagged")
+    # Never lose the episode over a tagging problem.
+    shutil.copy2(src, dst)
 
 
 def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None = None) -> bool:

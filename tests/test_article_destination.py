@@ -137,6 +137,47 @@ class TestEpisodeStaging:
         assert sorted(p.name for p in staged.iterdir()) == \
             ['Long Read (01).mp3', 'Long Read (02).mp3']
 
+    def test_album_tag_becomes_the_site_not_the_headline(self, app_mod, tmp_path,
+                                                         monkeypatch):
+        """ABS names a podcast from the audio's ALBUM tag, not the folder.
+
+        The converter tags every render album=<book title>, so the first live
+        run produced a podcast called 'Roku raises streaming stick prices by up
+        to 60 percent' containing one episode of itself — and the next Ars piece
+        would have made another one-episode podcast beside it. Precisely the
+        clutter this change exists to remove.
+        """
+        seen = {}
+
+        def fake_run(cmd, **kw):
+            for i, tok in enumerate(cmd):
+                if tok == '-metadata':
+                    k, _, v = cmd[i + 1].partition('=')
+                    seen[k] = v
+            Path(cmd[-1]).write_bytes(b'\xff\xfb' + b'0' * 4096)
+            return type('R', (), {'returncode': 0, 'stdout': '', 'stderr': ''})()
+
+        monkeypatch.setattr(app_mod.subprocess, 'run', fake_run)
+        monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
+        out = self._render(tmp_path, ['0001 - Roku.mp3'])
+        app_mod._stage_episode(
+            out,
+            {'id': 'j9', 'source_site': 'Ars Technica', 'source_date': '2026-07-24'},
+            'Roku raises streaming stick prices by up to 60 percent')
+        assert seen['album'] == 'Ars Technica'          # the podcast
+        assert seen['title'].startswith('Roku raises')  # the episode
+
+    def test_tagging_failure_still_delivers_the_episode(self, app_mod, tmp_path,
+                                                        monkeypatch):
+        """A tagging problem must never cost the audio."""
+        def boom(*a, **k):
+            raise OSError('ffmpeg missing')
+        monkeypatch.setattr(app_mod.subprocess, 'run', boom)
+        monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
+        out = self._render(tmp_path, ['0001 - A.mp3'])
+        staged = app_mod._stage_episode(out, {'id': 'j10'}, 'A Title')
+        assert [p.name for p in staged.iterdir()] == ['A Title.mp3']
+
     def test_no_audio_returns_none_so_the_caller_can_fall_back(self, app_mod, tmp_path):
         out = tmp_path / 'empty'
         out.mkdir()
