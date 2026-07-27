@@ -193,20 +193,22 @@ services:
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
-    # FULL image, not `-min`. The `-min` variant is Piper-only; the full one also
-    # ships **XTTS-v2**, which is the local answer to accented English. Piper
-    # gives real accents but inherits VCTK's dry anechoic recording ("tinny or
-    # distant"); Chatterbox sounds better but cannot hold an accent at all
-    # (proven twice — see VOICES.md). XTTS clones from a reference and, unlike
-    # Chatterbox, is reported to carry accent with it.
+    # The `-min` variant, deliberately. The full `openedai-speech` image ships
+    # XTTS-v2 as well; it was tried on 2026-07-27 as a local route to accented
+    # English and **failed the same way Chatterbox did** — Dave: "bullshit,
+    # americanised crap".
     #
-    # Bigger image and it pulls torch, so expect a slow first start. Set
-    # PIPER_IMAGE back to `openedai-speech-min` to get the small one.
+    # That is now three cloning engines (Chatterbox Nano, Chatterbox Turbo,
+    # XTTS-v2) producing the same result from good accented references. The
+    # conclusion is not about any one engine: **zero-shot cloning does not carry
+    # an accent.** It takes timbre from the reference and phonetics from its own
+    # training data. See VOICES.md.
     #
-    # NOTE ON LICENCE: XTTS-v2 is released under the Coqui Public Model License
-    # (non-commercial). Fine for Dave's personal library; would need revisiting
-    # before any commercial use.
-    image: ${PIPER_IMAGE:-ghcr.io/matatonic/openedai-speech:latest}
+    # To get XTTS back for some OTHER purpose (it is a fine cloner, just not an
+    # accent one), set PIPER_IMAGE=ghcr.io/matatonic/openedai-speech:latest —
+    # 8 GB, pulls torch, slow first start. Licence is Coqui Public Model License,
+    # non-commercial.
+    image: ${PIPER_IMAGE:-ghcr.io/matatonic/openedai-speech-min:latest}
     container_name: piper-tts
     ports:
       - "5000:8000"

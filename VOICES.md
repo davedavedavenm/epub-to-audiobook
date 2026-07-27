@@ -10,15 +10,32 @@ not reasoned about; where something is untested it says so.
 
 **An accent lives in the model, not in the reference clip.**
 
-Everything below follows from this. A voice-cloning engine takes *timbre* from
-your reference audio and *phonetics* from its own training data. Chatterbox is
-trained predominantly on American English, so an Irish reference produces an
-Irish-sounding timbre saying American vowels. Piper's `en_GB-vctk-medium` was
-**trained on** the VCTK speakers, so the accent is in the weights and comes out
-intact.
+Zero-shot voice cloning takes *timbre* from your reference and *phonetics* from
+its own training data. If that training data is predominantly American English,
+an Irish reference gives you an Irish-sounding voice saying American vowels.
 
-There is one lever that moves this — `cfg_weight` — see below. It is not a
-complete escape from the rule.
+**This was tested to destruction on 2026-07-27. Three engines, four attempts,
+one result:**
+
+| Attempt | Engine | Reference | Dave's verdict |
+|---|---|---|---|
+| 1 | Chatterbox Nano | raw VCTK clips | *"those accents are shit"* |
+| 2 | Chatterbox Nano | native-accent Piper prose | *"softened the shit out of the voices and made them american"* |
+| 3 | Chatterbox Turbo | same | *"irish 'ok'… not amazing"* |
+| 4 | **XTTS-v2** | Edge Irish/ZA + Piper Scottish | *"bullshit, americanised crap"* |
+
+XTTS is a completely different architecture from Chatterbox and is widely
+described as preserving accent. **It did not.** That is what makes this a rule
+rather than a quirk: it is not about which cloner you pick.
+
+**Do not attempt accent cloning again on any engine** without evidence that the
+model was *trained* on the accent. A fourth attempt needs a reason, not a hunch.
+
+Working accents come from models trained per-speaker (Piper's
+`en_GB-vctk-medium`, trained on the VCTK speakers) or per-locale (Edge's
+`en-IE-*`, `en-AU-*`). Those hold up.
+
+`cfg_weight` (below) moves the needle on Chatterbox but does not escape the rule.
 
 ---
 
@@ -43,7 +60,24 @@ Edge's full English list was checked live and is worth knowing: it has **Irish
 male and female** (Connor, Emily), Australian, New Zealand, South African and
 five British voices. **No Welsh anywhere**, on any engine, cloud or local.
 
-### XTTS-v2 — the local candidate under test
+### XTTS-v2 — tested and rejected
+
+**Result: failed, same as Chatterbox.** Dave: *"bullshit, americanised crap"*.
+Image reverted to `-min`, the 8 GB reclaimed, `tts-1-hd` entries deleted from the
+voice map. Piper natives re-verified working afterwards.
+
+This was the strongest remaining candidate — different architecture, widely
+described as accent-preserving, fed genuinely accented references (Edge Connor
+and Luke; Piper VCTK p272 for Scottish, since **Edge has no Scottish English
+voice at all**). It still flattened them. That failure is what turned "Chatterbox
+can't do accents" into the general rule at the top of this file.
+
+To bring XTTS back for some *other* job — it is a capable cloner, just not an
+accent one — set `PIPER_IMAGE=ghcr.io/matatonic/openedai-speech:latest`. Licence
+is Coqui Public Model License, non-commercial.
+
+<details>
+<summary>Original write-up, kept for the reasoning (it was sound; the result was not)</summary>
 
 The Piper container was running `openedai-speech-**min**`, which is Piper-only.
 The **full** `openedai-speech` image also ships **XTTS-v2**, and
@@ -62,6 +96,30 @@ VCTK p272 **because Edge has no Scottish English voice at all**.
 
 **Licence:** XTTS-v2 is Coqui Public Model License, **non-commercial**. Fine for
 a personal library; revisit before any commercial use.
+
+</details>
+
+### So what is actually left for local accented English
+
+Cloning is exhausted. Only two routes remain, and both mean a model **trained**
+on the accent:
+
+1. **Use what already works and fix its one flaw.** Piper native VCTK has real
+   Irish, Scottish, Northern Irish, Welsh-female and Australian-male accents.
+   The only complaint is that they sound dry and close-mic'd — VCTK was recorded
+   in an anechoic chamber. That is a post-processing problem (EQ, a little room),
+   not a model problem, and unlike accent it does not fight anything. **This is
+   the cheapest real win available.**
+2. **Distil a cloud voice into a local model.** Generate a few hours of Edge
+   `en-IE-ConnorNeural` audio with known transcripts, then fine-tune a Piper
+   model on it. The output is a genuinely local model whose weights hold the
+   accent — which is the only thing that has ever worked. Piper fine-tuning is
+   documented and runs on modest hardware. Slower and more involved, but it is
+   the honest answer to *"how do we get those voices locally"*.
+
+**MeloTTS** is worth a look for Australian specifically: it ships a *native*
+Australian English voice (trained, not cloned), so it sidesteps the rule. No
+Irish.
 
 ---
 
@@ -156,12 +214,20 @@ already installed. The `LEADIN` cold-start fix was already in `tada/server.py`.
 Each was "discovered" from scratch. **Read the code and the voice list before
 researching anything.**
 
-**3. Concluded correctly, then argued myself out of it.** I established that
-cloning carries timbre but not phonetics, then hypothesised that better
+**3. Concluded correctly, then argued myself out of it — twice.** I established
+that cloning carries timbre but not phonetics, then hypothesised that better
 reference audio would fix it, rebuilt nine voices, and shipped them **without
 listening**. Dave: *"you softened the shit out of the voices and made them
-american"*. Reverted entirely. This project's standing rule — *settle audio
-questions by ear* — exists precisely for that failure.
+american"*. Reverted entirely.
+
+Then did the same shape again with XTTS-v2: pulled an 8 GB image on the strength
+of a reputation for accent preservation, without a single clip to back it.
+Dave: *"bullshit, americanised crap"*. Reverted, image deleted.
+
+The second one was worth running — XTTS is genuinely different architecture, and
+its failure is what made the rule general instead of Chatterbox-specific. But
+the honest framing is: **the rule was already visible after attempt one**, and
+attempts two through four cost hours to confirm it.
 
 **4. Blamed the model for our own bug.** Reported that TADA "invented a word
 that was not in the text". It was `LEADIN = "Right. "`, which we prepend
