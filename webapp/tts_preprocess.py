@@ -562,6 +562,13 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     # hyphen as a clause break, so a single compound word comes out as two words
     # with a gap between them.
     #
+    # NOT a measurement, and an earlier commit message wrongly implied one. The
+    # hyphen-free Nano render came out ~15 KB smaller at a constant bitrate,
+    # which looked like a second of removed dead air — but the TADA pair went
+    # the other way, and both engines are autoregressive and non-deterministic,
+    # so two generations of two different strings cannot be compared by size.
+    # The evidence here is Dave's ear plus the finding below. Nothing more.
+    #
     # This is the SAME failure this file already documents one screen above —
     # "feeding them a human pronunciation guide like Coo-per-TEE-no makes them
     # read the hyphens as pauses". That finding was only ever acted on for

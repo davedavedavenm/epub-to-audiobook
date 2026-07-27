@@ -7,6 +7,14 @@ diverge from the text — dropped words/sentences, gross misreads, numbers or
 names that came out wrong. High-confidence, clearly-mapped fixes are proposed
 as lexicon entries; everything else is written to a per-book QA report.
 
+Confirmed by experiment 2026-07-27, and worth knowing before trusting a clean
+report: TADA rendered "Alice" as "ay liss" (Dave, by ear) and Whisper
+transcribed it as "Alice" anyway. Deliberately mis-spelling the name to "Aliss"
+ALSO transcribed as "Alice". ASR normalises a mispronounced proper noun straight
+back to the word it expects, so this layer cannot grade pronunciation of a name
+at all — it can only tell you the right WORD was said. Grading a voice still
+needs an ear.
+
 What this reliably catches (high value):
   * dropped/duplicated words and skipped sentences,
   * gross substitutions (engine said something clearly different),
