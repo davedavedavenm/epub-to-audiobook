@@ -193,7 +193,20 @@ services:
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
-    image: ${PIPER_IMAGE:-ghcr.io/matatonic/openedai-speech-min:latest}
+    # FULL image, not `-min`. The `-min` variant is Piper-only; the full one also
+    # ships **XTTS-v2**, which is the local answer to accented English. Piper
+    # gives real accents but inherits VCTK's dry anechoic recording ("tinny or
+    # distant"); Chatterbox sounds better but cannot hold an accent at all
+    # (proven twice — see VOICES.md). XTTS clones from a reference and, unlike
+    # Chatterbox, is reported to carry accent with it.
+    #
+    # Bigger image and it pulls torch, so expect a slow first start. Set
+    # PIPER_IMAGE back to `openedai-speech-min` to get the small one.
+    #
+    # NOTE ON LICENCE: XTTS-v2 is released under the Coqui Public Model License
+    # (non-commercial). Fine for Dave's personal library; would need revisiting
+    # before any commercial use.
+    image: ${PIPER_IMAGE:-ghcr.io/matatonic/openedai-speech:latest}
     container_name: piper-tts
     ports:
       - "5000:8000"

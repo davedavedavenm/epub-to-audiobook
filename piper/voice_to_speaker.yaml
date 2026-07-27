@@ -103,3 +103,27 @@ tts-1:
     model: voices/en_GB-vctk-medium.onnx
     speaker: 80
     comment: p262, female, 23, Edinburgh
+
+tts-1-hd:
+  # XTTS-v2 accent clones (2026-07-27). The local answer to accented English:
+  # Piper carries a real accent but sounds dry and close-mic'd; Chatterbox
+  # sounds better but flattens every accent to American (proven twice, see
+  # VOICES.md). XTTS clones from a reference and is reported to carry the
+  # accent with it — this is the test of that.
+  #
+  # References are ~25s of continuous prose:
+  #   irish, southafrican -> Edge locale voices (en-IE-Connor, en-ZA-Luke)
+  #   scottish            -> Piper native VCTK p272, because Edge has NO
+  #                          Scottish English voice at all
+  xtts_irish_m:
+    model: xtts
+    speaker: voices/xref_irish.wav
+    language: en
+  xtts_scottish_m:
+    model: xtts
+    speaker: voices/xref_scottish.wav
+    language: en
+  xtts_southafrican_m:
+    model: xtts
+    speaker: voices/xref_southafrican.wav
+    language: en
