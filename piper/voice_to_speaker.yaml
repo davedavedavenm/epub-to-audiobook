@@ -1,0 +1,105 @@
+# Piper voice map for openedai-speech.
+#
+# WHY THIS FILE EXISTS (2026-07-27)
+# --------------------------------
+# Dave, on the accented voices: *"those accents are shit"*. He was right, and
+# the cause is not the speakers — it is the engine.
+#
+# The accented narrators were Chatterbox CLONES built from VCTK reference
+# clips. Zero-shot cloning transfers timbre well and phonetics poorly: the
+# model imposes prosody from its own training data, so a genuinely Irish
+# reference comes out vaguely-Irish-at-best. Picking different VCTK speakers
+# would not have helped, which is why the reference clips audited clean
+# (all ~18s, all distinct, all the right speakers).
+#
+# Piper's `en_GB-vctk-medium` was TRAINED on these exact speakers, so the
+# accent is baked into the model rather than transferred at inference. It is a
+# more synthetic voice than Chatterbox, but the accent is real. That is the
+# trade, and it is Dave's to judge by ear.
+#
+# Speaker indices come from the model's own speaker_id_map (rhasspy/piper-voices
+# voices.json), NOT from the VCTK speaker number. p364 is index 106, not 364.
+# Accents and regions are from the VCTK corpus speaker-info.txt (CC BY 4.0).
+#
+# This file is BIND-MOUNTED over /app/config so it survives image rebuilds —
+# the image ships its own copy at /app/voice_to_speaker.default.yaml and edits
+# inside the container are lost on recreate.
+
+tts-1:
+  # ---- stock openedai voices, preserved verbatim ----
+  alloy:
+    model: voices/en_US-libritts_r-medium.onnx
+    speaker: 79
+  echo:
+    model: voices/en_US-libritts_r-medium.onnx
+    speaker: 134
+  fable:
+    model: voices/en_GB-northern_english_male-medium.onnx
+    speaker:
+  onyx:
+    model: voices/en_US-libritts_r-medium.onnx
+    speaker: 159
+  nova:
+    model: voices/en_US-libritts_r-medium.onnx
+    speaker: 107
+  shimmer:
+    model: voices/en_US-libritts_r-medium.onnx
+    speaker: 163
+
+  # ---- VCTK native-accent narrators ----
+  # Irish
+  vctk_irish_m_p364_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 106
+    comment: p364, male, 23, Donegal
+  vctk_irish_m_p245_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 97
+    comment: p245, male, 25, Dublin
+  vctk_irish_f_p288_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 58
+    comment: p288, female, 22, Dublin
+  vctk_irish_f_p283_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 8
+    comment: p283, female, 24, Cork
+
+  # Northern Irish
+  vctk_northernirish_m_p292_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 61
+    comment: p292, male, 23, Belfast
+  vctk_northernirish_f_p293_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 78
+    comment: p293, female, 22, Belfast
+
+  # Australian. VCTK has only TWO Australians and both are male — there is no
+  # Australian female in the corpus, so that gap needs a different source.
+  vctk_australian_m_p326_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 71
+    comment: p326, male, 26, Sydney
+  vctk_australian_m_p374_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 25
+    comment: p374, male, 28
+
+  # Welsh. VCTK has exactly ONE Welsh speaker and she is female; there is no
+  # Welsh male. (Piper's cy_GB voices speak the Welsh LANGUAGE, not English
+  # with a Welsh accent — not what is wanted here.)
+  vctk_welsh_f_p253_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 88
+    comment: p253, female, 22, Cardiff
+
+  # Scottish
+  vctk_scottish_m_p272_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 62
+    comment: p272, male, 23, Edinburgh
+  vctk_scottish_f_p262_native:
+    model: voices/en_GB-vctk-medium.onnx
+    speaker: 80
+    comment: p262, female, 23, Edinburgh

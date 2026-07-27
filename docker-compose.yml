@@ -203,6 +203,13 @@ services:
       - HF_HOME=/data
     volumes:
       - piper-data:/data
+      # Bind-mounted so added voices and the voice map survive image rebuilds.
+      # The image ships both inside /app, where edits are lost on recreate —
+      # which is why the accented VCTK voices have to live here. NOTE: these
+      # mounts SHADOW the image's own directories, so piper/voices must also
+      # contain the stock models copied out of the image (scripts/piper_setup.sh).
+      - ./piper/voices:/app/voices
+      - ./piper/config:/app/config
     profiles:
       - piper  # Only start with: docker compose --profile piper up
 
