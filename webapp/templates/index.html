@@ -267,6 +267,43 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .preview-btn{ background:var(--accent); color:#fff; border-color:var(--accent); }
 .preview-btn:hover{ background:var(--accent-deep); transform:scale(1.05); }
 
+/* One transport for every narrator audition. It lives outside the tab panels,
+   so changing rooms in the studio never throws away the tape position. */
+.voice-player{
+  position:fixed; right:28px; bottom:24px; z-index:900; width:min(560px,calc(100vw - 344px));
+  display:grid; grid-template-columns:auto minmax(128px,1fr) minmax(130px,220px) auto auto;
+  align-items:center; gap:14px; padding:13px 15px; color:var(--text-on-dark);
+  background:color-mix(in srgb,var(--bg-sidebar) 94%,transparent);
+  border:1px solid rgba(255,255,255,.11); border-left:3px solid var(--accent);
+  border-radius:12px; box-shadow:0 18px 48px rgba(0,0,0,.36); backdrop-filter:blur(16px) saturate(1.15);
+}
+.voice-player[hidden]{ display:none; }
+.voice-player-pulse{ width:9px; height:30px; border-radius:3px; background:var(--accent); opacity:.65; }
+.voice-player[data-state="playing"] .voice-player-pulse{ animation:playerPulse 1.1s ease-in-out infinite; }
+@keyframes playerPulse{ 0%,100%{ transform:scaleY(.35); opacity:.45; } 50%{ transform:scaleY(1); opacity:1; } }
+.voice-player-copy{ min-width:0; display:flex; flex-direction:column; gap:2px; }
+.voice-player-state{ font-family:var(--mono); font-size:.58rem; letter-spacing:.14em; text-transform:uppercase; color:rgba(236,238,244,.55); }
+.voice-player-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.9rem; font-weight:700; }
+.voice-player-time{ font-family:var(--mono); font-size:.62rem; color:rgba(236,238,244,.55); font-variant-numeric:tabular-nums; }
+.voice-player-seek{ width:100%; accent-color:var(--accent); cursor:pointer; }
+.voice-player-seek:disabled{ opacity:.4; cursor:default; }
+.voice-player-btn{ width:42px; height:42px; padding:0; border-radius:50%; border:1px solid rgba(255,255,255,.18); background:var(--accent); color:#fff; cursor:pointer; font-size:1rem; display:grid; place-items:center; }
+.voice-player-btn:hover{ background:var(--accent-deep); }
+.voice-player-dismiss{ width:30px; height:30px; padding:0; border:0; background:transparent; color:rgba(236,238,244,.6); cursor:pointer; font-size:1rem; }
+.voice-player-dismiss:hover{ color:#fff; }
+.voice-player-btn:focus-visible,.voice-player-dismiss:focus-visible,.voice-player-seek:focus-visible{ outline:2px solid #fff; outline-offset:3px; }
+body.has-voice-player .content-body{ padding-bottom:136px; }
+.voice-card.paused{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); }
+.paused-badge{ display:none; margin-top:8px; font-family:var(--mono); font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--accent); }
+.voice-card.paused .paused-badge{ display:block; }
+.compare-play{ width:100%; margin-top:12px; }
+@media(max-width:768px){
+  .voice-player{ left:12px; right:12px; bottom:12px; width:auto; grid-template-columns:auto minmax(0,1fr) auto auto; gap:10px; }
+  .voice-player-seek{ grid-column:1/-1; grid-row:2; }
+  body.has-voice-player .content-body{ padding-bottom:168px; }
+}
+@media(prefers-reduced-motion:reduce){ .voice-player[data-state="playing"] .voice-player-pulse{ animation:none; } }
+
 /* modal / preview / toc */
 .modal-content{ border-radius:var(--radius-lg); }
 .preview-text{ font-family:var(--serif); font-weight:400; }
@@ -652,7 +689,22 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         </div>
     </div>
 </div>
-<audio id="preview-audio"></audio>
+<section id="voice-player" class="voice-player" data-state="idle" hidden
+         aria-label="Voice sample player">
+    <span class="voice-player-pulse" aria-hidden="true"></span>
+    <div class="voice-player-copy">
+        <span id="voice-player-state" class="voice-player-state" role="status" aria-live="polite">Voice sample ready</span>
+        <strong id="voice-player-name" class="voice-player-name">No voice selected</strong>
+        <span id="voice-player-time" class="voice-player-time">0:00 / 0:00</span>
+    </div>
+    <input id="voice-player-seek" class="voice-player-seek" type="range" min="0" max="0" value="0" step="0.1"
+           aria-label="Voice sample playback position" disabled>
+    <button id="voice-player-toggle" class="voice-player-btn" type="button"
+            aria-label="Play voice sample" onclick="toggleGlobalPreview()">&#9654;</button>
+    <button id="voice-player-dismiss" class="voice-player-dismiss" type="button"
+            aria-label="Stop and close voice sample" title="Stop and close" onclick="dismissGlobalPreview()">&#10005;</button>
+    <audio id="preview-audio" preload="metadata"></audio>
+</section>
 <script src="/static/llm_ui.js"></script>
 <script>
     /* ---- App dialogs -------------------------------------------------------
@@ -928,31 +980,10 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         if (rt && rt.value === 'local') renderTargetNote(bookId, 'local');
     }
 
-    let wsPreviewBtn = null;
     async function previewWorkspaceVoice(bookId, btn) {
         const voiceId = document.getElementById('voice-' + bookId)?.value;
         if (!voiceId) return;
-        if (wsPreviewBtn && wsPreviewBtn !== btn) { wsPreviewBtn.innerHTML = wsPreviewBtn.dataset.original || wsPreviewBtn.innerHTML; wsPreviewBtn.disabled = false; }
-        const original = btn.innerHTML;
-        btn.dataset.original = original;
-        wsPreviewBtn = btn;
-        if (speakingVoiceId) { clearVoiceState(speakingVoiceId); speakingVoiceId = null; }
-        const audio = document.getElementById('preview-audio');
-        audio.pause();
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loading-spinner" style="width:13px; height:13px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; display:inline-block;"></span> Rendering…';
-        const restore = () => { if (wsPreviewBtn === btn) { btn.innerHTML = original; btn.disabled = false; wsPreviewBtn = null; } };
-        try {
-            const resp = await fetch(`/api/preview/${voiceId}`);
-            if (!resp.ok) throw new Error('Preview failed');
-            audio.src = URL.createObjectURL(await resp.blob());
-            audio.onended = restore;
-            await audio.play();
-        } catch(e) {
-            console.error(e);
-            btn.innerHTML = '<span style="color:var(--error)">⚠ Preview failed</span>';
-            setTimeout(restore, 1800);
-        }
+        await requestVoicePreview(voiceId, btn);
     }
 
     function buildVoiceOptions(selectedId) {
@@ -1253,11 +1284,11 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                 <div id="compare-players" class="compare-grid hidden">
                     <div class="compare-cell">
                         <div class="compare-label"><span class="compare-tag">A</span><span id="compare-label-a">—</span></div>
-                        <audio id="compare-audio-a" controls preload="none"></audio>
+                        <button id="compare-play-a" class="btn compare-play" type="button" onclick="playComparisonPreview('a', this)">&#9654; Play A</button>
                     </div>
                     <div class="compare-cell">
                         <div class="compare-label"><span class="compare-tag b">B</span><span id="compare-label-b">—</span></div>
-                        <audio id="compare-audio-b" controls preload="none"></audio>
+                        <button id="compare-play-b" class="btn compare-play" type="button" onclick="playComparisonPreview('b', this)">&#9654; Play B</button>
                     </div>
                 </div>
             </div>
@@ -1321,6 +1352,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
                                     <div class="voice-name">${escapeHtml(v.name)}</div>
                                     <div class="voice-meta">${v.accent} - ${v.gender}</div>
                                     <div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div>
+                                    <div class="paused-badge">Paused</div>
                                     <div class="loading-badge">Generating sample — first play can take a few minutes…</div>
                                 </div>
                                 <button class="preview-btn" id="vb-${id}" onclick="playVoicePreview('${id}', this)" title="Listen to this voice" aria-label="Listen to ${escapeHtml(v.name)}">
@@ -1333,6 +1365,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
             `;
         }).join('') + unconfiguredSection;
         loadCloneList();
+        syncPreviewUi();
     }
 
     let _urlPreview = null;
@@ -1475,57 +1508,233 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         loadCloneList();
     }
 
-    // Which voice is currently speaking (only ever one).
+    // One global transport owns every voice audition: voice grid, workspace and
+    // A/B comparison. Its audio element is outside all tab panels, so switching
+    // tabs cannot destroy the element or reset currentTime (#45).
     let speakingVoiceId = null;
+    let previewPhase = 'idle';
+    let previewObjectUrl = null;
+    let previewRequestController = null;
+    let previewRequestSerial = 0;
+    let previewSourceBtn = null;
+    let previewEventsBound = false;
+    const comparisonPreviews = { a: null, b: null };
     const PLAY_ICON = '<span style="margin-left: 2px;">&#9654;</span>';
-    const STOP_ICON = '<span>&#9632;</span>';
+    const PAUSE_ICON = '<span aria-hidden="true">&#10074;&#10074;</span>';
+    const LOADING_ICON = '<span class="loading-spinner" style="width:16px; height:16px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; display:inline-block;"></span>';
+
+    function previewEls() {
+        return {
+            audio: document.getElementById('preview-audio'),
+            player: document.getElementById('voice-player'),
+            state: document.getElementById('voice-player-state'),
+            name: document.getElementById('voice-player-name'),
+            time: document.getElementById('voice-player-time'),
+            seek: document.getElementById('voice-player-seek'),
+            toggle: document.getElementById('voice-player-toggle'),
+        };
+    }
+
+    function formatPreviewTime(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+        const whole = Math.floor(seconds);
+        return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+    }
 
     function clearVoiceState(voiceId) {
         if (!voiceId) return;
         const card = document.getElementById('vc-' + voiceId);
-        const btn  = document.getElementById('vb-' + voiceId);
-        if (card) card.classList.remove('speaking', 'loading');
-        if (btn) { btn.classList.remove('stop'); btn.disabled = false; btn.innerHTML = PLAY_ICON; }
+        const btn = document.getElementById('vb-' + voiceId);
+        if (card) card.classList.remove('speaking', 'paused', 'loading');
+        if (btn) {
+            btn.classList.remove('stop');
+            btn.disabled = false;
+            btn.innerHTML = PLAY_ICON;
+            btn.setAttribute('aria-label', `Listen to ${voices[voiceId]?.name || voiceId}`);
+        }
+    }
+
+    function restorePreviewSourceButton() {
+        if (previewSourceBtn && !previewSourceBtn.classList.contains('preview-btn')) {
+            previewSourceBtn.innerHTML = previewSourceBtn.dataset.previewOriginal || previewSourceBtn.innerHTML;
+            previewSourceBtn.disabled = false;
+            delete previewSourceBtn.dataset.previewOriginal;
+            delete previewSourceBtn.dataset.previewVoice;
+        }
+        previewSourceBtn = null;
+    }
+
+    function setPreviewSourceButton(btn, voiceId) {
+        if (previewSourceBtn !== btn) restorePreviewSourceButton();
+        previewSourceBtn = btn || null;
+        if (btn && !btn.classList.contains('preview-btn')) {
+            if (!btn.dataset.previewOriginal) btn.dataset.previewOriginal = btn.innerHTML;
+            btn.dataset.previewVoice = voiceId;
+        }
+    }
+
+    function syncPreviewUi() {
+        const { audio, player, state, name, time, seek, toggle } = previewEls();
+        if (!audio || !player) return;
+        const hasVoice = Boolean(speakingVoiceId);
+        player.hidden = !hasVoice;
+        document.body.classList.toggle('has-voice-player', hasVoice);
+        if (!hasVoice) return;
+
+        const voiceName = voices[speakingVoiceId]?.name || speakingVoiceId;
+        player.dataset.state = previewPhase;
+        name.textContent = voiceName;
+        const states = {
+            loading: 'Preparing sample', playing: 'Now playing', paused: 'Paused',
+            ended: 'Sample ended', error: 'Sample unavailable', idle: 'Voice sample ready',
+        };
+        state.textContent = states[previewPhase] || states.idle;
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        const position = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+        time.textContent = `${formatPreviewTime(position)} / ${formatPreviewTime(duration)}`;
+        seek.max = duration || 0;
+        seek.value = Math.min(position, duration || 0);
+        seek.disabled = !duration || previewPhase === 'loading' || previewPhase === 'error';
+        toggle.disabled = previewPhase === 'loading' || previewPhase === 'error';
+        const canPause = previewPhase === 'playing';
+        toggle.innerHTML = canPause ? PAUSE_ICON : PLAY_ICON;
+        toggle.setAttribute('aria-label', canPause ? `Pause ${voiceName}` : (previewPhase === 'ended' ? `Replay ${voiceName}` : `Resume ${voiceName}`));
+
+        document.querySelectorAll('.voice-card').forEach(card => card.classList.remove('speaking', 'paused', 'loading'));
+        document.querySelectorAll('.preview-btn').forEach(btn => {
+            btn.classList.remove('stop'); btn.disabled = false; btn.innerHTML = PLAY_ICON;
+        });
+        const card = document.getElementById('vc-' + speakingVoiceId);
+        const cardBtn = document.getElementById('vb-' + speakingVoiceId);
+        if (card) card.classList.add(previewPhase === 'playing' ? 'speaking' : previewPhase === 'loading' ? 'loading' : 'paused');
+        if (cardBtn) {
+            cardBtn.disabled = previewPhase === 'loading';
+            cardBtn.innerHTML = previewPhase === 'loading' ? LOADING_ICON : (canPause ? PAUSE_ICON : PLAY_ICON);
+            cardBtn.setAttribute('aria-label', canPause ? `Pause ${voiceName}` : (previewPhase === 'ended' ? `Replay ${voiceName}` : `Resume ${voiceName}`));
+        }
+        if (previewSourceBtn && !previewSourceBtn.classList.contains('preview-btn') && document.contains(previewSourceBtn)) {
+            previewSourceBtn.disabled = previewPhase === 'loading';
+            previewSourceBtn.innerHTML = previewPhase === 'loading'
+                ? `${LOADING_ICON} Rendering…`
+                : (canPause ? '&#10074;&#10074; Pause' : (previewPhase === 'ended' ? '&#9654; Replay' : '&#9654; Resume'));
+        }
+    }
+
+    function bindPreviewEvents() {
+        if (previewEventsBound) return;
+        const { audio, seek } = previewEls();
+        if (!audio || !seek) return;
+        previewEventsBound = true;
+        audio.addEventListener('play', () => { previewPhase = 'playing'; syncPreviewUi(); });
+        audio.addEventListener('pause', () => {
+            if (speakingVoiceId && previewPhase !== 'loading' && !audio.ended) previewPhase = 'paused';
+            syncPreviewUi();
+        });
+        audio.addEventListener('ended', () => { previewPhase = 'ended'; syncPreviewUi(); });
+        audio.addEventListener('timeupdate', syncPreviewUi);
+        audio.addEventListener('loadedmetadata', syncPreviewUi);
+        audio.addEventListener('durationchange', syncPreviewUi);
+        audio.addEventListener('error', () => {
+            if (speakingVoiceId && previewPhase !== 'loading') { previewPhase = 'error'; syncPreviewUi(); }
+        });
+        seek.addEventListener('input', () => {
+            const position = Number(seek.value);
+            if (Number.isFinite(position)) audio.currentTime = position;
+        });
+    }
+
+    async function toggleGlobalPreview() {
+        bindPreviewEvents();
+        const { audio } = previewEls();
+        if (!speakingVoiceId || previewPhase === 'loading' || previewPhase === 'error') return;
+        if (!audio.paused) { audio.pause(); return; }
+        if (audio.ended || (Number.isFinite(audio.duration) && audio.currentTime >= audio.duration)) audio.currentTime = 0;
+        try { await audio.play(); }
+        catch (e) { console.error(e); previewPhase = 'paused'; syncPreviewUi(); }
+    }
+
+    function dismissGlobalPreview() {
+        bindPreviewEvents();
+        const { audio } = previewEls();
+        previewRequestSerial += 1;
+        if (previewRequestController) previewRequestController.abort();
+        previewRequestController = null;
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+        clearVoiceState(speakingVoiceId);
+        speakingVoiceId = null;
+        previewPhase = 'idle';
+        restorePreviewSourceButton();
+        syncPreviewUi();
+    }
+
+    async function requestVoicePreview(voiceId, btn, preparedBlob = null) {
+        bindPreviewEvents();
+        const { audio } = previewEls();
+        if (speakingVoiceId === voiceId && previewPhase !== 'error' && !preparedBlob) {
+            await toggleGlobalPreview();
+            return;
+        }
+
+        const serial = ++previewRequestSerial;
+        if (previewRequestController) previewRequestController.abort();
+        previewRequestController = new AbortController();
+        audio.pause();
+        clearVoiceState(speakingVoiceId);
+        setPreviewSourceButton(btn, voiceId);
+        speakingVoiceId = voiceId;
+        previewPhase = 'loading';
+        syncPreviewUi();
+
+        try {
+            let blob = preparedBlob;
+            if (!blob) {
+                const resp = await fetch(`/api/preview/${voiceId}`, { signal: previewRequestController.signal });
+                if (!resp.ok) throw new Error('Preview failed');
+                blob = await resp.blob();
+            }
+            if (serial !== previewRequestSerial) return;
+            if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = URL.createObjectURL(blob);
+            audio.src = previewObjectUrl;
+            audio.currentTime = 0;
+            previewPhase = 'paused';
+            syncPreviewUi();
+            try { await audio.play(); }
+            catch (playError) {
+                // Browsers may expire user activation while a cold sample is
+                // rendered. The sample is still loaded; one press resumes it.
+                console.warn(playError);
+                previewPhase = 'paused';
+                syncPreviewUi();
+            }
+            const card = document.getElementById('vc-' + voiceId);
+            if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (e) {
+            if (e.name === 'AbortError' || serial !== previewRequestSerial) return;
+            console.error(e);
+            previewPhase = 'error';
+            syncPreviewUi();
+        } finally {
+            if (serial === previewRequestSerial) previewRequestController = null;
+        }
     }
 
     async function playVoicePreview(voiceId, btn) {
-        const audio = document.getElementById('preview-audio');
-        const card = document.getElementById('vc-' + voiceId);
+        await requestVoicePreview(voiceId, btn);
+    }
 
-        // Click the speaking voice again -> stop it.
-        if (speakingVoiceId === voiceId && !audio.paused) {
-            audio.pause(); audio.currentTime = 0;
-            clearVoiceState(voiceId); speakingVoiceId = null;
+    async function playComparisonPreview(side, btn) {
+        const prepared = comparisonPreviews[side];
+        if (!prepared) return;
+        if (speakingVoiceId === prepared.voiceId) {
+            await toggleGlobalPreview();
             return;
         }
-        // Starting a new one always silences the previous.
-        if (speakingVoiceId) { audio.pause(); clearVoiceState(speakingVoiceId); }
-        speakingVoiceId = voiceId;
-
-        if (card) card.classList.add('loading');   // shows "Generating sample…" if not cached
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loading-spinner" style="width:16px; height:16px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; display:inline-block;"></span>';
-
-        try {
-            const resp = await fetch(`/api/preview/${voiceId}`);
-            if (!resp.ok) throw new Error('Preview failed');
-            const blob = await resp.blob();
-            audio.src = URL.createObjectURL(blob);
-            audio.onended = () => { clearVoiceState(speakingVoiceId); speakingVoiceId = null; };
-            await audio.play();
-
-            if (card) { card.classList.remove('loading'); card.classList.add('speaking'); }
-            btn.disabled = false;
-            btn.classList.add('stop');
-            btn.innerHTML = STOP_ICON;
-            if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        } catch(e) {
-            console.error(e);
-            clearVoiceState(voiceId);
-            speakingVoiceId = null;
-            btn.innerHTML = '<span style="color:var(--error)">!</span>';
-            setTimeout(() => { btn.innerHTML = PLAY_ICON; btn.disabled = false; }, 2000);
-        }
+        await requestVoicePreview(prepared.voiceId, btn, prepared.blob);
     }
 
     async function renderComparison(btn) {
@@ -1536,20 +1745,27 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
         const players = document.getElementById('compare-players');
         const original = btn.textContent;
         btn.disabled = true;
-        if (speakingVoiceId) { document.getElementById('preview-audio').pause(); clearVoiceState(speakingVoiceId); speakingVoiceId = null; }
         try {
             status.textContent = `Rendering ${voices[aId]?.name || aId}… first render can take a minute.`;
             let resp = await fetch(`/api/preview/${aId}`);
             if (!resp.ok) throw new Error('Voice A preview failed');
+            comparisonPreviews.a = { voiceId: aId, blob: await resp.blob() };
             document.getElementById('compare-label-a').textContent = `${voices[aId]?.name || aId} (${voices[aId]?.accent || ''})`;
-            document.getElementById('compare-audio-a').src = URL.createObjectURL(await resp.blob());
             status.textContent = `Rendering ${voices[bId]?.name || bId}…`;
             resp = await fetch(`/api/preview/${bId}`);
             if (!resp.ok) throw new Error('Voice B preview failed');
+            comparisonPreviews.b = { voiceId: bId, blob: await resp.blob() };
             document.getElementById('compare-label-b').textContent = `${voices[bId]?.name || bId} (${voices[bId]?.accent || ''})`;
-            document.getElementById('compare-audio-b').src = URL.createObjectURL(await resp.blob());
+            for (const side of ['a', 'b']) {
+                const playBtn = document.getElementById('compare-play-' + side);
+                if (playBtn) {
+                    playBtn.innerHTML = `&#9654; Play ${side.toUpperCase()}`;
+                    playBtn.dataset.previewOriginal = playBtn.innerHTML;
+                    playBtn.disabled = false;
+                }
+            }
             players.classList.remove('hidden');
-            status.textContent = 'Done — press play on each to compare.';
+            status.textContent = 'Done — A and B use the global player, so they cannot overlap.';
         } catch(e) {
             console.error(e);
             status.innerHTML = '<span style="color:var(--error);">⚠ ' + escapeHtml(e.message || 'Comparison failed') + '</span>';
@@ -1919,6 +2135,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
     function escapeHtml(str) { if(!str) return ''; const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
 
     window.onload = async () => {
+        bindPreviewEvents();
         const storedTheme = localStorage.getItem('audiobook-theme');
         const theme = storedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
         setTheme(theme);

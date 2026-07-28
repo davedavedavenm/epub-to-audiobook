@@ -26,10 +26,10 @@ class TestEngineSeesUploads:
         custom = load.index('"custom"')
         assert custom > builtin, 'custom voices must be scanned after built-ins'
 
-    def test_both_chatterbox_services_mount_it(self):
-        """One WAV should give a Turbo narrator AND a Nano one."""
-        assert COMPOSE.count('/app/voices/custom') == 2, \
-            'both chatterbox and chatterbox-nano need the custom voices mount'
+    def test_all_chatterbox_services_mount_it(self):
+        """One WAV should reach Turbo, Nano and Multilingual V3."""
+        assert COMPOSE.count('/app/voices/custom') == 3, \
+            'Turbo, Nano and Multilingual V3 all need the custom voices mount'
 
 
 class TestWebappSeesUploads:
