@@ -209,8 +209,10 @@ still ungraded exception:
 
 4. **Chatterbox Multilingual V3.** Unlike the rejected English-only cloners,
    upstream specifically claims improved accent preservation. It now renders
-   locally with Irish and South African references at RTF 4.15/4.81. That
-   justifies the experiment; it does not establish quality until Dave listens.
+   locally with Irish and South African references at RTF 4.15/4.81. ASR
+   sequence ratios are 0.848/0.844, but both clips contain suspect number
+   readings. That justifies the experiment; it does not establish quality until
+   Dave listens.
 
 **Note on (2), before anyone starts:** Orpheus's own training guide advises
 *against* fine-tuning on synthetic data — it says synthetic voices "lack

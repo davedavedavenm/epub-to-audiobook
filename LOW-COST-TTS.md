@@ -26,7 +26,9 @@ opt-in evaluation services until the clips are graded by ear.
 | Chatterbox Multilingual V3 | **4.15 Irish** | **4.81 South African** | 5.74 GiB | **~2.1–2.4 days** | Successfully rendered; quality/accent awaiting listening. MIT, local CPU, isolated opt-in service. |
 
 Whisper `base` sequence ratios were 0.769/0.802 for Melo and 0.826/0.823
-for OmniVoice. That proves the files contain mostly matching English; it does
+for OmniVoice. V3 scored 0.848 Irish / 0.844 ZA, but its ASR transcripts show
+material number errors, so the slightly higher aggregate score is not a clean
+win. These checks prove the files contain mostly matching English; they do
 **not** grade accents or naturalness. Dave's listening verdict is recorded above.
 See STATUS.md for exact wall times, durations, memory and clip paths.
 

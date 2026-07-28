@@ -48,7 +48,11 @@
 > candidate for higher-quality Irish and South African cloning. The identical
 > hard sample rendered in **316.36 s / 76.248 s audio (RTF 4.15)** for Irish and
 > **319.20 s / 66.408 s (RTF 4.81)** for South African; peak cgroup memory on
-> the successful container was **5.74 GiB**. Accent/naturalness await Dave's ear.
+> the successful container was **5.74 GiB**. Whisper `base` sequence ratios were
+> **0.848 Irish / 0.844 ZA**, slightly above Omni's 0.826/0.823, but the
+> transcripts expose number mistakes: Irish lost digits in `3,400` and
+> `230,000`; ZA rendered `230,000` as `23,000` and mangled `£24.6 billion`.
+> Accent/naturalness await Dave's ear.
 > Clips: `/api/sample/cv3_irish_male.mp3` and
 > `/api/sample/cv3_southafrican_male.mp3`.
 

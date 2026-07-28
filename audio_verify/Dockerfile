@@ -14,7 +14,8 @@ COPY verify_audio_sample.py .
 COPY verify_audio_vs_captured.py .
 COPY transcribe_candidates.py .
 
-RUN useradd -r -s /bin/false appuser && chown -R appuser:appuser /app
+RUN useradd -r -m -s /bin/false appuser \
+    && chown -R appuser:appuser /app /home/appuser
 USER appuser
 
 ENTRYPOINT ["python", "/app/verify_audio_sample.py"]
