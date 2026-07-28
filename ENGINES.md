@@ -80,6 +80,27 @@ Source: [resemble-ai/chatterbox GitHub](https://github.com/resemble-ai/chatterbo
 - **Hardware**: no official minimums published. Measured here: ~2–6 GB RAM
   generating on CPU [measured]; OOM-looped in a 6 GB container on a 15 GB
   host under memory pressure [incident 2026-07-09].
+- **Multilingual V3 (500M, 23+ languages):** upstream says it improves speaker
+  identity and accent preservation across languages. Local CPU evaluation is
+  isolated as `chatterbox-v3`; successful hard-sample RTF was 4.15 Irish and
+  4.81 South African with `cfg_weight=0`. Accent quality remains **[unverified]**
+  until heard.
+
+## OmniVoice
+
+Sources: [k2-fsa/OmniVoice](https://github.com/k2-fsa/OmniVoice) ·
+[voice-design attributes](https://github.com/k2-fsa/OmniVoice/blob/master/docs/voice-design.md)
+
+- Voice-design accents are a fixed validated vocabulary: American, British,
+  Australian, Canadian, Indian, Chinese, Korean, Japanese, Portuguese and
+  Russian. Irish and South African are not accepted.
+- English pronunciation can be overridden inline with bracketed CMU phonemes.
+  This is the official mechanism to address proper names such as Huawei and
+  Xiaomi.
+- Measured locally at the default 32 diffusion steps: RTF 9.10 British / 9.06
+  Australian on CPU. Dave graded the accents good and the result far better
+  than Melo, but called out Huawei/Xiaomi pronunciation. Model weights are
+  CC-BY-NC.
 
 ## Kokoro (82M) via Kokoro-FastAPI
 

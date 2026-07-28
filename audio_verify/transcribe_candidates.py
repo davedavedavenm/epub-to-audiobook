@@ -31,9 +31,14 @@ def main() -> int:
     model = WhisperModel(args.model, device="cpu", compute_type="int8", cpu_threads=4)
     results = []
     for audio in sorted(args.samples.glob("*.mp3")):
-        if not audio.name.startswith(("me_", "ov_")):
+        if not audio.name.startswith(("me_", "ov_", "cv3_")):
             continue
-        engine = "melotts" if audio.name.startswith("me_") else "omnivoice"
+        if audio.name.startswith("me_"):
+            engine = "melotts"
+        elif audio.name.startswith("ov_"):
+            engine = "omnivoice"
+        else:
+            engine = "chatterbox"
         expected = words(sample_text_for(engine))
         segments, info = model.transcribe(str(audio), language="en", beam_size=1, vad_filter=True)
         transcript = " ".join((segment.text or "").strip() for segment in segments).strip()

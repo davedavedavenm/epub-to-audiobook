@@ -1,6 +1,6 @@
 # Voices and accents
 
-**Last updated: 2026-07-27.** What works, what does not, and the wrong turns —
+**Last updated: 2026-07-28.** What works, what does not, and the wrong turns —
 recorded so nobody walks back down them. Every claim here was heard or measured,
 not reasoned about; where something is untested it says so.
 
@@ -51,14 +51,23 @@ English:
 |---|---|---|---|
 | **Kokoro** | US, UK **only** | yes | running — checked live, no Irish/Australian |
 | **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speakers | yes | installed — real accents, but dry and close-mic'd |
-| **MeloTTS** | US, UK, Indian, **Australian**, default | yes | **not installed**; no Irish |
-| **XTTS-v2** | clones from a reference; reported to carry accent | yes | **being tested** — see below |
+| **MeloTTS** | US, UK, Indian, **Australian**, default | yes | installed and **rejected by ear**; no Irish |
+| **OmniVoice** | US, UK, AU, CA, IN + five non-native-English accents | yes | accents good; slow on CPU; **no Irish/ZA** in fixed upstream vocabulary |
+| **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Irish + ZA clips rendered; listening pending |
+| **XTTS-v2** | clones from a reference; reported to carry accent | yes | tested and rejected — see below |
 | **Chatterbox** Nano/Turbo | none. English-only, American phonetics | yes | proven twice not to hold an accent |
 | **Edge** | IE, AU, NZ, GB, ZA, IN, CA, HK, KE, NG, PH, SG, TZ, US | **no** | works, graded good, needs internet |
 
 Edge's full English list was checked live and is worth knowing: it has **Irish
 male and female** (Connor, Emily), Australian, New Zealand, South African and
 five British voices. **No Welsh anywhere**, on any engine, cloud or local.
+
+OmniVoice's upstream voice-design list is closed, not free-form: American,
+British, Australian, Canadian, Indian, Chinese, Korean, Japanese, Portuguese
+and Russian accents. Asking it for Irish or South African is rejected during
+instruction validation. It does, however, support inline CMU phonemes for
+English pronunciation correction, which is the supported route for its Huawei
+and Xiaomi failures.
 
 ### XTTS-v2 — tested and rejected
 
@@ -108,13 +117,15 @@ cloner?**
 
 | Model | Mechanism | English accents | Verdict |
 |---|---|---|---|
-| **[MeloTTS](https://github.com/myshell-ai/MeloTTS)** | **trained per-accent** | `EN-US`, `EN-BR`, `EN_INDIA`, `EN-AU`, `EN-Default` | **Best fit.** Sidesteps the rule entirely. Confirmed by loading the model on CPU and reading its own speaker table — not from the README. **No Irish.** |
-| **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | **Worth testing.** The tag interface is a genuinely different control surface from cloning — it may reach accents the clone path cannot. |
+| **[MeloTTS](https://github.com/myshell-ai/MeloTTS)** | **trained per-accent** | `EN-US`, `EN-BR`, `EN_INDIA`, `EN-AU`, `EN-Default` | Installed and fast, then **rejected by ear** for poor pronunciation, number handling and overall TTS quality. **No Irish.** |
+| **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | Not a low-cost Zorin candidate: current S2 Pro is 4B and its official install guide calls for 24 GB GPU memory. CPU packaging exists but does not make it practical here. |
 | **[Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)** | zero-shot cloning + named voices | English voices (tara, leah, jess, leo, dan, mia, zac, zoe); no accent variants | Cloning half will hit the rule. **But it ships fine-tuning tooling and data-processing scripts** — the supported route to a custom local voice. 3B, heavy on CPU. ⚠️ Their own guidance: *"I recommend not using synthetic data for training as it produces worse results"* — a direct warning against distilling Edge output, which is worth knowing **before** attempting the distil path below. |
 | **[Dia2-2B](https://huggingface.co/nari-labs/Dia2-2B)** | dialogue TTS, context conditioning | English only, 2-minute cap | Not accent-targeted, and the 2-minute cap rules out narration. |
 | **[VibeVoice](https://microsoft.github.io/VibeVoice/)** | long-form multi-speaker | English + Chinese | **See below — I dismissed this wrongly, and it matters more than accents.** |
 
-**Order to pursue:** VibeVoice → MeloTTS → Fish-Speech → Orpheus.
+**Resulting order:** grade Chatterbox V3 → keep Omni for supported accents and
+short work → improve Piper post-processing. Melo is rejected; Fish S2 Pro is
+outside the local hardware budget.
 
 ---
 
@@ -175,8 +186,9 @@ probably the most valuable model on this list for an audiobook pipeline.
 
 ### So what is actually left for local accented English
 
-Cloning is exhausted. Only two routes remain, and both mean a model **trained**
-on the accent:
+Ordinary English-only cloning is exhausted. Two proven routes remain, both
+using a model **trained** on the accent, plus V3 as one evidence-backed but
+still ungraded exception:
 
 1. **Use what already works and fix its one flaw.** Piper native VCTK has real
    Irish, Scottish, Northern Irish, Welsh-female and Australian-male accents.
@@ -192,7 +204,13 @@ on the accent:
    the honest answer to *"how do we get those voices locally"*.
 
 3. **MeloTTS for the accents it has.** Confirmed working on CPU with five native
-   English accents. Covers Australian and British outright. Not Irish.
+   English accents, but rejected by ear. Covers Australian and British on
+   paper, not at the quality required here. Not Irish.
+
+4. **Chatterbox Multilingual V3.** Unlike the rejected English-only cloners,
+   upstream specifically claims improved accent preservation. It now renders
+   locally with Irish and South African references at RTF 4.15/4.81. That
+   justifies the experiment; it does not establish quality until Dave listens.
 
 **Note on (2), before anyone starts:** Orpheus's own training guide advises
 *against* fine-tuning on synthetic data — it says synthetic voices "lack
@@ -268,7 +286,7 @@ Other documented settings, untested here:
 |---|---|---|---|
 | Chatterbox-Nano | 110M | **English only** | On-device/CPU, 3× realtime on 8 cores. What we render books with. |
 | Chatterbox-Turbo | 350M | **English only** | Built for low-latency voice agents. |
-| **Chatterbox-Multilingual V3** | **500M** | 23+ | Headline feature: *"improves voice identity and **accent preservation**"*. **NOT INSTALLED — this is the next thing to try.** |
+| **Chatterbox-Multilingual V3** | **500M** | 23+ | Headline feature: *"improves voice identity and **accent preservation**"*. Installed as isolated `chatterbox-v3`; Irish/ZA listening pending. |
 | Chatterbox (original) | 500M | English | CFG & exaggeration tuning. |
 
 Nano and Turbo are English-only agent models that make **no claim about accent
@@ -372,10 +390,9 @@ current. Use `scripts/deploy.sh`. See OPERATIONS.md.
 
 ## Next, in order
 
-1. **Install Chatterbox Multilingual V3** and A/B it against Nano `cfg_weight=0`
-   on the same references. It is the only model in the family that claims accent
-   preservation, and it is the honest answer to "can I have these accents on a
-   good-sounding engine".
+1. **Grade Chatterbox Multilingual V3** Irish and South African against the
+   native Piper/Edge references. It is installed and measured; listening is the
+   remaining gate.
 2. **Expose `cfg_weight` per voice**, so accented narrators default to `0` and
    ordinary ones stay at `0.5`.
 3. **De-tinny the Piper natives.** VCTK was recorded in an anechoic chamber on a

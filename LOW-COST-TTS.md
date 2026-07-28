@@ -21,12 +21,13 @@ opt-in evaluation services until the clips are graded by ear.
 
 | Candidate | British RTF | Australian RTF | Peak memory | 12h-book CPU estimate | Current verdict |
 |---|---:|---:|---:|---:|---|
-| [MeloTTS](https://github.com/myshell-ai/MeloTTS) | **0.34** | **0.33** | 3.86 GiB | **~4.0 h** | Throughput qualifies; listening pending. Old/stale dependency stack and 4.16 GB image are maintenance costs. |
-| [OmniVoice](https://github.com/k2-fsa/OmniVoice) | **9.10** | **9.06** | 1.59 GiB | **~4.5 days** | Default-quality CPU throughput disqualifies it for full books; potentially useful for short clips if listening quality earns it. Non-commercial weights. |
+| [MeloTTS](https://github.com/myshell-ai/MeloTTS) | **0.34** | **0.33** | 3.86 GiB | **~4.0 h** | **Rejected by ear:** bad TTS, pronunciation and number handling. Speed does not rescue it. |
+| [OmniVoice](https://github.com/k2-fsa/OmniVoice) | **9.10** | **9.06** | 1.59 GiB | **~4.5 days** | **Best accent quality of this pair**, but default CPU throughput disqualifies full books. Huawei/Xiaomi need its supported inline CMU overrides. Non-commercial weights. |
+| Chatterbox Multilingual V3 | **4.15 Irish** | **4.81 South African** | 5.74 GiB | **~2.1–2.4 days** | Successfully rendered; quality/accent awaiting listening. MIT, local CPU, isolated opt-in service. |
 
 Whisper `base` sequence ratios were 0.769/0.802 for Melo and 0.826/0.823
 for OmniVoice. That proves the files contain mostly matching English; it does
-**not** grade accents or naturalness. Possible number errors require listening.
+**not** grade accents or naturalness. Dave's listening verdict is recorded above.
 See STATUS.md for exact wall times, durations, memory and clip paths.
 
 ## Book Cost Assumptions

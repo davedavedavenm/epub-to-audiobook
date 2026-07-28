@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## Local accent candidates deployed (2026-07-28) — measured, not yet graded by ear
+> ## Local accent candidates deployed (2026-07-28) — first listening verdict
 >
 > MeloTTS and OmniVoice now run as isolated, opt-in CPU services on zorin
 > (`melotts-tts:8007`, `omnivoice-tts:8008`). Both expose the same
@@ -17,12 +17,19 @@
 > | OmniVoice British | 585.45 s | 64.37 s | **9.10** | **1.39 GiB** | 0.826 |
 > | OmniVoice Australian | 580.00 s | 64.03 s | **9.06** | **1.59 GiB** | 0.823 |
 >
-> **Measured conclusion:** Melo is fast enough for full books; OmniVoice at
+> **Listening conclusion (Dave, 2026-07-28):** OmniVoice is *"far far better
+> than Melo"* and its British/Australian accents are good. Melo has poor
+> pronunciation and number handling and is rejected despite its speed.
+> OmniVoice badly pronounced Huawei and Xiaomi; upstream supports inline CMU
+> phoneme overrides, so that is a fixable lexicon issue rather than an accent
+> limitation.
+>
+> **Measured conclusion:** Melo is fast enough for full books but fails quality;
+> OmniVoice at
 > its upstream 32-step default is not a local CPU audiobook engine on this
-> host (~4.5 days of compute for 12 hours of audio). That says nothing yet
-> about accent quality. Whisper `base` found broadly intact speech in all four,
+> host (~4.5 days of compute for 12 hours of audio). Whisper `base` found broadly intact speech in all four,
 > but possible number/name errors remain — notably `230,000` heard as `23,000`
-> on both Omni clips. Listening must settle whether that is ASR or synthesis.
+> on both Omni clips.
 >
 > Clips (all opened and returned `200 audio/mpeg`):
 > `/api/sample/me_british.mp3`, `/api/sample/me_australian.mp3`,
@@ -34,6 +41,16 @@
 > OmniVoice's image is 2.33 GB plus ~3.0 GB of cached weights; idle RSS after
 > generation is ~1.3 GiB. Melo code/weights are MIT; OmniVoice code is
 > Apache-2.0 but its model weights are CC BY-NC 4.0.
+
+> **Additional local accents:** Piper VCTK already provides selectable Irish
+> (Donegal, Dublin, Cork), Northern Irish (Belfast), Scottish, Welsh-female and
+> Australian-male voices. Chatterbox Multilingual V3 is now an isolated CPU
+> candidate for higher-quality Irish and South African cloning. The identical
+> hard sample rendered in **316.36 s / 76.248 s audio (RTF 4.15)** for Irish and
+> **319.20 s / 66.408 s (RTF 4.81)** for South African; peak cgroup memory on
+> the successful container was **5.74 GiB**. Accent/naturalness await Dave's ear.
+> Clips: `/api/sample/cv3_irish_male.mp3` and
+> `/api/sample/cv3_southafrican_male.mp3`.
 
 > ## Where things stand, 2026-07-27 (end of day)
 >
@@ -64,8 +81,8 @@
 > deployed only `webapp` and left `worker` on stale code.
 >
 > **Not done, and honest about it:** no Welsh male voice exists in any open
-> model. Chatterbox Multilingual V3 — the only one in the family claiming accent
-> preservation — is not installed.
+> model. Chatterbox Multilingual V3 is installed and rendered for Irish/ZA, but
+> its accent quality is not verified until Dave hears those clips.
 
 
 > ## TADA runs locally now (2026-07-27, measured) — #23 root-caused and fixed
