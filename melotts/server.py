@@ -27,7 +27,7 @@ def _get_model():
 
         log.info("loading MeloTTS English model on cpu")
         _model = TTS(language="EN", device="cpu")
-        log.info("MeloTTS speakers: %s", list(_model.hps.data.spk2id))
+        log.info("MeloTTS speakers: %s", list(_model.hps.data.spk2id.keys()))
     return _model
 
 
@@ -78,4 +78,3 @@ def speech(req: SpeechRequest):
         audio = model.tts_to_file(req.input, speaker_id, speed=req.speed, quiet=True)
     payload, media_type = _encode(audio, model.hps.data.sampling_rate, req.response_format.lower())
     return Response(content=payload, media_type=media_type)
-
