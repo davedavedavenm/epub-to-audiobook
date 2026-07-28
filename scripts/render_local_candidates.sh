@@ -15,8 +15,8 @@ PY
 }
 
 render() {
-  local engine="$1" port="$2" voice="$3" output="$4"
-  local text_file payload_file
+  local engine="$1" port="$2" voice="$3" output="$4" container="$5"
+  local text_file payload_file output_file pid cgroup peak_bytes
   text_file="$(mktemp)"
   payload_file="$(mktemp)"
   trap 'rm -f "${text_file}" "${payload_file}"' RETURN
@@ -31,17 +31,23 @@ print(json.dumps({
 }))
 PY
   echo "Rendering ${engine}/${voice} -> ${output}"
-  /usr/bin/time -v curl --fail --silent --show-error \
+  output_file="${OUT_DIR}/${output}.mp3"
+  /usr/bin/time -f 'wall_seconds=%e' curl --fail --silent --show-error \
     -H 'Content-Type: application/json' \
     --data-binary "@${payload_file}" \
     "http://127.0.0.1:${port}/v1/audio/speech" \
-    -o "${OUT_DIR}/${output}.mp3"
-  ffprobe -v error -show_entries format=duration,size \
-    -of default=noprint_wrappers=1 "${OUT_DIR}/${output}.mp3"
+    -o "${output_file}"
+  stat --format='size=%s' "${output_file}"
+  docker exec -i "${container}" ffprobe -v error -i pipe:0 \
+    -show_entries format=duration -of default=noprint_wrappers=1 \
+    < "${output_file}"
+  pid="$(docker inspect --format '{{.State.Pid}}' "${container}")"
+  cgroup="$(awk -F: '$1 == "0" {print $3}' "/proc/${pid}/cgroup")"
+  peak_bytes="$(cat "/sys/fs/cgroup${cgroup}/memory.peak")"
+  echo "container_peak_bytes=${peak_bytes}"
 }
 
-render melotts 8007 EN-BR me_british
-render melotts 8007 EN-AU me_australian
-render omnivoice 8008 british-female ov_british
-render omnivoice 8008 australian-female ov_australian
-
+render melotts 8007 EN-BR me_british melotts-tts
+render melotts 8007 EN-AU me_australian melotts-tts
+render omnivoice 8008 british-female ov_british omnivoice-tts
+render omnivoice 8008 australian-female ov_australian omnivoice-tts
