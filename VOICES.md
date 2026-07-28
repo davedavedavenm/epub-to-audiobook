@@ -99,6 +99,24 @@ a personal library; revisit before any commercial use.
 
 </details>
 
+### Candidate models, evaluated 2026-07-27
+
+Dave sent five to look at, with: *"it took me 5 minutes to find these."* Fair —
+this should have been my sweep, not his. Evaluated against the one question that
+matters: **does it ship accents trained into the model, or is it another
+cloner?**
+
+| Model | Mechanism | English accents | Verdict |
+|---|---|---|---|
+| **[MeloTTS](https://github.com/myshell-ai/MeloTTS)** | **trained per-accent** | `EN-US`, `EN-BR`, `EN_INDIA`, `EN-AU`, `EN-Default` | **Best fit.** Sidesteps the rule entirely. Confirmed by loading the model on CPU and reading its own speaker table — not from the README. **No Irish.** |
+| **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | **Worth testing.** The tag interface is a genuinely different control surface from cloning — it may reach accents the clone path cannot. |
+| **[Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)** | zero-shot cloning + named voices | English voices (tara, leah, jess, leo, dan, mia, zac, zoe); no accent variants | Cloning half will hit the rule. **But it ships fine-tuning tooling and data-processing scripts** — the supported route to a custom local voice. 3B, heavy on CPU. ⚠️ Their own guidance: *"I recommend not using synthetic data for training as it produces worse results"* — a direct warning against distilling Edge output, which is worth knowing **before** attempting the distil path below. |
+| **[Dia2-2B](https://huggingface.co/nari-labs/Dia2-2B)** | dialogue TTS, context conditioning | English only, 2-minute cap | Wrong tool. Built for speech-to-speech dialogue turns, not narration, and not accent-targeted. |
+| **[VibeVoice](https://microsoft.github.io/VibeVoice/)** | long-form multi-speaker cloning | — | Same wall as other cloners. The repo has also pivoted heavily to **ASR** (recent releases are all VibeVoice-ASR). |
+
+**Order to pursue:** MeloTTS → Fish-Speech → Orpheus. Dia2 and VibeVoice are the
+wrong shape for this.
+
 ### So what is actually left for local accented English
 
 Cloning is exhausted. Only two routes remain, and both mean a model **trained**
@@ -117,9 +135,15 @@ on the accent:
    documented and runs on modest hardware. Slower and more involved, but it is
    the honest answer to *"how do we get those voices locally"*.
 
-**MeloTTS** is worth a look for Australian specifically: it ships a *native*
-Australian English voice (trained, not cloned), so it sidesteps the rule. No
-Irish.
+3. **MeloTTS for the accents it has.** Confirmed working on CPU with five native
+   English accents. Covers Australian and British outright. Not Irish.
+
+**Note on (2), before anyone starts:** Orpheus's own training guide advises
+*against* fine-tuning on synthetic data — it says synthetic voices "lack
+diversity and map to the same set of tokens when tokenised". Distilling Edge is
+exactly that. It may still work (Piper fine-tunes are less sensitive than a 3B
+LLM-based model), but go in expecting to have to prove it, and prefer real
+recorded speech if any is available.
 
 ---
 
@@ -207,6 +231,14 @@ against `cfg_weight=0.5` — the setting Resemble's README says to change for
 exactly this problem — and never opened the Model Zoo, which says plainly that
 Nano and Turbo are English-only agent models. Dave: *"did you bother to consult
 chatterbox docs and repo to actually check?"* No.
+
+**1b. Did not sweep the field.** After four cloning failures I was still
+reaching for more cloners instead of asking which models ship *trained* accents.
+Dave found MeloTTS, Fish-Speech, Orpheus, Dia2 and VibeVoice in five minutes and
+sent them over. MeloTTS — five native English accent variants, exactly the
+architecture that works — was the obvious first stop and I had not looked at it.
+**When a class of approach fails repeatedly, survey the alternatives instead of
+producing another instance of the failing class.**
 
 **2. Re-researched what the repo already contained. Three times.**
 The VCTK accent voices were already installed. The Edge Australian voices were
