@@ -111,11 +111,67 @@ cloner?**
 | **[MeloTTS](https://github.com/myshell-ai/MeloTTS)** | **trained per-accent** | `EN-US`, `EN-BR`, `EN_INDIA`, `EN-AU`, `EN-Default` | **Best fit.** Sidesteps the rule entirely. Confirmed by loading the model on CPU and reading its own speaker table — not from the README. **No Irish.** |
 | **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | **Worth testing.** The tag interface is a genuinely different control surface from cloning — it may reach accents the clone path cannot. |
 | **[Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)** | zero-shot cloning + named voices | English voices (tara, leah, jess, leo, dan, mia, zac, zoe); no accent variants | Cloning half will hit the rule. **But it ships fine-tuning tooling and data-processing scripts** — the supported route to a custom local voice. 3B, heavy on CPU. ⚠️ Their own guidance: *"I recommend not using synthetic data for training as it produces worse results"* — a direct warning against distilling Edge output, which is worth knowing **before** attempting the distil path below. |
-| **[Dia2-2B](https://huggingface.co/nari-labs/Dia2-2B)** | dialogue TTS, context conditioning | English only, 2-minute cap | Wrong tool. Built for speech-to-speech dialogue turns, not narration, and not accent-targeted. |
-| **[VibeVoice](https://microsoft.github.io/VibeVoice/)** | long-form multi-speaker cloning | — | Same wall as other cloners. The repo has also pivoted heavily to **ASR** (recent releases are all VibeVoice-ASR). |
+| **[Dia2-2B](https://huggingface.co/nari-labs/Dia2-2B)** | dialogue TTS, context conditioning | English only, 2-minute cap | Not accent-targeted, and the 2-minute cap rules out narration. |
+| **[VibeVoice](https://microsoft.github.io/VibeVoice/)** | long-form multi-speaker | English + Chinese | **See below — I dismissed this wrongly, and it matters more than accents.** |
 
-**Order to pursue:** MeloTTS → Fish-Speech → Orpheus. Dia2 and VibeVoice are the
-wrong shape for this.
+**Order to pursue:** VibeVoice → MeloTTS → Fish-Speech → Orpheus.
+
+---
+
+## VibeVoice — the one I got wrong, and why it is the most important of the five
+
+I dismissed this in one line as "same cloning wall, and the repo has pivoted to
+ASR". Both halves were wrong, and Dave pushed back: *"you too quickly dismissed
+the other ones i gave you. vibevoice, for example. dont do that."* He was right.
+What I did was skim a README, see ASR release notes at the top, and pattern-match
+to a conclusion I already held.
+
+**What it actually is** (Microsoft Research, [tech report](https://arxiv.org/abs/2508.19205)):
+
+- **Up to 90 minutes of continuous speech in a single generation** (1.5B, 64K
+  context). Large does ~45 min.
+- **Up to 4 distinct speakers** with consistent identity and natural turn-taking.
+- Continuous acoustic + semantic tokenisers at a **7.5 Hz frame rate**, with a
+  Qwen2.5 LLM for context and a diffusion head for acoustic detail.
+
+**Why this is bigger than the accent question.** Chunking is the structural wound
+in this pipeline, and almost every audio defect found on 2026-07-27 traces back
+to it:
+
+- TADA has no long-form mode, so chunks are hard-concatenated and Dave heard
+  "weird pacing"; we paper over it with `JOIN_SILENCE_MS = 250`.
+- Chunk-initial instability forced the `LEADIN = "Right. "` hack, whose trimmer
+  then leaks the word into the audio.
+- The entire transcript-capture and ASR-verification apparatus exists to police
+  per-chunk rendering.
+
+**A model that renders 90 minutes in one pass deletes that whole problem class**,
+and 4-speaker support means distinct character voices in fiction — something
+nothing else here can do.
+
+**Availability (checked, not assumed):**
+
+| Weight | Status |
+|---|---|
+| `microsoft/VibeVoice-1.5B` | **available**, 64K ctx, ~90 min |
+| `microsoft/VibeVoice-Realtime-0.5B` | **available**, ~300 ms first audio, single speaker, streaming |
+| `microsoft/VibeVoice-Large` | **401 / disabled** — community mirrors exist (`aoi-ot/VibeVoice-Large`, `aoi-ot/VibeVoice-7B`) |
+| GGUF quantisations | exist (`wsbagnsv1/VibeVoice-1.5B-gguf`) — relevant for CPU on zorin |
+
+**Constraints to respect:**
+
+- Licensed **for research purposes**. Personal library use is within spirit;
+  commercial is not.
+- **English and Chinese only.** Other languages "may be unintelligible".
+- Microsoft disabled the repo in Sept 2025 over misuse, then restored it. The
+  Large weights remain 401.
+- **No accent controls.** It will not solve Irish or Welsh. Its value here is
+  long-form coherence and multi-speaker, not accent.
+
+**The lesson, recorded because it is the same one three times over:** I keep
+converting "this doesn't solve the problem I'm currently fixated on" into "this
+isn't worth looking at". VibeVoice does not fix accents — and it is still
+probably the most valuable model on this list for an audiobook pipeline.
 
 ### So what is actually left for local accented English
 
@@ -239,6 +295,15 @@ sent them over. MeloTTS — five native English accent variants, exactly the
 architecture that works — was the obvious first stop and I had not looked at it.
 **When a class of approach fails repeatedly, survey the alternatives instead of
 producing another instance of the failing class.**
+
+**1c. Dismissed candidates on a skim instead of a test.** I wrote VibeVoice off
+in one line — "same cloning wall, pivoted to ASR" — from README headlines.
+Reading it properly showed a model that renders **90 minutes in one pass with 4
+speakers**, which attacks the chunking problem that causes most of the audio
+defects in this repo. Dave: *"you too quickly dismissed the other ones i gave
+you. vibevoice, for example. dont do that."* **A candidate that does not solve
+today's problem may still be the most valuable thing on the list. Read it before
+ranking it.**
 
 **2. Re-researched what the repo already contained. Three times.**
 The VCTK accent voices were already installed. The Edge Australian voices were
