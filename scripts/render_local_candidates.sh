@@ -42,7 +42,8 @@ PY
   docker cp "${output_file}" "${container}:${probe_file}" >/dev/null
   docker exec "${container}" ffprobe -v error \
     -show_entries format=duration -of default=noprint_wrappers=1 "${probe_file}"
-  docker exec "${container}" rm -f "${probe_file}"
+  # docker cp creates the probe as root even though the service runs non-root.
+  docker exec --user 0 "${container}" rm -f "${probe_file}"
   pid="$(docker inspect --format '{{.State.Pid}}' "${container}")"
   cgroup="$(awk -F: '$1 == "0" {print $3}' "/proc/${pid}/cgroup")"
   peak_bytes="$(cat "/sys/fs/cgroup${cgroup}/memory.peak")"
