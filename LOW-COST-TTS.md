@@ -43,12 +43,16 @@ The identical Arthur hard passage was rendered on a free Kaggle P100 (Higgs's
 valid full clip used three separately generated paragraphs after its single
 full-text call truncated at the first blank line). Dave's first listening gate
 put **MOSS at 10/10**, called Qwen nearly issue-free, put VibeVoice at **9/10**,
-and gave Higgs 10/10 for pronunciation but not stability. Full-chapter tests
-are now running before any engine is promoted.
+and gave Higgs 10/10 for pronunciation but not stability. MOSS's first full
+chapter was complete but failed the continuity listening gate: it sounded like
+sentences strung together with unusual pauses. The harness had rendered 105
+independent chunks and inserted 104 x 0.35 s hard-silence joins (36.4 s total),
+so this result cannot distinguish engine behavior from assembly behavior. A
+no-join, single-generation chapter is queued before MOSS is promoted or rejected.
 
 | Candidate | Measured P100 RTF | P100 GPU hours / 12.4h book | Nominal 30h Kaggle week | First listening result |
 |---|---:|---:|---:|---|
-| MOSS-TTS 1.5B | **1.132** | **14.04h** | 46.8% | Most expressive/natural; 10/10 |
+| MOSS-TTS Local Transformer v1.5 | **1.132** | **14.04h** | 46.8% | Short clip 10/10; segmented chapter continuity failed, single-pass A/B queued |
 | VibeVoice 1.5B | **1.161** | **14.40h** | 48.0% | Good, slightly less emotive; 9/10 |
 | Higgs Audio 3B | **1.685** | **20.89h** | 69.6% | Excellent pronunciation; skips/repeats make this a lower bound |
 | Qwen3-TTS | **2.355** | **29.20h** | 97.3% | Cleanest audition, but nearly a whole weekly quota per book |

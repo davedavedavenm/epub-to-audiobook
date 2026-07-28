@@ -13,13 +13,18 @@
 
 > ## MOSS / Qwen / VibeVoice / Higgs screening (2026-07-28)
 >
-> The first identical-passage auditions are heard. MOSS was the quality/compute
-> leader (10/10, expressive, RTF 1.132); Qwen was nearly issue-free but flatter
+> The first identical-passage auditions are heard. MOSS led the short sample
+> (10/10, expressive, RTF 1.132); Qwen was nearly issue-free but flatter
 > (RTF 2.355); VibeVoice was good but less emotive (9/10, RTF 1.161); Higgs had
 > 10/10 pronunciation when correct but audible skip/repeat and garble artifacts
-> (RTF 1.685 on the direct P100 paragraph). Full-chapter MOSS/Vibe/Qwen jobs and
-> a deterministic two-seed Higgs seam test are running on free Kaggle. They are
-> **unverified** until duration and ASR guards pass and Dave hears the outputs.
+> (RTF 1.685 on the direct P100 paragraph). MOSS's first full chapter passed
+> duration/ASR but failed Dave's continuity listening gate: it sounded like
+> sentences strung together with odd pauses. The harness itself used 105
+> independent generations and 104 hard 0.35 s joins (36.4 s inserted silence),
+> so a vendor-supported single-pass chapter is queued to separate model behavior
+> from harness behavior. Vibe/Qwen chapter validation and the deterministic
+> two-seed Higgs seam test remain in progress on free Kaggle. They are
+> **unverified** until all guards pass and Dave hears the outputs.
 
 > ## Audiobook quality gate (2026-07-28)
 >
