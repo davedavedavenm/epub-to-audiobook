@@ -40,6 +40,9 @@ fi
 if [[ "${ENABLE_OMNIVOICE_PROFILE:-0}" == "1" ]]; then
   PROFILE_ARGS+=(--profile omnivoice)
 fi
+if [[ "${ENABLE_CHATTERBOX_V3_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile chatterbox-v3)
+fi
 
 echo "Enabled Compose profiles: ${PROFILE_ARGS[*]}"
 APP_GIT_SHA="${GIT_SHA}" APP_BUILD_TIME="${BUILD_TIME}" APP_VERSION="${TAG}" \

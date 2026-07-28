@@ -83,13 +83,14 @@ def test_years_spelled_for_both_modern_and_legacy():
 
 
 def test_candidate_sample_accepts_extensionless_and_mp3_urls():
-    sample = appmod.PREVIEWS_DIR / 'me_british.mp3'
-    sample.write_bytes(b'ID3candidate-audio')
-
     with appmod.app.test_client() as client:
-        for path in ('/api/sample/me_british', '/api/sample/me_british.mp3'):
-            response = client.get(path)
-            assert response.status_code == 200
-            assert response.mimetype == 'audio/mpeg'
-            assert response.data == b'ID3candidate-audio'
-            assert 'me_british.mp3' in response.headers['Content-Disposition']
+        for name in ('me_british', 'vctk_irish_m_p364_native',
+                     'cv3_southafrican_male'):
+            sample = appmod.PREVIEWS_DIR / f'{name}.mp3'
+            sample.write_bytes(b'ID3candidate-audio')
+            for path in (f'/api/sample/{name}', f'/api/sample/{name}.mp3'):
+                response = client.get(path)
+                assert response.status_code == 200
+                assert response.mimetype == 'audio/mpeg'
+                assert response.data == b'ID3candidate-audio'
+                assert f'{name}.mp3' in response.headers['Content-Disposition']

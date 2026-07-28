@@ -154,6 +154,39 @@ services:
       retries: 5
       start_period: 180s
 
+  # Chatterbox Multilingual V3 — isolated accent-preservation candidate.
+  # It shares code and model cache with the other Chatterbox variants but loads
+  # the 500M multilingual checkpoint in its own process. Evaluation only until
+  # Irish and South African references have been graded by ear.
+  chatterbox-v3:
+    image: ghcr.io/davedavedavenm/epub-to-audiobook-chatterbox:latest
+    build:
+      context: ./chatterbox
+    container_name: chatterbox-v3
+    logging: *default-logging
+    ports:
+      - "8009:8004"
+    restart: unless-stopped
+    mem_limit: 8g
+    memswap_limit: 8g
+    environment:
+      - CHATTERBOX_MULTILINGUAL_V3=1
+      - CHATTERBOX_CHUNK_CHARS=${CHATTERBOX_CHUNK_CHARS:-280}
+      # Low CFG gives the reference accent the strongest chance to survive.
+      - CHATTERBOX_CFG_WEIGHT=${CHATTERBOX_V3_CFG_WEIGHT:-0}
+      - NUMBA_CACHE_DIR=/tmp/numba
+    volumes:
+      - chatterbox-cache:/data/hf
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/voices:/app/voices/custom
+    profiles:
+      - chatterbox-v3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+
   # Hume TADA — most natural voice-cloning engine (British narrators).
   # CPU by default. Start with: docker compose --profile tada up
   tada-tts:

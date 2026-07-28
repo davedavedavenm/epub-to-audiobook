@@ -35,6 +35,7 @@ VOICES_DIR = os.environ.get("VOICES_DIR", "/app/voices")
 CHUNK_CHARS = int(os.environ.get("CHATTERBOX_CHUNK_CHARS", "280"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NANO = os.environ.get("CHATTERBOX_NANO", "0") == "1"
+MULTILINGUAL_V3 = os.environ.get("CHATTERBOX_MULTILINGUAL_V3", "0") == "1"
 
 app = FastAPI()
 
@@ -65,11 +66,18 @@ def _load_voices():
 def _get_model():
     global _model
     if _model is None:
-        from chatterbox.tts_turbo import ChatterboxTurboTTS
-        if NANO:
+        if MULTILINGUAL_V3:
+            from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+
+            log.info("loading Chatterbox Multilingual V3 on %s ...", DEVICE)
+            _model = ChatterboxMultilingualTTS.from_pretrained(
+                device=DEVICE, t3_model="v3")
+        else:
+            from chatterbox.tts_turbo import ChatterboxTurboTTS
+        if NANO and not MULTILINGUAL_V3:
             log.info("loading Chatterbox Nano on %s ...", DEVICE)
             _model = ChatterboxTurboTTS.from_pretrained(device=DEVICE, nano=True)
-        else:
+        elif not MULTILINGUAL_V3:
             log.info("loading Chatterbox Turbo on %s ...", DEVICE)
             _model = ChatterboxTurboTTS.from_pretrained(device=DEVICE)
     return _model
@@ -119,6 +127,7 @@ def _startup():
 def health():
     return {"status": "ok", "device": DEVICE,
             "nano": NANO,
+            "multilingual_v3": MULTILINGUAL_V3,
             "cuda_available": torch.cuda.is_available(),
             "torch": torch.__version__,
             "torch_cuda": getattr(torch.version, "cuda", None),
@@ -153,12 +162,19 @@ def speech(req: SpeechReq):
             exag = req.exaggeration if req.exaggeration is not None else EXAGGERATION
             cfgw = req.cfg_weight if req.cfg_weight is not None else CFG_WEIGHT
             for chunk in _chunk(req.input):
-                try:
-                    wav = model.generate(chunk, audio_prompt_path=ref,
-                                         exaggeration=exag, cfg_weight=cfgw)
-                except TypeError:
-                    # older chatterbox-tts without these kwargs
-                    wav = model.generate(chunk, audio_prompt_path=ref)
+                if MULTILINGUAL_V3:
+                    wav = model.generate(chunk, language_id="en",
+                                         audio_prompt_path=ref,
+                                         exaggeration=exag,
+                                         cfg_weight=cfgw)
+                else:
+                    try:
+                        wav = model.generate(chunk, audio_prompt_path=ref,
+                                             exaggeration=exag,
+                                             cfg_weight=cfgw)
+                    except TypeError:
+                        # older chatterbox-tts without these kwargs
+                        wav = model.generate(chunk, audio_prompt_path=ref)
                 arr = wav.detach().cpu().numpy().astype("float32").reshape(-1)
                 pieces.append(arr)
                 del wav
