@@ -9,13 +9,17 @@ debugging problems the official docs already answered — see OPERATIONS.md
 
 ## Listening outcomes (one user, one book — NOT a general ranking)
 
-Recorded so the repo reflects what was verified by ear, on `Apple in China`
-(dense proper nouns, non-fiction), 2026-07-10:
+Recorded so the repo reflects what was verified by ear. The original comparison
+used `Apple in China` (dense proper nouns, non-fiction) on 2026-07-10; later
+accent-engine verdicts are dated in the table.
 
 | Engine | Verdict | Hardware |
 |---|---|---|
 | Chatterbox Turbo (`uk_male_minter` / "Arthur") | "really really good" — accepted for full-book use | CPU only (Ryzen 9 8945HS, 16 threads) |
 | TADA-1B (v8, cloned voice, after transcript+pacing fixes) | Better than earlier cuts, but residual pacing drift + proper-noun misreads | Kaggle T4 |
+| Deployed Piper regional/VCTK path (2026-07-28) | **Outputs rejected for production:** most sound bad, accents insufficiently authentic, and pronunciation inadequate. Cause remains open pending direct-current-runtime A/B listening | CPU only (zorin) |
+| MeloTTS (2026-07-28) | **Rejected:** bad overall TTS, poor pronunciation and poor number handling | CPU only (zorin) |
+| OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 
 **Read this as a data point, not a recommendation.** It reflects one listener,
 one non-fiction book, and CPU-only local hardware. TADA's ceiling is genuinely
@@ -26,6 +30,20 @@ control, no documented sampling params. On a GPU, with shorter chapters, or
 with fiction/dialogue, TADA may well win — and if Hume ships long-form support
 it likely becomes the default (see issue #21). Both engines stay first-class;
 pick by ear on your own hardware.
+
+## Piper deployment audit (2026-07-28)
+
+The listening verdict applies to our outputs, not automatically to every Piper
+deployment. The deployed ONNX hash matches the official VCTK-medium artifact and
+all configured speaker IDs match its `speaker_id_map`, so there is no evidence of
+a corrupt model or wrong-speaker bug. However, the official model is only
+medium/22.05 kHz, was fine-tuned from US Lessac, and uses `en-gb-x-rp` for every
+speaker. Our archived `openedai-speech` wrapper runs Piper 1.2.0 and transcodes
+previews to 64 kbps MP3; current upstream is 1.6.0 and supports raw phoneme
+injection. Same-text deployed-encoding, WAV-reencode and current-runtime clips
+exist and return `200 audio/mpeg`, but have not yet been graded by ear. See
+VOICES.md. Do not turn the failed-output verdict into a root-cause claim until
+that A/B is heard.
 
 ## Hume TADA-1B
 

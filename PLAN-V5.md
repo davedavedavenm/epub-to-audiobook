@@ -102,14 +102,18 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [ ] 5.3 Assert it: the first chunk's transcript must not begin with the
       lead-in word. That test would have caught this immediately.
 
-## 6. Warm up the Piper native accents — #43
+## 6. Audit the Piper synthesis path before closing it
 
-- [ ] 6.1 Gentle EQ plus a little room on the VCTK natives. Dave: *"some sound a
-      bit tinny or distant"* — VCTK was recorded anechoic on a headset mic and
-      the models inherited it.
-- [ ] 6.2 Judge by ear against the untouched version.
-
-Unlike accent, this does not fight the model.
+- [x] 6.1 Verify model bytes and all speaker IDs against upstream. They match;
+      there is no corrupt-download or wrong-speaker evidence.
+- [x] 6.2 Audit the rest of the path. It uses Piper 1.2.0 in an archived wrapper,
+      64 kbps MP3 previews, and the official medium VCTK model (US Lessac base,
+      one RP phonemizer across speakers).
+- [x] 6.3 Render same-text A/Bs for deployed 64 kbps, deployed synthesis from
+      WAV, and current Piper 1.6 direct.
+- [ ] 6.4 Grade those A/Bs by ear. Keep the current path out of production now;
+      call it a model/engine ceiling only after the direct-current clip also
+      fails. Do not spend time on EQ until this cause split is measured.
 
 ---
 

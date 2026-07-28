@@ -2,6 +2,11 @@
 
 Goal: keep audiobook generation below GBP3/book, ideally much less.
 
+> **Quality is the admission test; cost is a constraint after that.** A local,
+> free or fast engine that sounds bad is not a successful audiobook engine.
+> Candidates must first pass listening for naturalness, authentic accent,
+> pronunciation (including names and numbers), pacing and long-form comfort.
+
 > **The premise of this document has largely been won (2026-07-25).** It was
 > written when a good local render was impractical and the question was which
 > paid or quota-limited service to lean on. **Chatterbox Nano measures RTF 0.83
@@ -50,7 +55,7 @@ This means most mainstream premium APIs are too expensive for full-book default 
 |--------|--------|--------------------|-------|
 | Kokoro CPU | Implemented | GBP0 incremental | Best default if time is acceptable. Memory leak is mitigated by restarts and single concurrency. |
 | Kokoro on Vast.ai GPU | Implemented | Usually pennies if batched | Best bulk strategy. Spin up only for queued batches, keep concurrency around 2-3 on RTX 3060. |
-| Piper | Implemented | GBP0 incremental | Lowest-resource fallback. Quality is lower than Kokoro but reliable. |
+| Piper | Implemented | GBP0 incremental | Current deployed output is legacy/debug only and **rejected for production by ear**. Root cause is not assumed: speaker/model integrity passed audit; current-runtime and encoding A/B awaits listening. |
 | EdgeTTS | Implemented via `tts-proxy` | GBP0 direct API cost | Good quality and many voices. Treat as unofficial/fragile because it depends on the `edge-tts` package and Microsoft service behavior. |
 | AWS Polly Long-Form | Implemented via `tts-proxy` | Avoid | Proven too expensive for good-quality audiobook use. Keep only as legacy code path; do not use for normal conversions. |
 | Inworld TTS 1.5 | Implemented via `tts-proxy` | Likely over budget for full books | Keep as experimental/premium unless real account pricing proves otherwise. |
@@ -298,11 +303,16 @@ zorin stack — `uk_male_minter_ref.wav`, `uk_female_golding_ref.wav`
 
 Default path:
 
-1. Use Kokoro CPU for one-off conversions when time does not matter.
-2. Use Kokoro GPU autoscaling for batches; this is the best cost/speed point.
-3. Keep EdgeTTS as a free fallback for books where a Microsoft neural voice sounds better.
-4. Progress the Chatterbox Turbo track: real-book passage test, then a British reference voice, then deploy devnen/Chatterbox-TTS-Server beside Kokoro (same OpenAI API shape).
-5. Trial Lemonfox only if Chatterbox Turbo disappoints; its economics fit the GBP3/book target and its OpenAI-compatible API should be a small proxy addition.
+1. Audition the target book's hardest passage first. Reject any engine that fails
+   naturalness, pronunciation, accent authenticity or long-form comfort.
+2. Use the accepted Chatterbox Turbo “Arthur” outcome as the current local
+   quality reference, while still sampling each new book.
+3. Keep EdgeTTS as the heard-good accent baseline where internet use is acceptable.
+4. Keep OmniVoice as a short-form/local accent candidate while pronunciation
+   overrides and throughput are evaluated; grade Chatterbox Multilingual V3 by ear.
+5. Only then optimise cost and speed. The current Piper path and Melo are not
+   production fallbacks; Piper's direct-current-runtime A/B must be heard before
+   making an engine-wide claim.
 
 Avoid:
 

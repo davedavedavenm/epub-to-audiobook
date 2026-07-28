@@ -78,6 +78,14 @@ playbook but skips these is a net negative.
 12. **A regression guard that fires is right until proven otherwise.** They
     encode decisions that were paid for, often by ear. If one blocks a change,
     the default is that the change is wrong — not the guard.
+13. **Listening proves the output failed; it does not prove why.** Before
+    rejecting an engine, blaming a model, or proposing a replacement, audit the
+    exact deployed synthesis path against the repo history and the vendor's
+    current docs. Verify model identity/hash and quality tier, voice/speaker
+    mapping, language/phonemizer, inference defaults, wrapper/runtime version,
+    preprocessing, cache freshness and output transcoding. Then render a direct
+    upstream-vs-app A/B. Report the listening verdict separately from the
+    root-cause conclusion; leave the cause open when the A/B has not been heard.
 
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.

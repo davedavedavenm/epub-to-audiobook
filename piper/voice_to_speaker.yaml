@@ -12,10 +12,12 @@
 # would not have helped, which is why the reference clips audited clean
 # (all ~18s, all distinct, all the right speakers).
 #
-# Piper's `en_GB-vctk-medium` was TRAINED on these exact speakers, so the
-# accent is baked into the model rather than transferred at inference. It is a
-# more synthetic voice than Chatterbox, but the accent is real. That is the
-# trade, and it is Dave's to judge by ear.
+# Piper's `en_GB-vctk-medium` was TRAINED on these exact speakers, so this was a
+# reasonable candidate to audition. That fact did NOT establish accent fidelity
+# or quality: Dave subsequently rejected the current outputs as poor and not
+# authentic enough. The model is medium quality, was fine-tuned from US Lessac,
+# and uses one `en-gb-x-rp` phonemizer for every speaker. See VOICES.md for the
+# synthesis-path audit; do not promote speaker provenance into a quality claim.
 #
 # Speaker indices come from the model's own speaker_id_map (rhasspy/piper-voices
 # voices.json), NOT from the VCTK speaker number. p364 is index 106, not 364.
@@ -46,7 +48,7 @@ tts-1:
     model: voices/en_US-libritts_r-medium.onnx
     speaker: 163
 
-  # ---- VCTK native-accent narrators ----
+  # ---- VCTK accent-labelled speakers (evaluation/legacy; not approved) ----
   # Irish
   vctk_irish_m_p364_native:
     model: voices/en_GB-vctk-medium.onnx

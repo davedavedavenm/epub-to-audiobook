@@ -446,8 +446,7 @@ VOICES = {
     'am_eric': {'name': 'Eric', 'accent': 'American', 'gender': 'Male', 'engine': 'kokoro'},
     'am_liam': {'name': 'Liam', 'accent': 'American', 'gender': 'Male', 'engine': 'kokoro'},
 
-    # ============ PIPER VOICES - HIGH QUALITY ONLY ============
-    # ============ PIPER VOICES (LOCAL, FAST) ============
+    # ============ PIPER VOICES (LOCAL, FAST; NOT QUALITY-APPROVED) ============
     'fable': {'name': 'Northern Male', 'accent': 'British', 'gender': 'Male', 'engine': 'piper'},
     'alloy': {'name': 'Alloy (Piper)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
     'echo': {'name': 'Echo (Piper)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
@@ -527,14 +526,16 @@ VOICES = {
     'tadhg_hynes': {'name': 'Tadhg Hynes (rich, Hardy/Dickens)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'chatterbox'},
     'martin_geeson': {'name': 'Martin Geeson (British male, classic prose)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'nigel_boydell': {'name': 'Nigel Boydell (British male, characterful)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
-    # --- VCTK accent-labelled speakers, NATIVE (Piper, accent trained in) ---
+    # --- VCTK accent-labelled speakers (Piper; evaluation/legacy only) ---
     # Dave, 2026-07-27: "those accents are shit" — of the CLONES below. The
     # reference clips audited clean (right speakers, ~18s each, all distinct),
     # so the speakers were never the problem. Zero-shot cloning transfers
     # timbre well and phonetics poorly, so an Irish reference lands as
     # vaguely-Irish. Piper's en_GB-vctk-medium was TRAINED on these exact
-    # speakers, so the accent is in the weights instead of being transferred.
-    # More synthetic voice, real accent — settle it by ear.
+    # speakers, which justified an audition but did not establish authenticity.
+    # Dave rejected the current outputs on 2026-07-28 for voice quality, accent
+    # authenticity and pronunciation. See VOICES.md for the deployment audit;
+    # the root cause remains open until its current-runtime A/B is heard.
     'vctk_irish_m_p364_native': {'name': 'Irish male — Donegal (native)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
     'vctk_irish_m_p245_native': {'name': 'Irish male — Dublin (native)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
     'vctk_irish_f_p288_native': {'name': 'Irish female — Dublin (native)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},

@@ -1,5 +1,22 @@
 # Project Status & Remaining Tasks
 
+> ## Audiobook quality gate (2026-07-28)
+>
+> **A great-sounding audiobook is the objective.** Naturalness, authentic accent,
+> pronunciation of words/names/numbers, pacing and long-form listenability come
+> before locality, cost, memory or speed.
+>
+> **The current Piper outputs are rejected for production audiobook narration.**
+> Dave's latest listening verdict is that most sound bad, the accents are not
+> authentic enough, and pronunciation is inadequate. This
+> supersedes the earlier provisional *"not bad… tinny or distant"* assessment.
+> That verdict does not by itself prove an engine-level cause. The deployed
+> model hash and all speaker mappings pass audit, but the path uses an archived
+> wrapper, Piper 1.2.0, 64 kbps previews, and a medium VCTK model fine-tuned from
+> US Lessac with one RP phonemizer for every speaker. Current Piper 1.6/direct-WAV
+> A/B clips have been rendered; listening is still required. Availability must
+> not be presented as a solution to local accents in the meantime.
+
 > ## Local accent candidates deployed (2026-07-28) — first listening verdict
 >
 > MeloTTS and OmniVoice now run as isolated, opt-in CPU services on zorin
@@ -42,9 +59,10 @@
 > generation is ~1.3 GiB. Melo code/weights are MIT; OmniVoice code is
 > Apache-2.0 but its model weights are CC BY-NC 4.0.
 
-> **Additional local accents:** Piper VCTK already provides selectable Irish
-> (Donegal, Dublin, Cork), Northern Irish (Belfast), Scottish, Welsh-female and
-> Australian-male voices. Chatterbox Multilingual V3 is now an isolated CPU
+> **Additional local accents:** Piper VCTK exposes selectable Irish, Northern
+> Irish, Scottish, Welsh-female and Australian-male speaker labels, but those
+> outputs are now **rejected for production use** under the quality gate above.
+> Chatterbox Multilingual V3 is an isolated CPU
 > candidate for higher-quality Irish and South African cloning. The identical
 > hard sample rendered in **316.36 s / 76.248 s audio (RTF 4.15)** for Irish and
 > **319.20 s / 66.408 s (RTF 4.81)** for South African; peak cgroup memory on
@@ -69,14 +87,14 @@
 > | Hyphens | `daisy-chain` no longer read with a gap inside it. Graded better by ear on Nano |
 > | Articles | Land in an ABS **podcast** library grouped by source site, not on the audiobook shelf (#36 closed) |
 > | TADA | Runs locally on CPU for the first time — fp32→bf16, peak 15.99 GiB → 10.00 GiB, RTF 1.68 (#23 closed) |
-> | Accents | Native-accent Piper VCTK voices installed; twelve bad Chatterbox clones removed; Edge Australian voices labelled |
+> | Accents | Current Piper VCTK outputs rejected by ear; root-cause A/B pending; twelve bad Chatterbox clones removed; Edge Australian voices labelled |
 >
 > **The finding that matters most:** an accent lives in the **model**, not the
 > reference clip. Cloning carries timbre and not phonetics. Chatterbox's
 > `cfg_weight` is the one lever that moves this — default `0.5` fights the
 > accent, `0` lets it through — and every clip rendered today until the very end
-> used the default. Nano at `cfg_weight=0` is the best Chatterbox result so far;
-> the Piper natives still beat it.
+> used the default. Nano at `cfg_weight=0` was the best Chatterbox result in that
+> comparison, but neither it nor Piper meets the current production quality bar.
 >
 > **Failures worth knowing about**, in full in VOICES.md: never read the
 > Chatterbox docs; re-researched three things the repo already contained;
