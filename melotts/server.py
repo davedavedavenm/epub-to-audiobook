@@ -2,6 +2,7 @@
 
 import io
 import logging
+import os
 import subprocess
 import threading
 
@@ -23,6 +24,15 @@ _generation_lock = threading.Lock()
 def _get_model():
     global _model
     if _model is None:
+        # g2p_en still auto-downloads the pre-NLTK-3.9 resource name. Current
+        # NLTK requests the language-suffixed tagger instead, so seed both the
+        # tagger and CMU dictionary in our persistent writable cache.
+        import nltk
+
+        nltk_dir = os.environ.get("NLTK_DATA", "/data/nltk")
+        for resource in ("averaged_perceptron_tagger_eng", "cmudict"):
+            nltk.download(resource, download_dir=nltk_dir, quiet=True)
+
         from melo.api import TTS
 
         log.info("loading MeloTTS English model on cpu")
