@@ -23,12 +23,15 @@ NUM_STEP = int(os.environ.get("OMNIVOICE_NUM_STEP", "32"))
 torch.set_num_threads(int(os.environ.get("OMNIVOICE_THREADS", "6")))
 
 VOICE_INSTRUCTIONS = {
-    "british-female": "female, adult, warm audiobook narrator, British accent, clear and natural",
-    "british-male": "male, adult, warm audiobook narrator, British accent, clear and natural",
-    "australian-female": "female, adult, warm audiobook narrator, Australian accent, clear and natural",
-    "australian-male": "male, adult, warm audiobook narrator, Australian accent, clear and natural",
-    "indian-female": "female, adult, warm audiobook narrator, Indian English accent, clear and natural",
-    "indian-male": "male, adult, warm audiobook narrator, Indian English accent, clear and natural",
+    # OmniVoice validates every comma-separated item against a fixed upstream
+    # vocabulary. Keep these exact: prose descriptions are rejected, not merely
+    # ignored (the valid list lives in docs/voice-design.md upstream).
+    "british-female": "female, young adult, british accent",
+    "british-male": "male, middle-aged, british accent",
+    "australian-female": "female, young adult, australian accent",
+    "australian-male": "male, middle-aged, australian accent",
+    "indian-female": "female, young adult, indian accent",
+    "indian-male": "male, middle-aged, indian accent",
 }
 
 app = FastAPI()
@@ -107,4 +110,3 @@ def speech(req: SpeechRequest):
         )[0]
     payload, media_type = _encode(audio, model.sampling_rate, req.response_format.lower())
     return Response(content=payload, media_type=media_type)
-

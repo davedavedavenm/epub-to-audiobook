@@ -16,7 +16,7 @@ PY
 
 render() {
   local engine="$1" port="$2" voice="$3" output="$4" container="$5"
-  local text_file payload_file output_file pid cgroup peak_bytes
+  local text_file payload_file output_file probe_file pid cgroup peak_bytes
   text_file="$(mktemp)"
   payload_file="$(mktemp)"
   trap 'rm -f "${text_file}" "${payload_file}"' RETURN
@@ -38,9 +38,11 @@ PY
     "http://127.0.0.1:${port}/v1/audio/speech" \
     -o "${output_file}"
   stat --format='size=%s' "${output_file}"
-  docker exec -i "${container}" ffprobe -v error -i pipe:0 \
-    -show_entries format=duration -of default=noprint_wrappers=1 \
-    < "${output_file}"
+  probe_file="/tmp/${output}.mp3"
+  docker cp "${output_file}" "${container}:${probe_file}" >/dev/null
+  docker exec "${container}" ffprobe -v error \
+    -show_entries format=duration -of default=noprint_wrappers=1 "${probe_file}"
+  docker exec "${container}" rm -f "${probe_file}"
   pid="$(docker inspect --format '{{.State.Pid}}' "${container}")"
   cgroup="$(awk -F: '$1 == "0" {print $3}' "/proc/${pid}/cgroup")"
   peak_bytes="$(cat "/sys/fs/cgroup${cgroup}/memory.peak")"
