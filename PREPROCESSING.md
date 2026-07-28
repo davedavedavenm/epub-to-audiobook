@@ -8,6 +8,14 @@ worst listening problems were text defects, not voice defects.
 
 ## ✅ SETTLED BY EAR 2026-07-27 — modern engines get RAW text
 
+> **Edge exception found by ear, 2026-07-28:** the accent was *"not bad"*, but
+> all Chinese firms' names were pronounced badly in the Edge audition. Edge uses
+> the legacy path and therefore received the current seed respellings, so their
+> presence does not prove pronunciation is fixed. Because auditions and books
+> share preprocessing, this is a real output-path defect for Chinese-business
+> nonfiction. Capture the exact payload and run raw-vs-current Edge A/B before
+> changing either the lexicon or engine classification.
+
 The single most-litigated question in this pipeline is closed. Three clips, one
 sentence, identical voice and engine, the respelling the only variable:
 

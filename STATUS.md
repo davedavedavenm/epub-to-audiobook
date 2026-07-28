@@ -41,6 +41,12 @@
 > phoneme overrides, so that is a fixable lexicon issue rather than an accent
 > limitation.
 >
+> **Edge listening update (Dave, 2026-07-28):** its accent was *"not bad"*, but
+> all Chinese firms' names were pronounced badly. This means Edge is an accent
+> baseline, not yet a quality-approved narrator for Chinese-business nonfiction.
+> The audition used the shared book preprocessing path; capture its exact payload
+> and run raw-vs-current A/B before blaming Edge or changing the lexicon.
+>
 > **Measured conclusion:** Melo is fast enough for full books but fails quality;
 > OmniVoice at
 > its upstream 32-step default is not a local CPU audiobook engine on this
@@ -413,23 +419,19 @@ can drive, and self-service configuration.
 
 ## Open work → GitHub issues
 
-**Queried from the API 2026-07-25 — these five are the entire open backlog.**
-Everything previously listed here (#7–#15: the QA auto-fix loop, the TADA hiss
-A/B, the Vast memory cap, the failover toggle, the Kaggle clean-audio
-validation, the startup-recovery bug and the ABS sync bug) is **closed**.
+**Refreshed from GitHub on 2026-07-28.**
 
 | Issue | Kind | What | Note |
 |---|---|---|---|
 | [#21](../../issues/21) | enhancement | TADA: path to production-ready (parked — capability high, control missing) | The quality work. **Not blocked by #23** — see the note below |
-| [#23](../../issues/23) | bug | TADA OOMs on **local CPU** | **Symptom changed 2026-07-25** — the meta-tensor load error is fixed; it now builds, starts healthy, and OOMs on first synthesis against its 10 GiB cgroup |
-| [#24](../../issues/24) | enhancement | Inworld's 12 voices are selectable but cannot work without an API key — gate or hide them | Confirmed live: `inworld:false`, `polly:false` in `/api/engines/health` |
-| [#25](../../issues/25) | enhancement | Convert tab visual cleanup (hierarchy, spacing, demote advanced controls) | PLAN-V3 #4 shipped the 3-step wizard; **check whether this cosmetic remainder is still real before working it** |
-| ~~#27~~ | — | **Settled by ear 2026-07-27: raw text wins.** "A better by far." The modern-engine filter is correct and stays; see PREPROCESSING.md |
-| [#36](../../issues/36) | enhancement | URL → audio. **Shipped v1.7.0** | paste a link, preview, narrate |
-| ~~#39~~ | — | iGPU for Whisper — **closed unnecessary**. CPU measured fast enough, and faster-whisper cannot use OpenVINO anyway |
-
-Not yet an issue but the biggest lever: **GPU auto-provision for TADA/Chatterbox
-from the UI** so quality engines don't run on CPU (the "one-click" goal).
+| [#33](../../issues/33) | bug | Local render silently skipped ASR verification | Never sync an unverified book as if it passed |
+| [#37](../../issues/37) | bug | Settings save blocked by wrong WAL ownership | Deployment/settings reliability |
+| [#40](../../issues/40) | bug | Two renders of one book are indistinguishable in Audiobookshelf | Preserve narrator/render identity |
+| [#41](../../issues/41) | enhancement | Automatically re-render chunks that fail ASR | Close the quality-control loop |
+| [#42](../../issues/42) | enhancement | Article RSS and Telegram link capture | Article ingestion workflow |
+| [#43](../../issues/43) | enhancement | Chatterbox Multilingual V3 accents + per-voice `cfg_weight` | Local accent candidate |
+| [#44](../../issues/44) | enhancement | Evaluate VibeVoice 90-minute single-pass rendering | Long-form continuity candidate |
+| [#45](../../issues/45) | enhancement | Persistent voice-sample play/pause across tabs and menus | One global player; preserve state/position; prevent overlaps |
 
 ## Live deployment check (2026-07-25)
 

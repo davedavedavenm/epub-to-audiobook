@@ -86,11 +86,18 @@ English:
 | **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Irish + ZA clips rendered; listening pending |
 | **XTTS-v2** | clones from a reference; reported to carry accent | yes | tested and rejected — see below |
 | **Chatterbox** Nano/Turbo | none. English-only, American phonetics | yes | proven twice not to hold an accent |
-| **Edge** | IE, AU, NZ, GB, ZA, IN, CA, HK, KE, NG, PH, SG, TZ, US | **no** | works, graded good, needs internet |
+| **Edge** | IE, AU, NZ, GB, ZA, IN, CA, HK, KE, NG, PH, SG, TZ, US | **no** | accents “not bad”, but Chinese company names were all poor; needs internet |
 
 Edge's full English list was checked live and is worth knowing: it has **Irish
 male and female** (Connor, Emily), Australian, New Zealand, South African and
 five British voices. **No Welsh anywhere**, on any engine, cloud or local.
+
+**Latest Edge listening verdict (Dave, 2026-07-28):** the accent was *"not
+bad"*, but all Chinese firms' names were pronounced badly. This is a real
+audiobook-quality failure for Chinese-business nonfiction even though the accent
+passes. Do not assume the existing seed respellings solve it. The audition and
+book share preprocessing, but the exact Edge payload still needs a raw-vs-current
+A/B before assigning the cause to Edge or changing the lexicon.
 
 OmniVoice's upstream voice-design list is closed, not free-form: American,
 British, Australian, Canadian, Indian, Chinese, Korean, Japanese, Portuguese
@@ -291,7 +298,7 @@ recorded speech if any is available.
 |---|---|
 | Irish or South African, local | **No approved production voice yet.** Chatterbox Multilingual V3 clips exist but remain ungraded. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
-| Irish, South African or Australian, online | Edge remains the acceptable accent baseline heard so far; it is not local. |
+| Irish, South African or Australian, online | Edge remains an acceptable **accent** baseline, but is not approved for Chinese-business nonfiction because company-name pronunciation failed. It is not local. |
 | Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
 | British/general narration, local | Use only a voice that has passed the target book's listening sample; Chatterbox Turbo “Arthur” is the currently recorded accepted full-book outcome. |
 
