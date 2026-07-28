@@ -8,10 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements.txt .
+# Melo imports its Japanese cleaner even for English. Its setup hook is
+# skipped when pip builds a wheel, so reproduce the vendor Dockerfile's
+# explicit dictionary install or MeCab fails before the English model loads.
 RUN pip install --no-cache-dir \
       torch==2.1.2 torchaudio==2.1.2 \
       --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && python -m unidic download
 
 COPY server.py .
 
