@@ -190,6 +190,59 @@ services:
       retries: 5
       start_period: 600s
 
+  # MeloTTS — small, CPU-realtime English model with native British,
+  # Australian and Indian speaker embeddings. Evaluation-only until the
+  # rendered samples have passed listening and ASR checks.
+  melotts-tts:
+    build:
+      context: ./melotts
+    container_name: melotts-tts
+    logging: *default-logging
+    ports:
+      - "8007:8007"
+    restart: unless-stopped
+    mem_limit: 4g
+    memswap_limit: 4g
+    volumes:
+      - melotts-cache:/data
+    profiles:
+      - melotts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # OmniVoice — local voice design with explicit British/Australian/Indian
+  # accents. CPU float32 is slower but avoids relying on unsupported fp16 CPU
+  # kernels; its non-commercial model licence makes this evaluation-only.
+  omnivoice-tts:
+    build:
+      context: ./omnivoice
+    container_name: omnivoice-tts
+    logging: *default-logging
+    ports:
+      - "8008:8008"
+    restart: unless-stopped
+    mem_limit: 12g
+    memswap_limit: 12g
+    environment:
+      - OMNIVOICE_DEVICE=cpu
+      - OMNIVOICE_DTYPE=${OMNIVOICE_DTYPE:-float32}
+      - OMNIVOICE_THREADS=${OMNIVOICE_THREADS:-6}
+      - OMNIVOICE_NUM_STEP=${OMNIVOICE_NUM_STEP:-32}
+    volumes:
+      - omnivoice-cache:/data/hf
+    profiles:
+      - omnivoice
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
@@ -463,3 +516,5 @@ volumes:
   piper-data:
   chatterbox-cache:
   tada-cache:
+  melotts-cache:
+  omnivoice-cache:

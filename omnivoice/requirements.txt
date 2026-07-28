@@ -1,0 +1,5 @@
+omnivoice @ git+https://github.com/k2-fsa/OmniVoice.git@468e927ba3716cd8dd86421148dfb3046e9f9d7b
+fastapi==0.115.12
+uvicorn==0.34.2
+soundfile==0.13.1
+

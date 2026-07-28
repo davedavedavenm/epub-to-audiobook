@@ -34,6 +34,12 @@ fi
 if [[ "${ENABLE_TADA_PROFILE:-0}" == "1" ]]; then
   PROFILE_ARGS+=(--profile tada)
 fi
+if [[ "${ENABLE_MELOTTS_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile melotts)
+fi
+if [[ "${ENABLE_OMNIVOICE_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile omnivoice)
+fi
 
 echo "Enabled Compose profiles: ${PROFILE_ARGS[*]}"
 APP_GIT_SHA="${GIT_SHA}" APP_BUILD_TIME="${BUILD_TIME}" APP_VERSION="${TAG}" \

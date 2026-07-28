@@ -1,0 +1,6 @@
+melotts @ git+https://github.com/myshell-ai/MeloTTS.git@209145371cff8fc3bd60d7be902ea69cbdb7965a
+fastapi==0.115.12
+uvicorn==0.34.2
+soundfile==0.13.1
+numpy<2
+
