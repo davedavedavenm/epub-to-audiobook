@@ -13,6 +13,22 @@ Goal: keep audiobook generation below GBP3/book, ideally much less.
 
 Last reviewed: 2026-07-02 (cost tables); premise revised 2026-07-25. Rough conversion used for quick screening: USD1 ~= GBP0.75.
 
+## 2026-07-28 local accent bake-off
+
+Two candidates were containerised and actually rendered on zorin, using the
+same 192-word hard sample and CPU-only OpenAI-compatible endpoints. These are
+opt-in evaluation services until the clips are graded by ear.
+
+| Candidate | British RTF | Australian RTF | Peak memory | 12h-book CPU estimate | Current verdict |
+|---|---:|---:|---:|---:|---|
+| [MeloTTS](https://github.com/myshell-ai/MeloTTS) | **0.34** | **0.33** | 3.86 GiB | **~4.0 h** | Throughput qualifies; listening pending. Old/stale dependency stack and 4.16 GB image are maintenance costs. |
+| [OmniVoice](https://github.com/k2-fsa/OmniVoice) | **9.10** | **9.06** | 1.59 GiB | **~4.5 days** | Default-quality CPU throughput disqualifies it for full books; potentially useful for short clips if listening quality earns it. Non-commercial weights. |
+
+Whisper `base` sequence ratios were 0.769/0.802 for Melo and 0.826/0.823
+for OmniVoice. That proves the files contain mostly matching English; it does
+**not** grade accents or naturalness. Possible number errors require listening.
+See STATUS.md for exact wall times, durations, memory and clip paths.
+
 ## Book Cost Assumptions
 
 Provider pricing is usually per 1M characters. A practical audiobook estimate:

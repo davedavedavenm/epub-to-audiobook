@@ -1,5 +1,40 @@
 # Project Status & Remaining Tasks
 
+> ## Local accent candidates deployed (2026-07-28) — measured, not yet graded by ear
+>
+> MeloTTS and OmniVoice now run as isolated, opt-in CPU services on zorin
+> (`melotts-tts:8007`, `omnivoice-tts:8008`). Both expose the same
+> `/v1/audio/speech` shape as the existing engines. They are **evaluation
+> services, not selectable production voices**: promotion waits for Dave's
+> listening verdict on the clips below.
+>
+> Identical canonical 192-word sample, i5-12400, no GPU, default quality:
+>
+> | Engine / accent | Wall time | Audio | RTF | Peak cgroup memory | ASR sequence ratio |
+> |---|---:|---:|---:|---:|---:|
+> | Melo British | 21.52 s | 63.06 s | **0.34** | **3.86 GiB** | 0.769 |
+> | Melo Australian | 21.62 s | 66.17 s | **0.33** | **3.86 GiB** | 0.802 |
+> | OmniVoice British | 585.45 s | 64.37 s | **9.10** | **1.39 GiB** | 0.826 |
+> | OmniVoice Australian | 580.00 s | 64.03 s | **9.06** | **1.59 GiB** | 0.823 |
+>
+> **Measured conclusion:** Melo is fast enough for full books; OmniVoice at
+> its upstream 32-step default is not a local CPU audiobook engine on this
+> host (~4.5 days of compute for 12 hours of audio). That says nothing yet
+> about accent quality. Whisper `base` found broadly intact speech in all four,
+> but possible number/name errors remain — notably `230,000` heard as `23,000`
+> on both Omni clips. Listening must settle whether that is ASR or synthesis.
+>
+> Clips (all opened and returned `200 audio/mpeg`):
+> `/api/sample/me_british`, `/api/sample/me_australian`,
+> `/api/sample/ov_british`, `/api/sample/ov_australian`.
+>
+> Operational costs worth recording: Melo's image is **4.16 GB** because its
+> old multilingual import path requires a 526 MB UniDic download even for
+> English; idle RSS after generation is ~3.1 GiB against a 4 GiB cap.
+> OmniVoice's image is 2.33 GB plus ~3.0 GB of cached weights; idle RSS after
+> generation is ~1.3 GiB. Melo code/weights are MIT; OmniVoice code is
+> Apache-2.0 but its model weights are CC BY-NC 4.0.
+
 > ## Where things stand, 2026-07-27 (end of day)
 >
 > **Read next:** [VOICES.md](VOICES.md) for accents and engines — including the
