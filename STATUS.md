@@ -25,8 +25,8 @@
 > on both Omni clips. Listening must settle whether that is ASR or synthesis.
 >
 > Clips (all opened and returned `200 audio/mpeg`):
-> `/api/sample/me_british`, `/api/sample/me_australian`,
-> `/api/sample/ov_british`, `/api/sample/ov_australian`.
+> `/api/sample/me_british.mp3`, `/api/sample/me_australian.mp3`,
+> `/api/sample/ov_british.mp3`, `/api/sample/ov_australian.mp3`.
 >
 > Operational costs worth recording: Melo's image is **4.16 GB** because its
 > old multilingual import path requires a 526 MB UniDic download even for

@@ -90,6 +90,24 @@ the wiring *between* components, where the unit suite is blind.
 
 ## Incident log
 
+### 2026-07-28 — one incomplete HTTP request wedged the whole web UI
+
+- **Symptom:** the candidate sample links and even `/api/health` accepted TCP
+  connections but returned no HTTP bytes. Docker still showed the webapp as
+  healthy, so this initially looked like a bad sample URL or dead host.
+- **Evidence:** a curl from Zorin itself also timed out. After 300 seconds,
+  Gunicorn killed its only synchronous worker while its stack was blocked in
+  `sock.recv`; connection state included stalled `CLOSE-WAIT` clients.
+- **Cause:** the webapp had one synchronous Gunicorn worker. One client that
+  connected and did not finish its request could monopolise that worker, so
+  unrelated health, UI and sample requests queued behind it.
+- **Fix:** retain one process (the queue/recovery guards are in-memory) but use
+  Gunicorn's `gthread` worker with four threads. Sample routes also accept an
+  explicit `.mp3` suffix and return the real filename, which makes browsers and
+  chat clients recognise them as playable audio more reliably.
+- **Do not trust the Docker health badge alone for this failure.** Curl
+  `/api/health` and require a timely HTTP response.
+
 ### 2026-07-25 — Settings could not save: WAL sidecars owned by the wrong user
 - **Symptom:** every write through the Settings page returned
   `{"error":"attempt to write a readonly database"}`, so no API key, token or

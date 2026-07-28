@@ -63,4 +63,6 @@ USER appuser
 EXPOSE 8881
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["gunicorn", "--bind", "0.0.0.0:8881", "--workers", "1", "--timeout", "300", "app:app"]
+# Keep one process because queue/recovery guards are intentionally in-memory,
+# but do not let one slow or incomplete client monopolise the entire web UI.
+CMD ["gunicorn", "--bind", "0.0.0.0:8881", "--workers", "1", "--worker-class", "gthread", "--threads", "4", "--timeout", "300", "app:app"]

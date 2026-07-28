@@ -5066,6 +5066,11 @@ def audition_sample(name: str):
     """Serve a one-off audition clip — currently the 1997 A/B pair (#26), so the
     modern-engine number question is settled by ear rather than by argument.
     Allowlisted names only; never an arbitrary path."""
+    # Browsers and chat clients treat a URL ending in .mp3 more reliably as
+    # playable media. Keep the old extensionless URLs working too.
+    if name.endswith('.mp3'):
+        name = name[:-4]
+
     # #27: does chatterbox want pronunciation help at all? Three renders of one
     # sentence — raw, the current SHOUTY-CAPS seed style, and a natural
     # lowercase respelling. The filter that drops respellings for modern
@@ -5083,7 +5088,8 @@ def audition_sample(name: str):
     p = PREVIEWS_DIR / f"{name}.mp3"
     if not p.exists():
         return jsonify({'error': 'Not generated yet'}), 404
-    return send_file(p, mimetype='audio/mpeg')
+    return send_file(p, mimetype='audio/mpeg', download_name=p.name,
+                     conditional=True)
 
 
 @app.route('/api/preview/<voice_id>')
