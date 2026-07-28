@@ -22,10 +22,12 @@ USER appuser
 
 ENV HF_HOME=/data/hf
 ENV NLTK_DATA=/data/nltk
+# librosa JIT-compiles through numba at import time. The installed package is
+# read-only to appuser, so give numba an explicit writable cache directory.
+ENV NUMBA_CACHE_DIR=/tmp/numba
 EXPOSE 8007
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
     CMD curl -f http://localhost:8007/health || exit 1
 
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8007"]
-

@@ -203,6 +203,8 @@ services:
     restart: unless-stopped
     mem_limit: 4g
     memswap_limit: 4g
+    environment:
+      - NUMBA_CACHE_DIR=/tmp/numba
     volumes:
       - melotts-cache:/data
     profiles:
