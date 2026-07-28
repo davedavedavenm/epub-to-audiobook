@@ -21,9 +21,13 @@ accent-engine verdicts are dated in the table.
 | MeloTTS (2026-07-28) | **Rejected:** bad overall TTS, poor pronunciation and poor number handling | CPU only (zorin) |
 | OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 | EdgeTTS accented English voices (2026-07-28) | Accents “not bad”, but all tested Chinese company names were pronounced badly; not approved for Chinese-business nonfiction without a pronunciation A/B/fix | Microsoft cloud service |
+| MOSS-TTS 1.5B (2026-07-28) | **10/10:** simulated breath, more natural and expressive; strongest quality/compute result in the first audition | Kaggle P100 |
+| Qwen3-TTS (2026-07-28) | Almost no issues and very good; flatter than MOSS, but the cleanest reliability signal in the first audition | Kaggle P100 |
+| VibeVoice 1.5B (2026-07-28) | **9/10:** good, but a little less emotive; chapter-scale continuity test in progress | Kaggle P100 |
+| Higgs Audio V2/3B (2026-07-28) | Pronunciation **10/10** when correct, but the joined passage skipped/repeated near “What changed” and garbled/clipped the power-spec line; not long-form-safe yet | Kaggle P100 + HF Space |
 
-**Read this as a data point, not a recommendation.** It reflects one listener,
-one non-fiction book, and CPU-only local hardware. TADA's ceiling is genuinely
+**Read this as a data point, not a recommendation.** It reflects one listener
+and one hard passage/book; the hardware used is stated per row. TADA's ceiling is genuinely
 higher — mid-generation it spontaneously voiced a quotation in its own native
 voice with flawless prosody and pronunciation (v8 002, 03:03–03:55). Its
 weakness is *control*, not capability: no long-form mode, no pronunciation

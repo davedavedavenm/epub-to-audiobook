@@ -1,5 +1,26 @@
 # Project Status & Remaining Tasks
 
+> ## Persistent audition player shipped (2026-07-28) — #45
+>
+> Commit `200c696` is deployed to both webapp and worker. Voice cards, book
+> workspace previews and A/B comparison now share one audio element and one
+> fixed transport with voice name, elapsed/duration, seek, pause/resume, replay
+> and dismiss. A new sample aborts/replaces the old one, so auditions cannot
+> overlap. Chrome verification on the live Zorin stack paused Arthur at 16.8 s,
+> switched from Voices to Library, retained 16.8 s, and resumed to 19.4 s.
+> Both containers reported healthy on the same commit; 217 repository tests
+> passed (isolated import mode).
+
+> ## MOSS / Qwen / VibeVoice / Higgs screening (2026-07-28)
+>
+> The first identical-passage auditions are heard. MOSS was the quality/compute
+> leader (10/10, expressive, RTF 1.132); Qwen was nearly issue-free but flatter
+> (RTF 2.355); VibeVoice was good but less emotive (9/10, RTF 1.161); Higgs had
+> 10/10 pronunciation when correct but audible skip/repeat and garble artifacts
+> (RTF 1.685 on the direct P100 paragraph). Full-chapter MOSS/Vibe/Qwen jobs and
+> a deterministic two-seed Higgs seam test are running on free Kaggle. They are
+> **unverified** until duration and ASR guards pass and Dave hears the outputs.
+
 > ## Audiobook quality gate (2026-07-28)
 >
 > **A great-sounding audiobook is the objective.** Naturalness, authentic accent,

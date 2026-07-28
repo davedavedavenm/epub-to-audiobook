@@ -118,13 +118,13 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 
 ## 7. Persistent voice-sample player — #45
 
-- [ ] 7.1 Use one global audio controller for every voice audition. Starting a
+- [x] 7.1 Use one global audio controller for every voice audition. Starting a
       new sample stops/replaces the old one; samples must never overlap.
-- [ ] 7.2 Show a persistent play/pause control with the current voice name
+- [x] 7.2 Show a persistent play/pause control with the current voice name
       whenever a sample is loaded.
-- [ ] 7.3 Preserve playing/paused state and current position across every
+- [x] 7.3 Preserve playing/paused state and current position across every
       in-app tab and menu selection. Navigation must not destroy or orphan it.
-- [ ] 7.4 Keep the control accessible and synchronized with playing, paused and
+- [x] 7.4 Keep the control accessible and synchronized with playing, paused and
       ended events. Verify pause → navigate → resume from the same position.
 
 ---

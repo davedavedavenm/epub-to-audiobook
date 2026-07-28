@@ -37,6 +37,36 @@ win. These checks prove the files contain mostly matching English; they do
 **not** grade accents or naturalness. Dave's listening verdict is recorded above.
 See STATUS.md for exact wall times, durations, memory and clip paths.
 
+## 2026-07-28 next-generation audiobook shortlist
+
+The identical Arthur hard passage was rendered on a free Kaggle P100 (Higgs's
+valid full clip used three separately generated paragraphs after its single
+full-text call truncated at the first blank line). Dave's first listening gate
+put **MOSS at 10/10**, called Qwen nearly issue-free, put VibeVoice at **9/10**,
+and gave Higgs 10/10 for pronunciation but not stability. Full-chapter tests
+are now running before any engine is promoted.
+
+| Candidate | Measured P100 RTF | P100 GPU hours / 12.4h book | Nominal 30h Kaggle week | First listening result |
+|---|---:|---:|---:|---|
+| MOSS-TTS 1.5B | **1.132** | **14.04h** | 46.8% | Most expressive/natural; 10/10 |
+| VibeVoice 1.5B | **1.161** | **14.40h** | 48.0% | Good, slightly less emotive; 9/10 |
+| Higgs Audio 3B | **1.685** | **20.89h** | 69.6% | Excellent pronunciation; skips/repeats make this a lower bound |
+| Qwen3-TTS | **2.355** | **29.20h** | 97.3% | Cleanest audition, but nearly a whole weekly quota per book |
+
+Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
+At a conservative nine-hour job budget that means two Kaggle sessions for
+MOSS/Vibe, three for Higgs and four for Qwen. Kaggle is free, but quota and
+session fragmentation are costs.
+
+Read-only Vast offers checked at 2026-07-28 19:55 BST were about **$0.079/h for
+an RTX 3060**, **$0.213/h for an RTX 3090**, and **$0.360/h for an RTX 4090**,
+including 45 GB storage but excluding bandwidth. No instance was created. There
+is no measured Vast benchmark for these four engines yet: at an explicitly
+hypothetical 2x P100 speed on that 3090, a 12.4h book would be about **$1.49
+MOSS, $1.53 Vibe, $2.22 Higgs or $3.10 Qwen**. Do not treat those scenarios as
+measurements. The 3060 tier is not selectable until peak VRAM proves the model
+fits 12 GB.
+
 ## Book Cost Assumptions
 
 Provider pricing is usually per 1M characters. A practical audiobook estimate:
