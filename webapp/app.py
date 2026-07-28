@@ -409,7 +409,7 @@ TTS_ENGINES = {
     },
     'piper': {
         'name': 'Piper',
-        'description': 'Fast, lightweight neural TTS',
+        'description': 'Legacy/debug only — not approved for audiobook quality',
         'url_env': 'PIPER_URL',
         'default_url': 'http://piper-tts:8000/v1'
     }
@@ -447,12 +447,12 @@ VOICES = {
     'am_liam': {'name': 'Liam', 'accent': 'American', 'gender': 'Male', 'engine': 'kokoro'},
 
     # ============ PIPER VOICES (LOCAL, FAST; NOT QUALITY-APPROVED) ============
-    'fable': {'name': 'Northern Male', 'accent': 'British', 'gender': 'Male', 'engine': 'piper'},
-    'alloy': {'name': 'Alloy (Piper)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
-    'echo': {'name': 'Echo (Piper)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
-    'onyx': {'name': 'Onyx (Piper)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
-    'nova': {'name': 'Nova (Piper)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
-    'shimmer': {'name': 'Shimmer (Piper)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
+    'fable': {'name': 'Northern Male (Piper legacy)', 'accent': 'British', 'gender': 'Male', 'engine': 'piper'},
+    'alloy': {'name': 'Alloy (Piper legacy)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
+    'echo': {'name': 'Echo (Piper legacy)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
+    'onyx': {'name': 'Onyx (Piper legacy)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
+    'nova': {'name': 'Nova (Piper legacy)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
+    'shimmer': {'name': 'Shimmer (Piper legacy)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
 
     # ============ EDGETTS VOICES (FREE, HIGH QUALITY) ============
     # British Edge Voices
@@ -535,18 +535,18 @@ VOICES = {
     # speakers, which justified an audition but did not establish authenticity.
     # Dave rejected the current outputs on 2026-07-28 for voice quality, accent
     # authenticity and pronunciation. See VOICES.md for the deployment audit;
-    # the root cause remains open until its current-runtime A/B is heard.
-    'vctk_irish_m_p364_native': {'name': 'Irish male — Donegal (native)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_irish_m_p245_native': {'name': 'Irish male — Dublin (native)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_irish_f_p288_native': {'name': 'Irish female — Dublin (native)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_irish_f_p283_native': {'name': 'Irish female — Cork (native)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_northernirish_m_p292_native': {'name': 'Northern Irish male — Belfast (native)', 'accent': 'Northern Irish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_northernirish_f_p293_native': {'name': 'Northern Irish female — Belfast (native)', 'accent': 'Northern Irish', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_australian_m_p326_native': {'name': 'Australian male — Sydney (native)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_australian_m_p374_native': {'name': 'Australian male (native)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_welsh_f_p253_native': {'name': 'Welsh female — Cardiff (native)', 'accent': 'Welsh', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_scottish_m_p272_native': {'name': 'Scottish male — Edinburgh (native)', 'accent': 'Scottish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_scottish_f_p262_native': {'name': 'Scottish female — Edinburgh (native)', 'accent': 'Scottish', 'gender': 'Female', 'engine': 'piper'},
+    # the controlled Piper 1.2/1.6 + encoding A/B then failed at every layer.
+    'vctk_irish_m_p364_native': {'name': 'Irish male — Donegal (Piper legacy)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_irish_m_p245_native': {'name': 'Irish male — Dublin (Piper legacy)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_irish_f_p288_native': {'name': 'Irish female — Dublin (Piper legacy)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_irish_f_p283_native': {'name': 'Irish female — Cork (Piper legacy)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_northernirish_m_p292_native': {'name': 'Northern Irish male — Belfast (Piper legacy)', 'accent': 'Northern Irish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_northernirish_f_p293_native': {'name': 'Northern Irish female — Belfast (Piper legacy)', 'accent': 'Northern Irish', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_australian_m_p326_native': {'name': 'Australian male — Sydney (Piper legacy)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_australian_m_p374_native': {'name': 'Australian male (Piper legacy)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_welsh_f_p253_native': {'name': 'Welsh female — Cardiff (Piper legacy)', 'accent': 'Welsh', 'gender': 'Female', 'engine': 'piper'},
+    'vctk_scottish_m_p272_native': {'name': 'Scottish male — Edinburgh (Piper legacy)', 'accent': 'Scottish', 'gender': 'Male', 'engine': 'piper'},
+    'vctk_scottish_f_p262_native': {'name': 'Scottish female — Edinburgh (Piper legacy)', 'accent': 'Scottish', 'gender': 'Female', 'engine': 'piper'},
 
     # --- NO ACCENTED VOICES ON CHATTERBOX. THIS IS SETTLED. ---
     #
@@ -566,10 +566,9 @@ VOICES = {
     # talked myself out of it and shipped without listening. The cost was a
     # round of Dave's time.
     #
-    # Accented narrators therefore live on engines where the accent is IN THE
-    # MODEL: Piper native VCTK (above) and Edge for Australian. Do not add an
-    # accented chatterbox voice without new evidence that the engine has
-    # changed — a third attempt at this needs a reason, not a hunch.
+    # The Piper VCTK path above also failed by ear and remains only for legacy
+    # comparison. Do not add an accented Chatterbox or Piper production voice
+    # without materially new evidence and a passed listening sample.
     # ============ TADA (LOCAL/GPU, MOST NATURAL) ============
     'uk_male_minter_tada': {'name': 'Arthur — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
     'uk_female_golding_tada': {'name': 'Harriet — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
@@ -4553,10 +4552,10 @@ def delete_custom_voice(voice_id: str):
         return jsonify({'error': str(e)}), 500
 
 
-# Ordered preference for conversion failover: the human-cloned clone engines
-# first (best quality), then the always-local guaranteed-completes engines so a
-# book NEVER strands just because a GPU engine is down.
-_ENGINE_FALLBACK_ORDER = ['tada', 'chatterbox', 'kokoro', 'piper']
+# Ordered preference for conversion failover. Piper is deliberately excluded:
+# the controlled old/current-runtime + encoding A/B failed pronunciation and
+# sound quality. A failed job is preferable to silently producing a bad book.
+_ENGINE_FALLBACK_ORDER = ['tada', 'chatterbox', 'kokoro']
 
 
 def _voice_for_engine(voice, target_engine):

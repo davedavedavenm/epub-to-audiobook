@@ -244,6 +244,14 @@ def test_conversion_engine_failover_wired():
     assert 'allow_engine_fallback' in APP, "engine failover not wired into the queue gate (#6)"
 
 
+def test_rejected_piper_is_not_an_automatic_fallback():
+    """A healthy endpoint is not enough: Piper failed the controlled listening
+    A/B and must never silently replace a quality-approved engine."""
+    assert "_ENGINE_FALLBACK_ORDER = ['tada', 'chatterbox', 'kokoro']" in APP
+    assert 'PROFILE_ARGS=(--profile chatterbox-nano)' in DEPLOY
+    assert 'ENABLE_PIPER_PROFILE' in DEPLOY
+
+
 def _load_tp():
     import importlib.util
     spec = importlib.util.spec_from_file_location('tp2', ROOT / 'webapp' / 'tts_preprocess.py')

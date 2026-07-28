@@ -34,10 +34,12 @@ back. This incident did not touch conversion state or generated media.
   **RTF 0.87 vs 3.33**. A 12.4-hour book takes ~11 h on Nano vs ~41 h on Turbo —
   **faster than realtime on CPU, so full books no longer need a GPU at all.**
   Turbo remains fully selectable; it is simply no longer the default.
-- `scripts/deploy.sh` starts **Piper + chatterbox-nano** by default — Nano
+- `scripts/deploy.sh` starts **chatterbox-nano** by default — Nano
   carries the default voice, so its container must be up or the default engine
-  is offline on a fresh deploy. Turbo and TADA stay opt-in
-  (`ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`) because they are heavy.
+  is offline on a fresh deploy. Piper is legacy/debug and opt-in
+  (`ENABLE_PIPER_PROFILE=1`) after failing the controlled quality A/B. Turbo and
+  TADA stay opt-in (`ENABLE_CHATTERBOX_PROFILE=1` /
+  `ENABLE_TADA_PROFILE=1`) because they are heavy.
   **That describes a fresh deploy, not necessarily the running box.** A live
   check on 2026-07-25 found Turbo *and* kokoro up alongside nano and piper
   (opt-ins from earlier sessions, never brought down). Harmless on 31 GB, but

@@ -111,9 +111,10 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       one RP phonemizer across speakers).
 - [x] 6.3 Render same-text A/Bs for deployed 64 kbps, deployed synthesis from
       WAV, and current Piper 1.6 direct.
-- [ ] 6.4 Grade those A/Bs by ear. Keep the current path out of production now;
-      call it a model/engine ceiling only after the direct-current clip also
-      fails. Do not spend time on EQ until this cause split is measured.
+- [x] 6.4 Grade those A/Bs by ear. Dave: all three were *"absolute shit"*;
+      almost every word was wrong and they sounded bad. Close VCTK-medium,
+      remove Piper from automatic fallback, and do not spend time on EQ,
+      bitrate, wrapper upgrades or inference tuning around this model.
 
 ---
 
@@ -122,8 +123,8 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 Numbers (`50k`, decades, decimal percents, the thousands comma modern engines
 pause at) · hyphenated compounds no longer read with a pause · articles land in
 an ABS podcast library grouped by site · TADA runs locally on CPU (#23, bf16,
-RTF 1.68) · native-accent Piper voices installed · twelve bad accent clones
-removed · `cfg_weight` identified as the accent lever.
+RTF 1.68) · Piper VCTK installed, audited and rejected · twelve bad accent
+clones removed · `cfg_weight` identified as the accent lever.
 
 Full detail: STATUS.md, VOICES.md, OPERATIONS.md, and the closed issues.
 

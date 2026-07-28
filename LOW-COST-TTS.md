@@ -55,7 +55,7 @@ This means most mainstream premium APIs are too expensive for full-book default 
 |--------|--------|--------------------|-------|
 | Kokoro CPU | Implemented | GBP0 incremental | Best default if time is acceptable. Memory leak is mitigated by restarts and single concurrency. |
 | Kokoro on Vast.ai GPU | Implemented | Usually pennies if batched | Best bulk strategy. Spin up only for queued batches, keep concurrency around 2-3 on RTX 3060. |
-| Piper | Implemented | GBP0 incremental | Current deployed output is legacy/debug only and **rejected for production by ear**. Root cause is not assumed: speaker/model integrity passed audit; current-runtime and encoding A/B awaits listening. |
+| Piper | Implemented | GBP0 incremental | Legacy/debug only; **rejected for production by ear**. Deployed 64 kbps, same-WAV higher-bitrate, and current Piper 1.6 direct A/Bs all failed badly. Not an automatic fallback. |
 | EdgeTTS | Implemented via `tts-proxy` | GBP0 direct API cost | Good quality and many voices. Treat as unofficial/fragile because it depends on the `edge-tts` package and Microsoft service behavior. |
 | AWS Polly Long-Form | Implemented via `tts-proxy` | Avoid | Proven too expensive for good-quality audiobook use. Keep only as legacy code path; do not use for normal conversions. |
 | Inworld TTS 1.5 | Implemented via `tts-proxy` | Likely over budget for full books | Keep as experimental/premium unless real account pricing proves otherwise. |
@@ -310,9 +310,9 @@ Default path:
 3. Keep EdgeTTS as the heard-good accent baseline where internet use is acceptable.
 4. Keep OmniVoice as a short-form/local accent candidate while pronunciation
    overrides and throughput are evaluated; grade Chatterbox Multilingual V3 by ear.
-5. Only then optimise cost and speed. The current Piper path and Melo are not
-   production fallbacks; Piper's direct-current-runtime A/B must be heard before
-   making an engine-wide claim.
+5. Only then optimise cost and speed. Piper and Melo are not production
+   fallbacks. Reconsider Piper only for a materially different, independently
+   good model—not another wrapper or encoding change around VCTK-medium.
 
 Avoid:
 

@@ -11,12 +11,13 @@ pronunciation of ordinary words/proper nouns/numbers, pacing and long-form
 listenability are the first gate. Locality, cost, memory and speed matter only
 after an engine passes that listening gate.
 
-**The current deployed Piper outputs are rejected for production audiobooks
-(Dave, 2026-07-28).** Most sound bad, the accents do not sound authentic enough,
-and pronunciation is below the required standard. This supersedes the earlier
-provisional *"not bad… tinny or distant"* note. It does **not**, by itself,
-identify the engine as the cause. Accent metadata and speaker origin do not
-establish authenticity or audiobook quality.
+**The tested Piper path is rejected for production audiobooks (Dave,
+2026-07-28).** Most existing voices sounded bad and inauthentic. A controlled
+audit then compared deployed Piper 1.2 at both encodings with current Piper 1.6
+direct, using the same official VCTK model and text. Dave's verdict on all three:
+*"absolute shit… almost every word wrong, and sounded crap."* This rules out the
+old wrapper and MP3 bitrate as meaningful fixes. Accent metadata and speaker
+origin do not establish authenticity or audiobook quality.
 
 ### Synthesis-path audit SOP
 
@@ -79,7 +80,7 @@ English:
 | Model | English accents | Local | Status here |
 |---|---|---|---|
 | **Kokoro** | US, UK **only** | yes | running — checked live, no Irish/Australian |
-| **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speaker labels | yes | current deployed outputs **rejected by ear**; synthesis-path audit below, cause not yet closed |
+| **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speaker labels | yes | **rejected by ear** for this project; old/current runtime and encoding A/B all failed badly |
 | **MeloTTS** | US, UK, Indian, **Australian**, default | yes | installed and **rejected by ear**; no Irish |
 | **OmniVoice** | US, UK, AU, CA, IN + five non-native-English accents | yes | accents good; slow on CPU; **no Irish/ZA** in fixed upstream vocabulary |
 | **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Irish + ZA clips rendered; listening pending |
@@ -261,12 +262,19 @@ The initial response to Dave's latest verdict incorrectly jumped straight from
   uses the model's official `noise_scale=0.333`, `length_scale=1.4`, and
   `noise_w=0.333`. The model is not truncated or pointed at the wrong speaker.
 
-Three fresh, explicit-extension clips isolate the remaining questions using the
+Three fresh, explicit-extension clips isolated the remaining questions using the
 same p364 text: `vctk_audit_piper12_64k.mp3` (deployed path/encoding),
 `vctk_audit_piper12_wrapper.mp3` (same synthesis re-encoded from WAV), and
 `vctk_audit_piper16_direct.mp3` (current Piper direct, same official model).
-All return `200 audio/mpeg`. **Their quality difference is ungraded until Dave
-listens.** Do not claim that an upgrade or higher bitrate fixes Piper before that.
+All return `200 audio/mpeg`.
+
+**Final listening verdict (Dave, 2026-07-28):** all three were *"absolute shit"*;
+almost every word was wrong and they sounded bad. Higher bitrate did not rescue
+the deployed synthesis, and current Piper 1.6 did not rescue the model. The
+official VCTK-medium path is closed. Do not spend more time tuning, EQing or
+repackaging it. This finding is scoped to the models actually tested, but it is
+enough to remove Piper from this project's production choices and automatic
+fallbacks.
 
 **Note on (2), before anyone starts:** Orpheus's own training guide advises
 *against* fine-tuning on synthetic data — it says synthetic voices "lack
@@ -284,7 +292,7 @@ recorded speech if any is available.
 | Irish or South African, local | **No approved production voice yet.** Chatterbox Multilingual V3 clips exist but remain ungraded. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
 | Irish, South African or Australian, online | Edge remains the acceptable accent baseline heard so far; it is not local. |
-| Current Piper regional path | **Do not use for production audiobooks.** Its outputs failed voice quality, authenticity and pronunciation; whether current upstream/encoding materially improves it awaits the audit A/B. |
+| Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
 | British/general narration, local | Use only a voice that has passed the target book's listening sample; Chatterbox Turbo “Arthur” is the currently recorded accepted full-book outcome. |
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
@@ -450,9 +458,8 @@ current. Use `scripts/deploy.sh`. See OPERATIONS.md.
    listening is the remaining gate.
 2. **Expose `cfg_weight` per voice**, so accented narrators default to `0` and
    ordinary ones stay at `0.5`.
-3. **Grade the Piper synthesis-path A/B.** If higher-bitrate/current-runtime
-   output is still poor, stop polishing this VCTK model: the model choice, voice
-   quality, authenticity and pronunciation are below the bar. If it is
-   materially better, fix the serving path and re-audition before promotion.
+3. **Piper VCTK is closed.** Its controlled synthesis-path A/B failed at every
+   layer. Do not polish or repackage this model; only reopen Piper for a
+   materially different model with independently good samples.
 4. **Welsh male** — find/train a materially better model on suitable human
    speech, or accept the gap.

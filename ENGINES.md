@@ -17,7 +17,7 @@ accent-engine verdicts are dated in the table.
 |---|---|---|
 | Chatterbox Turbo (`uk_male_minter` / "Arthur") | "really really good" — accepted for full-book use | CPU only (Ryzen 9 8945HS, 16 threads) |
 | TADA-1B (v8, cloned voice, after transcript+pacing fixes) | Better than earlier cuts, but residual pacing drift + proper-noun misreads | Kaggle T4 |
-| Deployed Piper regional/VCTK path (2026-07-28) | **Outputs rejected for production:** most sound bad, accents insufficiently authentic, and pronunciation inadequate. Cause remains open pending direct-current-runtime A/B listening | CPU only (zorin) |
+| Piper regional/VCTK path (2026-07-28) | **Rejected for production:** deployed 64 kbps, higher-bitrate same-WAV, and current Piper 1.6 direct clips were all “absolute shit”; almost every word wrong and poor sound | CPU only (zorin) |
 | MeloTTS (2026-07-28) | **Rejected:** bad overall TTS, poor pronunciation and poor number handling | CPU only (zorin) |
 | OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 
@@ -40,10 +40,12 @@ a corrupt model or wrong-speaker bug. However, the official model is only
 medium/22.05 kHz, was fine-tuned from US Lessac, and uses `en-gb-x-rp` for every
 speaker. Our archived `openedai-speech` wrapper runs Piper 1.2.0 and transcodes
 previews to 64 kbps MP3; current upstream is 1.6.0 and supports raw phoneme
-injection. Same-text deployed-encoding, WAV-reencode and current-runtime clips
-exist and return `200 audio/mpeg`, but have not yet been graded by ear. See
-VOICES.md. Do not turn the failed-output verdict into a root-cause claim until
-that A/B is heard.
+injection. Same-text deployed-encoding, same-WAV higher-bitrate and
+current-runtime clips all returned `200 audio/mpeg` and were graded by ear.
+All three failed badly: almost every word wrong and poor sound. The old wrapper
+and bitrate are therefore not the fix; the tested official VCTK-medium model
+path is closed. Keep Piper only as legacy/debug compatibility, not a production
+engine or automatic fallback. See VOICES.md.
 
 ## Hume TADA-1B
 

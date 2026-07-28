@@ -27,7 +27,12 @@ BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 # the default engine is offline on a fresh deploy. It is the 110M model at
 # RTF 0.87 (measured) — light enough to run always, unlike Turbo/TADA which
 # stay opt-in because they are heavy and slow.
-PROFILE_ARGS=(--profile piper --profile chatterbox-nano)
+PROFILE_ARGS=(--profile chatterbox-nano)
+if [[ "${ENABLE_PIPER_PROFILE:-0}" == "1" ]]; then
+  # Legacy/debug only. The controlled Piper 1.2/1.6 + encoding A/B failed the
+  # audiobook quality bar on 2026-07-28, so never enable it by default.
+  PROFILE_ARGS+=(--profile piper)
+fi
 if [[ "${ENABLE_CHATTERBOX_PROFILE:-0}" == "1" ]]; then
   PROFILE_ARGS+=(--profile chatterbox)
 fi

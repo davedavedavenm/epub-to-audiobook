@@ -10,12 +10,12 @@
 > Dave's latest listening verdict is that most sound bad, the accents are not
 > authentic enough, and pronunciation is inadequate. This
 > supersedes the earlier provisional *"not bad… tinny or distant"* assessment.
-> That verdict does not by itself prove an engine-level cause. The deployed
-> model hash and all speaker mappings pass audit, but the path uses an archived
-> wrapper, Piper 1.2.0, 64 kbps previews, and a medium VCTK model fine-tuned from
-> US Lessac with one RP phonemizer for every speaker. Current Piper 1.6/direct-WAV
-> A/B clips have been rendered; listening is still required. Availability must
-> not be presented as a solution to local accents in the meantime.
+> The deployed model hash and all speaker mappings pass audit. The controlled
+> comparison covered Piper 1.2 at 64 kbps, the exact same WAV at higher bitrate,
+> and current Piper 1.6 direct with the same official VCTK-medium model. Dave:
+> all three were *"absolute shit"*, almost every word was wrong, and they sounded
+> bad. The wrapper and bitrate are not the fix; this model path is closed. Piper
+> is legacy/debug only and is not a production or automatic fallback.
 
 > ## Local accent candidates deployed (2026-07-28) — first listening verdict
 >
@@ -87,7 +87,7 @@
 > | Hyphens | `daisy-chain` no longer read with a gap inside it. Graded better by ear on Nano |
 > | Articles | Land in an ABS **podcast** library grouped by source site, not on the audiobook shelf (#36 closed) |
 > | TADA | Runs locally on CPU for the first time — fp32→bf16, peak 15.99 GiB → 10.00 GiB, RTF 1.68 (#23 closed) |
-> | Accents | Current Piper VCTK outputs rejected by ear; root-cause A/B pending; twelve bad Chatterbox clones removed; Edge Australian voices labelled |
+> | Accents | Piper VCTK rejected after old/current runtime + encoding A/B all failed; twelve bad Chatterbox clones removed; Edge Australian voices labelled |
 >
 > **The finding that matters most:** an accent lives in the **model**, not the
 > reference clip. Cloning carries timbre and not phonetics. Chatterbox's
