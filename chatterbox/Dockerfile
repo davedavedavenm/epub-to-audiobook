@@ -16,9 +16,9 @@ RUN pip install --no-cache-dir torch==2.6.0 --index-url https://download.pytorch
 COPY server.py .
 COPY voices/ /app/voices/
 
-RUN useradd -r -s /bin/false appuser \
+RUN useradd -r -m -s /bin/false appuser \
     && mkdir -p /data/hf \
-    && chown -R appuser:appuser /app /data
+    && chown -R appuser:appuser /app /data /home/appuser
 USER appuser
 
 ENV VOICES_DIR=/app/voices

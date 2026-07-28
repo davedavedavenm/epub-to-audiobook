@@ -167,8 +167,10 @@ services:
     ports:
       - "8009:8004"
     restart: unless-stopped
-    mem_limit: 8g
-    memswap_limit: 8g
+    # V3 loads under 8 GiB but its S3Gen decode crosses that cap after token
+    # generation; the first real render was cgroup-killed at that exact point.
+    mem_limit: 12g
+    memswap_limit: 12g
     environment:
       - CHATTERBOX_MULTILINGUAL_V3=1
       - CHATTERBOX_CHUNK_CHARS=${CHATTERBOX_CHUNK_CHARS:-280}

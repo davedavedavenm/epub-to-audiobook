@@ -149,6 +149,13 @@ def speech(req: SpeechReq):
     if ref is None and req.voice.endswith("_nano"):
         ref = _voice_paths.get(req.voice[:-len("_nano")])
     if ref is None:
+        # Custom references are bind-mounted and may be added after startup.
+        # Rescan on a miss before considering the documented fallback.
+        _load_voices()
+        ref = _voice_paths.get(req.voice)
+        if ref is None and req.voice.endswith("_nano"):
+            ref = _voice_paths.get(req.voice[:-len("_nano")])
+    if ref is None:
         # fall back to any voice so a bad name doesn't hard-fail a book
         if not _voice_paths:
             return JSONResponse({"error": "no reference voices installed"}, status_code=503)
