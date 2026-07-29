@@ -111,6 +111,8 @@ cp .env.example .env
 docker compose up -d                                              # Kokoro only (fast)
 docker compose --profile chatterbox up -d                        # + Chatterbox Turbo (best UK voices)
 docker compose --profile tada up -d                              # + TADA (expressive; research model)
+docker compose --profile vibevoice up -d                         # + VibeVoice (CUDA GPU already attached)
+docker compose --profile qwen3 up -d                             # + Qwen3-TTS (CUDA GPU already attached)
 docker compose --profile piper --profile chatterbox --profile tada up -d   # everything
 
 # 4. Open the UI
@@ -189,6 +191,8 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `KOKORO_URL` | Kokoro TTS endpoint (default: `http://kokoro-tts:8880/v1`) |
 | `CHATTERBOX_URL` | Chatterbox Turbo endpoint (default: `http://chatterbox-tts:8004/v1`) |
 | `TADA_URL` | TADA endpoint (default: `http://tada-tts:8005/v1`) |
+| `VIBEVOICE_URL` | VibeVoice endpoint (default: `http://vibevoice-tts:8010/v1`; opt-in CUDA profile) |
+| `QWEN3_URL` | Qwen3-TTS endpoint (default: `http://qwen3-tts:8011/v1`; opt-in CUDA profile) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | OpenAI-compatible LLM for the smart chapter guard, metadata + adaptive pronunciation. Optional (heuristic fallback). Free: Groq or Gemini — see `.env.example` |

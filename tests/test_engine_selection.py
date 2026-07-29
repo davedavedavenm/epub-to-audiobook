@@ -49,6 +49,18 @@ def test_engine_url_tada():
     assert model == 'tts-1'
 
 
+def test_engine_url_vibevoice():
+    url, model = get_engine_url('vibevoice', JOB_ID)
+    assert url == appmod.VIBEVOICE_URL
+    assert model == 'microsoft/VibeVoice-1.5B'
+
+
+def test_engine_url_qwen3():
+    url, model = get_engine_url('qwen3', JOB_ID)
+    assert url == appmod.QWEN3_URL
+    assert model == 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'
+
+
 def test_engine_url_edge():
     url, model = get_engine_url('edge', JOB_ID)
     assert url == _proxy_or(f'http://tts-proxy:8882/j/{JOB_ID}/v1')

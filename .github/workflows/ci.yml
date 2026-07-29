@@ -27,7 +27,7 @@ jobs:
       - name: Lint
         run: |
           pip install -q ruff
-          ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/
+          ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/ vibevoice/ qwen3/
 
       - name: Run tests
         run: python -m pytest tests/ -x -q

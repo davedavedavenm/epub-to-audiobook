@@ -20,7 +20,9 @@ if [ ! -f .env ]; then
   cp .env.example .env
 fi
 
-GIT_SHA="$(git rev-parse --short HEAD)"
+# Full commit, not an abbreviated display SHA: Kaggle finalist kernels fetch
+# this exact object and assert parity with the deployed worker before rendering.
+GIT_SHA="$(git rev-parse HEAD)"
 BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 # chatterbox-nano carries the DEFAULT voice, so its container has to be up or
@@ -47,6 +49,12 @@ if [[ "${ENABLE_OMNIVOICE_PROFILE:-0}" == "1" ]]; then
 fi
 if [[ "${ENABLE_CHATTERBOX_V3_PROFILE:-0}" == "1" ]]; then
   PROFILE_ARGS+=(--profile chatterbox-v3)
+fi
+if [[ "${ENABLE_VIBEVOICE_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile vibevoice)
+fi
+if [[ "${ENABLE_QWEN3_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile qwen3)
 fi
 
 echo "Enabled Compose profiles: ${PROFILE_ARGS[*]}"

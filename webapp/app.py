@@ -48,6 +48,8 @@ CHATTERBOX_URL = os.environ.get('CHATTERBOX_URL', 'http://chatterbox-tts:8004/v1
 # cannot share a process — hence a second service and a second URL.
 CHATTERBOX_NANO_URL = os.environ.get('CHATTERBOX_NANO_URL', 'http://chatterbox-nano:8004/v1')
 TADA_URL = os.environ.get('TADA_URL', 'http://tada-tts:8005/v1')
+VIBEVOICE_URL = os.environ.get('VIBEVOICE_URL', 'http://vibevoice-tts:8010/v1')
+QWEN3_URL = os.environ.get('QWEN3_URL', 'http://qwen3-tts:8011/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
@@ -412,6 +414,18 @@ TTS_ENGINES = {
         'description': 'Legacy/debug only — not approved for audiobook quality',
         'url_env': 'PIPER_URL',
         'default_url': 'http://piper-tts:8000/v1'
+    },
+    'vibevoice': {
+        'name': 'VibeVoice 1.5B',
+        'description': 'Provisional quality leader; long-form GPU narration (Kaggle or opt-in local CUDA)',
+        'url_env': 'VIBEVOICE_URL',
+        'default_url': 'http://vibevoice-tts:8010/v1'
+    },
+    'qwen3': {
+        'name': 'Qwen3-TTS 1.7B',
+        'description': 'Consistency co-finalist; GPU narration fallback (Kaggle or opt-in local CUDA)',
+        'url_env': 'QWEN3_URL',
+        'default_url': 'http://qwen3-tts:8011/v1'
     }
 }
 
@@ -586,6 +600,12 @@ VOICES = {
     'uk_female_golding_cosyvoice': {'name': 'Harriet (CosyVoice)', 'accent': 'British', 'gender': 'Female', 'engine': 'cosyvoice'},
     'uk_male_yearsley_cosyvoice': {'name': 'Edmund (CosyVoice)', 'accent': 'British', 'gender': 'Male', 'engine': 'cosyvoice'},
     'uk_female_samuel_cosyvoice': {'name': 'Beatrice (CosyVoice)', 'accent': 'British', 'gender': 'Female', 'engine': 'cosyvoice'},
+    # ============ LONG-FORM GPU FINALISTS (LISTENED VOICE ONLY) ============
+    # Only Arthur is registered: that is the reference actually heard in the
+    # full-chapter audition. Do not imply the other reference voices have passed
+    # the audiobook listening gate until their samples have been rendered/heard.
+    'uk_male_minter_vibevoice': {'name': 'Arthur — VibeVoice (quality finalist)', 'accent': 'British', 'gender': 'Male', 'engine': 'vibevoice'},
+    'uk_male_minter_qwen3': {'name': 'Arthur — Qwen3-TTS (consistency finalist)', 'accent': 'British', 'gender': 'Male', 'engine': 'qwen3'},
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
@@ -1693,7 +1713,17 @@ def _do_recovery(job_id):
     import time as time_module
     time_module.sleep(30)  # Brief delay to let engine settle
     try:
-        recover_partial_conversion(job_id)
+        job = get_job(job_id) or {}
+        if (job.get('render_target') or 'local') == 'kaggle':
+            # Never fall from a GPU-only Kaggle engine into the local converter:
+            # that either targets an offline CUDA service or silently changes
+            # the execution path. The Kaggle recovery planner skips chapters
+            # already banked on disk and merges their QA reports.
+            convert_book_kaggle(job_id, job.get('input_filename', ''),
+                                job.get('output_dirname', ''), job.get('voice', ''),
+                                resume=False, recover_existing=True)
+        else:
+            recover_partial_conversion(job_id)
     except Exception as e:
         app.logger.error(f"Recovery failed for {job_id}: {e}")
         append_job_log(job_id, f"Recovery failed: {e}")
@@ -2394,14 +2424,16 @@ def get_voice_preview(voice_id: str) -> Path:
                 await edge_tts.Communicate(ptext, voice_id).save(str(preview_path))
 
             asyncio.run(_edge())
-        elif engine in ('chatterbox', 'chatterbox_nano', 'tada'):
+        elif engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
             # Chatterbox/TADA preview (direct to the local service).
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
             # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
             # 180s cap was SHORTER than that, so every chatterbox sample was
             # generated, timed out, and thrown away — the cache could never fill
             # (2026-07-14). Be generous; this is a background job.
-            _url = (TADA_URL if engine == 'tada'
+            _url = (VIBEVOICE_URL if engine == 'vibevoice'
+                    else QWEN3_URL if engine == 'qwen3'
+                    else TADA_URL if engine == 'tada'
                     else CHATTERBOX_NANO_URL if engine == 'chatterbox_nano'
                     else CHATTERBOX_URL)
             response = requests.post(
@@ -2671,6 +2703,10 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         return CHATTERBOX_URL, 'tts-1'
     elif tts_engine == 'tada':
         return TADA_URL, 'tts-1'
+    elif tts_engine == 'vibevoice':
+        return VIBEVOICE_URL, 'microsoft/VibeVoice-1.5B'
+    elif tts_engine == 'qwen3':
+        return QWEN3_URL, 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'
     else:
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else KOKORO_URL
         return url, 'kokoro'
@@ -2726,6 +2762,22 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
 
     if tts_engine == 'tada':
         cmd.append('--denoise')
+    if tts_engine == 'vibevoice':
+        # Vibe's accepted result was one generation per chapter. The old 3600s
+        # HTTP timeout was shorter than the measured 3676s chapter generation.
+        cmd.extend(['--chunk-chars', '1000000', '--request-timeout', '21600'])
+    elif tts_engine == 'qwen3':
+        # Reproduce the accepted audition's sentence-sized passes and 350ms
+        # joins; this is a quality parameter, not generic converter trivia.
+        cmd.extend(['--chunk-chars', '450', '--join-silence-ms', '350'])
+
+    _asr = str(get_setting('ASR_VERIFY')
+               if get_setting('ASR_VERIFY') is not None
+               else os.environ.get('ASR_VERIFY', '1')).strip().lower()
+    if _asr not in ('0', 'false', 'no', 'off'):
+        qa_model = (get_setting('ASR_VERIFY_MODEL')
+                    or os.environ.get('ASR_VERIFY_MODEL') or 'base').strip()
+        cmd.extend(['--qa', '--qa-model', qa_model])
 
     return cmd
 
@@ -3578,7 +3630,8 @@ def monitor_conversion(job_id: str, container_name: str):
 KAGGLE_KERNELS_DIR = os.environ.get('KAGGLE_KERNELS_DIR', '/app/kaggle_kernels')
 
 
-def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, voice: str, resume: bool = False):
+def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, voice: str,
+                        resume: bool = False, recover_existing: bool = False):
     """Render a book on a free Kaggle GPU (chatterbox/tada), then run the same
     completion path as a local conversion (verify, ABS sync, notify)."""
     try:
@@ -3691,12 +3744,35 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
         _chapters = []
     batches = KR.plan_batches(_chapters, start or 1, end or 0,
                               rtf=KR.ENGINE_RTF.get(engine, 0.9))
+    if recover_existing and _chapters:
+        existing = set()
+        for f in output_path.glob('*.mp3'):
+            m = re.match(r'^(\d+)', f.stem)
+            if m:
+                existing.add(int(m.group(1)))
+        selected = [int(c['index']) for c in _chapters
+                    if int(c.get('index', 0)) >= int(start or 1)
+                    and (not end or int(c.get('index', 0)) <= int(end))]
+        missing = [n for n in selected if n not in existing]
+        spans = []
+        for n in missing:
+            if not spans or n != spans[-1][1] + 1:
+                spans.append([n, n])
+            else:
+                spans[-1][1] = n
+        batches = []
+        for lo, hi in spans:
+            batches.extend(KR.plan_batches(_chapters, lo, hi,
+                                           rtf=KR.ENGINE_RTF.get(engine, 0.9)))
+        append_job_log(job_id, f"Kaggle recovery: keeping {len(existing)} banked chapter(s); "
+                       f"{len(missing)} chapter(s) still need rendering")
     if len(batches) > 1:
         append_job_log(job_id,
                        f"Kaggle: ~{sum(b[2] for b in batches):.1f} GPU-h of audio — splitting into "
                        f"{len(batches)} sessions so each one banks its chapters")
 
-    ok, msg = False, 'no batches planned'
+    ok, msg = (True, 'all requested chapters were already banked') if not batches \
+        else (False, 'no batches planned')
     for _i, (_bs, _be, _bh) in enumerate(batches, 1):
         _cur = get_job(job_id)
         if _cur and _cur.get('status') == 'cancelled':
@@ -3842,7 +3918,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # applies (bug caught running the real worker path 2026-07-08).
             _pjob = get_job(job_id)
             _pengine = (_pjob.get('tts_engine') if _pjob else None) or 'kokoro'
-            _modern = _pengine in ('chatterbox', 'chatterbox_nano', 'tada')
+            _modern = _pengine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3')
             _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon, modern=_modern)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
@@ -3888,7 +3964,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # SLOW_ENGINE_MIN_TIMEOUT: chatterbox/tada on CPU run near realtime;
         # polluted ETA metrics produced absurd timeouts (375m for a ~14h book,
         # incident 2026-07-07). Floor the timeout at char_count/4 chars-per-sec.
-        if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada'):
+        if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
             floor_seconds = int(char_count / 4.0)
             if timeout_seconds < floor_seconds:
                 timeout_seconds = floor_seconds
@@ -4017,6 +4093,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
         if tts_engine == 'tada':
             cmd.append('--denoise')
+        if tts_engine == 'vibevoice':
+            cmd.extend(['--chunk-chars', '1000000', '--request-timeout', '21600'])
+        elif tts_engine == 'qwen3':
+            cmd.extend(['--chunk-chars', '450', '--join-silence-ms', '350'])
 
         log_file_path = Path(LOG_DIR) / f"{job_id}_convert.log"
         log_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -4275,6 +4355,8 @@ def check_engines_health(max_age=20):
         'chatterbox': f"{CHATTERBOX_URL.rstrip('/')}/audio/voices",
         'chatterbox_nano': f"{CHATTERBOX_NANO_URL.rstrip('/')}/audio/voices",
         'tada': f"{TADA_URL.rstrip('/')}/audio/voices",
+        'vibevoice': f"{VIBEVOICE_URL.rstrip('/')}/audio/voices",
+        'qwen3': f"{QWEN3_URL.rstrip('/')}/audio/voices",
         'piper': f"{PIPER_URL.rstrip('/')}/models",  # openedai-speech has no /audio/voices
     }
     out = {}
@@ -4563,8 +4645,15 @@ def _voice_for_engine(voice, target_engine):
     exist on BOTH tada and chatterbox under parallel ids (uk_male_minter and
     uk_male_minter_tada), so a tada<->chatterbox failover keeps the same
     'character'. Otherwise fall back to that engine's first registered voice."""
-    base = voice[:-5] if voice.endswith('_tada') else voice
-    cand = (base + '_tada') if target_engine == 'tada' else base
+    base = voice
+    for suffix in ('_vibevoice', '_qwen3', '_tada', '_nano', '_cosyvoice'):
+        if base.endswith(suffix):
+            base = base[:-len(suffix)]
+            break
+    suffixes = {'vibevoice': '_vibevoice', 'qwen3': '_qwen3',
+                'tada': '_tada', 'chatterbox_nano': '_nano',
+                'cosyvoice': '_cosyvoice'}
+    cand = base + suffixes.get(target_engine, '')
     if cand in VOICES and VOICES[cand].get('engine') == target_engine:
         return cand
     for v, meta in VOICES.items():
@@ -5945,6 +6034,11 @@ def _ollama_chat(messages, timeout=40, max_tokens=200) -> str:
 # real failure looks like. Tune with GARBLED_WER once there are more samples;
 # this is a first calibration against one book, not a law.
 GARBLED_WER = float(os.environ.get('GARBLED_WER', '0.35'))
+# These finalists are being promoted specifically because their chapter audio
+# passed listening + ASR. Shipping a render without a complete machine-readable
+# QA report would silently lower that bar (#33), so they fail closed while the
+# older engines retain their current compatibility behaviour.
+QUALITY_GATE_REQUIRED_ENGINES = frozenset({'vibevoice', 'qwen3'})
 
 
 def presync_quality_gate(job_id, output_path):
@@ -5961,21 +6055,42 @@ def presync_quality_gate(job_id, output_path):
     import statistics
     output_path = Path(output_path)
     mp3s = sorted(output_path.glob('*.mp3'))
-    if len(mp3s) < 2:
+    job = get_job(job_id) or {}
+    required = job.get('tts_engine') in QUALITY_GATE_REQUIRED_ENGINES
+    if len(mp3s) < 2 and not required:
         return False, [], None      # nothing to compare against; don't block
 
     wer, words = {}, {}
     qa_path = output_path / 'qa_report.json'
+    qa_error = None
     if qa_path.exists():
         try:
             rep = json.loads(qa_path.read_text(encoding='utf-8'))
             for c in rep.get('chapters', []):
                 ch = c.get('chapter')
-                if ch is not None:
-                    wer[int(ch)] = c.get('wer')
-                    words[int(ch)] = c.get('n_source') or 0
-        except Exception:
-            pass
+                if ch is not None and isinstance(c.get('wer'), (int, float)) \
+                        and int(c.get('n_source') or 0) > 0:
+                    wer[int(ch)] = float(c['wer'])
+                    words[int(ch)] = int(c['n_source'])
+            if required and not isinstance(rep.get('chapters'), list):
+                qa_error = 'qa_report.json has no chapters list'
+        except Exception as e:
+            qa_error = f'qa_report.json is invalid: {str(e)[:120]}'
+    elif required:
+        qa_error = 'qa_report.json is missing'
+
+    if required:
+        rendered = set()
+        for f in mp3s:
+            m = re.match(r'^(\d+)', f.stem)
+            if m:
+                rendered.add(int(m.group(1)))
+        missing = sorted(rendered - set(wer))
+        if not wer and not qa_error:
+            qa_error = 'qa_report.json contains zero valid chapter checks'
+        elif missing and not qa_error:
+            qa_error = ('qa_report.json does not cover rendered chapter(s): ' +
+                        ', '.join(map(str, missing[:20])))
 
     bpw = {}
     for f in mp3s:
@@ -6003,8 +6118,10 @@ def presync_quality_gate(job_id, output_path):
             flags.append({'chapter': ch, 'issue': 'garbled', 'wer': round(e, 3),
                           'detail': f'ASR word-error {e:.0%} — audio does not match the text'})
 
+    if qa_error:
+        flags.insert(0, {'chapter': 0, 'issue': 'qa_missing', 'detail': qa_error})
     held = bool(flags)
-    summary = None
+    summary = qa_error
     if held and _ollama_available():
         summary = guard.explain_gate(flags, _ollama_chat)   # fail-open, non-deciding
 
@@ -6012,7 +6129,7 @@ def presync_quality_gate(job_id, output_path):
     # at is not a pass — it is an absence of evidence, and until now the two
     # were written identically as `held: false` (#33). ASR data only exists for
     # engines routed via tts-proxy, so every Chatterbox/TADA book lands here.
-    verified = bool(wer)
+    verified = bool(wer) and not qa_error
     unverified_reason = None
     if not verified:
         # Be precise about WHICH half is missing. Since transcript capture moved
@@ -6022,7 +6139,9 @@ def presync_quality_gate(job_id, output_path):
         # Whisper has to transcribe the rendered audio to produce qa_report.json,
         # and that only happens when the converter is given --qa.
         chunks_exist = bool(_read_captured_chunks(job_id))
-        if chunks_exist:
+        if qa_error:
+            unverified_reason = qa_error
+        elif chunks_exist:
             unverified_reason = (
                 'the text sent to the engine was recorded, but no ASR pass ran, '
                 'so the AUDIO was never compared against it. ASR_VERIFY appears '
@@ -6444,9 +6563,14 @@ def convert_from_library():
 
         output_dirname = f"{safe_name}_{job_id}"
         tts_engine = all_voices().get(voice, {}).get('engine', 'kokoro')
+        render_target = (data.get('render_target') or 'local').lower()
         engine_fallback_note = None
         health = check_engines_health()
-        if health.get(tts_engine) is False:
+        # A stopped local CUDA service says nothing about Kaggle availability.
+        # Cloud-capable engines are validated by convert_book_kaggle against its
+        # own template registry and credentials; rejecting here made Cosy/new
+        # finalist voices impossible to queue for Kaggle.
+        if render_target != 'kaggle' and health.get(tts_engine) is False:
             # Opt-in failover: if the caller allows it, substitute the next
             # healthy engine (voice remapped) so the book still runs. Default
             # (no flag) keeps the strict reject so we never silently swap voices.
@@ -6489,7 +6613,7 @@ def convert_from_library():
             'end_chapter': end_chapter,
             'notify_telegram': 1 if data.get('notify_telegram') else 0,
             'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0,
-            'render_target': (data.get('render_target') or 'local').lower(),
+            'render_target': render_target,
             'output_format': (data.get('output_format') or 'mp3').lower(),
             # Set HERE, at creation, not patched on afterwards. The queue runner
             # is kicked off on the next line, so a caller that saved the job and

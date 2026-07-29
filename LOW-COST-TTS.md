@@ -16,7 +16,9 @@ Goal: keep audiobook generation below GBP3/book, ideally much less.
 > engines, but the default answer is now "render it locally and pay nothing".
 > See STATUS.md for the measurement.
 
-Last reviewed: 2026-07-02 (cost tables); premise revised 2026-07-25. Rough conversion used for quick screening: USD1 ~= GBP0.75.
+Last reviewed: 2026-07-02 (API cost tables); finalist compute costs and local
+CPU feasibility reviewed 2026-07-29. Rough conversion used for quick screening:
+USD1 ~= GBP0.75.
 
 ## 2026-07-28 local accent bake-off
 
@@ -64,6 +66,14 @@ better for audiobooks.
 | Higgs Audio | **1.558** | **19.32h** | 64.4% | Listenable, but one of two seeds still clipped/joined in places |
 | Qwen3-TTS | **2.056** | **25.49h** | 85.0% | **Co-finalist:** really good; strongest consistency signal |
 
+Production scaffolding now mirrors those heard paths rather than inventing new
+settings: Vibe is one generation per chapter (six-hour HTTP ceiling); Qwen uses
+roughly 450-character sentence passes with the audition's 350 ms joins. Both
+run on free Kaggle or an explicitly attached local CUDA GPU, and both require a
+complete ASR `qa_report.json` before delivery. This is not yet a production
+verification: Vibe's 90-minute stress test and the retained Raven M4B E2E still
+have to pass. No automatic/paid Vast route was added.
+
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage
 RTFs. A 12.4-hour book consumes nearly the whole nominal weekly Kaggle allowance
@@ -80,7 +90,62 @@ not treat those scenarios as measurements. The chapter run measured Qwen at
 5.26 GiB allocated / 6.75 GiB reserved, so a 12 GB 3060 is capacity-plausible
 for Qwen, although its speed and actual cost remain unmeasured. MOSS peaked at
 13.23 GiB and does not fit that tier; Vibe and Higgs chapter runs did not record
-peak VRAM.
+peak VRAM. A later **short-sample** Vibe P100 accent kernel supplied the first
+Vibe measurement: Irish peaked at **5.299 GiB allocated / 5.607 GiB reserved**;
+South African at **5.166 / 5.604 GiB**. That makes a 12 GB GPU
+capacity-plausible for short Vibe generation, but it is not a full-chapter peak
+or a long-form capacity proof.
+
+Vast's [public RTX 3090 pricing page](https://vast.ai/pricing/gpu/RTX-3090)
+advertised a **$0.13/h “from” price** on 2026-07-29. That is a marketplace
+headline, not a quote for the exact image, disk and network configuration above.
+At that rate and deliberately assuming **no speed advantage over the measured
+P100 runs**, the compute-only ceiling for the same 12.4-hour book would be
+**$3.65 Vibe / $3.31 Qwen**. At the actual $0.213/h offer checked the prior
+evening, the corresponding no-speedup ceilings are **$5.99 / $5.43**; the
+existing hypothetical 2x cases are **$2.99 / $2.72**. Storage and bandwidth are
+additional, and Vast bills them separately. These are cost scenarios, not Vast
+benchmarks. Kaggle therefore remains the least-cash path while quota is
+available: **$0**, but about **28.10 of 30 nominal weekly GPU hours for Vibe** or
+**25.49 hours for Qwen**, before startup, ASR and retries.
+
+Sources: [Kaggle efficient GPU usage](https://www.kaggle.com/docs/efficient-gpu-usage)
+(free P100; quota is 30 hours/week or sometimes higher) ·
+[Vast pricing](https://docs.vast.ai/guides/instances/pricing) (marketplace,
+per-second compute plus storage and bandwidth).
+
+### 2026-07-29 local Q8 feasibility check — measured, not yet heard
+
+The exact finalists were also run locally through the third-party native
+[audio.cpp](https://github.com/0xShug0/audio.cpp) CPU runtime, using its packaged
+[GGUF models](https://huggingface.co/audio-cpp/audio.cpp-gguf). This is a
+**different quantised inference path** from the full-precision Python/Kaggle
+clips that passed listening. Both local outputs remain **human-ungraded** and
+must not inherit those verdicts.
+
+Method: zorin i5-12400, four-CPU container cap, 14 GiB/no-swap cap, audio.cpp
+image revision `c810a069906f5a20b65094f9b6c755888dbb0d61`, the same UK Minter
+reference, and the same 36-word hard sample including `1997`, `Huawei`, `Xiaomi`
+and `7,000`. Both outputs were complete 24 kHz mono WAVs.
+
+| Local package | Output | Cold wall / framework session | Cold / session RTF | Peak container memory | ASR completeness | 12.4h CPU extrapolation |
+|---|---:|---:|---:|---:|---|---:|
+| VibeVoice 1.5B Q8_0 (3.00 GiB) | 15.60 s | 107 s / 101.736 s | **6.86 / 6.52** | **4.551 GiB** | 36 words spoken, but Whisper heard `Huawei`/`Xiaomi` as “Swawe”/“Shaumi” | **80.9 h session / 85.0 h cold** |
+| Qwen3-TTS 1.7B Base Q8_0_v2 (2.51 GiB) | 15.28 s | 46 s / 41.251 s | **3.01 / 2.70** | **7.937 GiB** | **Exact 36/36 transcript**, including Huawei and Xiaomi | **33.5 h session / 37.3 h cold** |
+
+Vibe reported 1.113 seconds of component weight loading. Qwen did not expose a
+separate weight-load timer; its Docker startup, model setup and teardown outside
+the measured session took roughly 4.7–5.7 seconds (the wrapper wall counter was
+whole-second), so that is not a model-load measurement. The production web app
+stayed healthy during both runs (worst sampled health latency 13.6 ms for Vibe
+and 8.2 ms for Qwen).
+
+**Cost/runtime conclusion:** Qwen Q8 is the only credible local fallback from
+this test, and it still projects to roughly a day and a half per 12.4-hour book.
+Vibe Q8 projects to more than three days and already has pronunciation evidence
+against it. Keep the heard, full-precision Kaggle paths as the quality baseline;
+do not promote either Q8 path to audiobook production until the clips and a
+long-form render pass human listening.
 
 ## Book Cost Assumptions
 

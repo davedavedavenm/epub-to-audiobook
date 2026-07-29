@@ -57,6 +57,21 @@ the GPU is remote and rationed.
 
 ## Next-gen engines (Chatterbox / TADA) — one-command GPU runbook
 
+### VibeVoice/Qwen3 finalists are not wired to Vast
+
+`vibevoice-tts` and `qwen3-tts` have opt-in Compose profiles for a GPU already
+attached to the host, plus free-Kaggle kernels. Neither profile calls
+`scripts/vast-gpu.sh`, and the webapp integration does not create or rent a
+Vast instance. Do not add either to the Vast/autoscale path until a paid run is
+explicitly authorised and measured.
+
+Current planning numbers come from one accepted Kaggle P100 chapter, not Vast:
+Vibe RTF 2.266 (~28.10 GPU-h / 12.4-hour book) and Qwen RTF 2.056 (~25.49 h).
+The corresponding $2.99/$2.72 Vast figures in LOW-COST-TTS.md are hypothetical
+price scenarios. Kaggle costs £0 but either book consumes most of a nominal
+30-hour weekly allowance, so chapter-batched commits and QA-report merging are
+mandatory.
+
 **Do NOT pip-install engines on a bare instance** (the 2026-07-06 attempt wasted
 ~80 min + $ and failed on a dep conflict). Instead the engine images are built
 ONCE in GitHub CI (`.github/workflows/build-engines.yml`) and pushed to GHCR;

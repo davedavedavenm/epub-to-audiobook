@@ -142,7 +142,7 @@ def chunk(text, n):
     return out or [text]
 
 
-def _concat_wav(chunks):
+def _concat_wav(chunks, join_silence_ms=0):
     """Concatenate WAV byte-chunks at the SAMPLE level via stdlib wave — one
     clean, fully-decodable stream. Concatenating encoded MP3 bytes instead
     leaves corrupt frame headers at every join: players tolerate them but
@@ -172,7 +172,17 @@ def _concat_wav(chunks):
     ww.setnchannels(ch)                          # set individually — never copy the
     ww.setsampwidth(sw)                          # source's placeholder nframes
     ww.setframerate(fr)
-    for f in frames:
+    silence = b''
+    if join_silence_ms and frames:
+        # PCM silence between independently generated passages. Qwen's accepted
+        # audiobook audition used 350 ms; keeping this in the canonical
+        # converter makes local, Kaggle and recovery renders byte-structurally
+        # equivalent instead of hiding the pacing decision in one notebook.
+        silence_frames = int(fr * float(join_silence_ms) / 1000.0)
+        silence = b'\x00' * (silence_frames * ch * sw)
+    for i, f in enumerate(frames):
+        if i and silence:
+            ww.writeframes(silence)
         ww.writeframes(f)
     ww.close()
     return out.getvalue()
@@ -272,7 +282,7 @@ def _capture_chunk(job_id, chapter_idx, text, voice, model):
 
 
 def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', speed=1.0,
-          job_id=None):
+          job_id=None, request_timeout=3600, join_silence_ms=0):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
     caller encodes one MP3 from that."""
@@ -290,8 +300,11 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', sp
             try:
                 r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
                                   json={"model": model, "input": c, "voice": voice,
-                                        "response_format": "wav", "speed": speed},
-                                  timeout=(15, 3600))
+                                        "response_format": "wav", "speed": speed,
+                                        # Stable across retry/recovery. New engines use
+                                        # it; existing Pydantic shims ignore the field.
+                                        "seed": 12345 + ((chapter_idx - 1) * 1000) + (chunk_idx - 1)},
+                                  timeout=(15, request_timeout))
                 r.raise_for_status()
                 parts.append(_ensure_wav(r.content))
                 break
@@ -300,7 +313,7 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', sp
                     raise
                 print(f"  chunk retry {attempt+1}/2 after error: {str(e)[:80]}", flush=True)
                 time.sleep(10 * (attempt + 1))
-    return _concat_wav(parts)
+    return _concat_wav(parts, join_silence_ms=join_silence_ms)
 
 
 def sanitize_filename(name):
@@ -321,6 +334,11 @@ def main():
     ap.add_argument('--start', type=int, default=1)
     ap.add_argument('--end', type=int, default=0)
     ap.add_argument('--chunk-chars', type=int, default=280)
+    ap.add_argument('--request-timeout', type=int, default=3600,
+                    help='per-generation HTTP read timeout in seconds. Long-form engines '
+                         'can legitimately need more than one hour for one chapter.')
+    ap.add_argument('--join-silence-ms', type=int, default=0,
+                    help='PCM silence inserted between generated chunks (0 = none)')
     ap.add_argument('--min-words', type=int, default=120,
                     help='skip chapters shorter than this (front-matter)')
     ap.add_argument('--denoise', action='store_true',
@@ -450,7 +468,9 @@ def main():
                     'album_artist': book_author, 'genre': 'Audiobook',
                     'track': f"{done_render + 1}/{total_render}"}
             wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx,
-                        model=a.model, speed=a.speed, job_id=a.job_id)
+                        model=a.model, speed=a.speed, job_id=a.job_id,
+                        request_timeout=a.request_timeout,
+                        join_silence_ms=a.join_silence_ms)
             mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
                 fn = out / f"{idx:03d}{suffix}.mp3"

@@ -109,6 +109,14 @@ but when you want the best result:
   the `chatterbox` profile.
 - **Hume TADA** — the most expressive/natural on easy text, but a research
   model with rough edges on dense non-fiction. Enable with the `tada` profile.
+- **VibeVoice / Qwen3-TTS finalists** — the best full-chapter audition results,
+  but GPU-only and still provisional. Select Arthur with **Kaggle GPU** for the
+  normal free path. A 12.4-hour book consumes roughly 28.10/25.49 GPU-hours,
+  so either can use most of Kaggle's nominal weekly allowance. If this machine
+  already has a compatible NVIDIA GPU, the optional local services are
+  `docker compose --profile vibevoice --profile qwen3 up -d`; these profiles
+  do not rent cloud hardware. Vibe's runtime has an important research-use/
+  community-fork boundary documented in [ENGINES.md](ENGINES.md).
 
 Which sounds best depends on the book and your hardware — trust your ears, and
 use **Preview** to compare. (More detail in [ENGINES.md](ENGINES.md).)

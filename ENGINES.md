@@ -36,6 +36,92 @@ with fiction/dialogue, TADA may well win — and if Hume ships long-form support
 it likely becomes the default (see issue #21). Both engines stay first-class;
 pick by ear on your own hardware.
 
+The first recorded Vibe GPU-memory measurement comes from a later **short
+accent sample**, not the heard full chapter: on a Kaggle P100, Irish peaked at
+**5.299 GiB allocated / 5.607 GiB reserved** and South African at **5.166 /
+5.604 GiB**. This is useful capacity evidence for a short request only; do not
+promote it to a long-form VRAM ceiling.
+
+## Qwen3-TTS / VibeVoice local native runtime audit (2026-07-29)
+
+Sources: [QwenLM/Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS) ·
+[microsoft/VibeVoice](https://github.com/microsoft/VibeVoice) ·
+[audio.cpp](https://github.com/0xShug0/audio.cpp) ·
+[audio.cpp GGUF packages](https://huggingface.co/audio-cpp/audio.cpp-gguf) ·
+[old experimental Vibe GGUF](https://huggingface.co/wsbagnsv1/VibeVoice-1.5B-gguf)
+
+- The official Qwen repo supports local model loading through its Python stack,
+  but documents CUDA/BF16 examples rather than an optimised CPU or GGUF route.
+  The CPU result below therefore uses the third-party audio.cpp runtime, not an
+  official Qwen CPU backend.
+- Microsoft's current VibeVoice repo has removed the TTS code and disabled the
+  TTS model link. The older `wsbagnsv1` GGUF explicitly says there is no
+  inference support. Neither is the tested route: the working local path is
+  audio.cpp's newer packaged VibeVoice implementation.
+- audio.cpp documents CUDA as its optimised backend and CPU as a portability
+  path. Its Q8 test report marks Qwen Q8_v2 as retaining speaker-sensitive
+  components at 16-bit to avoid long silence, while Vibe Q8 passes with possible
+  drift. These are upstream runtime claims, not listening results in this repo.
+
+Controlled local measurement on zorin (i5-12400, four-CPU cap, no container
+swap, UK Minter reference, 36 hard words):
+
+| Runtime/model | Audio | Framework session | Session RTF | Peak container memory | ASR evidence | Claim level |
+|---|---:|---:|---:|---:|---|---|
+| audio.cpp Qwen3-TTS 1.7B Base Q8_0_v2 | 15.28 s | 41.251 s | **2.70** | **7.937 GiB** | Exact 36/36 transcript, including Huawei/Xiaomi | Runtime/completeness measured; **human-ungraded** |
+| audio.cpp VibeVoice 1.5B Q8_0 | 15.60 s | 101.736 s | **6.52** | **4.551 GiB** | Complete word count, but Huawei/Xiaomi surfaced as “Swawe”/“Shaumi” | Runtime measured; pronunciation suspect; **human-ungraded** |
+
+Cold process wall was 46 seconds for Qwen (RTF 3.01) and 107 seconds for Vibe
+(RTF 6.86). Vibe exposed 1.113 seconds of component weight-load timings. Qwen
+did not expose a separate model-load timer; combined Docker startup, model setup
+and teardown outside the session took roughly 4.7–5.7 seconds. The small-sample
+session RTFs extrapolate to about
+33.5 CPU hours for Qwen and 80.9 for Vibe per 12.4 hours of finished audio, but
+that is **not** a long-form benchmark. Production remained healthy during the
+bounded tests. The local WAVs have not been heard, so they do not inherit the
+“really good” verdicts of the full-precision Kaggle renders.
+
+### Full-precision production adapter boundary (2026-07-29)
+
+Both finalists are now wired as first-class but **not yet deployed/production-
+verified** engines:
+
+- `vibevoice-tts` uses the official `microsoft/VibeVoice-1.5B` weights through
+  `vibevoice-community/VibeVoice` pinned at
+  `07cb79feadd2d3fd7f47530d4c964a12857936a0`. Microsoft disabled the official
+  TTS inference code because of misuse, so this provenance is shown in
+  `/health`; it must not be described as an official Microsoft runtime. The
+  model card frames the release for research/R&D and warns against real-world
+  use without further testing. One request is one chapter (fp16 + SDPA, DDPM
+  10, CFG 1.3, deterministic seed), preserving the path that passed listening.
+- `qwen3-tts` uses the official Apache-2.0 `QwenLM/Qwen3-TTS` package pinned at
+  `022e286b98fbec7e1e916cb940cdf532cd9f488e` and the official
+  `Qwen/Qwen3-TTS-12Hz-1.7B-Base` weights. Production keeps the accepted
+  sentence-boundary strategy: about 450 characters per pass and 350 ms of PCM
+  silence between passes.
+- Only `uk_male_minter_vibevoice` and `uk_male_minter_qwen3` are registered.
+  Arthur is the only reference heard in the full-chapter finalist auditions;
+  the other UK references are not silently promoted.
+- Local services are explicit CUDA-only Compose profiles (`vibevoice`,
+  `qwen3`). They use an already-attached GPU and never provision Vast. The
+  default remains free/local Chatterbox Nano. Free Kaggle is the normal
+  full-precision target.
+- Every local, Kaggle and recovery render uses the canonical converter with
+  `--job-id --qa`. Kaggle session reports are merged by chapter. Missing,
+  invalid, empty or incomplete `qa_report.json` holds these engines at
+  **review needed before M4B or Audiobookshelf sync**.
+- Kaggle checks out the exact 40-character `APP_GIT_SHA` deployed on the worker,
+  not `master`, and verifies the Git-LFS Arthur reference by RIFF header, size
+  and SHA-256 before loading either model.
+
+The integration is provisional until the Vibe 90-minute single-pass stress
+test (#44), a pushed-image build, and a retained Raven `output_format=m4b` E2E
+have passed. The accepted chapter RTF extrapolates to **28.10 free Kaggle GPU-h
+for Vibe** and **25.49 h for Qwen** per 12.4-hour book—93.7% and 85.0% of a
+nominal 30 h weekly allowance. LOW-COST-TTS.md's Vast figures ($2.99/$2.72) are
+scenario estimates, not billed measurements; this integration creates no paid
+Vast path.
+
 ## Piper deployment audit (2026-07-28)
 
 The listening verdict applies to our outputs, not automatically to every Piper
@@ -155,7 +241,7 @@ Source: [p0n1/epub_to_audiobook](https://github.com/p0n1/epub_to_audiobook)
 
 | Host | CPU | RAM | CUDA | Verdict |
 |---|---|---|---|---|
-| zorin (upgraded 2026-07-20) | i5-12400 (6c/12t) | 31 GB | none | Kokoro/Piper/Chatterbox comfortable; TADA off (broken #23); full-book Chatterbox ~45h — use Kaggle |
+| zorin (upgraded 2026-07-20) | i5-12400 (6c/12t) | 31 GB | none | Kokoro/Chatterbox comfortable; TADA works but remains opt-in. Qwen Q8 fits at 7.94 GiB but projects ~33.5h/book; Vibe Q8 fits at 4.55 GiB but projects ~80.9h/book. Both Q8 paths are human-ungraded. |
 | Windows box | Ryzen 9 8945HS (16 threads) | 29 GB | none (Radeon iGPU) | Chatterbox + TADA fit comfortably on CPU; ~3–4× old NUC speed [measured CPU class] |
 | Cloud | Kaggle T4 (free) / Vast (paid) | — | yes | fast path for TADA/Chatterbox |
 

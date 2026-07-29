@@ -37,6 +37,8 @@ _ENGINE_KERNEL = {
     "chatterbox": "run_chatterbox.py",
     "tada": "run.py",
     "cosyvoice": "run_cosyvoice.py",
+    "vibevoice": "run_vibevoice.py",
+    "qwen3": "run_qwen3.py",
 }
 
 
@@ -57,7 +59,14 @@ SESSION_BUDGET_HOURS = float(os.environ.get("KAGGLE_SESSION_BUDGET_HOURS", "5"))
 WORDS_PER_MINUTE = 155.0        # narration pace
 SETUP_HOURS = 0.3               # per-session install + model download overhead
 # Measured realtime factors on Kaggle GPUs (gen seconds per audio second).
-ENGINE_RTF = {"cosyvoice": 0.9, "chatterbox": 0.85, "tada": 0.45}
+ENGINE_RTF = {
+    "cosyvoice": 0.9,
+    "chatterbox": 0.85,
+    "tada": 0.45,
+    # Measured on the accepted full Yellow Wallpaper chapter, Kaggle P100.
+    "vibevoice": 2.266,
+    "qwen3": 2.056,
+}
 
 
 def estimate_hours(words, rtf=0.9):
@@ -96,6 +105,41 @@ def kernel_slug(epub_path):
     find the same kernel `render_on_kaggle` created."""
     book = os.path.splitext(os.path.basename(epub_path))[0]
     return _slug(f"render-{book}")
+
+
+def _merge_qa_report(src_path, dst_path):
+    """Merge per-session QA into the book-level report.
+
+    Kaggle commits one batch at a time. Blindly copying qa_report.json made the
+    final batch overwrite every earlier chapter, so the pre-sync gate appeared
+    verified while inspecting only the tail of the book.
+    """
+    with open(src_path, encoding="utf-8") as f:
+        incoming = json.load(f)
+    current = {}
+    if os.path.exists(dst_path):
+        try:
+            with open(dst_path, encoding="utf-8") as f:
+                current = json.load(f)
+        except Exception:
+            current = {}
+    chapters = {}
+    for report in (current, incoming):
+        for chapter in report.get("chapters", []):
+            if chapter.get("chapter") is not None:
+                chapters[int(chapter["chapter"])] = chapter
+    merged_chapters = [chapters[k] for k in sorted(chapters)]
+    suggestions = {}
+    suggestions.update(current.get("lexicon_suggestions") or {})
+    suggestions.update(incoming.get("lexicon_suggestions") or {})
+    merged = dict(current or incoming)
+    merged.update({
+        "chapters": merged_chapters,
+        "flagged_chapters": [c["chapter"] for c in merged_chapters if c.get("flagged")],
+        "lexicon_suggestions": suggestions,
+    })
+    with open(dst_path, "w", encoding="utf-8") as f:
+        json.dump(merged, f, indent=2)
 
 
 def stop_kernel(slug, log=print):
@@ -193,13 +237,15 @@ def kernel_metadata(username, slug, dataset_id, enable_gpu=True):
     }
 
 
-def render_kernel_source(template_src, voice, start, end, progress_url=""):
+def render_kernel_source(template_src, voice, start, end, progress_url="", app_ref=""):
     """Substitute the knobs block of a kernel template. END<=0 means to end."""
     s = re.sub(r'VOICE\s*=\s*"[^"]*"', f'VOICE  = "{voice}"', template_src, count=1)
     s = re.sub(r'START\s*=\s*\d+', f'START  = {int(start) if start else 1}', s, count=1)
     s = re.sub(r'END\s*=\s*\d+', f'END    = {int(end) if end else 0}', s, count=1)
     if 'PROGRESS_URL' in s:
         s = re.sub(r'PROGRESS_URL\s*=\s*"[^"]*"', f'PROGRESS_URL = "{progress_url}"', s, count=1)
+    if 'APP_REF' in s:
+        s = re.sub(r'APP_REF\s*=\s*"[^"]*"', f'APP_REF = "{app_ref}"', s, count=1)
     return s
 
 
@@ -321,7 +367,7 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
     `repo_kaggle_dir` is the path to scripts/kaggle/ (for the kernel template).
     """
     if engine not in _ENGINE_KERNEL:
-        return False, f"engine {engine!r} can't render on Kaggle (chatterbox/tada only)"
+        return False, f"engine {engine!r} can't render on Kaggle (supported: {', '.join(render_engines())})"
     user = kaggle_username()
     if not user:
         return False, "Kaggle username unresolved (no kaggle.json / KAGGLE_USERNAME)"
@@ -331,6 +377,10 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
         return False, f"kernel template missing: {template_path}"
     with open(template_path, encoding="utf-8") as f:
         template_src = f.read()
+    app_ref = os.environ.get("APP_GIT_SHA", "").strip()
+    if engine in ("vibevoice", "qwen3") and not re.fullmatch(r"[0-9a-fA-F]{40}", app_ref):
+        return False, ("APP_GIT_SHA must be the full deployed 40-character commit for "
+                       f"{engine}; refusing to run a drifting Kaggle checkout")
 
     book = os.path.splitext(os.path.basename(epub_path))[0]
     ds_slug = _slug(f"epub-{book}")
@@ -369,7 +419,7 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
             k_dir = os.path.join(tmp, "k")
             os.makedirs(k_dir)
             with open(os.path.join(k_dir, "run.py"), "w", encoding="utf-8") as f:
-                f.write(render_kernel_source(template_src, voice, start, end, progress_url))
+                f.write(render_kernel_source(template_src, voice, start, end, progress_url, app_ref))
             with open(os.path.join(k_dir, "kernel-metadata.json"), "w") as f:
                 json.dump(kernel_metadata(user, kslug, dataset_id), f)
             log(f"Kaggle: pushing GPU kernel {user}/{kslug} (engine={engine}, voice={voice})")
@@ -413,7 +463,14 @@ def render_on_kaggle(epub_path, voice, engine, start, end, out_dir,
                 with open(slog, encoding="utf-8", errors="ignore") as f:
                     tail = f.read()[-400:]
             return False, f"Kaggle render {st} with {len(mp3s)} mp3s. {tail}"
-        for f in mp3s + [x for x in os.listdir(out_tmp) if x.endswith(".json")]:
+        for f in mp3s:
             shutil.copy(os.path.join(out_tmp, f), os.path.join(out_dir, f))
+        for f in [x for x in os.listdir(out_tmp) if x.endswith(".json")]:
+            src = os.path.join(out_tmp, f)
+            dst = os.path.join(out_dir, f)
+            if f == "qa_report.json":
+                _merge_qa_report(src, dst)
+            else:
+                shutil.copy(src, dst)
         log(f"Kaggle: pulled {len(mp3s)} chapters into {out_dir} ({hours:.1f} GPU-hours)")
         return True, f"rendered {len(mp3s)} chapters on Kaggle GPU"

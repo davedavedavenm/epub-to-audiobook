@@ -1,12 +1,14 @@
 name: Build engine images
 
-# Builds the Chatterbox Turbo and TADA engine containers ONCE in CI and pushes
+# Builds the engine containers ONCE in CI and pushes
 # them to GitHub Container Registry (GHCR). A Vast.ai GPU (or any host) then
 # just PULLS a ready image in seconds — no slow pip-install per session.
 #
 # Images published (public):
 #   ghcr.io/davedavedavenm/epub-to-audiobook-chatterbox:latest
 #   ghcr.io/davedavedavenm/epub-to-audiobook-tada:latest
+#   ghcr.io/davedavedavenm/epub-to-audiobook-vibevoice:latest
+#   ghcr.io/davedavedavenm/epub-to-audiobook-qwen3:latest
 
 on:
   push:
@@ -14,6 +16,9 @@ on:
     paths:
       - 'chatterbox/**'
       - 'tada/**'
+      - 'vibevoice/**'
+      - 'qwen3/**'
+      - 'chatterbox/voices/**'
       - 'webapp/**'
       - 'scripts/convert_book.py'
       - '.github/workflows/build-engines.yml'
@@ -28,9 +33,23 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        engine: [chatterbox, tada]
+        include:
+          - engine: chatterbox
+            context: ./chatterbox
+            dockerfile: ./chatterbox/Dockerfile
+          - engine: tada
+            context: ./tada
+            dockerfile: ./tada/Dockerfile
+          - engine: vibevoice
+            context: .
+            dockerfile: ./vibevoice/Dockerfile
+          - engine: qwen3
+            context: .
+            dockerfile: ./qwen3/Dockerfile
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -46,7 +65,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./${{ matrix.engine }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-${{ matrix.engine }}:latest

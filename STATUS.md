@@ -1,5 +1,22 @@
 # Project Status & Remaining Tasks
 
+> ## VibeVoice/Qwen3 production scaffolding (2026-07-29) — UNVERIFIED
+>
+> The two full-chapter finalists are now represented by pinned GPU services,
+> exact-commit Kaggle kernels, listened-only Arthur voice IDs and the shared
+> local/Kaggle/recovery/finalize path. Vibe preserves one generation per
+> chapter with a six-hour request timeout; Qwen preserves ~450-character
+> sentence passes and 350 ms joins. Both fail closed to `review needed` when a
+> real, complete `qa_report.json` is absent, before M4B build or ABS sync.
+>
+> This is **scaffolding, not a production pass**: no image has been built on a
+> CUDA host, no new kernel has run, and no deployment occurred. Promotion still
+> requires Vibe's 90-minute stress test (#44), exact-image smoke tests and a
+> retained Raven `output_format=m4b` E2E. Default rendering remains local/free
+> Chatterbox Nano. Kaggle is free but a typical 12.4-hour book projects to 28.10
+> GPU-h (Vibe) or 25.49 h (Qwen), nearly a full nominal weekly quota. Vast cost
+> numbers remain estimates; no code in this integration rents a Vast instance.
+
 > ## Persistent audition player shipped (2026-07-28) — #45
 >
 > Commit `200c696` is deployed to both webapp and worker. Voice cards, book

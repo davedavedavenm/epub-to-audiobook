@@ -28,8 +28,13 @@ class TestEngineSeesUploads:
 
     def test_all_chatterbox_services_mount_it(self):
         """One WAV should reach Turbo, Nano and Multilingual V3."""
-        assert COMPOSE.count('/app/voices/custom') == 3, \
-            'Turbo, Nano and Multilingual V3 all need the custom voices mount'
+        for service in ('chatterbox-tts', 'chatterbox-nano', 'chatterbox-v3'):
+            match = re.search(rf'(?ms)^  {re.escape(service)}:\n(.*?)(?=^  [\w-]+:\n|\Z)',
+                              COMPOSE)
+            assert match, f'{service} service block is missing'
+            block = match.group(1)
+            assert '/app/voices/custom' in block, \
+                f'{service} needs the custom voices mount'
 
 
 class TestWebappSeesUploads:

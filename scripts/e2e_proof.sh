@@ -7,7 +7,7 @@
 # Run on zorin. Prints one PASS/FAIL block per engine plus a summary.
 #
 # Select a known engine by name, or pass an exact engine:voice pair:
-#   bash scripts/e2e_proof.sh vibevoice:vibevoice_uk_male
+#   E2E_RENDER_TARGET=kaggle bash scripts/e2e_proof.sh vibevoice:uk_male_minter_vibevoice
 # Set E2E_CLEANUP=1 only for disposable regression runs after listening.
 set -uo pipefail
 API="${E2E_API:-http://localhost:8881}"

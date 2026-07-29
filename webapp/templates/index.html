@@ -791,6 +791,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         try { engineUnconfigured = await (await fetch('/api/engines/unconfigured')).json(); } catch(e) {}
     }
     function engineUp(e) { return engineHealth[e] !== false; }
+    // These engines can be selected for a free Kaggle render even when their
+    // optional local CUDA service is not running. Disabling their <option>
+    // based only on local health made the cloud path impossible to choose.
+    const KAGGLE_GPU_ENGINES = ['cosyvoice', 'vibevoice', 'qwen3', 'chatterbox', 'tada'];
+    function engineSelectable(e) { return engineUp(e) || KAGGLE_GPU_ENGINES.includes(e); }
     function engineConfigured(e) { return !engineUnconfigured[e]; }
     // Voices we are willing to offer as a choice at all.
     function selectableVoices() {
@@ -994,9 +999,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const engines = [...new Set(usable.map(([id, v]) => v.engine))];
         return engines.map(engine => {
             const up = engineUp(engine);
+            const selectable = engineSelectable(engine);
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
-            const label = engine.toUpperCase() + (up ? ' ENGINE' : ' ENGINE — OFFLINE');
-            return `<optgroup label="${label}">${engineVoices.map(([id, v]) => `<option value="${id}" ${up ? '' : 'disabled'} ${id === selectedId && up ? 'selected' : ''}>${v.name} (${v.accent})${up ? '' : ' — offline'}</option>`).join('')}</optgroup>`;
+            const label = engine.toUpperCase() + (up ? ' ENGINE' : (selectable ? ' ENGINE — KAGGLE GPU' : ' ENGINE — OFFLINE'));
+            return `<optgroup label="${label}">${engineVoices.map(([id, v]) => `<option value="${id}" ${selectable ? '' : 'disabled'} ${id === selectedId && selectable ? 'selected' : ''}>${v.name} (${v.accent})${up ? '' : (selectable ? ' — Kaggle GPU' : ' — offline')}</option>`).join('')}</optgroup>`;
         }).join('');
     }
 
