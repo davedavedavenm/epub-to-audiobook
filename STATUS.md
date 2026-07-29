@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## VibeVoice/Qwen3 production scaffolding (2026-07-29) — UNVERIFIED
+> ## VibeVoice/Qwen3 production path (2026-07-29) — RAVEN E2E VERIFIED
 >
 > The two full-chapter finalists are now represented by pinned GPU services,
 > exact-commit Kaggle kernels, listened-only Arthur voice IDs and the shared
@@ -9,13 +9,20 @@
 > sentence passes and 350 ms joins. Both fail closed to `review needed` when a
 > real, complete `qa_report.json` is absent, before M4B build or ABS sync.
 >
-> This is **scaffolding, not a production pass**: no image has been built on a
-> CUDA host, no new kernel has run, and no deployment occurred. Promotion still
-> requires Vibe's 90-minute stress test (#44), exact-image smoke tests and a
-> retained Raven `output_format=m4b` E2E. Default rendering remains local/free
-> Chatterbox Nano. Kaggle is free but a typical 12.4-hour book projects to 28.10
-> GPU-h (Vibe) or 25.49 h (Qwen), nearly a full nominal weekly quota. Vast cost
-> numbers remain estimates; no code in this integration rents a Vast instance.
+> Commit `fef678d` is deployed to both webapp and worker. A real retained Raven
+> job (`313aab35`) passed the Vibe Kaggle → ASR gate → chaptered M4B → cover →
+> Audiobookshelf path: 1,130 source words, 361.392 s MP3, one inspected chapter,
+> 0.115 worst WER, `qa_verified=1`, 3,106,802-byte M4B with one chapter marker,
+> and 58,088-byte cover. The local and ABS MP3/M4B/cover SHA-256 hashes match.
+> Kernel generation was 440 s for 361.392 s audio (RTF 1.218); total cloud
+> session/poll handoff was about 15.8 minutes and was recorded as 0.2 GPU-h at
+> one-decimal precision. Full-chapter peak VRAM was not recorded; the measured
+> short-sample Vibe peaks remain 5.166–5.299 GiB allocated / 5.604–5.607 GiB
+> reserved. Exact-revision GHCR builds passed for both finalist images (Actions
+> run `30431465911`); promotion still
+> requires Vibe's 90-minute stress test (#44) and an exact-image CUDA smoke test.
+> Default rendering remains local/free Chatterbox Nano. Vast cost numbers remain
+> estimates; no Vast instance was created and no integration code rents one.
 
 > ## Persistent audition player shipped (2026-07-28) — #45
 >
@@ -25,8 +32,10 @@
 > and dismiss. A new sample aborts/replaces the old one, so auditions cannot
 > overlap. Chrome verification on the live Zorin stack paused Arthur at 16.8 s,
 > switched from Voices to Library, retained 16.8 s, and resumed to 19.4 s.
-> Both containers reported healthy on the same commit; 217 repository tests
-> passed (isolated import mode).
+> The behavior was rechecked after the finalist deployment (`fef678d`): Arthur
+> played on Voices, continued on Queue, paused, then retained the same timestamp
+> and paused state on History. Both finalist voice cards were visible. Both
+> containers reported healthy on the same exact commit; 228 tests passed.
 
 > ## MOSS / Qwen / VibeVoice / Higgs audiobook verdict (2026-07-29)
 >

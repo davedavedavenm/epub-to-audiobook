@@ -123,7 +123,7 @@ print((r[0] or '')[:200] if r else '')" 2>/dev/null)
         # Zorin intentionally keeps media tooling in the app image, not on the
         # host.  Translate the shared host output path to its container mount so
         # retained production proofs receive the same duration validation.
-        CONTAINER_AUDIO="/data/output/${f#"$OUTPUT_DIR"/}"
+        CONTAINER_AUDIO="/data/audiobooks/${f#"$OUTROOT"/}"
         D=$(docker exec epub-to-audiobook-ui ffprobe -v error \
           -show_entries format=duration -of default=nw=1:nk=1 \
           "$CONTAINER_AUDIO" 2>/dev/null || echo 0)

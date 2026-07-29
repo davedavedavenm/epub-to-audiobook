@@ -83,8 +83,9 @@ bounded tests. The local WAVs have not been heard, so they do not inherit the
 
 ### Full-precision production adapter boundary (2026-07-29)
 
-Both finalists are now wired as first-class but **not yet deployed/production-
-verified** engines:
+Both finalists are now wired as first-class engines. The shared delivery path
+is deployed and Vibe has one retained production E2E proof; the local CUDA
+images themselves still need an exact-image GPU smoke:
 
 - `vibevoice-tts` uses the official `microsoft/VibeVoice-1.5B` weights through
   `vibevoice-community/VibeVoice` pinned at
@@ -114,9 +115,15 @@ verified** engines:
   not `master`, and verifies the Git-LFS Arthur reference by RIFF header, size
   and SHA-256 before loading either model.
 
-The integration is provisional until the Vibe 90-minute single-pass stress
-test (#44), a pushed-image build, and a retained Raven `output_format=m4b` E2E
-have passed. The accepted chapter RTF extrapolates to **28.10 free Kaggle GPU-h
+The retained Raven `output_format=m4b` E2E passed on 2026-07-29 as job
+`313aab35`: 1,130 source words, 361.392 seconds of audio, ASR worst WER 0.115,
+`qa_verified=1`, one chaptered M4B plus cover, and a byte-identical
+Audiobookshelf copy. Generation took 440 seconds (RTF 1.218); end-to-end Kaggle
+session/poll handoff was about 15.8 minutes. Full-chapter VRAM was not logged.
+Exact-revision GHCR builds for Vibe and Qwen passed in Actions run
+`30431465911`. The integration remains provisional until the Vibe 90-minute
+single-pass stress test (#44) and an exact-image CUDA smoke have passed. The
+accepted Yellow Wallpaper chapter RTF extrapolates to **28.10 free Kaggle GPU-h
 for Vibe** and **25.49 h for Qwen** per 12.4-hour book—93.7% and 85.0% of a
 nominal 30 h weekly allowance. LOW-COST-TTS.md's Vast figures ($2.99/$2.72) are
 scenario estimates, not billed measurements; this integration creates no paid

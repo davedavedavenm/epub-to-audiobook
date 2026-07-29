@@ -70,9 +70,11 @@ Production scaffolding now mirrors those heard paths rather than inventing new
 settings: Vibe is one generation per chapter (six-hour HTTP ceiling); Qwen uses
 roughly 450-character sentence passes with the audition's 350 ms joins. Both
 run on free Kaggle or an explicitly attached local CUDA GPU, and both require a
-complete ASR `qa_report.json` before delivery. This is not yet a production
-verification: Vibe's 90-minute stress test and the retained Raven M4B E2E still
-have to pass. No automatic/paid Vast route was added.
+complete ASR `qa_report.json` before delivery. The retained Raven Vibe E2E has
+now passed: 1,130 words, 361.392 s audio, ASR worst WER 0.115, RTF 1.218 for
+the 440 s generation, chaptered M4B, cover and byte-identical Audiobookshelf
+copy. The 90-minute stress test and exact-image CUDA smoke are still open. No
+automatic/paid Vast route was added.
 
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage
