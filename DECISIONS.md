@@ -79,3 +79,18 @@ not dependable enough to lead.
 **Why:** see STATUS.md for the underlying RTF/ASR measurements and listening
 notes — this entry only tracks the current standing, not the evidence trail.
 Check STATUS.md for anything newer before treating this as final.
+
+## ASR evidence boundary — Active
+
+ASR is structural QA only: use it to detect missing, repeated, truncated or
+grossly mismatched audio. It does not rank naturalness, accent, prosody or
+pronunciation, and an individual ASR substitution is never evidence that the
+engine pronounced a word badly. Human listening is authoritative for audible
+quality. The local Vibe Q8 clip proved the reverse-error case on 2026-07-29:
+Dave heard Huawei/Xiaomi as fine while Whisper produced “Swawe”/“Shaumi”.
+
+**Why:** ASR has now failed in both directions—normalising an audibly wrong
+name back to the expected word, and transcribing an acceptable pronunciation
+as the wrong word. Removing ASR entirely would also remove the guard that caught
+collapsed outputs; keeping it within this narrow boundary preserves its value
+without pretending it can hear like the listener.

@@ -24,6 +24,18 @@
 > Default rendering remains local/free Chatterbox Nano. Vast cost numbers remain
 > estimates; no Vast instance was created and no integration code rents one.
 
+> ## Local Q8 listening verdict (2026-07-29) — BOTH SHORT CLIPS PASS
+>
+> Dave listened to the exact local audio.cpp Q8 outputs and said both Vibe and
+> Qwen sounded fine. The earlier Vibe “pronunciation suspect” label was wrong:
+> Whisper's “Swawe”/“Shaumi” transcript for Huawei/Xiaomi was an ASR false
+> positive, not an audible defect. Qwen Q8 remains the practical local choice on
+> throughput (RTF 2.70, ~33.5 h per 12.4 h book) versus Vibe Q8 (RTF 6.52,
+> ~80.9 h). Both still need a long-form Q8 listening pass before production use.
+> ASR remains enabled only as structural QA for collapse, omissions, repeats and
+> gross mismatch; it is no longer admissible evidence for pronunciation,
+> naturalness, prosody or accent quality.
+
 > ## Persistent audition player shipped (2026-07-28) — #45
 >
 > Commit `200c696` is deployed to both webapp and worker. Voice cards, book

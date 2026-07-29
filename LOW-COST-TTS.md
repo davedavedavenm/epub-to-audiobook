@@ -116,14 +116,14 @@ Sources: [Kaggle efficient GPU usage](https://www.kaggle.com/docs/efficient-gpu-
 [Vast pricing](https://docs.vast.ai/guides/instances/pricing) (marketplace,
 per-second compute plus storage and bandwidth).
 
-### 2026-07-29 local Q8 feasibility check — measured, not yet heard
+### 2026-07-29 local Q8 feasibility check — measured and heard
 
 The exact finalists were also run locally through the third-party native
 [audio.cpp](https://github.com/0xShug0/audio.cpp) CPU runtime, using its packaged
 [GGUF models](https://huggingface.co/audio-cpp/audio.cpp-gguf). This is a
 **different quantised inference path** from the full-precision Python/Kaggle
-clips that passed listening. Both local outputs remain **human-ungraded** and
-must not inherit those verdicts.
+clips. Dave subsequently listened to both local outputs and said both sounded
+fine. That verdict applies to these short clips; long-form Q8 is still unproven.
 
 Method: zorin i5-12400, four-CPU container cap, 14 GiB/no-swap cap, audio.cpp
 image revision `c810a069906f5a20b65094f9b6c755888dbb0d61`, the same UK Minter
@@ -132,8 +132,8 @@ and `7,000`. Both outputs were complete 24 kHz mono WAVs.
 
 | Local package | Output | Cold wall / framework session | Cold / session RTF | Peak container memory | ASR completeness | 12.4h CPU extrapolation |
 |---|---:|---:|---:|---:|---|---:|
-| VibeVoice 1.5B Q8_0 (3.00 GiB) | 15.60 s | 107 s / 101.736 s | **6.86 / 6.52** | **4.551 GiB** | 36 words spoken, but Whisper heard `Huawei`/`Xiaomi` as “Swawe”/“Shaumi” | **80.9 h session / 85.0 h cold** |
-| Qwen3-TTS 1.7B Base Q8_0_v2 (2.51 GiB) | 15.28 s | 46 s / 41.251 s | **3.01 / 2.70** | **7.937 GiB** | **Exact 36/36 transcript**, including Huawei and Xiaomi | **33.5 h session / 37.3 h cold** |
+| VibeVoice 1.5B Q8_0 (3.00 GiB) | 15.60 s | 107 s / 101.736 s | **6.86 / 6.52** | **4.551 GiB** | Complete; Dave heard no issue. Whisper's Huawei/Xiaomi guesses were false positives | **80.9 h session / 85.0 h cold** |
+| Qwen3-TTS 1.7B Base Q8_0_v2 (2.51 GiB) | 15.28 s | 46 s / 41.251 s | **3.01 / 2.70** | **7.937 GiB** | Complete; Dave heard no issue | **33.5 h session / 37.3 h cold** |
 
 Vibe reported 1.113 seconds of component weight loading. Qwen did not expose a
 separate weight-load timer; its Docker startup, model setup and teardown outside
@@ -142,12 +142,12 @@ whole-second), so that is not a model-load measurement. The production web app
 stayed healthy during both runs (worst sampled health latency 13.6 ms for Vibe
 and 8.2 ms for Qwen).
 
-**Cost/runtime conclusion:** Qwen Q8 is the only credible local fallback from
-this test, and it still projects to roughly a day and a half per 12.4-hour book.
-Vibe Q8 projects to more than three days and already has pronunciation evidence
-against it. Keep the heard, full-precision Kaggle paths as the quality baseline;
-do not promote either Q8 path to audiobook production until the clips and a
-long-form render pass human listening.
+**Cost/runtime conclusion:** both Q8 paths pass the short listening gate. Qwen
+Q8 is the practical local fallback because it projects to roughly a day and a
+half per 12.4-hour book; Vibe Q8 projects to more than three days. Neither is a
+production audiobook path until a long-form Q8 render passes human listening.
+ASR remains useful for completeness/collapse detection, but its word guesses
+must not be used as pronunciation evidence.
 
 ## Book Cost Assumptions
 

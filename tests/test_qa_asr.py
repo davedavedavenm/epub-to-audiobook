@@ -52,11 +52,13 @@ def test_dropped_sentence_is_caught():
     assert r['wer'] >= 0.4
 
 
-def test_misread_name_yields_lexicon_suggestion():
+def test_known_asr_name_error_does_not_yield_pronunciation_suggestion():
+    """Dave heard Huawei correctly in both Q8 clips while Whisper disagreed.
+    That machine error must never become a lexicon change suggestion."""
     q = _load()
     r = q.diff_report("The Huawei device shipped.", "The wawei device shipped.")
     sugg = q.suggest_lexicon(r['divergences'])
-    assert sugg.get('huawei') == 'wawei'
+    assert 'huawei' not in sugg
 
 
 def test_short_words_not_suggested():

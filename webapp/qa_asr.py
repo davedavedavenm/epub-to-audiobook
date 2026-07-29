@@ -1,19 +1,20 @@
 """QA Layer 2 — ASR verification (the self-correcting / "learning" layer).
 
-The point: stop needing a human to find TTS bugs by ear. After a chapter is
-rendered, transcribe the audio back with a LOCAL Whisper (faster-whisper, CPU),
-align the transcript to the source text, and surface where the spoken words
-diverge from the text — dropped words/sentences, gross misreads, numbers or
-names that came out wrong. High-confidence, clearly-mapped fixes are proposed
-as lexicon entries; everything else is written to a per-book QA report.
+The point: catch structural TTS failures without requiring a human to discover
+every collapsed chapter. After a chapter is rendered, transcribe the audio back
+with a LOCAL Whisper (faster-whisper, CPU), align the transcript to the source
+text, and surface dropped words/sentences, gross mismatches and incomplete
+numbers. ASR is not a pronunciation or voice-quality judge.
 
 Confirmed by experiment 2026-07-27, and worth knowing before trusting a clean
 report: TADA rendered "Alice" as "ay liss" (Dave, by ear) and Whisper
 transcribed it as "Alice" anyway. Deliberately mis-spelling the name to "Aliss"
 ALSO transcribed as "Alice". ASR normalises a mispronounced proper noun straight
 back to the word it expects, so this layer cannot grade pronunciation of a name
-at all — it can only tell you the right WORD was said. Grading a voice still
-needs an ear.
+at all. The reverse failure is also proven: both local Q8 clips pronounced
+Huawei/Xiaomi acceptably to Dave, while Whisper invented “Swawe”/“Shaumi” for
+Vibe. A machine disagreement is therefore only a place to listen, never negative
+pronunciation evidence. Grading a voice still needs an ear.
 
 What this reliably catches (high value):
   * dropped/duplicated words and skipped sentences,
@@ -164,6 +165,12 @@ def diff_report(source_text: str, transcript: str, context: int = 4) -> dict:
     }
 
 
+# Words the ASR has demonstrably mangled while the engine said them acceptably.
+# Applying a "fix" for these would corrupt audio that is already right.
+_ASR_ARTEFACT = re.compile(
+    r'^(dinah|lory|gryphon|mock|caucus|eaglet|huawei|xiaomi)$', re.I)
+
+
 def suggest_lexicon(divergences: list[dict], min_len: int = 5) -> dict:
     """From substitution divergences, propose conservative lexicon entries:
     a source word the ASR heard as something clearly different is a candidate
@@ -179,15 +186,11 @@ def suggest_lexicon(divergences: list[dict], min_len: int = 5) -> dict:
         if len(src) == 1 and len(heard) == 1:
             w, got = src[0], heard[0]
             # skip trivial/short words and near-identical (likely ASR noise)
-            if len(w) >= min_len and w != got and not w.isdigit():
+            if (len(w) >= min_len and w != got and not w.isdigit()
+                    and not _ASR_ARTEFACT.match(w)):
                 if difflib.SequenceMatcher(a=w, b=got).ratio() < 0.8:
                     sugg[w] = got  # {misread source word: what it sounded like}
     return sugg
-
-
-# Words the ASR routinely mangles but the engine says correctly. Applying a
-# "fix" for these would corrupt audio that is already right.
-_ASR_ARTEFACT = re.compile(r'^(dinah|lory|gryphon|mock|caucus|eaglet)$', re.I)
 
 
 def annotate_suggestions(sugg: dict) -> list[dict]:

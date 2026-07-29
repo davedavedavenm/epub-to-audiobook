@@ -68,8 +68,8 @@ swap, UK Minter reference, 36 hard words):
 
 | Runtime/model | Audio | Framework session | Session RTF | Peak container memory | ASR evidence | Claim level |
 |---|---:|---:|---:|---:|---|---|
-| audio.cpp Qwen3-TTS 1.7B Base Q8_0_v2 | 15.28 s | 41.251 s | **2.70** | **7.937 GiB** | Exact 36/36 transcript, including Huawei/Xiaomi | Runtime/completeness measured; **human-ungraded** |
-| audio.cpp VibeVoice 1.5B Q8_0 | 15.60 s | 101.736 s | **6.52** | **4.551 GiB** | Complete word count, but Huawei/Xiaomi surfaced as “Swawe”/“Shaumi” | Runtime measured; pronunciation suspect; **human-ungraded** |
+| audio.cpp Qwen3-TTS 1.7B Base Q8_0_v2 | 15.28 s | 41.251 s | **2.70** | **7.937 GiB** | Complete 36/36 | **Short clip passed human listening**; sounded fine |
+| audio.cpp VibeVoice 1.5B Q8_0 | 15.60 s | 101.736 s | **6.52** | **4.551 GiB** | Complete 36/36; Whisper's Huawei/Xiaomi substitutions were false positives | **Short clip passed human listening**; sounded fine |
 
 Cold process wall was 46 seconds for Qwen (RTF 3.01) and 107 seconds for Vibe
 (RTF 6.86). Vibe exposed 1.113 seconds of component weight-load timings. Qwen
@@ -248,7 +248,7 @@ Source: [p0n1/epub_to_audiobook](https://github.com/p0n1/epub_to_audiobook)
 
 | Host | CPU | RAM | CUDA | Verdict |
 |---|---|---|---|---|
-| zorin (upgraded 2026-07-20) | i5-12400 (6c/12t) | 31 GB | none | Kokoro/Chatterbox comfortable; TADA works but remains opt-in. Qwen Q8 fits at 7.94 GiB but projects ~33.5h/book; Vibe Q8 fits at 4.55 GiB but projects ~80.9h/book. Both Q8 paths are human-ungraded. |
+| zorin (upgraded 2026-07-20) | i5-12400 (6c/12t) | 31 GB | none | Kokoro/Chatterbox comfortable; TADA works but remains opt-in. Both Q8 short clips passed human listening. Qwen Q8 fits at 7.94 GiB and projects ~33.5h/book; Vibe Q8 fits at 4.55 GiB and projects ~80.9h/book. Long-form Q8 remains unproven. |
 | Windows box | Ryzen 9 8945HS (16 threads) | 29 GB | none (Radeon iGPU) | Chatterbox + TADA fit comfortably on CPU; ~3–4× old NUC speed [measured CPU class] |
 | Cloud | Kaggle T4 (free) / Vast (paid) | — | yes | fast path for TADA/Chatterbox |
 

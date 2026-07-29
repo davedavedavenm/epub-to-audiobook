@@ -2058,7 +2058,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             const sugg = q.suggestions || {};
             const keys = Object.keys(sugg);
             if (keys.length) {
-                html += `<div style="font-size:0.85rem; margin:12px 0 6px;"><b>Pronunciation suggestions</b> <span style="color:var(--ink-3); font-weight:400;">(review — may be transcription noise, not truth)</span>:</div>`;
+                html += `<div style="font-size:0.85rem; margin:12px 0 6px;"><b>Transcriber disagreements</b> <span style="color:var(--ink-3); font-weight:400;">(listen first — ASR cannot grade pronunciation or voice quality)</span>:</div>`;
                 html += keys.map(k => `<div style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:0.82rem;">
                     <code style="background:var(--paper); padding:2px 6px; border-radius:4px;">${escapeHtml(k)} → ${escapeHtml(sugg[k])}</code>
                     <button class="btn" style="font-size:0.72rem; padding:4px 10px;" onclick="applyQA('${jobId}', ${JSON.stringify(k).replace(/"/g,'&quot;')}, ${JSON.stringify(sugg[k]).replace(/"/g,'&quot;')}, this)">Apply</button>
