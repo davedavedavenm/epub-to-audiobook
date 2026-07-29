@@ -21,10 +21,10 @@ accent-engine verdicts are dated in the table.
 | MeloTTS (2026-07-28) | **Rejected:** bad overall TTS, poor pronunciation and poor number handling | CPU only (zorin) |
 | OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 | EdgeTTS accented English voices (2026-07-28) | Accents “not bad”, but all tested Chinese company names were pronounced badly; not approved for Chinese-business nonfiction without a pronunciation A/B/fix | Microsoft cloud service |
-| MOSS-TTS Local Transformer v1.5 (2026-07-28) | Short hard-text clip **10/10:** simulated breath, natural and expressive. First chapter render was **not audiobook-approved**: it sounded like sentences strung together with odd pauses. That render used 105 independent generations plus 104 artificial 0.35 s joins, so a true single-pass chapter is required before attributing the continuity fault to MOSS. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
-| Qwen3-TTS (2026-07-28) | Almost no issues and very good; flatter than MOSS, but the cleanest reliability signal in the first audition | Kaggle P100 |
-| VibeVoice 1.5B (2026-07-28) | **9/10:** good, but a little less emotive; chapter-scale continuity test in progress | Kaggle P100 |
-| Higgs Audio V2/3B (2026-07-28) | Pronunciation **10/10** when correct, but the joined passage skipped/repeated near “What changed” and garbled/clipped the power-spec line; not long-form-safe yet | Kaggle P100 + HF Space |
+| MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
+| Qwen3-TTS (2026-07-29) | Full chapter **“really good”** and audiobook-listenable. Strongest consistency result; 33:03, RTF 2.056, ASR similarity 0.9848. Current co-finalist. | Kaggle P100 |
+| VibeVoice 1.5B (2026-07-29) | Full single-pass chapter **“really good,” maybe better [than Qwen] as more expressive**. 27:03, RTF 2.266, ASR similarity 0.9831. Provisional quality leader; 90-minute stress test still owed. | Kaggle P100 |
+| Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
 
 **Read this as a data point, not a recommendation.** It reflects one listener
 and one hard passage/book; the hardware used is stated per row. TADA's ceiling is genuinely

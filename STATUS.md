@@ -11,20 +11,25 @@
 > Both containers reported healthy on the same commit; 217 repository tests
 > passed (isolated import mode).
 
-> ## MOSS / Qwen / VibeVoice / Higgs screening (2026-07-28)
+> ## MOSS / Qwen / VibeVoice / Higgs audiobook verdict (2026-07-29)
 >
-> The first identical-passage auditions are heard. MOSS led the short sample
-> (10/10, expressive, RTF 1.132); Qwen was nearly issue-free but flatter
-> (RTF 2.355); VibeVoice was good but less emotive (9/10, RTF 1.161); Higgs had
-> 10/10 pronunciation when correct but audible skip/repeat and garble artifacts
-> (RTF 1.685 on the direct P100 paragraph). MOSS's first full chapter passed
-> duration/ASR but failed Dave's continuity listening gate: it sounded like
-> sentences strung together with odd pauses. The harness itself used 105
-> independent generations and 104 hard 0.35 s joins (36.4 s inserted silence),
-> so a vendor-supported single-pass chapter is queued to separate model behavior
-> from harness behavior. Vibe/Qwen chapter validation and the deterministic
-> two-seed Higgs seam test remain in progress on free Kaggle. They are
-> **unverified** until all guards pass and Dave hears the outputs.
+> **VibeVoice and Qwen pass the full-chapter listening gate.** Qwen was “really
+> good”; Vibe was equally good and possibly better because it was more
+> expressive. Vibe is the provisional quality leader and Qwen the consistency
+> leader. Measured chapter results: Vibe 27:03 / RTF 2.266 / ASR 0.9831; Qwen
+> 33:03 / RTF 2.056 / ASR 0.9848.
+>
+> Higgs is usable but not dependable enough to lead: seed 12345 was “pretty
+> good”; seed 54321 was also good and listenable but felt clipped/joined in a
+> few places. Generation RTF was 1.556–1.559; ASR similarity 0.9799/0.9570.
+>
+> MOSS is no longer a finalist. After the invalid 105-chunk/36.4-second-added-
+> silence render, two true single-pass attempts collapsed at 2:21 and 2:36.
+> The final 13-section paragraph-aware render had zero inserted silence and
+> passed duration/ASR (40:31, RTF 1.245, ASR 0.9849, peak VRAM 13.23 GiB), but
+> Dave still heard several joins, weaker expression and off pacing: “not
+> horrible,” but worse than Vibe/Qwen. The next quality step is Vibe's existing
+> 90-minute single-pass stress test (#44), with Qwen retained as co-finalist.
 
 > ## Audiobook quality gate (2026-07-28)
 >

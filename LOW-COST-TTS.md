@@ -41,35 +41,46 @@ See STATUS.md for exact wall times, durations, memory and clip paths.
 
 The identical Arthur hard passage was rendered on a free Kaggle P100 (Higgs's
 valid full clip used three separately generated paragraphs after its single
-full-text call truncated at the first blank line). Dave's first listening gate
-put **MOSS at 10/10**, called Qwen nearly issue-free, put VibeVoice at **9/10**,
-and gave Higgs 10/10 for pronunciation but not stability. MOSS's first full
-chapter was complete but failed the continuity listening gate: it sounded like
-sentences strung together with unusual pauses. The harness had rendered 105
-independent chunks and inserted 104 x 0.35 s hard-silence joins (36.4 s total),
-so this result cannot distinguish engine behavior from assembly behavior. A
-no-join, single-generation chapter is queued before MOSS is promoted or rejected.
+full-text call truncated at the first blank line). That short test advanced all
+four engines to longer listening tests. The audiobook result is now clearer:
+**VibeVoice and Qwen pass**; Higgs is listenable but seed-dependent; MOSS is not
+a finalist. Vibe's full chapter was “really good” and possibly better than Qwen
+because it was more expressive. Qwen was also “really good” and had the cleanest
+consistency signal. Higgs seed 12345 was “pretty good”; seed 54321 remained
+listenable but felt clipped/joined in several places.
 
-| Candidate | Measured P100 RTF | P100 GPU hours / 12.4h book | Nominal 30h Kaggle week | First listening result |
+MOSS received the most corrective testing. Its first chapter used 105
+independent chunks plus 104 x 0.35 s joins, so that result was not treated as an
+engine verdict. Two true single-pass attempts then collapsed after only 2:21 and
+2:36 with near-zero source coverage. The final 13-section, paragraph-aware
+render inserted no silence and passed ASR, but Dave still heard joins, weaker
+expression and off pacing. It was “not horrible,” but Vibe/Qwen were clearly
+better for audiobooks.
+
+| Candidate | Chapter P100 RTF | P100 GPU hours / 12.4h book | Nominal 30h Kaggle week | Full listening result |
 |---|---:|---:|---:|---|
-| MOSS-TTS Local Transformer v1.5 | **1.132** | **14.04h** | 46.8% | Short clip 10/10; segmented chapter continuity failed, single-pass A/B queued |
-| VibeVoice 1.5B | **1.161** | **14.40h** | 48.0% | Good, slightly less emotive; 9/10 |
-| Higgs Audio 3B | **1.685** | **20.89h** | 69.6% | Excellent pronunciation; skips/repeats make this a lower bound |
-| Qwen3-TTS | **2.355** | **29.20h** | 97.3% | Cleanest audition, but nearly a whole weekly quota per book |
+| MOSS-TTS Local Transformer v1.5 | **1.245** | **15.44h** | 51.5% | Complete low-seam render, but joins/pacing/expression keep it below finalists |
+| VibeVoice 1.5B | **2.266** | **28.10h** | 93.7% | **Provisional quality leader:** really good; possibly better/more expressive than Qwen |
+| Higgs Audio | **1.558** | **19.32h** | 64.4% | Listenable, but one of two seeds still clipped/joined in places |
+| Qwen3-TTS | **2.056** | **25.49h** | 85.0% | **Co-finalist:** really good; strongest consistency signal |
 
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
-At a conservative nine-hour job budget that means two Kaggle sessions for
-MOSS/Vibe, three for Higgs and four for Qwen. Kaggle is free, but quota and
-session fragmentation are costs.
+The table now uses the completed chapter runs, not the earlier short-passage
+RTFs. A 12.4-hour book consumes nearly the whole nominal weekly Kaggle allowance
+with Vibe, about 85% with Qwen, 64% with Higgs or 52% with MOSS. Kaggle is free,
+but quota and session fragmentation are real constraints.
 
 Read-only Vast offers checked at 2026-07-28 19:55 BST were about **$0.079/h for
 an RTX 3060**, **$0.213/h for an RTX 3090**, and **$0.360/h for an RTX 4090**,
 including 45 GB storage but excluding bandwidth. No instance was created. There
-is no measured Vast benchmark for these four engines yet: at an explicitly
-hypothetical 2x P100 speed on that 3090, a 12.4h book would be about **$1.49
-MOSS, $1.53 Vibe, $2.22 Higgs or $3.10 Qwen**. Do not treat those scenarios as
-measurements. The 3060 tier is not selectable until peak VRAM proves the model
-fits 12 GB.
+is no measured Vast benchmark for these four engines yet: applying the updated
+chapter RTFs and an explicitly hypothetical 2x P100 speed on that 3090, a 12.4h
+book would be about **$1.64 MOSS, $2.99 Vibe, $2.06 Higgs or $2.72 Qwen**. Do
+not treat those scenarios as measurements. The chapter run measured Qwen at
+5.26 GiB allocated / 6.75 GiB reserved, so a 12 GB 3060 is capacity-plausible
+for Qwen, although its speed and actual cost remain unmeasured. MOSS peaked at
+13.23 GiB and does not fit that tier; Vibe and Higgs chapter runs did not record
+peak VRAM.
 
 ## Book Cost Assumptions
 
