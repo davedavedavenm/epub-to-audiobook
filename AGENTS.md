@@ -2,12 +2,23 @@
 
 Self-hosted ebook-to-audiobook conversion app with Docker services, TTS engines, queue processing, Audiobookshelf sync, and optional Telegram/WhatsApp notifications.
 
+## Decisions — Check Before Acting
+
+[DECISIONS.md](DECISIONS.md) holds settled, closed questions for this repo —
+engine defaults, GPU policy, deploy discipline, current quality-gate verdicts.
+It is not a changelog; STATUS.md is. **Before proposing to change, redo, or
+re-open something, check DECISIONS.md for an existing entry on that topic
+first.** If a session settles a new question or reverses one, update
+DECISIONS.md in the same session — don't just log it in STATUS.md and leave
+DECISIONS.md stale.
+
 ## Current Direction & Doc Map (2026-07)
 
 Read these before changing anything TTS- or text-related:
 
 | Doc | What it holds |
 |-----|---------------|
+| [DECISIONS.md](DECISIONS.md) | **Settled questions — check first, before STATUS.md.** |
 | [GETTING-STARTED.md](GETTING-STARTED.md) | New-user walkthrough: install, convert, connect an LLM, voices, ABS. |
 | [OPERATIONS.md](OPERATIONS.md) | Runbook + incident log: job states, failure responses, capacity truths. |
 | [STATUS.md](STATUS.md) | **Current state & remaining tasks — read first.** What's verified vs unverified vs not-done. |
