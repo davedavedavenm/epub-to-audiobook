@@ -117,7 +117,17 @@ print((r[0] or '')[:200] if r else '')" 2>/dev/null)
     AUDIO_SECONDS=0
     for f in "$DIR"/*.mp3; do
       [ -f "$f" ] || continue
-      D=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$f" 2>/dev/null || echo 0)
+      if command -v ffprobe >/dev/null 2>&1; then
+        D=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$f" 2>/dev/null || echo 0)
+      else
+        # Zorin intentionally keeps media tooling in the app image, not on the
+        # host.  Translate the shared host output path to its container mount so
+        # retained production proofs receive the same duration validation.
+        CONTAINER_AUDIO="/data/output/${f#"$OUTPUT_DIR"/}"
+        D=$(docker exec epub-to-audiobook-ui ffprobe -v error \
+          -show_entries format=duration -of default=nw=1:nk=1 \
+          "$CONTAINER_AUDIO" 2>/dev/null || echo 0)
+      fi
       AUDIO_SECONDS=$(python3 -c "print(float('$AUDIO_SECONDS') + float('$D'))")
     done
     MIN_SECONDS=$(python3 -c "print(float('$WORDS') / 260.0 * 60.0 if float('$WORDS') else 0)")
