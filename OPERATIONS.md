@@ -106,22 +106,34 @@ LL has two independent search paths. If one is down, the other still works.
    which runs inside gluetun's network namespace (`network_mode: service:gluetun`).
    If the VPN drops, gluetun's firewall kills all egress.
 
+### Automatic dual-grab (epub + audiobook)
+
+When a book is added to LazyLibrarian with both `Status=Wanted` (ebook) and
+`AudioStatus=Wanted` (audiobook), the scheduled search job automatically grabs
+**both formats** on the next cycle. No manual intervention needed.
+
+LL's search runs periodically (`cron_search_book` job). It queries all enabled
+providers (NZB + torrent) for each wanted item. Ebook results are filtered to
+epub/mobi/azw3; audiobook results accept m4b/m4a/mp3. Downloads go to
+qBittorrent (torrents, via VPN) or SABnzbd (Usenet, via SOCKS5/VPN).
+
 ### Grab → library delivery
 
 ```
 qBittorrent/SABnzbd download
   → /opt/slskd-stack/downloads/books/  (NAS sshfs mount on docker-vm)
   → book_sync.sh (root cron, */10 min)
-  → scp epub/mobi/azw3 to homelab-pi:~/Downloads/openbooks/books/
-  → zorin sshfs mount → /mnt/openbooks (read-only)
-  → epub-to-audiobook webapp library
-  → conversion → ABS sync
+      ├── epub/mobi/azw3 → scp to homelab-pi → zorin sshfs → /mnt/openbooks
+      │                    → epub-to-audiobook app → conversion → ABS
+      └── m4b/m4a/mp3 folders → cp to /opt/stacks/audiobookshelf/audiobooks/
+                                 → ABS library scan triggered automatically
 ```
 
-`book_sync.sh` lives at `/home/dave/scripts/book_sync.sh` on docker-vm. It only
-handles ebooks (epub/mobi/azw3). Audio files are NOT auto-synced — audiobooks
-from the conversion pipeline land in ABS directly; random audio downloads need
-manual review. A `.processed/` sentinel directory prevents re-syncing.
+`book_sync.sh` lives at `/home/dave/scripts/book_sync.sh` on docker-vm. It
+handles both formats: ebooks go to the conversion library (homelab-pi),
+audiobooks go directly to Audiobookshelf. A `.processed/` sentinel directory
+prevents re-syncing. After delivering an audiobook, the script triggers an ABS
+library scan so the new title appears immediately.
 
 ### VPN coverage
 
