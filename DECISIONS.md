@@ -80,6 +80,22 @@ not dependable enough to lead.
 notes — this entry only tracks the current standing, not the evidence trail.
 Check STATUS.md for anything newer before treating this as final.
 
+## Book acquisition pipeline docs — moved to infra — Active
+
+The LazyLibrarian/Prowlarr/qBittorrent/SABnzbd grab-and-delivery pipeline
+(topology, VPN coverage, credentials, failure modes) is host-stack
+infrastructure, not this app. It briefly lived in this repo's
+`OPERATIONS.md` (added 2026-07-31) but moved to `infra` on 2026-08-01 —
+`docs/protocols/book-acquisition-pipeline.md`, with `book_sync.sh` and
+`pipeline_healthcheck.sh` tracked at `infra/stacks/docker-vm/media-stack/scripts/`.
+
+**Why:** it duplicated infra's own host-stack records and, separately,
+overlapped un-cross-referenced with `mediahub`'s NAS-side `books-dl`
+project. See `infra/DECISIONS.md` "Book acquisition pipeline docs
+consolidated into infra" for the full reasoning. Don't re-add that material
+here — this repo keeps only `scripts/wanted/` (the `wanted_monitor`
+watcher), per `infra/docs/protocols/repo-map.md`.
+
 ## ASR evidence boundary — Active
 
 ASR is structural QA only: use it to detect missing, repeated, truncated or

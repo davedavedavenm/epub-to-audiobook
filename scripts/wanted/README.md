@@ -70,12 +70,11 @@ Hourly run with a lock (recommended):
 - `--request-cooldown-s`: minimum time between requests per title
 - `--min-wanted-age-s`: wait this long after becoming Wanted before enqueuing (helps avoid LL churn)
 
-## Pipeline healthcheck (installed 2026-07-10)
+## Pipeline healthcheck
 
-`pipeline_healthcheck.sh` runs daily (cron 09:00 on docker-vm) and Telegram-alerts
-ONLY when something is wrong: LazyLibrarian API, SABnzbd API (key+whitelist),
-OpenBooks websocket handshake, library-sync freshness (sync.log on the OpenBooks
-host), stale stuck `.temp` downloads (>2h), and repeated bridge failures.
-Born from two weeks of silent failure: the sync cron died on a host-key change
-and the OpenBooks bridge failed 469 times on a parser bug — all logged, nothing
-alerted. Silent failure is the enemy; every leg now has a tripwire.
+The general grab-pipeline healthcheck (LazyLibrarian, SABnzbd, qBittorrent,
+Prowlarr, library sync, gluetun) moved to the `infra` repo 2026-08-01 —
+`stacks/docker-vm/media-stack/scripts/pipeline_healthcheck.sh` — since it
+checks host-stack services this app doesn't own, not just this watcher. The
+copy previously tracked here had drifted stale (still checking the retired
+OpenBooks path); don't re-add it here. See `infra/docs/protocols/book-acquisition-pipeline.md`.

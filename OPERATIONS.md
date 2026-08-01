@@ -77,126 +77,21 @@ Audiobookshelf, wiping after each success. **Run it after any change to the
 render, sync or packaging paths** — every defect it has found so far lived in
 the wiring *between* components, where the unit suite is blind.
 
-## Book acquisition pipeline (2026-07-31)
+## Book acquisition pipeline
 
-How books get from "wanted" to the audiobook library. This section documents the
-full search-to-grab-to-library flow, the infrastructure it runs on, and what to
-check when it breaks.
+How books get from "wanted" to the audiobook library — LazyLibrarian,
+Prowlarr, qBittorrent/SABnzbd, VPN coverage, `book_sync.sh` delivery,
+credentials, and failure modes — is host-stack infrastructure, not this
+app. It's documented in the `infra` repo at
+`docs/protocols/book-acquisition-pipeline.md`, with `book_sync.sh` and
+`pipeline_healthcheck.sh` tracked at `stacks/docker-vm/media-stack/scripts/`
+there (moved 2026-08-01; see `infra/DECISIONS.md`). Don't re-add that
+material here.
 
-### Topology
-
-| Host | Role | Key services |
-|------|------|--------------|
-| **docker-vm** (192.168.1.113) | Orchestration + downloads | LazyLibrarian, SABnzbd, qBittorrent (in gluetun), Prowlarr client, Audiobookshelf, book_sync cron |
-| **mediahub NAS** (10.77.0.24 / 192.168.1.248) | Storage + indexers | Prowlarr (Docker, port 9696), Synology packages, 7 TB volume |
-| **gluetun** (container on docker-vm) | VPN tunnel | ProtonVPN WireGuard → Netherlands, killswitch, SOCKS5 on 127.0.0.1:1080, HTTP proxy on 127.0.0.1:8888 |
-| **homelab-pi** (192.168.1.248) | Book library host | OpenBooks (manual, port 6081), sshfs target for zorin |
-| **zorin** (192.168.1.41) | Audiobook conversion | epub-to-audiobook webapp+worker, sshfs mount of homelab-pi's books → `/mnt/openbooks` |
-
-### Search paths (LazyLibrarian)
-
-LL has two independent search paths. If one is down, the other still works.
-
-1. **NZB / Usenet** (direct Newznab indexers: NZBgeek, NZBFinder, Nzb.su,
-   DrunkenSlug). Own API keys, no Prowlarr dependency. Downloads via SABnzbd,
-   which routes through gluetun's SOCKS5 proxy (`socks5://127.0.0.1:1080`).
-
-2. **Torrents** (Prowlarr-proxied Torznab: LimeTorrents, InternetArchive).
-   Requires Prowlarr on the NAS (10.77.0.24:9696). Downloads via qBittorrent,
-   which runs inside gluetun's network namespace (`network_mode: service:gluetun`).
-   If the VPN drops, gluetun's firewall kills all egress.
-
-### Automatic dual-grab (epub + audiobook)
-
-When a book is added to LazyLibrarian with both `Status=Wanted` (ebook) and
-`AudioStatus=Wanted` (audiobook), the scheduled search job automatically grabs
-**both formats** on the next cycle. No manual intervention needed.
-
-LL's search runs periodically (`cron_search_book` job). It queries all enabled
-providers (NZB + torrent) for each wanted item. Ebook results are filtered to
-epub/mobi/azw3; audiobook results accept m4b/m4a/mp3. Downloads go to
-qBittorrent (torrents, via VPN) or SABnzbd (Usenet, via SOCKS5/VPN).
-
-### Grab → library delivery
-
-```
-qBittorrent/SABnzbd download
-  → /opt/slskd-stack/downloads/books/  (NAS sshfs mount on docker-vm)
-  → book_sync.sh (root cron, */10 min)
-      ├── epub/mobi/azw3 → scp to homelab-pi → zorin sshfs → /mnt/openbooks
-      │                    → epub-to-audiobook app → conversion → ABS
-      └── m4b/m4a/mp3 folders → cp to /opt/stacks/audiobookshelf/audiobooks/
-                                 → ABS library scan triggered automatically
-```
-
-`book_sync.sh` lives at `/home/dave/scripts/book_sync.sh` on docker-vm. It
-handles both formats: ebooks go to the conversion library (homelab-pi),
-audiobooks go directly to Audiobookshelf. A `.processed/` sentinel directory
-prevents re-syncing. After delivering an audiobook, the script triggers an ABS
-library scan so the new title appears immediately.
-
-### VPN coverage
-
-| Component | VPN? | Mechanism |
-|-----------|------|-----------|
-| qBittorrent (torrent downloads) | ✅ | `network_mode: service:gluetun` — all traffic via ProtonVPN WireGuard, killswitch |
-| slskd / soularr (Soulseek music) | ✅ | Same gluetun namespace |
-| SABnzbd (Usenet downloads) | ✅ | `socks5_proxy_url = socks5://127.0.0.1:1080` (gluetun SOCKS5) |
-| Prowlarr (indexer search queries) | ❌ | Runs on NAS, queries public indexer websites over HTTPS. Low risk: no P2P, no swarm exposure |
-| OpenBooks (manual, family use) | ❌ | IRC DCC on homelab-pi. Manual use only |
-
-### Monitoring
-
-`/home/dave/scripts/pipeline_healthcheck.sh` on docker-vm (root cron, daily
-09:00). Alerts via Telegram ONLY on failure. Checks:
-
-1. LazyLibrarian API
-2. SABnzbd API
-3. qBittorrent login (at 10.77.0.7:8086 via WireGuard)
-4. Prowlarr API (at 10.77.0.24:9696)
-5. Library sync freshness (rsync on homelab-pi)
-6. Gluetun HTTP proxy reachability
-
-### Wanted monitor
-
-`/home/dave/scripts/run_wanted_monitor.sh` on docker-vm (root cron, hourly).
-Checks LazyLibrarian's Wanted list against the audiobook library, sends
-Telegram/WhatsApp notifications when a title appears. The OpenBooks IRC
-automated bridge was retired 2026-07-31 (505 consecutive failures; the IRC
-network the bridge targeted is unreachable from the script, though OpenBooks
-itself still works for manual family use via its web UI).
-
-### Key credentials (stored in configs, not here)
-
-- qBittorrent: admin user, password in LL's `[QBITTORRENT]` section
-- Prowlarr API key: in LL's `[Torznab_*]` sections; source of truth is
-  `/volume1/docker/projects/prowlarr/config/config.xml` on the NAS (requires sudo)
-- SABnzbd API key: in LL's config (`sab_api`)
-- Gluetun WireGuard key: `/opt/slskd-stack/.env` on docker-vm
-
-### Failure modes
-
-| Symptom | Likely cause | Fix |
-|---------|-------------|-----|
-| LL search returns 0 results | Prowlarr down OR indexers failing | Check `http://10.77.0.24:9696` — NAS may be rebooting. NZB path works independently |
-| qBittorrent 403/401 | Password changed or container recreated | Check `docker logs books-qbittorrent` for temp password |
-| book_sync not delivering | homelab-pi SSH unreachable | `ssh dave@192.168.1.248 hostname` from docker-vm |
-| Healthcheck reports Prowlarr 401 | API key rotated on NAS | `sudo grep ApiKey /volume1/docker/projects/prowlarr/config/config.xml` on NAS |
-| Gluetun unhealthy | ProtonVPN connection dropped | `docker logs gluetun` — check WireGuard key expiry |
-| Books not appearing in audiobook library | sshfs mount stale on zorin | `sudo umount /mnt/openbooks && ls /mnt/openbooks` (autofs remounts) |
-
-### Reverting tonight's changes (2026-07-31)
-
-All changes have timestamped backups on docker-vm:
-
-- LL config: `/home/dave/docker-apps/lazylibrarian/config/config.ini.bak-20260731-bookpipe`
-- qBittorrent config: `/opt/slskd-stack/qbit-config/qBittorrent/qBittorrent.conf.bak-20260731`
-- Wanted monitor script: `/home/dave/scripts/run_wanted_monitor.sh.bak-20260731`
-- Healthcheck: `/home/dave/scripts/pipeline_healthcheck.sh.bak-20260731`
-- Gluetun compose: `/opt/slskd-stack/compose.yaml.bak-20260731-sabvpn`
-
-To fully revert: restore each backup, `docker compose up -d` in `/opt/slskd-stack`,
-restart LL and SABnzbd, remove the `book-sync` line from root's crontab.
+What this repo owns from that pipeline: the **wanted monitor** watcher
+(`scripts/wanted/wanted_monitor.py` + `run_wanted_monitor.sh`), which checks
+LazyLibrarian's Wanted list against this app's library and notifies via
+Telegram/WhatsApp when a title lands — see `scripts/wanted/README.md`.
 
 ## Common failures → responses
 
