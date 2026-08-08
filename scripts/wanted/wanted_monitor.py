@@ -268,6 +268,30 @@ class StateDB:
         return rows
 
     def mark_openbooks_sent(self, row_id: int):
+        # Recovered from the deployed host copy 2026-08-07 (infra#46): the live
+        # script had this idempotency guard and git did not, so redeploying from
+        # git would have silently regressed it. Keeps reruns from recording the
+        # same request twice.
+        row = self.conn.execute(
+            'SELECT id, key FROM openbooks_queue WHERE id=?',
+            (row_id,)
+        ).fetchone()
+        if not row:
+            return
+
+        key = row['key']
+        if key:
+            existing_sent = self.conn.execute(
+                "SELECT id FROM openbooks_queue WHERE key=? AND status='sent' AND id<>? LIMIT 1",
+                (key, row_id)
+            ).fetchone()
+            if existing_sent:
+                # A previous attempt already recorded this request as sent.
+                # Drop the duplicate queued row so reruns stay idempotent.
+                self.conn.execute('DELETE FROM openbooks_queue WHERE id=?', (row_id,))
+                self.conn.commit()
+                return
+
         self.conn.execute('''
             UPDATE openbooks_queue
             SET status='sent', updated_ts=?, attempt_count=attempt_count+1, last_error=NULL
@@ -393,11 +417,15 @@ def read_ll_wanted(ll_db: Path) -> list[Wanted]:
 
     conn = sqlite3.connect(str(tmp))
     cur = conn.cursor()
+    # LazyLibrarian tracks the two formats in separate columns: Status is the
+    # ebook, AudioStatus the audiobook. This monitor exists to notice when an
+    # AUDIOBOOK turns up, so filtering on Status alone made it blind to most of
+    # the list — 4 of 12 wanted titles on 2026-08-07 (infra#46). Match either.
     cur.execute('''
-        SELECT authors.AuthorName, books.BookName
+        SELECT DISTINCT authors.AuthorName, books.BookName
         FROM books
         JOIN authors ON books.AuthorID = authors.AuthorID
-        WHERE books.Status = 'Wanted'
+        WHERE books.Status = 'Wanted' OR books.AudioStatus = 'Wanted'
     ''')
     rows = cur.fetchall()
     conn.close()
