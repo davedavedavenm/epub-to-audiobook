@@ -2427,7 +2427,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 
     async function previewArticleUrl() {
         const urlInput = document.getElementById('art-url-input');
-        const url = (urlInput?.value || '').strip ? urlInput.value.trim() : '';
+        const url = (urlInput?.value || '').trim();
         if (!url) {
             appAlert({ title: 'Enter a URL', message: 'Please paste a valid web article URL.', tone: 'warning', icon: '⚠️' });
             return;
