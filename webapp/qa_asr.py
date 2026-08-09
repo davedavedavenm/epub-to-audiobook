@@ -236,7 +236,12 @@ def transcribe(audio_path: str | Path, model_size: str = "base", device: str = "
             "faster-whisper not installed — QA Layer 2 needs it. "
             "Install locally: pip install faster-whisper") from e
     compute = "int8" if device == "cpu" else "float16"
-    model = WhisperModel(model_size, device=device, compute_type=compute)
+    import os
+    model_dir = os.environ.get('WHISPER_MODEL_DIR', '/data/models/whisper')
+    try:
+        model = WhisperModel(model_size, device=device, compute_type=compute, download_root=model_dir, local_files_only=True)
+    except Exception:
+        model = WhisperModel(model_size, device=device, compute_type=compute, download_root=model_dir)
     segments, _ = model.transcribe(str(audio_path), beam_size=1, vad_filter=True)
     return " ".join(seg.text for seg in segments)
 

@@ -4079,7 +4079,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         _asr = str(get_setting('ASR_VERIFY')
                    if get_setting('ASR_VERIFY') is not None
                    else os.environ.get('ASR_VERIFY', '1')).strip().lower()
-        if _asr not in ('0', 'false', 'no', 'off'):
+        is_article = (job and job.get('source_kind') == 'article') or (char_count < 15000 and _asr != 'force')
+        if _asr not in ('0', 'false', 'no', 'off') and not is_article:
             qa_model = (get_setting('ASR_VERIFY_MODEL')
                         or os.environ.get('ASR_VERIFY_MODEL') or 'base').strip()
             cmd.extend(['--qa', '--qa-model', qa_model])
@@ -4087,6 +4088,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                                    f"the audio will be transcribed and compared against "
                                    f"the source text. Measured ~20x realtime, so this "
                                    f"adds roughly 6% to the render.")
+        elif is_article:
+            append_job_log(job_id, "Fast article mode: skipped post-flight ASR verification for instant turnaround.")
 
         if job and job.get('start_chapter'):
             cmd.extend(['--start', str(job['start_chapter'])])
