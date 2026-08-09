@@ -890,6 +890,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         localStorage.setItem('audiobook-tab', tabId);
         if(tabId === 'library') loadLibrary();
+        if(tabId === 'articles') loadArticlesTab();
         if(tabId === 'history') loadHistory();
         if(tabId === 'voices') renderVoices();
         if(tabId === 'queue') loadJobs();
@@ -2389,7 +2390,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 
     async function loadArticlesTab() {
         const voiceSel = document.getElementById('art-voice-select');
-        if (voiceSel && !voiceSel.children.length) {
+        if (voiceSel) {
             voiceSel.innerHTML = buildVoiceOptions('uk_female_samuel_nano');
         }
         const listContent = document.getElementById('articles-list-content');
