@@ -5885,6 +5885,71 @@ def cancel_job(job_id: str):
     return jsonify({'status': 'cancelled', 'job_id': job_id, 'wiped_data': bool(wipe_data)})
 
 
+@app.route('/api/jobs/batch-reconvert', methods=['POST'])
+def batch_reconvert():
+    """Enqueue multiple books from history or library for conversion."""
+    data = request.get_json(silent=True) or {}
+    job_ids = data.get('job_ids') or []
+    voice_option = data.get('voice_option', 'keep')
+    engine_option = data.get('tts_engine_option', 'keep')
+
+    if not isinstance(job_ids, list) or not job_ids:
+        return jsonify({'error': 'job_ids must be a non-empty list'}), 400
+
+    enqueued = []
+    for jid in job_ids:
+        job = get_job(jid)
+        if not job:
+            continue
+
+        voice = job['voice'] if voice_option == 'keep' else (
+            get_setting('default_voice', 'accent_australian_female_nano') if voice_option == 'default' else voice_option
+        )
+        engine = job.get('tts_engine', 'kokoro') if engine_option == 'keep' else engine_option
+
+        new_job_id = uuid.uuid4().hex
+        safe_name = sanitize_filename(job.get('book_name', 'book'))
+        output_dirname = f"{safe_name}_{new_job_id}"
+
+        new_job = {
+            'id': new_job_id,
+            'book_name': job.get('book_name', 'Untitled'),
+            'input_filename': job.get('input_filename', ''),
+            'output_dirname': output_dirname,
+            'voice': voice,
+            'tts_engine': engine,
+            'status': 'queued',
+            'created_at': datetime.now().isoformat(),
+            'source_kind': job.get('source_kind', 'book'),
+            'is_pdf': job.get('is_pdf', False),
+            'start_chapter': job.get('start_chapter', 1),
+            'end_chapter': job.get('end_chapter', None),
+            'queue_rank': next_queue_rank(),
+        }
+
+        # Copy original input file if present
+        src_filename = job.get('input_filename', '')
+        if src_filename:
+            src_file = UPLOAD_DIR / src_filename
+            if src_file.exists():
+                base_name = src_filename.split('_', 1)[-1] if '_' in src_filename else src_filename
+                new_input_name = f"{new_job_id}_{base_name}"
+                dst_file = UPLOAD_DIR / new_input_name
+                try:
+                    shutil.copy2(src_file, dst_file)
+                    new_job['input_filename'] = new_input_name
+                except Exception as e:
+                    app.logger.warning(f"Could not copy input file for batch reconvert: {e}")
+
+        save_job(new_job)
+        enqueued.append(new_job_id)
+
+    if enqueued and not is_queue_paused():
+        maybe_start_next_queued_job()
+
+    return jsonify({'status': 'ok', 'enqueued_count': len(enqueued), 'job_ids': enqueued})
+
+
 @app.route('/api/jobs/bulk-action', methods=['POST'])
 def bulk_job_action():
     """Bulk manage queued, converting, failed, or cancelled jobs."""

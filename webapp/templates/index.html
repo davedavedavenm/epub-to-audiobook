@@ -2120,13 +2120,123 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     }
     setInterval(animateWaves, 430);
 
+    let selectedHistoryIds = new Set();
+
+    function toggleSelectAllHistory(checked) {
+        document.querySelectorAll('.history-job-cb').forEach(cb => {
+            cb.checked = checked;
+            if (checked) selectedHistoryIds.add(cb.dataset.id);
+            else selectedHistoryIds.delete(cb.dataset.id);
+        });
+        updateHistorySelectionCount();
+    }
+
+    function toggleHistoryItemCb(id, checked) {
+        if (checked) selectedHistoryIds.add(id);
+        else selectedHistoryIds.delete(id);
+        updateHistorySelectionCount();
+    }
+
+    function updateHistorySelectionCount() {
+        const el = document.getElementById('history-selected-count');
+        if (el) el.textContent = `(${selectedHistoryIds.size} selected)`;
+    }
+
+    async function batchReconvertSelected() {
+        const jobIds = Array.from(selectedHistoryIds);
+        if (jobIds.length === 0) {
+            appAlert({ title: 'No books selected', message: 'Please select one or more books from history to re-convert.', tone: 'warning', icon: 'ℹ️' });
+            return;
+        }
+        const voiceOption = document.getElementById('batch-voice-select')?.value || 'keep';
+        const engineOption = document.getElementById('batch-engine-select')?.value || 'keep';
+
+        if (!await appConfirm({
+            title: `Re-convert ${jobIds.length} Selected Book(s)?`,
+            message: `This will enqueue ${jobIds.length} book(s) into the queue using ${voiceOption === 'keep' ? 'original narrator' : voiceOption} and ${engineOption === 'keep' ? 'original engine' : engineOption}.`,
+            confirmText: `Re-convert (${jobIds.length})`, cancelText: 'Cancel', tone: 'primary', icon: '🎙️'
+        })) return;
+
+        const resp = await fetch('/api/jobs/batch-reconvert', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                job_ids: jobIds,
+                voice_option: voiceOption,
+                tts_engine_option: engineOption
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'ok') {
+            selectedHistoryIds.clear();
+            appAlert({ title: 'Batch Enqueued', message: `Enqueued ${res.enqueued_count} book(s) to the conversion queue.`, tone: 'success', icon: '✅' });
+            switchTab('queue');
+            loadJobs();
+        } else {
+            appAlert({ title: 'Batch conversion failed', message: res.error || 'Could not enqueue batch', tone: 'danger', icon: '⚠️' });
+        }
+    }
+
     async function loadHistory() {
         const content = document.getElementById('history-content');
         try {
             const resp = await fetch('/api/history');
             if(!resp.ok) throw new Error('HTTP ' + resp.status);
             const jobs = await resp.json();
-            content.innerHTML = jobs.map(j => `<div class="card" style="display:flex; justify-content:space-between; align-items:center;"><div><div style="font-family:var(--serif); font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:10px;">✅ ${escapeHtml(j.book_name)} ${preBadge(j)}</div></div><div style="display:flex; gap:12px;"><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button><button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button></div></div>`).join('') || '<div class="card">History is empty.</div>';
+
+            const batchHeader = `
+                <div class="card" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:16px 24px; margin-bottom:20px; background:var(--bg-element); border:1px solid var(--border); border-radius:12px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <input type="checkbox" id="history-select-all" onchange="toggleSelectAllHistory(this.checked)" style="width:18px; height:18px; cursor:pointer;" />
+                        <label for="history-select-all" style="font-weight:700; font-size:0.9rem; cursor:pointer;">Select All History</label>
+                        <span id="history-selected-count" style="font-size:0.85rem; color:var(--text-secondary);">(0 selected)</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                            Narrator:
+                            <select id="batch-voice-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
+                                <option value="keep">Keep original narrator</option>
+                                <option value="default">Default (Accent Australian Female)</option>
+                                ${selectableVoices().map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                            </select>
+                        </label>
+                        <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                            Engine:
+                            <select id="batch-engine-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
+                                <option value="keep">Keep original engine</option>
+                                <option value="chatterbox_nano">Chatterbox Nano (Fast)</option>
+                                <option value="kokoro">Kokoro TTS</option>
+                                <option value="edge">Edge TTS</option>
+                                <option value="chatterbox">Chatterbox Turbo</option>
+                                <option value="tada">TADA</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary" style="font-size:0.85rem; padding:8px 16px;" onclick="batchReconvertSelected()">🎙️ Re-convert Selected</button>
+                    </div>
+                </div>`;
+
+            if (jobs.length > 0) {
+                content.innerHTML = batchHeader + jobs.map(j => `
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <input type="checkbox" class="history-job-cb" data-id="${j.id}" ${selectedHistoryIds.has(j.id) ? 'checked' : ''} onchange="toggleHistoryItemCb('${j.id}', this.checked)" style="width:18px; height:18px; cursor:pointer;" />
+                            <div>
+                                <div style="font-family:var(--serif); font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:10px;">
+                                    ✅ ${escapeHtml(j.book_name)} ${preBadge(j)}
+                                </div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">Narrator: <b>${escapeHtml(j.voice_name || j.voice)}</b> (${j.tts_engine.toUpperCase()})</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:12px;">
+                            <button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button>
+                            <button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                content.innerHTML = '<div class="card">History is empty.</div>';
+            }
+            updateHistorySelectionCount();
         } catch(e) {
             if(content) content.innerHTML = '<div class="card" style="text-align:center; color:var(--error); border-color:var(--error); font-weight:600;">⚠️ Could not reach the studio API — check the server is running, then refresh.</div>';
         }
