@@ -91,3 +91,24 @@ def test_convert_requires_body(client):
 def test_job_not_found(client):
     r = client.get('/api/jobs/nonexistent-id-12345/logs')
     assert r.status_code in (404, 200)
+
+
+def test_library_batch_convert(client):
+    r_empty = client.post('/api/library/batch-convert', json={
+        'paths': [],
+        'voice_option': 'default',
+        'tts_engine_option': 'keep'
+    })
+    assert r_empty.status_code == 400
+
+    r_valid = client.post('/api/library/batch-convert', json={
+        'paths': ['non_existent_book.epub'],
+        'voice_option': 'default',
+        'tts_engine_option': 'keep'
+    })
+    assert r_valid.status_code == 200
+    data = r_valid.get_json()
+    assert data['status'] == 'ok'
+    assert data['enqueued_count'] == 0
+
+

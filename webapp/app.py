@@ -7031,7 +7031,7 @@ def batch_convert_library():
         shutil.copy2(p, input_path)
 
         output_dirname = f"{safe_name}_{job_id}"
-        voice_info = get_voice_info(voice)
+        voice_info = all_voices().get(voice, {})
 
         job = {
             'id': job_id,
