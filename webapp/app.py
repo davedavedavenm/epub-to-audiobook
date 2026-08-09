@@ -5560,7 +5560,8 @@ def article_podcast_rss(site: str = None):
     from article import generate_podcast_rss
     base_url = request.host_url.rstrip('/')
 
-    conn = get_db_connection()
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)
+    conn.row_factory = sqlite3.Row
     query = "SELECT * FROM jobs WHERE source_kind = 'article' AND status = 'completed' ORDER BY created_at DESC"
     rows = conn.execute(query).fetchall()
     conn.close()
@@ -5629,7 +5630,8 @@ def telegram_webhook():
         book_name = art['title']
         output_dirname = f"podcast_{sanitize_filename(art['site'])}_{sanitize_filename(art['title'])[:30]}"
 
-        conn = get_db_connection()
+        conn = sqlite3.connect(str(DB_PATH), timeout=10)
+        conn.row_factory = sqlite3.Row
         conn.execute('''
             INSERT INTO jobs (id, book_name, author, publisher, input_filename, output_dirname,
                               voice, status, source_kind, source_url, notify_telegram, created_at)
