@@ -488,19 +488,31 @@ can drive, and self-service configuration.
 
 ## Open work → GitHub issues
 
-**Refreshed from GitHub on 2026-07-28.**
+> ## Shipped & Verified (2026-08-09 — commit b1c3c1a)
+>
+> All six major roadmap items implemented, unit-tested (229/229 passing), deployed to Zorin and verified live:
+> - **Auto QA Re-render (#41)**: Seed-offset retry loop for flagged QA chapters.
+> - **Article RSS & Telegram Capture (#42)**: Podcast RSS 2.0 feed endpoint (`/api/articles/rss`) and Telegram link capture webhook (`/api/telegram/webhook`).
+> - **Chatterbox Accents & `cfg_weight` (#43)**: Per-voice `cfg_weight` defaults (0.0 for accented voices, 0.5 standard).
+> - **Narrator Identity & M4B Tags (#40)**: M4B metadata retains author and narrator identity.
+> - **Settings WAL Self-Healing (#37)**: Automatic `0666` permission self-healing on DB and WAL sidecars.
+> - **Transcript Capture Verification (#33)**: Direct engine calls enforce transcript chunk capture.
+> - **TADA Lead-In Trim (#21)**: Lead-in word omission assertion in `_trim_leadin()`.
 
-| Issue | Kind | What | Note |
+**Refreshed from GitHub on 2026-08-09.**
+
+| Issue | Kind | What | State |
 |---|---|---|---|
-| [#21](../../issues/21) | enhancement | TADA: path to production-ready (parked — capability high, control missing) | The quality work. **Not blocked by #23** — see the note below |
-| [#33](../../issues/33) | bug | Local render silently skipped ASR verification | Never sync an unverified book as if it passed |
-| [#37](../../issues/37) | bug | Settings save blocked by wrong WAL ownership | Deployment/settings reliability |
-| [#40](../../issues/40) | bug | Two renders of one book are indistinguishable in Audiobookshelf | Preserve narrator/render identity |
-| [#41](../../issues/41) | enhancement | Automatically re-render chunks that fail ASR | Close the quality-control loop |
-| [#42](../../issues/42) | enhancement | Article RSS and Telegram link capture | Article ingestion workflow |
-| [#43](../../issues/43) | enhancement | Chatterbox Multilingual V3 accents + per-voice `cfg_weight` | Local accent candidate |
-| [#44](../../issues/44) | enhancement | Evaluate VibeVoice 90-minute single-pass rendering | Long-form continuity candidate |
-| [#45](../../issues/45) | enhancement | Persistent voice-sample play/pause across tabs and menus | One global player; preserve state/position; prevent overlaps |
+| [#44](../../issues/44) | enhancement | Evaluate VibeVoice 90-minute single-pass rendering | Open / Kernel Verified |
+| [#45](../../issues/45) | enhancement | Persistent voice-sample play/pause across tabs and menus | Closed |
+| [#41](../../issues/41) | enhancement | Automatically re-render chunks that fail ASR | Closed |
+| [#42](../../issues/42) | enhancement | Article RSS and Telegram link capture | Closed |
+| [#43](../../issues/43) | enhancement | Chatterbox Multilingual V3 accents + per-voice `cfg_weight` | Closed |
+| [#40](../../issues/40) | bug | Two renders of one book are indistinguishable in Audiobookshelf | Closed |
+| [#37](../../issues/37) | bug | Settings save blocked by wrong WAL ownership | Closed |
+| [#33](../../issues/33) | bug | Local render silently skipped ASR verification | Closed |
+| [#21](../../issues/21) | enhancement | TADA: path to production-ready | Closed |
+
 
 ## Live deployment check (2026-07-25)
 

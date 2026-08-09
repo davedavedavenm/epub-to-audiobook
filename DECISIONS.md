@@ -121,3 +121,40 @@ without pretending it can hear like the listener.
 specifically as audiobooks (missed 4 of 12 wanted titles on 2026-08-07).
 Fixed in commit `908d82b` alongside recovering openbooks queue idempotency guard.
 
+## Automatic QA Re-Render (#41) — Active
+
+Structural QA verification failures (WER >= 0.08) automatically trigger up to 2
+re-renders with seed offsets (`seed + attempt * 10000`), retaining the audio
+with the lowest WER.
+
+**Why:** Sampling defects (seed variation or cold-start artefacts) are
+self-healed automatically without human intervention or per-book parameter tuning.
+
+## Article Podcast RSS Feed & Telegram Capture (#42) — Active
+
+Articles are served via a standard RSS 2.0 podcast feed (`/api/articles/rss`) with
+audio enclosures for Pocket Casts/Overcast/ABS, and article URLs sent via Telegram
+webhook (`/api/telegram/webhook`) are automatically fetched, converted to EPUB,
+and enqueued for narration.
+
+**Why:** Decouples article narrations from the main audiobook shelf into a clean
+podcast feed and provides one-tap link capture from phone/desktop via Telegram.
+
+## Narrator Identity & M4B Metadata (#40) — Active
+
+Single-file M4B builds preserve author and narrator identity (`composer` / `narrator`
+ID3 tags).
+
+**Why:** Prevents multiple renders of the same book using different voices from
+collapsing into a single indistinguishable entry in Audiobookshelf.
+
+## Settings DB WAL Permissions Self-Healing (#37) — Active
+
+Startup entrypoint (`entrypoint.sh`) and webapp DB initialization (`init_db()`)
+automatically enforce read-write permissions (`0666`) on SQLite database files
+and WAL/SHM sidecars.
+
+**Why:** Eliminates intermittent `READONLY` errors when saving Settings after system
+reboots or file permission shifts.
+
+
