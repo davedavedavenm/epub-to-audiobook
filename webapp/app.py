@@ -117,7 +117,7 @@ SUPPORTED_FORMATS = {'.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.txt', '.html',
 # quality ("as good as turbo, not worse anyway") at RTF 0.87 vs 3.33 — i.e.
 # faster than realtime on CPU, no GPU, no quota. Turbo remains fully available
 # as `uk_male_minter` and friends; this only changes what you get by default.
-DEFAULT_VOICE = 'uk_male_minter_nano'
+DEFAULT_VOICE = 'uk_female_samuel_nano'
 
 # TTS speed: 1.0 = normal, <1.0 = slower with more pauses, range 0.5-1.5
 # Default 1.0 (Kokoro's natural speed sounds good; adjust per-job if needed)
@@ -6091,6 +6091,38 @@ def download_job(job_id: str):
 
 
 
+@app.route('/api/jobs/<job_id>/audio_files', methods=['GET'])
+def get_job_audio_files(job_id: str):
+    """Return list of MP3 audio tracks for a completed job for web playback."""
+    job = get_job(job_id)
+    if not job or not job.get('output_dirname'):
+        return jsonify({'error': 'Job not found'}), 404
+    out_dir = OUTPUT_DIR / job['output_dirname']
+    if not out_dir.exists():
+        return jsonify({'error': 'Output directory not found'}), 404
+
+    mp3s = sorted(out_dir.glob('*.mp3'))
+    files = [{'filename': f.name, 'url': f'/api/jobs/{job_id}/stream/{f.name}'} for f in mp3s]
+    return jsonify({
+        'job_id': job_id,
+        'book_name': job.get('book_name'),
+        'files': files
+    })
+
+
+@app.route('/api/jobs/<job_id>/stream/<filename>', methods=['GET'])
+def stream_job_audio(job_id: str, filename: str):
+    """Stream specific MP3 audio file for inline web audio player."""
+    job = get_job(job_id)
+    if not job or not job.get('output_dirname'):
+        return jsonify({'error': 'Job not found'}), 404
+    out_dir = OUTPUT_DIR / job['output_dirname']
+    target_file = out_dir / filename
+    if not target_file.exists() or not target_file.is_file():
+        return jsonify({'error': 'Audio file not found'}), 404
+    return send_file(target_file, mimetype='audio/mpeg')
+
+
 @app.route('/api/jobs/<job_id>/download_epub', methods=['GET'])
 def download_epub_job(job_id: str):
     """Download the generated EPUB file (with Media Overlays)."""
@@ -6965,9 +6997,67 @@ def convert_from_library():
                         'engine_fallback': engine_fallback_note})
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/library/batch-convert', methods=['POST'])
+def batch_convert_library():
+    """Convert multiple ebooks from library in batch."""
+    data = request.get_json(silent=True) or {}
+    paths = data.get('paths') or []
+    voice_option = data.get('voice_option', DEFAULT_VOICE)
+    engine_option = data.get('tts_engine_option', 'keep')
+
+    if not isinstance(paths, list) or not paths:
+        return jsonify({'error': 'paths must be a non-empty list'}), 400
+
+    enqueued = []
+    for p_str in paths:
+        p = Path(p_str)
+        if not p.exists():
+            continue
+
+        voice = get_setting('default_voice', DEFAULT_VOICE) if voice_option == 'default' else (
+            DEFAULT_VOICE if voice_option == 'keep' else voice_option
+        )
+
+        job_id = str(uuid.uuid4())[:8]
+        book_name = p.stem
+        safe_name = sanitize_filename(book_name)
+        file_ext = p.suffix.lower()
+
+        input_filename = f"{job_id}_{safe_name}{file_ext}"
+        input_path = UPLOAD_DIR / input_filename
+        shutil.copy2(p, input_path)
+
+        output_dirname = f"{safe_name}_{job_id}"
+        voice_info = get_voice_info(voice)
+
+        job = {
+            'id': job_id,
+            'book_name': book_name,
+            'voice': voice,
+            'voice_name': voice_info.get('name', voice) if voice_info else voice,
+            'tts_engine': voice_info.get('engine', 'kokoro') if voice_info else 'kokoro',
+            'status': 'queued',
+            'created_at': datetime.now().isoformat(),
+            'input_filename': input_filename,
+            'output_dirname': output_dirname,
+            'is_pdf': (file_ext == '.pdf'),
+            'tts_speed': DEFAULT_TTS_SPEED,
+            'source_kind': 'book',
+            'queue_rank': next_queue_rank(),
+        }
+        if engine_option != 'keep':
+            job['tts_engine'] = engine_option
+
+        save_job(job)
+        enqueued.append(job_id)
+
+    if enqueued and not is_queue_paused():
+        maybe_start_next_queued_job()
+
+    return jsonify({'status': 'ok', 'enqueued_count': len(enqueued), 'job_ids': enqueued})
 
 
 

@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>Audiobook Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
 body {
@@ -11,12 +14,12 @@ body {
     background-image: radial-gradient(rgba(154,59,50,0.035) 1px, transparent 1px);
     background-size: 22px 22px; transition: background 0.4s, color 0.4s;
 }
-::selection { background: var(--accent); color: var(--paper-raised); }
+::selection { background: var(--accent); color: #fff; }
 .app-main { flex: 1; margin-left: 288px; height: 100vh; overflow-y: auto !important; display: flex; flex-direction: column; }
 .content-body { padding: 56px 64px 96px; max-width: 1360px; width: 100%; margin: 0 auto; flex: 1; }
 
 .sidebar { width: 288px; background: var(--bg-sidebar); color: var(--text-on-dark); padding: 44px 26px; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000; border-right: 1px solid rgba(184,137,45,0.18); }
-.sidebar-brand { margin-bottom: 8px; font-family: var(--serif); font-size: 2.35rem; font-weight: 600; font-optical-sizing: auto; letter-spacing: -0.02em; line-height: 1; }
+.sidebar-brand { margin-bottom: 8px; font-family: var(--sans); font-size: 2.1rem; font-weight: 800; font-optical-sizing: auto; letter-spacing: -0.02em; line-height: 1; }
 .sidebar-brand::first-letter { color: var(--gilt); }
 .sidebar-tag { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.32em; color: rgba(240,232,216,0.4); margin-bottom: 52px; padding-left: 3px; }
 .nav-links { display: flex; flex-direction: column; gap: 4px; flex: 1; }
@@ -27,7 +30,7 @@ body {
 .nav-tab.active::before { content: ''; position: absolute; left: -26px; top: 50%; transform: translateY(-50%); width: 4px; height: 22px; background: var(--gilt); border-radius: 0 4px 4px 0; }
 
 .top-bar { padding: 30px 64px; display: flex; justify-content: space-between; align-items: flex-end; position: sticky; top: 0; background: color-mix(in srgb, var(--paper) 88%, transparent); border-bottom: 1px solid var(--border); z-index: 100; backdrop-filter: blur(14px) saturate(1.2); flex-shrink: 0; }
-.page-title { font-family: var(--serif); font-size: 2.9rem; font-weight: 500; font-optical-sizing: auto; margin: 0; letter-spacing: -0.025em; }
+.page-title { font-family: var(--sans); font-size: 2.4rem; font-weight: 700; font-optical-sizing: auto; margin: 0; letter-spacing: -0.025em; }
 .page-title::after { content: ''; display: block; width: 46px; height: 3px; background: var(--gilt); margin-top: 10px; border-radius: 3px; }
 
 .tab-panel { display: none !important; }
@@ -35,13 +38,13 @@ body {
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-.card { background: var(--paper-raised); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 40px; margin-bottom: 32px; box-shadow: var(--shadow); position: relative; }
-.btn { padding: 13px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-strong); background: var(--bg-element); color: var(--text-primary); transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-family: var(--sans); font-size: 0.96rem; letter-spacing: -0.01em; }
+.card { background: var(--paper-raised); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 36px; margin-bottom: 28px; box-shadow: var(--shadow); position: relative; }
+.btn { padding: 12px 22px; border-radius: 10px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-strong); background: var(--paper-raised); color: var(--text-primary); transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-family: var(--sans); font-size: 0.94rem; letter-spacing: -0.01em; }
 .btn:hover { border-color: var(--accent); background: var(--bg-hover); transform: translateY(-1px); }
-.btn-primary { background: var(--ink); color: var(--paper-raised); border: 1px solid var(--ink); }
-.btn-primary:hover { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 12px 26px -12px rgba(154,59,50,0.6); }
+.btn-primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+.btn-primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); color: #fff; box-shadow: 0 12px 26px -12px rgba(242,107,78,0.6); }
 
-.input-control { width: 100%; padding: 13px 16px; background: var(--paper); border: 1px solid var(--border-strong); border-radius: 10px; color: var(--text-primary); font-family: var(--sans); font-size: 0.98rem; transition: 0.2s; }
+.input-control { width: 100%; padding: 12px 16px; background: var(--paper); border: 1px solid var(--border-strong); border-radius: 10px; color: var(--text-primary); font-family: var(--sans); font-size: 0.96rem; transition: 0.2s; }
 .input-control:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 select.input-control { cursor: pointer; }
 
@@ -51,7 +54,7 @@ select.input-control { cursor: pointer; }
 .library-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow); transform: translateY(-2px); }
 .library-item:hover::before { background: var(--accent); }
 .library-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 26px; gap: 20px; }
-.library-item-title { font-family: var(--serif); font-size: 1.62rem; font-weight: 500; font-optical-sizing: auto; line-height: 1.18; flex: 1; letter-spacing: -0.02em; }
+.library-item-title { font-family: var(--sans); font-size: 1.5rem; font-weight: 700; font-optical-sizing: auto; line-height: 1.18; flex: 1; letter-spacing: -0.02em; }
 .library-item-format { background: var(--ink); color: var(--paper-raised); font-size: 0.66rem; font-weight: 800; padding: 5px 11px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; }
 
 .workspace-trigger { margin-top: auto; display: flex; gap: 13px; align-items: center; }
@@ -73,7 +76,7 @@ select.input-control { cursor: pointer; }
 .modal-content { background: var(--paper-raised); width: 95%; max-width: 1180px; height: 90vh; border-radius: var(--radius-lg); padding: 0; position: relative; display: flex; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow); }
 .modal-close { position: absolute; top: 22px; right: 24px; background: transparent; border: none; font-size: 1.8rem; cursor: pointer; color: var(--text-secondary); z-index: 10; }
 
-/* ---- App dialogs (replace native confirm/alert, which look like OS popups) ---- */
+/* ---- App dialogs ---- */
 .dlg-backdrop{ position:fixed; inset:0; background:rgba(10,12,16,.62); backdrop-filter:blur(10px);
   display:flex; align-items:center; justify-content:center; z-index:3000; padding:20px;
   opacity:0; pointer-events:none; transition:opacity .18s ease; }
@@ -86,7 +89,7 @@ select.input-control { cursor: pointer; }
   font-size:1.25rem; margin-bottom:14px; background:var(--accent-tint); color:var(--accent); }
 .dlg[data-tone="danger"] .dlg-icon{ background:rgba(232,106,106,.14); color:var(--error); }
 .dlg[data-tone="info"]   .dlg-icon{ background:var(--cloud-tint); color:var(--cloud); }
-.dlg-title{ font-family:var(--serif); font-size:1.16rem; font-weight:800; margin:0 0 8px; color:var(--text-primary); letter-spacing:-.01em; }
+.dlg-title{ font-family:var(--sans); font-size:1.2rem; font-weight:800; margin:0 0 8px; color:var(--text-primary); letter-spacing:-.01em; }
 .dlg-msg{ margin:0; color:var(--text-secondary); font-size:.93rem; line-height:1.55; white-space:pre-line; }
 .dlg-details{ margin:16px 0 0; padding:12px 14px; background:var(--bg-element); border:1px solid var(--border);
   border-radius:var(--radius-sm); display:grid; gap:7px; }
@@ -107,7 +110,7 @@ select.input-control { cursor: pointer; }
 @media (prefers-reduced-motion:reduce){ .dlg-backdrop, .dlg{ transition:none; } }
 .preview-sidebar { width: 340px; background: var(--bg-element); border-right: 1px solid var(--border); padding: 44px 30px; overflow-y: auto; flex-shrink: 0; }
 .preview-body { flex: 1; padding: 48px 60px; overflow-y: auto; position: relative; }
-.preview-text { font-family: var(--serif); font-size: 1.22rem; line-height: 1.85; white-space: pre-wrap; color: var(--text-primary); font-weight: 380; }
+.preview-text { font-family: var(--sans); font-size: 1.15rem; line-height: 1.85; white-space: pre-wrap; color: var(--text-primary); font-weight: 400; }
 
 .toc-item { padding: 11px 15px; border-radius: 8px; cursor: pointer; font-size: 0.92rem; font-weight: 500; transition: 0.2s; border: 1px solid transparent; }
 .toc-item:hover { background: var(--bg-hover); }
@@ -118,12 +121,12 @@ select.input-control { cursor: pointer; }
 .gpu-dot.active { background: var(--success); box-shadow: 0 0 10px var(--success); }
 
 .engine-section { margin-bottom: 56px; }
-.engine-header { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; letter-spacing: 0.02em; color: var(--accent); margin-bottom: 26px; border-bottom: 1px solid var(--border); padding-bottom: 14px; display: flex; align-items: center; gap: 14px; text-transform: none; }
+.engine-header { font-family: var(--sans); font-size: 1.2rem; font-weight: 700; letter-spacing: 0.02em; color: var(--accent); margin-bottom: 26px; border-bottom: 1px solid var(--border); padding-bottom: 14px; display: flex; align-items: center; gap: 14px; text-transform: none; }
 .engine-header::after { content: ''; flex: 1; height: 1px; background: var(--border); opacity: 0.6; }
 .voices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px; }
 .voice-card { background: var(--paper-raised); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 22px 24px; transition: 0.3s; display: flex; justify-content: space-between; align-items: center; }
 .voice-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow); }
-.voice-name { font-family: var(--serif); font-size: 1.16rem; font-weight: 550; margin-bottom: 3px; letter-spacing: -0.01em; }
+.voice-name { font-family: var(--sans); font-size: 1.1rem; font-weight: 700; margin-bottom: 3px; letter-spacing: -0.01em; }
 .voice-meta { font-size: 0.74rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
 .preview-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-element); transition: 0.2s; color: var(--text-primary); flex-shrink: 0; }
 .preview-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); transform: scale(1.06); }
@@ -138,25 +141,19 @@ select.input-control { cursor: pointer; }
 ::-webkit-scrollbar-track { background: transparent; }
 </style>
 <style>
-/* ============================================================
-   STUDIO CONSOLE design system (2026-07-10 redesign).
-   Overrides the legacy Narration Press theme above by re-declaring
-   the same class names — markup + JS untouched. Cool ink neutrals,
-   one signal-coral accent (the "on-air" light), mono for all data,
-   waveform motif. Both themes designed.
-   ============================================================ */
+/* Studio design system overrides */
 :root{
-  --paper:#0E1015; --paper-raised:#171A21; --surface-2:#1F232C;
-  --ink:#ECEEF4; --text-primary:#ECEEF4; --text-secondary:#A4AAB8; --ink-soft:#A4AAB8; --ink-3:#6C7280;
-  --bg-sidebar:#0A0C10; --bg-element:#1F232C; --bg-hover:#262B35; --text-on-dark:#ECEEF4;
-  --accent:#F26B4E; --accent-deep:#D9502F; --accent-tint:#2B1A15; --accent-ink:#F9C7BA;
-  --cloud:#4FB6B0; --cloud-tint:#14241F; --cloud-ink:#7FD3CD; --gilt:#F26B4E;
-  --border:#262B35; --border-strong:#333A47; --success:#46B57E; --error:#E86A6A;
-  --serif:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"DejaVu Sans","Liberation Sans",Helvetica,Arial,sans-serif;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"DejaVu Sans","Liberation Sans",Helvetica,Arial,sans-serif;
-  --mono:"SF Mono","Cascadia Code","Segoe UI Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --paper:#0a0e17; --paper-raised:#121826; --surface-2:#1a2234;
+  --ink:#f8fafc; --text-primary:#f8fafc; --text-secondary:#94a3b8; --ink-soft:#94a3b8; --ink-3:#64748b;
+  --bg-sidebar:#060911; --bg-element:#161e2e; --bg-hover:#1e293b; --text-on-dark:#f8fafc;
+  --accent:#6366f1; --accent-deep:#4f46e5; --accent-tint:#1e1b4b; --accent-ink:#a5b4fc;
+  --cloud:#06b6d4; --cloud-tint:#164e63; --cloud-ink:#67e8f9; --gilt:#6366f1;
+  --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.14); --success:#10b981; --error:#ef4444;
+  --serif:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --sans:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --mono:'JetBrains Mono', monospace;
   --radius-lg:16px; --radius-md:10px; --radius-sm:8px;
-  --shadow:0 1px 2px rgba(0,0,0,.3), 0 14px 34px -20px rgba(0,0,0,.6);
+  --shadow:0 4px 20px rgba(0,0,0,0.4);
 }
 [data-theme="light"]{
   --paper:#F5F6F9; --paper-raised:#FFFFFF; --surface-2:#F0F2F6;
@@ -390,6 +387,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     <div class="sidebar-tag">Audiobook · self-hosted</div>
     <nav class="nav-links" role="tablist" aria-label="Studio sections">
         <button class="nav-tab active" id="tab-btn-library" role="tab" aria-selected="true" aria-controls="tab-library" data-tab="library" onclick="switchTab('library')"><i aria-hidden="true">📚</i> <span>Library</span></button>
+        <button class="nav-tab" id="tab-btn-articles" role="tab" aria-selected="false" aria-controls="tab-articles" data-tab="articles" onclick="switchTab('articles')"><i aria-hidden="true">📰</i> <span>Articles</span></button>
         <button class="nav-tab" id="tab-btn-convert" role="tab" aria-selected="false" aria-controls="tab-convert" data-tab="convert" onclick="switchTab('convert')"><i aria-hidden="true">📤</i> <span>Upload</span></button>
         <button class="nav-tab" id="tab-btn-queue" role="tab" aria-selected="false" aria-controls="tab-queue" data-tab="queue" onclick="switchTab('queue')"><i aria-hidden="true">⏳</i> <span>Queue</span> <span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
         <button class="nav-tab" id="tab-btn-voices" role="tab" aria-selected="false" aria-controls="tab-voices" data-tab="voices" onclick="switchTab('voices')"><i aria-hidden="true">🗣️</i> <span>Voices</span></button>
@@ -425,6 +423,49 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     </select>
                 </div>
                 <div id="library-grid" class="library-grid"></div>
+            </div>
+        </div>
+
+        <div class="tab-panel" id="tab-articles" role="tabpanel" aria-labelledby="tab-btn-articles">
+            <div class="card" style="margin-bottom:28px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                    <div>
+                        <h2 style="font-family:var(--sans); font-size:1.8rem; font-weight:800; margin:0 0 6px;">📰 Articles &amp; Web Ingest</h2>
+                        <div style="font-size:0.9rem; color:var(--text-secondary);">Convert any web article URL into narrated audio. Automatically published to your Podcast RSS feed.</div>
+                    </div>
+                    <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:12px 18px; display:flex; align-items:center; gap:12px;">
+                        <div>
+                            <div style="font-size:0.7rem; font-family:var(--mono); color:var(--ink-3); text-transform:uppercase; letter-spacing:0.1em; font-weight:700;">Podcast RSS Feed URL</div>
+                            <code id="rss-feed-url-display" style="font-family:var(--mono); font-size:0.8rem; color:var(--accent-ink);">/api/articles/rss</code>
+                        </div>
+                        <button class="btn" style="font-size:0.8rem; padding:6px 12px;" onclick="copyRssFeedUrl()">📋 Copy Feed URL</button>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr; gap:16px;">
+                    <div class="setup-field">
+                        <label class="setup-label" for="art-url-input">Article Web URL</label>
+                        <input id="art-url-input" class="input-control" placeholder="https://arstechnica.com/science/2026/08/deepmind-hurricane-breakthrough/" onkeydown="if(event.key==='Enter'){previewArticleUrl();}">
+                    </div>
+                    <div style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+                        <div class="setup-field" style="flex:2; min-width:220px;">
+                            <label class="setup-label" for="art-voice-select">Narrator (Default: Beatrice)</label>
+                            <select id="art-voice-select" class="input-control"></select>
+                        </div>
+                        <div class="setup-field" style="flex:1; min-width:140px;">
+                            <label class="setup-label" for="art-speed-input">Speed</label>
+                            <input id="art-speed-input" type="number" step="0.1" value="0.9" class="input-control">
+                        </div>
+                        <button class="btn btn-primary" style="height:44px; padding:0 24px;" onclick="previewArticleUrl()">Preview &amp; Narrate</button>
+                    </div>
+                    <div id="art-url-status" class="compare-status"></div>
+                    <div id="art-url-result" class="hidden" style="margin-top:16px;"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="font-size:1.3rem; font-weight:700; margin:0 0 16px;">Saved Articles &amp; Podcast Episodes</h3>
+                <div id="articles-list-content"></div>
             </div>
         </div>
         <div class="tab-panel" id="tab-convert" role="tabpanel" aria-labelledby="tab-btn-convert">
@@ -704,6 +745,26 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     <button id="voice-player-dismiss" class="voice-player-dismiss" type="button"
             aria-label="Stop and close voice sample" title="Stop and close" onclick="dismissGlobalPreview()">&#10005;</button>
     <audio id="preview-audio" preload="metadata"></audio>
+</section>
+
+<!-- Studio Web Audio Player -->
+<section id="studio-audio-player" class="voice-player hidden" style="width:min(720px, calc(100vw - 320px)); grid-template-columns: auto 1fr auto auto auto;">
+    <button id="sp-play-btn" class="voice-player-btn" onclick="toggleStudioAudioPlay()">▶</button>
+    <div class="voice-player-copy">
+        <div id="sp-title" class="voice-player-name">No track playing</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+            <input id="sp-seek" type="range" class="voice-player-seek" value="0" min="0" max="100" step="0.1" oninput="seekStudioAudio(this.value)">
+            <span id="sp-time" class="voice-player-time">00:00 / 00:00</span>
+        </div>
+    </div>
+    <select id="sp-speed" onchange="setStudioAudioSpeed(this.value)" style="background:var(--surface-2); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; font-size:0.75rem; padding:4px 8px; font-family:var(--mono);">
+        <option value="1.0">1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2.0">2.0x</option>
+    </select>
+    <button class="voice-player-dismiss" onclick="closeStudioAudioPlayer()">✖</button>
 </section>
 <script src="/static/llm_ui.js"></script>
 <script>
@@ -1020,11 +1081,41 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             filtered.sort((a, b) => (b.modified_ts || 0) - (a.modified_ts || 0));
         }
 
-        const voiceOptions = buildVoiceOptions('en-GB-RyanNeural');
+        const voiceOptions = buildVoiceOptions('uk_female_samuel_nano');
         const blendOptions = Object.entries(voices).filter(([id, v]) => v.engine === 'kokoro')
             .map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('');
 
-        grid.innerHTML = filtered.map(b => {
+        const batchHeader = `
+            <div class="card" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:16px 24px; margin-bottom:20px; background:var(--bg-element); border:1px solid var(--border); border-radius:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <input type="checkbox" id="library-select-all" onchange="toggleSelectAllLibrary(this.checked)" style="width:18px; height:18px; cursor:pointer;" />
+                    <label for="library-select-all" style="font-weight:700; font-size:0.9rem; cursor:pointer;">Select All Library</label>
+                    <span id="library-selected-count" style="font-size:0.85rem; color:var(--text-secondary);">(0 selected)</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                        Narrator:
+                        <select id="lib-batch-voice-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
+                            <option value="default">Default (Beatrice Nano)</option>
+                            ${selectableVoices().map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
+                        </select>
+                    </label>
+                    <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                        Engine:
+                        <select id="lib-batch-engine-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
+                            <option value="keep">Auto Engine</option>
+                            <option value="chatterbox_nano">Chatterbox Nano (Fast)</option>
+                            <option value="kokoro">Kokoro TTS</option>
+                            <option value="edge">Edge TTS</option>
+                            <option value="chatterbox">Chatterbox Turbo</option>
+                            <option value="tada">TADA</option>
+                        </select>
+                    </label>
+                    <button class="btn btn-primary" style="font-size:0.85rem; padding:8px 16px;" onclick="batchConvertLibrarySelected()">🎙️ Convert Selected</button>
+                </div>
+            </div>`;
+
+        grid.innerHTML = batchHeader + filtered.map(b => {
             const bookId = encodeURIComponent(b.path).replace(/%/g, '_');
             let statusBadge = '';
             if(b.status === 'completed') statusBadge = '<span class="li-tag done">✓ Audiobook ready</span>';
@@ -1033,6 +1124,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             return `
                 <div class="library-item">
                     <div class="li-main">
+                        <input type="checkbox" class="library-job-cb" data-path="${escapeHtml(b.path)}" ${selectedLibraryPaths.has(b.path) ? 'checked' : ''} onchange="toggleLibraryItemCb('${escapeHtml(b.path).replace(/'/g, "\\'")}', this.checked)" style="width:18px; height:18px; margin-right:12px; cursor:pointer;" />
                         <div class="li-cover" aria-hidden="true">${b.format && b.format.toLowerCase()==='epub' ? `<img loading="lazy" src="/api/library/cover?path=${encodeURIComponent(b.path)}" onload="this.style.opacity=1" onerror="this.remove()">` : ''}</div>
                         <div class="li-info">
                             <div class="li-title">${cleanTitle}</div>
@@ -2121,6 +2213,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     setInterval(animateWaves, 430);
 
     let selectedHistoryIds = new Set();
+    let selectedLibraryPaths = new Set();
+    let currentStudioAudio = null;
+    let currentStudioJobId = null;
 
     function toggleSelectAllHistory(checked) {
         document.querySelectorAll('.history-job-cb').forEach(cb => {
@@ -2140,6 +2235,223 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     function updateHistorySelectionCount() {
         const el = document.getElementById('history-selected-count');
         if (el) el.textContent = `(${selectedHistoryIds.size} selected)`;
+    }
+
+    function toggleSelectAllLibrary(checked) {
+        document.querySelectorAll('.library-job-cb').forEach(cb => {
+            cb.checked = checked;
+            if (checked) selectedLibraryPaths.add(cb.dataset.path);
+            else selectedLibraryPaths.delete(cb.dataset.path);
+        });
+        updateLibrarySelectionCount();
+    }
+
+    function toggleLibraryItemCb(path, checked) {
+        if (checked) selectedLibraryPaths.add(path);
+        else selectedLibraryPaths.delete(path);
+        updateLibrarySelectionCount();
+    }
+
+    function updateLibrarySelectionCount() {
+        const el = document.getElementById('library-selected-count');
+        if (el) el.textContent = `(${selectedLibraryPaths.size} selected)`;
+    }
+
+    async function batchConvertLibrarySelected() {
+        const paths = Array.from(selectedLibraryPaths);
+        if (paths.length === 0) {
+            appAlert({ title: 'No ebooks selected', message: 'Please select one or more books from your library to convert.', tone: 'warning', icon: 'ℹ️' });
+            return;
+        }
+        const voiceOption = document.getElementById('lib-batch-voice-select')?.value || 'default';
+        const engineOption = document.getElementById('lib-batch-engine-select')?.value || 'keep';
+
+        if (!await appConfirm({
+            title: `Convert ${paths.length} Selected Book(s)?`,
+            message: `This will enqueue ${paths.length} book(s) into the queue using Beatrice (Nano) or selected narrator.`,
+            confirmText: `Convert (${paths.length})`, cancelText: 'Cancel', tone: 'primary', icon: '🎙️'
+        })) return;
+
+        const resp = await fetch('/api/library/batch-convert', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                paths: paths,
+                voice_option: voiceOption,
+                tts_engine_option: engineOption
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'ok') {
+            selectedLibraryPaths.clear();
+            appAlert({ title: 'Batch Enqueued', message: `Enqueued ${res.enqueued_count} book(s) to the queue.`, tone: 'success', icon: '✅' });
+            switchTab('queue');
+            loadJobs();
+        } else {
+            appAlert({ title: 'Batch conversion failed', message: res.error || 'Could not enqueue batch', tone: 'danger', icon: '⚠️' });
+        }
+    }
+
+    async function playJobAudio(jobId, bookName) {
+        try {
+            const resp = await fetch(`/api/jobs/${jobId}/audio_files`);
+            if (!resp.ok) throw new Error('Could not fetch audio files');
+            const data = await resp.json();
+            if (!data.files || data.files.length === 0) {
+                appAlert({ title: 'No audio files', message: 'No MP3 files found for this title.', tone: 'warning', icon: '⚠️' });
+                return;
+            }
+            const streamUrl = data.files[0].url;
+
+            if (currentStudioAudio) {
+                currentStudioAudio.pause();
+            }
+            currentStudioAudio = new Audio(streamUrl);
+            currentStudioJobId = jobId;
+
+            const player = document.getElementById('studio-audio-player');
+            const titleEl = document.getElementById('sp-title');
+            const playBtn = document.getElementById('sp-play-btn');
+            const timeEl = document.getElementById('sp-time');
+            const seekEl = document.getElementById('sp-seek');
+            const speedEl = document.getElementById('sp-speed');
+
+            if (titleEl) titleEl.textContent = bookName || data.book_name || 'Now Playing';
+            if (player) player.classList.remove('hidden');
+
+            currentStudioAudio.playbackRate = parseFloat(speedEl?.value || '1.0');
+
+            currentStudioAudio.ontimeupdate = () => {
+                if (!currentStudioAudio) return;
+                const cur = currentStudioAudio.currentTime || 0;
+                const dur = currentStudioAudio.duration || 0;
+                if (seekEl && dur > 0) seekEl.value = (cur / dur) * 100;
+                if (timeEl) timeEl.textContent = `${formatPreviewTime(cur)} / ${formatPreviewTime(dur)}`;
+            };
+
+            currentStudioAudio.onended = () => {
+                if (playBtn) playBtn.innerHTML = '▶';
+            };
+
+            await currentStudioAudio.play();
+            if (playBtn) playBtn.innerHTML = '⏸';
+        } catch(e) {
+            appAlert({ title: 'Playback Error', message: String(e.message || e), tone: 'danger', icon: '⚠️' });
+        }
+    }
+
+    function toggleStudioAudioPlay() {
+        const playBtn = document.getElementById('sp-play-btn');
+        if (!currentStudioAudio) return;
+        if (currentStudioAudio.paused) {
+            currentStudioAudio.play();
+            if (playBtn) playBtn.innerHTML = '⏸';
+        } else {
+            currentStudioAudio.pause();
+            if (playBtn) playBtn.innerHTML = '▶';
+        }
+    }
+
+    function seekStudioAudio(val) {
+        if (!currentStudioAudio || !currentStudioAudio.duration) return;
+        currentStudioAudio.currentTime = (parseFloat(val) / 100) * currentStudioAudio.duration;
+    }
+
+    function setStudioAudioSpeed(speedStr) {
+        if (currentStudioAudio) {
+            currentStudioAudio.playbackRate = parseFloat(speedStr);
+        }
+    }
+
+    function closeStudioAudioPlayer() {
+        if (currentStudioAudio) {
+            currentStudioAudio.pause();
+            currentStudioAudio = null;
+        }
+        const player = document.getElementById('studio-audio-player');
+        if (player) player.classList.add('hidden');
+    }
+
+    function copyRssFeedUrl() {
+        const url = `${window.location.protocol}//${window.location.host}/api/articles/rss`;
+        navigator.clipboard.writeText(url).then(() => {
+            appAlert({ title: 'Feed URL Copied', message: `Copied Podcast RSS URL to clipboard:\n${url}`, tone: 'success', icon: '📋' });
+        }).catch(() => {
+            appAlert({ title: 'Podcast RSS Feed URL', message: url, tone: 'info', icon: '🎙️' });
+        });
+    }
+
+    async function loadArticlesTab() {
+        const voiceSel = document.getElementById('art-voice-select');
+        if (voiceSel && !voiceSel.children.length) {
+            voiceSel.innerHTML = buildVoiceOptions('uk_female_samuel_nano');
+        }
+        const listContent = document.getElementById('articles-list-content');
+        if (!listContent) return;
+        try {
+            const resp = await fetch('/api/history');
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const jobs = await resp.json();
+            const articles = jobs.filter(j => j.source_kind === 'article' || (j.book_name && j.book_name.toLowerCase().includes('article')));
+            if (articles.length > 0) {
+                listContent.innerHTML = articles.map(j => `
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:18px 24px;">
+                        <div>
+                            <div style="font-family:var(--sans); font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:10px;">
+                                📰 ${escapeHtml(j.book_name)}
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">
+                                Narrator: <b>${escapeHtml(j.voice_name || j.voice)}</b> (${(j.tts_engine || 'chatterbox_nano').toUpperCase()})
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-primary" style="font-size:0.85rem; padding:7px 14px;" onclick="playJobAudio('${j.id}', '${escapeHtml(j.book_name).replace(/'/g, "\\'")}')">▶ Play</button>
+                            <button class="btn" style="font-size:0.85rem; padding:7px 14px;" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 MP3</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                listContent.innerHTML = '<div style="color:var(--text-secondary); padding:20px 0;">No articles ingested yet. Paste a URL above to narrate your first article!</div>';
+            }
+        } catch(e) {
+            listContent.innerHTML = '<div style="color:var(--error);">Failed to load articles history.</div>';
+        }
+    }
+
+    async function previewArticleUrl() {
+        const urlInput = document.getElementById('art-url-input');
+        const url = (urlInput?.value || '').strip ? urlInput.value.trim() : '';
+        if (!url) {
+            appAlert({ title: 'Enter a URL', message: 'Please paste a valid web article URL.', tone: 'warning', icon: '⚠️' });
+            return;
+        }
+        const voice = document.getElementById('art-voice-select')?.value || 'uk_female_samuel_nano';
+        const speed = parseFloat(document.getElementById('art-speed-input')?.value || '0.9');
+
+        const status = document.getElementById('art-url-status');
+        const result = document.getElementById('art-url-result');
+        if (status) status.textContent = 'Extracting article content...';
+        if (result) result.classList.add('hidden');
+
+        try {
+            const resp = await fetch('/api/articles/narrate_url', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ url, voice, tts_speed: speed })
+            });
+            const res = await resp.json();
+            if (resp.ok && res.job_id) {
+                if (status) status.textContent = '✅ Article enqueued for narration!';
+                appAlert({ title: 'Article Enqueued', message: `Article "${res.title || 'Untitled'}" is now converting with Beatrice!`, tone: 'success', icon: '✅' });
+                urlInput.value = '';
+                switchTab('queue');
+                loadJobs();
+            } else {
+                if (status) status.textContent = '❌ ' + (res.error || 'Failed to extract article');
+            }
+        } catch(e) {
+            if (status) status.textContent = '❌ Extraction failed: ' + String(e);
+        }
     }
 
     async function batchReconvertSelected() {
@@ -2196,7 +2508,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                             Narrator:
                             <select id="batch-voice-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
                                 <option value="keep">Keep original narrator</option>
-                                <option value="default">Default (Accent Australian Female)</option>
+                                <option value="default">Default (Beatrice Nano)</option>
                                 ${selectableVoices().map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
                             </select>
                         </label>
@@ -2217,19 +2529,20 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 
             if (jobs.length > 0) {
                 content.innerHTML = batchHeader + jobs.map(j => `
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:18px 24px;">
                         <div style="display:flex; align-items:center; gap:14px;">
                             <input type="checkbox" class="history-job-cb" data-id="${j.id}" ${selectedHistoryIds.has(j.id) ? 'checked' : ''} onchange="toggleHistoryItemCb('${j.id}', this.checked)" style="width:18px; height:18px; cursor:pointer;" />
                             <div>
-                                <div style="font-family:var(--serif); font-size:1.2rem; font-weight:700; display:flex; align-items:center; gap:10px;">
+                                <div style="font-family:var(--sans); font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:10px;">
                                     ✅ ${escapeHtml(j.book_name)} ${preBadge(j)}
                                 </div>
-                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">Narrator: <b>${escapeHtml(j.voice_name || j.voice)}</b> (${j.tts_engine.toUpperCase()})</div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">Narrator: <b>${escapeHtml(j.voice_name || j.voice)}</b> (${(j.tts_engine || 'kokoro').toUpperCase()})</div>
                             </div>
                         </div>
-                        <div style="display:flex; gap:12px;">
-                            <button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button>
-                            <button class="btn" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 Download EPUB</button>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-primary" style="font-size:0.85rem; padding:7px 14px;" onclick="playJobAudio('${j.id}', '${escapeHtml(j.book_name).replace(/'/g, "\\'")}')">▶ Play</button>
+                            <button class="btn" style="font-size:0.85rem; padding:7px 14px;" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 MP3s</button>
+                            <button class="btn" style="font-size:0.85rem; padding:7px 14px;" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 EPUB</button>
                         </div>
                     </div>
                 `).join('');
