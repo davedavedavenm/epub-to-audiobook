@@ -170,3 +170,25 @@ class TestEpubHandoff:
         m = read_book_meta(self._build(tmp_path, author=''))
         assert m['title']
         assert 'author' in m
+
+
+class TestPodcastRSS:
+    def test_generate_podcast_rss_valid_xml(self):
+        from article import generate_podcast_rss
+        items = [{
+            'title': 'Test Article',
+            'author': 'Test Author',
+            'site': 'Ars Technica',
+            'url': 'https://arstechnica.com/test',
+            'audio_url': '/data/audiobooks/test.mp3',
+            'file_size': 1234567,
+            'date_str': '2026-08-09',
+            'guid': 'job123'
+        }]
+        xml = generate_podcast_rss('Ars Technica', items, 'https://myhost.com')
+        assert '<rss version="2.0"' in xml
+        assert '<title>Ars Technica</title>' in xml
+        assert '<title>Test Article</title>' in xml
+        assert 'url="https://myhost.com/data/audiobooks/test.mp3"' in xml
+        assert 'length="1234567"' in xml
+

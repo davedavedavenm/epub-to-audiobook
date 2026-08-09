@@ -350,3 +350,52 @@ def article_to_epub(meta: dict, out_path: str | Path) -> Path:
         z.writestr('OEBPS/chapter1.xhtml', chapter)
 
     return out_path
+
+
+def generate_podcast_rss(channel_title: str, items: list[dict], base_url: str) -> str:
+    """Generate a standard RSS 2.0 podcast feed for converted articles.
+
+    *items* is a list of dicts: {title, author, url, audio_url, file_size, duration_s, date_str, guid, summary}.
+    *base_url* is the root URL of the webapp service.
+    Returns valid RSS 2.0 XML string.
+    """
+    channel_title_xml = _xml_escape(channel_title or "Audiobook Articles Feed")
+    base_url = (base_url or "").rstrip('/')
+
+    items_xml = []
+    for item in items:
+        title = _xml_escape(item.get('title', 'Untitled Article'))
+        author = _xml_escape(item.get('author') or item.get('site') or 'EPUB to Audiobook')
+        guid = _xml_escape(item.get('guid') or item.get('audio_url') or item.get('title', ''))
+        link = _xml_escape(item.get('url') or base_url)
+        audio_url = item.get('audio_url', '')
+        if audio_url and not audio_url.startswith('http'):
+            audio_url = f"{base_url}{'/' if not audio_url.startswith('/') else ''}{audio_url}"
+        audio_url_xml = _xml_escape(audio_url)
+        size = item.get('file_size', 0)
+        mime = 'audio/mpeg' if audio_url.endswith('.mp3') else 'audio/mp4'
+        pub_date = item.get('date_str') or datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
+        desc = _xml_escape(item.get('summary') or f"Audio narration of {item.get('title', 'Article')}")
+
+        items_xml.append(f'''    <item>
+      <title>{title}</title>
+      <link>{link}</link>
+      <guid isPermaLink="false">{guid}</guid>
+      <pubDate>{pub_date}</pubDate>
+      <dc:creator>{author}</dc:creator>
+      <description>{desc}</description>
+      <enclosure url="{audio_url_xml}" length="{size}" type="{mime}"/>
+    </item>''')
+
+    joined_items = '\n'.join(items_xml)
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>{channel_title_xml}</title>
+    <link>{_xml_escape(base_url)}</link>
+    <description>Self-hosted article narration podcast feed</description>
+    <language>en</language>
+{joined_items}
+  </channel>
+</rss>'''
+

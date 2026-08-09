@@ -5548,6 +5548,117 @@ def job_qa(job_id: str):
             gate = _json.loads(_gp.read_text(encoding='utf-8'))
         except Exception:
             pass
+
+    return jsonify({'job_id': job_id, 'report': report, 'gate': gate})
+
+
+@app.route('/api/articles/rss')
+@app.route('/rss/podcasts')
+@app.route('/rss/articles/<site>')
+def article_podcast_rss(site: str = None):
+    """Serve converted articles as a standard RSS 2.0 podcast feed (#42)."""
+    from article import generate_podcast_rss
+    base_url = request.host_url.rstrip('/')
+
+    conn = get_db_connection()
+    query = "SELECT * FROM jobs WHERE source_kind = 'article' AND status = 'completed' ORDER BY created_at DESC"
+    rows = conn.execute(query).fetchall()
+    conn.close()
+
+    items = []
+    for r in rows:
+        j = dict(r)
+        out_dirname = j.get('output_dirname') or ''
+        out_dir = OUTPUT_DIR / out_dirname
+        if not out_dir.exists():
+            continue
+
+        site_name = j.get('publisher') or j.get('site') or 'Articles'
+        if site and site.lower() not in site_name.lower():
+            continue
+
+        audio_files = list(out_dir.glob('*.mp3')) + list(out_dir.glob('*.m4b'))
+        if not audio_files:
+            continue
+        audio_file = audio_files[0]
+
+        audio_rel_path = f"/data/audiobooks/{out_dirname}/{audio_file.name}"
+        items.append({
+            'title': j.get('book_name') or audio_file.stem,
+            'author': j.get('author') or site_name,
+            'site': site_name,
+            'url': j.get('source_url') or base_url,
+            'audio_url': audio_rel_path,
+            'file_size': audio_file.stat().st_size,
+            'date_str': j.get('created_at'),
+            'guid': j['id'],
+            'summary': f"Article from {site_name}: {j.get('book_name')}"
+        })
+
+    channel_name = f"Articles - {site}" if site else "Article Narrations"
+    rss_xml = generate_podcast_rss(channel_name, items, base_url)
+    return Response(rss_xml, media_type='application/rss+xml')
+
+
+@app.route('/api/telegram/webhook', methods=['POST'])
+def telegram_webhook():
+    """Handle incoming Telegram webhook messages for URL article capture (#42)."""
+    data = request.get_json(silent=True) or {}
+    msg = data.get('message') or data.get('channel_post') or {}
+    text = (msg.get('text') or '').strip()
+    chat_id = (msg.get('chat') or {}).get('id') or TELEGRAM_CHAT_ID
+
+    if not text or not chat_id:
+        return jsonify({'status': 'ignored'}), 200
+
+    urls = re.findall(r'https?://[^\s]+', text)
+    if not urls:
+        return jsonify({'status': 'no_url_found'}), 200
+
+    url = urls[0]
+    app.logger.info(f"Telegram article capture triggered for {url}")
+
+    try:
+        from article import fetch_article, article_to_epub
+        art = fetch_article(url)
+        epub_name = f"article_{int(time.time())}.epub"
+        epub_path = UPLOAD_DIR / epub_name
+        article_to_epub(art, epub_path)
+
+        job_id = str(uuid.uuid4())[:8]
+        book_name = art['title']
+        output_dirname = f"podcast_{sanitize_filename(art['site'])}_{sanitize_filename(art['title'])[:30]}"
+
+        conn = get_db_connection()
+        conn.execute('''
+            INSERT INTO jobs (id, book_name, author, publisher, input_filename, output_dirname,
+                              voice, status, source_kind, source_url, notify_telegram, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+        ''', (job_id, book_name, art['author'], art['site'], epub_name, output_dirname,
+              DEFAULT_VOICE, 'queued', 'article', url, datetime.now(timezone.utc).isoformat()))
+        conn.commit()
+        conn.close()
+
+        if TELEGRAM_BOT_TOKEN and chat_id:
+            try:
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                              json={'chat_id': chat_id, 'text': f"Enqueued article narration: {book_name} ({art['site']})"},
+                              timeout=5)
+            except Exception:
+                pass
+
+        return jsonify({'status': 'enqueued', 'job_id': job_id, 'title': book_name}), 200
+    except Exception as e:
+        app.logger.error(f"Telegram article capture failed for {url}: {e}")
+        if TELEGRAM_BOT_TOKEN and chat_id:
+            try:
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                              json={'chat_id': chat_id, 'text': f"Could not capture article: {e}"},
+                              timeout=5)
+            except Exception:
+                pass
+        return jsonify({'error': str(e)}), 400
+
     if not report:
         return jsonify({'available': False, 'gate': gate})
     chapters = report.get('chapters') or ([report] if 'wer' in report else [])
@@ -6206,14 +6317,19 @@ def _maybe_build_m4b(job_id, output_path, book_name):
         # the LLM narration profile (which has no author field, so it was
         # always empty) — leaving the M4B strictly worse tagged than the MP3s
         # built from the same source in the same job (#32).
-        title, author, extra = book_name or '', '', {}
+        title, author, extra = book_name or '', job.get('author') or '', {}
+        voice = job.get('voice') or ''
+        if voice:
+            extra['composer'] = f"Narrated by {voice}"
+            extra['narrator'] = voice
+
         epub_name = job.get('input_filename') or ''
         if epub_name:
             src = UPLOAD_DIR / epub_name
             if src.exists():
                 bm = read_book_meta(src)
                 title = bm.get('title') or title
-                author = bm.get('author') or ''
+                author = bm.get('author') or author
                 # Everything else the epub gave us. Audiobookshelf reads these,
                 # and Dave asked for as much per-book metadata as possible.
                 for src_key, tag in (('year', 'date'), ('publisher', 'publisher'),
