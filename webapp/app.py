@@ -5598,7 +5598,7 @@ def article_podcast_rss(site: str = None):
 
     channel_name = f"Articles - {site}" if site else "Article Narrations"
     rss_xml = generate_podcast_rss(channel_name, items, base_url)
-    return Response(rss_xml, media_type='application/rss+xml')
+    return Response(rss_xml, mimetype='application/rss+xml')
 
 
 @app.route('/api/telegram/webhook', methods=['POST'])
