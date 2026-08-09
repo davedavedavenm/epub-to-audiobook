@@ -5549,7 +5549,24 @@ def job_qa(job_id: str):
         except Exception:
             pass
 
-    return jsonify({'job_id': job_id, 'report': report, 'gate': gate})
+    if not report:
+        return jsonify({'available': False, 'gate': gate})
+    chapters = report.get('chapters') or ([report] if 'wer' in report else [])
+    # Aggregate: worst WER, dropped-word runs (RELIABLE), lexicon suggestions.
+    drops, suggestions = [], {}
+    worst = 0.0
+    for c in chapters:
+        worst = max(worst, c.get('wer', 0) or 0)
+        for d in (c.get('divergences') or []):
+            if d.get('type') == 'drop' and len(d.get('source', [])) >= 3:
+                drops.append(' '.join(d['source'])[:80])
+        for k, v in (c.get('lexicon_suggestions') or {}).items():
+            suggestions[k] = v
+    return jsonify({'available': True, 'worst_wer': round(worst, 3),
+                    'chapters': len(chapters),
+                    'dropped_runs': drops[:12],
+                    'suggestions': suggestions,
+                    'gate': gate})
 
 
 @app.route('/api/articles/rss')
@@ -5604,6 +5621,7 @@ def article_podcast_rss(site: str = None):
 @app.route('/api/telegram/webhook', methods=['POST'])
 def telegram_webhook():
     """Handle incoming Telegram webhook messages for URL article capture (#42)."""
+    import time
     data = request.get_json(silent=True) or {}
     msg = data.get('message') or data.get('channel_post') or {}
     text = (msg.get('text') or '').strip()
@@ -5637,7 +5655,7 @@ def telegram_webhook():
                               voice, status, source_kind, source_url, notify_telegram, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
         ''', (job_id, book_name, art['author'], art['site'], epub_name, output_dirname,
-              DEFAULT_VOICE, 'queued', 'article', url, datetime.now(timezone.utc).isoformat()))
+              DEFAULT_VOICE, 'queued', 'article', url, datetime.now().isoformat()))
         conn.commit()
         conn.close()
 
@@ -5660,25 +5678,6 @@ def telegram_webhook():
             except Exception:
                 pass
         return jsonify({'error': str(e)}), 400
-
-    if not report:
-        return jsonify({'available': False, 'gate': gate})
-    chapters = report.get('chapters') or ([report] if 'wer' in report else [])
-    # Aggregate: worst WER, dropped-word runs (RELIABLE), lexicon suggestions.
-    drops, suggestions = [], {}
-    worst = 0.0
-    for c in chapters:
-        worst = max(worst, c.get('wer', 0) or 0)
-        for d in (c.get('divergences') or []):
-            if d.get('type') == 'drop' and len(d.get('source', [])) >= 3:
-                drops.append(' '.join(d['source'])[:80])
-        for k, v in (c.get('lexicon_suggestions') or {}).items():
-            suggestions[k] = v
-    return jsonify({'available': True, 'worst_wer': round(worst, 3),
-                    'chapters': len(chapters),
-                    'dropped_runs': drops[:12],
-                    'suggestions': suggestions,
-                    'gate': gate})
 
 
 @app.route('/api/jobs/<job_id>/qa/apply', methods=['POST'])
