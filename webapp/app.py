@@ -613,8 +613,20 @@ VOICES = {
 from voice_sample import SAMPLE_TEXT as PREVIEW_TEXT, sample_text_for as _preview_text_for  # noqa: E402
 
 
+def _fix_db_permissions():
+    """Ensure DB and WAL sidecars have rw permissions (Issue #37 self-healing)."""
+    p = DB_PATH if isinstance(DB_PATH, Path) else Path(str(DB_PATH))
+    if p.parent.exists():
+        for item in p.parent.glob('*.db*'):
+            try:
+                os.chmod(item, 0o666)
+            except Exception:
+                pass
+
+
 def init_db():
     """Initialize SQLite database for job persistence."""
+    _fix_db_permissions()
     with get_db() as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS jobs (
