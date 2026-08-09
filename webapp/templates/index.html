@@ -1889,6 +1889,58 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
     }
 
+    async function promoteJob(jobId) {
+        await fetch(`/api/jobs/${jobId}/promote`, { method: 'POST' });
+        loadJobs();
+    }
+
+    async function moveJob(jobId, direction) {
+        await fetch(`/api/jobs/${jobId}/move`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ direction })
+        });
+        loadJobs();
+    }
+
+    async function setConcurrency(maxConcurrent) {
+        await fetch('/api/queue/concurrency', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ max_concurrent_jobs: maxConcurrent })
+        });
+        loadJobs();
+    }
+
+    let _draggedQueueId = null;
+    function onQueueDragStart(e, id) {
+        _draggedQueueId = id;
+        e.dataTransfer.effectAllowed = 'move';
+    }
+    function onQueueDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+    async function onQueueDrop(e, targetId) {
+        e.preventDefault();
+        if (!_draggedQueueId || _draggedQueueId === targetId) return;
+        const queuedCards = Array.from(document.querySelectorAll('.card[data-queue-id]'));
+        const ids = queuedCards.map(el => el.dataset.queueId);
+        const fromIdx = ids.indexOf(_draggedQueueId);
+        const toIdx = ids.indexOf(targetId);
+        if (fromIdx !== -1 && toIdx !== -1) {
+            ids.splice(fromIdx, 1);
+            ids.splice(toIdx, 0, _draggedQueueId);
+            await fetch('/api/queue/reorder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ordered_ids: ids })
+            });
+            loadJobs();
+        }
+        _draggedQueueId = null;
+    }
+
     function chapterProgressText(j) {
         if (j.current_chapter && j.total_chapters) {
             // current_chapter is the book-absolute index; total_chapters counts
@@ -1931,11 +1983,20 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const anyFailed = active.some(j => j.status === 'failed');
         const controls = `
             <div class="card" style="display:flex; flex-direction:column; gap:16px; padding:20px 28px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-weight:700; color:var(--text-secondary);">
-                        ${qstatus.paused ? '⏸️ Queue is PAUSED — running jobs finish, nothing new starts.' : `▶️ Queue running — ${qstatus.queued_count} waiting`}
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div style="font-weight:700; color:var(--text-secondary); display:flex; align-items:center; gap:12px;">
+                        <span>${qstatus.paused ? '⏸️ Queue is PAUSED — running jobs finish, nothing new starts.' : `▶️ Queue running — ${qstatus.queued_count} waiting`}</span>
                     </div>
-                    <div style="display:flex; gap:12px;">
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                            Parallel jobs:
+                            <select onchange="setConcurrency(this.value)" style="padding:4px 8px; border-radius:6px; background:var(--bg-element); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
+                                <option value="1" ${qstatus.max_concurrent_jobs === 1 ? 'selected' : ''}>1 (Sequential)</option>
+                                <option value="2" ${qstatus.max_concurrent_jobs === 2 ? 'selected' : ''}>2 Parallel</option>
+                                <option value="3" ${qstatus.max_concurrent_jobs === 3 ? 'selected' : ''}>3 Parallel</option>
+                                <option value="4" ${qstatus.max_concurrent_jobs === 4 ? 'selected' : ''}>4 Parallel</option>
+                            </select>
+                        </label>
                         <button class="btn" onclick="toggleQueuePause()">${qstatus.paused ? '▶️ Resume queue' : '⏸️ Pause queue'}</button>
                         ${anyFailed ? '<button class="btn" onclick="retryAllFailed()">🔁 Retry all failed</button>' : ''}
                     </div>
@@ -1959,7 +2020,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>`;
         if(active.length > 0) {
             queueContent.innerHTML = controls + active.map(j => `
-                <div class="card" style="${j.status === 'failed' ? 'border-color: var(--error);' : ''}">
+                <div class="card" data-queue-id="${j.id}" ${j.status === 'queued' ? 'draggable="true" ondragstart="onQueueDragStart(event, \'' + j.id + '\')" ondragover="onQueueDragOver(event)" ondrop="onQueueDrop(event, \'' + j.id + '\')"' : ''} style="${j.status === 'failed' ? 'border-color: var(--error);' : ''}; ${j.status === 'queued' ? 'cursor:grab;' : ''}">
                     <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
                         <div style="display:flex; gap:14px; align-items:flex-start;">
                             <input type="checkbox" class="queue-job-cb" data-id="${j.id}" ${selectedQueueIds.has(j.id) ? 'checked' : ''} onchange="toggleQueueItemCb('${j.id}', this.checked)" style="width:18px; height:18px; margin-top:4px; cursor:pointer;" />
@@ -1987,6 +2048,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     </div>
                     <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
                         <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="toggleLogs('${j.id}', this)">📜 Log</button>
+                        ${j.status === 'queued' ? `
+                            <button class="btn" style="font-size:0.85rem; padding:8px 14px; background:rgba(0,180,216,0.15); border-color:var(--accent); color:var(--accent);" onclick="promoteJob('${j.id}')">🔝 Promote to Top</button>
+                            <button class="btn" style="font-size:0.85rem; padding:8px 14px;" onclick="moveJob('${j.id}', -1)">⬆️ Move Up</button>
+                            <button class="btn" style="font-size:0.85rem; padding:8px 14px;" onclick="moveJob('${j.id}', 1)">⬇️ Move Down</button>
+                        ` : ''}
                         ${(j.status !== 'failed' && j.status !== 'completed' && j.status !== 'review needed') ? `<button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="cancelJob('${j.id}')">✋ Cancel</button>` : ''}
                         ${(j.status === 'completed' || j.status === 'review needed') ? `
                             <button class="btn" style="font-size:0.85rem; padding:8px 16px;" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 Download MP3s</button>

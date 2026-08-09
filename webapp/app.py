@@ -1624,8 +1624,16 @@ def get_next_queued_job():
         return job_to_dict(result) if result else None
 
 
+def get_max_concurrent_jobs() -> int:
+    """Return max concurrent jobs setting (default: 1, max: 4)."""
+    try:
+        return max(1, min(4, int(get_setting('max_concurrent_jobs', '1'))))
+    except Exception:
+        return 1
+
+
 def start_next_queued_job():
-    """Start the next queued job if no job is currently running.
+    """Start the next queued job if running job count is below limit.
 
     Uses _job_claim_lock to prevent race conditions where multiple callers
     (worker loop iterations, API endpoints) could start the same job twice.
@@ -1636,7 +1644,7 @@ def start_next_queued_job():
         if is_queue_paused():
             app.logger.info("Queue is paused; not starting queued jobs")
             return False
-        if is_job_running():
+        if running_job_count() >= get_max_concurrent_jobs():
             return False
 
         job = get_next_queued_job()
@@ -5356,8 +5364,24 @@ def queue_status():
         queued_count = conn.execute("SELECT COUNT(*) AS n FROM jobs WHERE status='queued'").fetchone()['n']
     return jsonify({
         'paused': is_queue_paused(),
-        'queued_count': queued_count
+        'queued_count': queued_count,
+        'max_concurrent_jobs': get_max_concurrent_jobs(),
     })
+
+
+@app.route('/api/queue/concurrency', methods=['POST'])
+def queue_concurrency():
+    """Set maximum concurrent conversion jobs."""
+    data = request.get_json(silent=True) or {}
+    val = data.get('max_concurrent_jobs')
+    try:
+        n = max(1, min(4, int(val)))
+        set_setting('max_concurrent_jobs', str(n))
+        if not is_queue_paused():
+            maybe_start_next_queued_job()
+        return jsonify({'status': 'ok', 'max_concurrent_jobs': n})
+    except Exception as e:
+        return jsonify({'error': f'Invalid concurrency value: {e}'}), 400
 
 
 @app.route('/api/queue/pause', methods=['POST'])
@@ -5372,6 +5396,42 @@ def queue_pause():
     if not paused:
         maybe_start_next_queued_job()
     return jsonify({'paused': paused})
+
+
+@app.route('/api/jobs/<job_id>/promote', methods=['POST'])
+def queue_promote(job_id: str):
+    """Promote a queued job to rank 1 (top of queue)."""
+    with get_db() as conn:
+        conn.execute('UPDATE jobs SET queue_rank = 1 WHERE id = ?', (job_id,))
+        rows = conn.execute("SELECT id FROM jobs WHERE status='queued' AND id <> ? ORDER BY COALESCE(queue_rank, 0), created_at", (job_id,)).fetchall()
+        for rank, r in enumerate(rows, start=2):
+            conn.execute('UPDATE jobs SET queue_rank = ? WHERE id = ?', (rank, r['id']))
+        conn.commit()
+    return jsonify({'status': 'ok', 'promoted_id': job_id})
+
+
+@app.route('/api/jobs/<job_id>/move', methods=['POST'])
+def queue_move(job_id: str):
+    """Move a queued job up (-1) or down (+1) in the queue."""
+    data = request.get_json(silent=True) or {}
+    direction = int(data.get('direction', -1))
+
+    with get_db() as conn:
+        rows = conn.execute("SELECT id FROM jobs WHERE status='queued' ORDER BY COALESCE(queue_rank, 0), created_at").fetchall()
+        ids = [r['id'] for r in rows]
+
+        if job_id not in ids:
+            return jsonify({'error': 'Job not queued'}), 400
+
+        idx = ids.index(job_id)
+        target = idx + direction
+        if 0 <= target < len(ids):
+            ids[idx], ids[target] = ids[target], ids[idx]
+            for rank, jid in enumerate(ids, start=1):
+                conn.execute('UPDATE jobs SET queue_rank = ? WHERE id = ?', (rank, jid))
+            conn.commit()
+
+    return jsonify({'status': 'ok', 'ordered_ids': ids})
 
 
 @app.route('/api/queue/reorder', methods=['POST'])
