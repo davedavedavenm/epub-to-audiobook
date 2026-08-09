@@ -110,3 +110,14 @@ name back to the expected word, and transcribing an acceptable pronunciation
 as the wrong word. Removing ASR entirely would also remove the guard that caught
 collapsed outputs; keeping it within this narrow boundary preserves its value
 without pretending it can hear like the listener.
+
+## Wanted monitor Audiobook status query — Active
+
+`scripts/wanted/wanted_monitor.py` queries LazyLibrarian's database matching
+`Status = 'Wanted' OR AudioStatus = 'Wanted'`. LazyLibrarian tracks ebooks in
+`Status` and audiobooks in `AudioStatus`.
+
+**Why:** filtering on `Status` alone made the monitor blind to titles wanted
+specifically as audiobooks (missed 4 of 12 wanted titles on 2026-08-07).
+Fixed in commit `908d82b` alongside recovering openbooks queue idempotency guard.
+
