@@ -1052,17 +1052,23 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         await requestVoicePreview(voiceId, btn);
     }
 
+    const ENGINE_LABELS = {
+        'chatterbox_nano': 'CHATTERBOX NANO (Fast CPU — Default)',
+        'chatterbox': 'CHATTERBOX TURBO (Heavy — Needs GPU)',
+        'kokoro': 'KOKORO TTS (Neural)',
+        'edge': 'EDGE TTS (Cloud)',
+        'tada': 'TADA (Natural GPU)',
+        'piper': 'PIPER (Legacy)'
+    };
     function buildVoiceOptions(selectedId) {
-        // Unconfigured engines are omitted entirely — a voice you cannot
-        // possibly render is not a choice, and listing it only invites a job
-        // that fails at queue time (#24).
         const usable = selectableVoices();
         const engines = [...new Set(usable.map(([id, v]) => v.engine))];
         return engines.map(engine => {
             const up = engineUp(engine);
             const selectable = engineSelectable(engine);
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
-            const label = engine.toUpperCase() + (up ? ' ENGINE' : (selectable ? ' ENGINE — KAGGLE GPU' : ' ENGINE — OFFLINE'));
+            const baseLabel = ENGINE_LABELS[engine] || (engine.toUpperCase() + ' ENGINE');
+            const label = baseLabel + (up ? '' : (selectable ? ' — KAGGLE GPU' : ' — OFFLINE'));
             return `<optgroup label="${label}">${engineVoices.map(([id, v]) => `<option value="${id}" ${selectable ? '' : 'disabled'} ${id === selectedId && selectable ? 'selected' : ''}>${v.name} (${v.accent})${up ? '' : (selectable ? ' — Kaggle GPU' : ' — offline')}</option>`).join('')}</optgroup>`;
         }).join('');
     }
