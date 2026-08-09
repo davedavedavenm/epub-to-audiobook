@@ -4491,6 +4491,7 @@ def api_url_preview():
 
 
 @app.route('/api/url/convert', methods=['POST'])
+@app.route('/api/articles/narrate_url', methods=['POST'])
 def api_url_convert():
     """Render a web article as audio, via the ordinary book pipeline.
 

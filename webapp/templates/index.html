@@ -2441,15 +2441,16 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         if (result) result.classList.add('hidden');
 
         try {
-            const resp = await fetch('/api/articles/narrate_url', {
+            const resp = await fetch('/api/url/convert', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ url, voice, tts_speed: speed })
             });
             const res = await resp.json();
-            if (resp.ok && res.job_id) {
+            if (resp.ok && (res.job_id || res.status === 'success')) {
                 if (status) status.textContent = '✅ Article enqueued for narration!';
-                appAlert({ title: 'Article Enqueued', message: `Article "${res.title || 'Untitled'}" is now converting with Beatrice!`, tone: 'success', icon: '✅' });
+                const title = (res.article && res.article.title) ? res.article.title : 'Article';
+                appAlert({ title: 'Article Enqueued', message: `Article "${title}" is now converting with Beatrice!`, tone: 'success', icon: '✅' });
                 urlInput.value = '';
                 switchTab('queue');
                 loadJobs();
