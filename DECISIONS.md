@@ -14,17 +14,29 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
-## TTS engine defaults — Active
+## TTS engine defaults & Narrator — Active
 
-Chatterbox Nano is the default production engine. Piper is legacy/debug only
-(`ENABLE_PIPER_PROFILE=1` required, not a fallback). Chatterbox Turbo and TADA
-require explicit opt-in (`ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`).
+Chatterbox Nano is the default production engine, and **Beatrice (Nano)** (`uk_female_samuel_nano`) is the default system narrator voice. Piper is legacy/debug only (`ENABLE_PIPER_PROFILE=1` required, not a fallback). Chatterbox Turbo and TADA require explicit opt-in (`ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`).
 
-**Why:** a controlled three-way Piper audit (1.2 @ 64kbps, same WAV at higher
-bitrate, 1.6 direct with official VCTK-medium) was rejected on listening —
-"absolute shit," wrong words, inauthentic accents — on 2026-07-28. Wrapper and
-bitrate were ruled out as the fix; the model path itself is closed. Don't
-re-run this audit without new evidence the underlying model changed.
+**Why:** Beatrice (Nano) offers high-quality UK human-cloned narration at fast CPU speeds (~0.87x RTF) without requiring extra docker profiles or GPU hardware. Piper audio was rejected on listening ("absolute shit") on 2026-07-28.
+
+## Article Ingest & Fast QA Bypass — Active
+
+Web article URL ingest (`POST /api/articles/narrate_url`) and short content (< 15,000 chars) skip post-flight ASR verification by default. Generated article audio is automatically published to the Podcast RSS 2.0 feed (`/api/articles/rss`).
+
+**Why:** Short articles do not suffer from multi-chapter drift, and skipping post-flight ASR reduces turnaround time from minutes to seconds.
+
+## Offline Whisper ASR Caching — Active
+
+Whisper ASR models are downloaded persistently to `/data/models/whisper` and initialized with `local_files_only=True`.
+
+**Why:** Prevents online HuggingFace Hub network checks, rate limit warnings, and latency delays during ASR verification passes.
+
+## Integrated Studio Web Audio Player — Active
+
+The web UI uses a single persistent glassmorphic audio player bar (`#studio-audio-player`) at the bottom right, supporting browser playback of completed audiobooks, articles, and previews across tabs with speed controls (`1.0x`–`2.0x`).
+
+**Why:** Issue #45. Eliminates orphaned audio playback and allows seamless listening while navigating the web application.
 
 ## TADA — Active
 

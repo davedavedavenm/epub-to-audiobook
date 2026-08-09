@@ -17,27 +17,22 @@ For current build state and remaining work see [STATUS.md](STATUS.md).
 ## Features
 
 ### TTS Engines
-- **Kokoro TTS** - default local engine; good quality, very low runtime cost, CPU or Vast.ai GPU
+- **Chatterbox Nano** - default local engine with **Beatrice (Nano)** (`uk_female_samuel_nano`) as system default narrator. Fast CPU inference (~0.87x RTF, faster than realtime), voice-cloned British narrators (Beatrice, Arthur, Harriet, Edmund). Runs out of the box with `docker compose up -d`.
+- **Kokoro TTS** - neural local engine; very low runtime cost, CPU or Vast.ai GPU
   - British, American, European, and multilingual voice packs
   - Voice mixing support (blend two voices)
 - **Chatterbox Turbo** - production narration engine with official pacing
-  controls; voice-cloned British narrators (Arthur, Edmund, Harriet, Beatrice)
-  from public-domain LibriVox readers. Runs well on **CPU** (a few hours per
-  novel) or GPU — no GPU required. Enable with the `chatterbox` compose profile.
-- **Hume TADA** - highest natural-voice ceiling and most expressive, via
-  TADA-1B; the same British narrators. A research model (no long-form/pacing
-  controls) — strongest on shorter or dialogue-heavy text and happiest on a
-  GPU. Enable with the `tada` compose profile.
-- Which sounds best is **text- and hardware-dependent — judge by ear**; see
-  [ENGINES.md](ENGINES.md) for officially-sourced facts and recorded listening
-  outcomes.
-- **Piper TTS** - lightweight local fallback for low-resource systems
+  controls. Enable with explicit `ENABLE_CHATTERBOX_PROFILE=1` compose profile.
+- **Hume TADA** - expressive natural-voice model via TADA-1B. Enable with explicit `ENABLE_TADA_PROFILE=1` compose profile.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
-- **AWS Polly** - legacy paid fallback via `tts-proxy`; not recommended (good long-form output is too expensive)
-- **Inworld TTS 1.5** - optional premium paid voice engine via `tts-proxy`
+- **Piper TTS** - legacy local fallback (`ENABLE_PIPER_PROFILE=1`)
 
-See [LOW-COST-TTS.md](LOW-COST-TTS.md) for the cost strategy and engine
-bake-off, and add your own cloned voices per [GETTING-STARTED.md](GETTING-STARTED.md) §5.
+### Web Application & Media Delivery
+- **Studio Console Web UI** - modern dark obsidian slate theme with Google Fonts (Plus Jakarta Sans & JetBrains Mono)
+- **Dedicated Articles Tab (`📰 Articles`)** - paste any article URL for instant narration, with fast QA bypass (sub-minute synthesis)
+- **Podcast RSS 2.0 Feed (`/api/articles/rss`)** - automatic podcast feed for streaming articles directly in Pocket Casts, Overcast, Apple Podcasts, or Audiobookshelf
+- **Library Batch Management** - select all library ebooks, pick narrators and engines, and batch convert in one click
+- **Studio Web Audio Player** - sticky glassmorphic bottom bar for listening to audiobooks, articles, and voice auditions across tabs with playback speed controls (1.0x–2.0x)
 
 ### Text Preprocessing (mandatory, engine-independent)
 

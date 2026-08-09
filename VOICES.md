@@ -300,7 +300,7 @@ recorded speech if any is available.
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
 | Irish, South African or Australian, online | Edge remains an acceptable **accent** baseline, but is not approved for Chinese-business nonfiction because company-name pronunciation failed. It is not local. |
 | Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
-| British/general narration, local | Use only a voice that has passed the target book's listening sample; Chatterbox Turbo “Arthur” is the currently recorded accepted full-book outcome. |
+| British/general narration, local | **Beatrice (Nano)** (`uk_female_samuel_nano` via Chatterbox Nano) is the system default narrator. Fast CPU inference (~0.87x RTF) with human-cloned British voice. |
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,

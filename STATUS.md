@@ -1,5 +1,20 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-09 Studio Upgrade & Production Baseline — DEPLOYED (559a1f5, c316cce)
+>
+> All features and fixes from the August 2026 Studio Upgrade session are tested
+> (`231/231 passed`) and live-deployed to the Zorin host (`http://192.168.1.41:8881`).
+>
+> 1. **Default Narrator**: Updated system default voice to **Beatrice (Nano)** (`uk_female_samuel_nano` via Chatterbox Nano). Fast CPU inference with human-cloned UK voice.
+> 2. **Dedicated Articles Tab (`📰 Articles`)**: Added a top-level sidebar tab for web article ingest. Features an integrated **Podcast RSS 2.0 Feed** (`http://192.168.1.41:8881/api/articles/rss`) with a **One-Tap "Copy Feed URL"** button for Pocket Casts, Overcast, Apple Podcasts, and Audiobookshelf.
+> 3. **Library Batch Conversion**: Added Library Batch Toolbar (`Select All Library`, Narrator dropdown, Engine dropdown, `🎙️ Convert Selected` button) and per-item checkboxes, backed by `POST /api/library/batch-convert`.
+> 4. **Studio Web Audio Player**: Added a persistent glassmorphic audio player bar (`#studio-audio-player`) at the bottom of the screen. Supports inline browser playback for completed audiobooks, articles, and previews across tabs with speed controls (`1.0x`–`2.0x`).
+> 5. **Fast Article QA Bypass**: Web articles and short content (< 15,000 chars) skip post-flight ASR verification by default for instant synthesis in seconds.
+> 6. **Offline Whisper ASR Caching**: Updated `qa_asr.py` to use `download_root="/data/models/whisper"` with `local_files_only=True`, keeping ASR 100% offline without HuggingFace Hub network checks or rate warnings.
+> 7. **Dropdown Engine Labels**: Updated Narrator dropdown optgroups to clearly distinguish `CHATTERBOX NANO (Fast CPU — Default)` from `CHATTERBOX TURBO (Heavy — Needs GPU)`.
+> 8. **Typography & Theme Polish**: Modernized UI typography with Google Fonts **Plus Jakarta Sans** and **JetBrains Mono**, obsidian dark slate theme (`#0a0e17`), and SVG button icons.
+> 9. **GitHub Issue #45**: Closed (`Web UI: persistent voice-sample play/pause across tabs and menus`).
+
 > ## VibeVoice/Qwen3 production path (2026-07-29) — RAVEN E2E VERIFIED
 >
 > The two full-chapter finalists are now represented by pinned GPU services,

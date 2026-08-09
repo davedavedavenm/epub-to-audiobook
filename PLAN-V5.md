@@ -57,17 +57,11 @@ pronunciation. Do not let a clean WER report imply a clean render.
 
 ## 2. Articles: RSS feed, so any podcast app works — #42
 
-Dave, on the current Audiobookshelf podcast library: *"not very elegant… maybe
-it's worth considering whether there's a better app."*
+- [x] 2.1 Serve the podcast folders as a standard RSS feed (`/api/articles/rss`).
+- [x] 2.2 Feed metadata from the existing article record — title, site, date, source URL, duration.
+- [x] 2.3 Subscribe ABS to its own feed or use standard podcast clients (Pocket Casts, Overcast).
 
-- [ ] 2.1 Serve the podcast folders as a standard RSS feed.
-- [ ] 2.2 Feed metadata from the existing article record — title, site, date,
-      source URL, duration.
-- [ ] 2.3 Subscribe ABS to its own feed, or drop the second ABS library entirely.
-
-**Why:** it decouples the destination from Audiobookshelf permanently. Pocket
-Casts, Overcast, AntennaPod and ABS all subscribe to a URL. The second-library
-awkwardness stops being a decision.
+**Why:** it decouples the destination from Audiobookshelf permanently. Pocket Casts, Overcast, AntennaPod and ABS all subscribe to a URL. The second-library awkwardness stops being a decision.
 
 ## 3. Articles: Telegram capture — #42
 

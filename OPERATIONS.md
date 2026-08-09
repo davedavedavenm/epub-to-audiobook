@@ -29,7 +29,7 @@ back. This incident did not touch conversion state or generated media.
 
 - Kokoro + Piper + Chatterbox (Turbo **and** Nano) + webapp/worker fit
   comfortably on 31 GB.
-- **Chatterbox NANO is the default engine** (`DEFAULT_VOICE=uk_male_minter_nano`).
+- **Chatterbox NANO is the default engine** (`DEFAULT_VOICE=uk_female_samuel_nano` — Beatrice Nano).
   A/B'd against Turbo on an identical passage: indistinguishable in quality at
   **RTF 0.87 vs 3.33**. A 12.4-hour book takes ~11 h on Nano vs ~41 h on Turbo —
   **faster than realtime on CPU, so full books no longer need a GPU at all.**

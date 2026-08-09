@@ -45,10 +45,7 @@ browser and go to:
 You should see the **Audiobook Studio** — a clean library screen. That's it,
 you're running.
 
-> **Want the very best voices?** The default voice (Kokoro) is fast and good.
-> For the premium British narrators (Arthur, Beatrice…), start the app with
-> `docker compose --profile chatterbox up -d` instead. It downloads a bit more
-> the first time. You can always change your mind later.
+> **Out of the box voices**: The app defaults to **Beatrice (Nano)** — a human-cloned British narrator running fast on CPU. You can also pick any Kokoro or Edge voice. `docker compose up -d` includes Chatterbox Nano by default.
 
 ---
 
