@@ -5744,27 +5744,25 @@ def diagnostics():
     })
 
 
-@app.route('/api/jobs/<job_id>/cancel', methods=['POST'])
-def cancel_job(job_id: str):
-    """Cancel a running job."""
+def _perform_cancel_job(job_id: str, wipe_data: bool = True) -> bool:
+    """Internal helper to stop process/container/Kaggle kernel and cancel a job."""
     job = get_job(job_id)
     if not job:
-        return jsonify({'error': 'Job not found'}), 404
+        return False
 
-    if job['status'] not in ('queued', 'converting', 'converting PDF', 'converting to audio') \
-            and not job['status'].startswith(('rendering on Kaggle GPU', 'queued on Kaggle')):
-        return jsonify({'error': 'Job is not running'}), 400
+    if job.get('status') in ('completed', 'cancelled'):
+        return False
 
-    # Stop the container if running
+    # Stop container if running
     container_name = job.get('container_name')
     if container_name:
         try:
             subprocess.run(['docker', 'stop', container_name], capture_output=True, timeout=10)
             subprocess.run(['docker', 'rm', '-f', container_name], capture_output=True, timeout=10)
         except Exception as e:
-            app.logger.warning(f"Could not stop container: {e}")
+            app.logger.warning(f"Could not stop container for {job_id}: {e}")
 
-    # Kill the process if tracked
+    # Kill process if tracked
     if job_id in running_processes:
         try:
             running_processes[job_id].kill()
@@ -5774,29 +5772,107 @@ def cancel_job(job_id: str):
 
     running_containers.pop(job_id, None)
 
-    # Stop the Kaggle kernel too. Cancelling used to end only our polling loop
-    # while the GPU kept billing against the weekly quota — the user believed
-    # they had stopped it, and nothing had (found 2026-07-25).
-    if str(job.get('status', '')).startswith(('rendering on Kaggle GPU', 'queued on Kaggle')):
+    # Stop Kaggle kernel
+    if str(job.get('status', '')).startswith(('rendering on Kaggle GPU', 'queued on Kaggle', 'recovering (Kaggle GPU)')):
         try:
             import kaggle_render as KR
             user = KR.kaggle_username()
             slug = KR.kernel_slug(job.get('input_filename') or '')
             if user and slug:
-                KR.stop_kernel(f"{user}/{slug}",
-                               log=lambda m: append_job_log(job_id, m))
+                KR.stop_kernel(f"{user}/{slug}", log=lambda m: append_job_log(job_id, m))
         except Exception as e:
             app.logger.warning(f"Could not stop Kaggle kernel for {job_id}: {e}")
-            append_job_log(job_id, f"WARNING: could not stop the Kaggle kernel ({e}) — "
-                                   f"it may still be using GPU quota.")
+
+    # Wipe partial conversion audio & transcripts if requested
+    if wipe_data:
+        out_dirname = job.get('output_dirname') or ''
+        if out_dirname:
+            out_dir = OUTPUT_DIR / out_dirname
+            if out_dir.exists():
+                try:
+                    shutil.rmtree(out_dir)
+                except Exception as e:
+                    app.logger.warning(f"Could not wipe output dir for {job_id}: {e}")
+        trans_dir = Path(f"/data/transcripts/{job_id}")
+        if trans_dir.exists():
+            try:
+                shutil.rmtree(trans_dir)
+            except Exception:
+                pass
 
     update_job(job_id,
         status='cancelled',
         error='Cancelled by user',
         completed_at=datetime.now().isoformat()
     )
+    return True
 
-    return jsonify({'status': 'cancelled'})
+
+@app.route('/api/jobs/<job_id>/cancel', methods=['POST'])
+def cancel_job(job_id: str):
+    """Cancel a running or queued job."""
+    job = get_job(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    wipe_data = data.get('wipe_data', request.args.get('wipe_data', '1') not in ('0', 'false', 'no'))
+
+    ok = _perform_cancel_job(job_id, wipe_data=bool(wipe_data))
+    if not ok:
+        return jsonify({'error': 'Job cannot be cancelled'}), 400
+
+    return jsonify({'status': 'cancelled', 'job_id': job_id, 'wiped_data': bool(wipe_data)})
+
+
+@app.route('/api/jobs/bulk-action', methods=['POST'])
+def bulk_job_action():
+    """Bulk manage queued, converting, failed, or cancelled jobs."""
+    data = request.get_json(silent=True) or {}
+    action = data.get('action')  # 'cancel', 'delete', 'clear_cancelled'
+    job_ids = data.get('job_ids') or []
+    wipe_data = bool(data.get('wipe_data', True))
+
+    if action not in ('cancel', 'delete', 'clear_cancelled'):
+        return jsonify({'error': 'Invalid action'}), 400
+
+    affected = []
+    if action == 'cancel':
+        for jid in job_ids:
+            if _perform_cancel_job(jid, wipe_data=wipe_data):
+                affected.append(jid)
+    elif action == 'delete':
+        for jid in job_ids:
+            _perform_cancel_job(jid, wipe_data=wipe_data)
+            j = get_job(jid)
+            if j:
+                inp = UPLOAD_DIR / (j.get('input_filename') or '')
+                if inp.exists():
+                    try:
+                        inp.unlink()
+                    except Exception:
+                        pass
+                with get_db() as conn:
+                    conn.execute('DELETE FROM jobs WHERE id = ?', (jid,))
+                    conn.commit()
+                affected.append(jid)
+    elif action == 'clear_cancelled':
+        with get_db() as conn:
+            rows = conn.execute("SELECT id, output_dirname, input_filename, source_kind FROM jobs WHERE status IN ('cancelled', 'failed')").fetchall()
+            for r in rows:
+                jid = r['id']
+                out_dir = OUTPUT_DIR / (r['output_dirname'] or '')
+                if out_dir.exists():
+                    shutil.rmtree(out_dir, ignore_errors=True)
+                if r['source_kind'] == 'article':
+                    inp = UPLOAD_DIR / (r['input_filename'] or '')
+                    if inp.exists():
+                        inp.unlink(missing_ok=True)
+                affected.append(jid)
+            conn.execute("DELETE FROM jobs WHERE status IN ('cancelled', 'failed')")
+            conn.commit()
+
+    return jsonify({'status': 'ok', 'action': action, 'affected_count': len(affected), 'affected_ids': affected})
 
 
 @app.route('/api/jobs/<job_id>/retry', methods=['POST'])

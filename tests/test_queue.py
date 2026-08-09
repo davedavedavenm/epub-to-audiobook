@@ -81,3 +81,25 @@ def test_queue_counting():
 
     assert queued_job_count() == 2
     assert running_job_count() == 2
+
+
+def test_cancel_wipes_partial_conversion_data(tmp_path):
+    from pathlib import Path
+    from app import _perform_cancel_job, OUTPUT_DIR
+
+    job = make_job('converting')
+    job['output_dirname'] = 'test_cancel_out'
+    save_job(job)
+
+    # Create dummy output directory
+    out_dir = Path(OUTPUT_DIR) / 'test_cancel_out'
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / 'chapter1.mp3').write_text('dummy audio')
+
+    assert out_dir.exists()
+
+    _perform_cancel_job(job['id'], wipe_data=True)
+
+    assert get_job(job['id'])['status'] == 'cancelled'
+    assert not out_dir.exists()
+
