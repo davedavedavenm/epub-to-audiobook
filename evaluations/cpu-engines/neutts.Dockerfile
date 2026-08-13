@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ffmpeg git libopenblas-dev \
+    build-essential cmake ffmpeg git libopenblas-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 ENV CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS"
 RUN pip install --no-cache-dir "neutts[llama,onnx]==1.4.1" soundfile==0.13.1
