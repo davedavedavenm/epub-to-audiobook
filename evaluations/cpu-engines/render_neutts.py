@@ -1,7 +1,9 @@
+import re
 import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import soundfile as sf
 import torch
 from neutts import NeuTTS
@@ -22,7 +24,22 @@ tts = NeuTTS(
 )
 ref_codes = torch.load('/upstream/samples/jo.pt', map_location='cpu')
 ref_text = Path('/upstream/samples/jo.txt').read_text().strip()
-audio = tts.infer(sample_text(), ref_codes, ref_text, temperature=1.0, top_k=50)
+chunks = [part.strip() for part in re.split(r'(?<=[.!?])\s+', sample_text()) if part.strip()]
+rendered = []
+chunk_durations = []
+for index, chunk in enumerate(chunks, 1):
+    audio = np.asarray(tts.infer(chunk, ref_codes, ref_text, temperature=1.0, top_k=50))
+    duration = len(audio) / 24000
+    if duration < 1.0:
+        raise RuntimeError(f'NeuTTS chunk {index}/{len(chunks)} truncated to {duration:.2f}s')
+    rendered.append(audio)
+    chunk_durations.append(round(duration, 3))
+audio = np.concatenate([
+    part
+    for index, rendered_audio in enumerate(rendered)
+    for part in ((np.zeros(6000, dtype=rendered_audio.dtype), rendered_audio)
+                 if index else (rendered_audio,))
+])
 wav = out / 'cpu_neutts_jo.wav'
 sf.write(wav, audio, 24000)
 finish('NeuTTS Air Q4', '1.4.1 / upstream ac69851', started, wav,
@@ -32,4 +49,7 @@ finish('NeuTTS Air Q4', '1.4.1 / upstream ac69851', started, wav,
            'backbone': 'neuphonic/neutts-air-q4-gguf',
            'codec': 'neuphonic/neucodec-onnx-decoder',
            'seed': 42,
+           'chunking': 'sentence boundary; 250 ms joins',
+           'chunks': len(chunks),
+           'chunk_durations_seconds': chunk_durations,
        })
