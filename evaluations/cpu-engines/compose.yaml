@@ -1,0 +1,55 @@
+services:
+  pocket:
+    build:
+      context: ../..
+      dockerfile: evaluations/cpu-engines/pocket.Dockerfile
+    cpus: 4
+    mem_limit: 6g
+    memswap_limit: 6g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+      - HF_HOME=/cache/huggingface
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+    volumes:
+      - ../..:/repo:ro
+      - ./output:/output
+      - pocket-cache:/cache/huggingface
+
+  neutts:
+    build:
+      context: ../..
+      dockerfile: evaluations/cpu-engines/neutts.Dockerfile
+    cpus: 4
+    mem_limit: 10g
+    memswap_limit: 10g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+      - HF_HOME=/cache/huggingface
+      - OMP_NUM_THREADS=4
+      - OPENBLAS_NUM_THREADS=4
+    volumes:
+      - ../..:/repo:ro
+      - ./output:/output
+      - neutts-cache:/cache/huggingface
+
+  kitten:
+    build:
+      context: ../..
+      dockerfile: evaluations/cpu-engines/kitten.Dockerfile
+    cpus: 4
+    mem_limit: 4g
+    memswap_limit: 4g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+      - HF_HOME=/cache/huggingface
+      - OMP_NUM_THREADS=4
+    volumes:
+      - ../..:/repo:ro
+      - ./output:/output
+      - kitten-cache:/cache/huggingface
+
+volumes:
+  pocket-cache:
+  neutts-cache:
+  kitten-cache:

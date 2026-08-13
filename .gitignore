@@ -41,3 +41,4 @@ piper/voices/
 # Local working artifacts (kaggle kernels, rendered audio) — not repo material
 output/
 scratch/
+evaluations/cpu-engines/output/

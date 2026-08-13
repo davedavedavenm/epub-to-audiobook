@@ -30,6 +30,7 @@ import socket
 import uuid
 import zipfile
 from datetime import datetime, timezone
+from email.utils import format_datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
@@ -467,7 +468,15 @@ def generate_podcast_rss(channel_title: str, items: list[dict], base_url: str) -
         audio_url_xml = _xml_escape(audio_url)
         size = item.get('file_size', 0)
         mime = 'audio/mpeg' if audio_url.endswith('.mp3') else 'audio/mp4'
-        pub_date = item.get('date_str') or datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
+        raw_date = item.get('date_str')
+        try:
+            published = datetime.fromisoformat(str(raw_date).replace('Z', '+00:00'))
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            published = datetime.now(timezone.utc)
+        # RSS 2.0 requires RFC 822-style dates, not SQLite's ISO timestamp.
+        pub_date = format_datetime(published.astimezone(timezone.utc), usegmt=True)
         desc = _xml_escape(item.get('summary') or f"Audio narration of {item.get('title', 'Article')}")
 
         items_xml.append(f'''    <item>

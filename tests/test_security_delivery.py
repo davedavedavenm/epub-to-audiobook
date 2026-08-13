@@ -5,7 +5,7 @@ from zipfile import ZipFile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
 
 import app as appmod  # noqa: E402
-from app import app, get_db, save_job  # noqa: E402
+from app import app, get_db, get_job, init_db, save_job  # noqa: E402
 from qa_report import merge_qa_reports  # noqa: E402
 
 
@@ -53,6 +53,7 @@ def test_recovery_qa_merge_preserves_all_chapters():
 
 def test_rss_enclosure_is_a_served_article_audio_route(tmp_path, monkeypatch):
     monkeypatch.setattr(appmod, 'OUTPUT_DIR', tmp_path)
+    monkeypatch.setattr(appmod, 'PUBLIC_BASE_URL', 'https://audio.example')
     job_id = 'rss-audio-test'
     outdir = tmp_path / 'podcast_test'
     outdir.mkdir()
@@ -70,7 +71,7 @@ def test_rss_enclosure_is_a_served_article_audio_route(tmp_path, monkeypatch):
             feed = client.get('/api/articles/rss')
             assert feed.status_code == 200
             enclosure = f'/api/articles/audio/{job_id}/article.mp3'
-            assert enclosure in feed.get_data(as_text=True)
+            assert f'https://audio.example{enclosure}' in feed.get_data(as_text=True)
             streamed = client.get(enclosure)
             assert streamed.status_code == 200
             assert streamed.mimetype == 'audio/mpeg'
@@ -78,6 +79,75 @@ def test_rss_enclosure_is_a_served_article_audio_route(tmp_path, monkeypatch):
         with get_db() as conn:
             conn.execute('DELETE FROM jobs WHERE id = ?', (job_id,))
             conn.commit()
+
+
+def _article_capture_fixture(tmp_path, monkeypatch):
+    upload = tmp_path / 'uploads'
+    output = tmp_path / 'output'
+    articles = tmp_path / 'articles'
+    for path in (upload, output, articles):
+        path.mkdir()
+    monkeypatch.setattr(appmod, 'DB_PATH', tmp_path / 'jobs.db')
+    monkeypatch.setattr(appmod, 'UPLOAD_DIR', upload)
+    monkeypatch.setattr(appmod, 'OUTPUT_DIR', output)
+    monkeypatch.setattr(appmod, 'ARTICLES_DIR', articles)
+    monkeypatch.setattr(appmod, 'LOG_DIR', tmp_path / 'logs')
+    monkeypatch.setattr(appmod, 'check_engines_health',
+                        lambda: {'chatterbox_nano': True})
+    monkeypatch.setattr(appmod, 'maybe_start_next_queued_job', lambda: None)
+    init_db()
+    return {
+        'url': 'https://example.com/story',
+        'title': 'A Proper Article Title',
+        'author': 'Writer',
+        'site': 'Example',
+        'date': '2026-08-13',
+        'image': '',
+        'text': 'A complete sentence for narration. ' * 110,
+        'word_count': 550,
+        'estimated_minutes': 4,
+    }
+
+
+def test_url_article_capture_uses_default_local_engine(tmp_path, monkeypatch):
+    meta = _article_capture_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr('article.fetch_article', lambda _url: meta)
+    with app.test_client() as client:
+        response = client.post('/api/articles/narrate_url', json={'url': meta['url']})
+    assert response.status_code == 200
+    job = get_job(response.get_json()['job_id'])
+    assert job['voice'] == appmod.DEFAULT_VOICE
+    assert job['tts_engine'] == 'chatterbox_nano'
+    assert job['render_target'] == 'local'
+    assert job['output_format'] == 'mp3'
+    assert job['source_kind'] == 'article'
+    assert job['source_site'] == 'Example'
+
+
+def test_telegram_article_capture_is_owner_only_and_uses_same_defaults(tmp_path, monkeypatch):
+    meta = _article_capture_fixture(tmp_path, monkeypatch)
+    calls = []
+    monkeypatch.setattr('article.fetch_article', lambda url: calls.append(url) or meta)
+    monkeypatch.setattr(appmod, 'TELEGRAM_WEBHOOK_SECRET', 'telegram-secret')
+    monkeypatch.setattr(appmod, 'TELEGRAM_CHAT_ID', '12345')
+    monkeypatch.setattr(appmod, 'TELEGRAM_BOT_TOKEN', '')
+    headers = {'X-Telegram-Bot-Api-Secret-Token': 'telegram-secret'}
+
+    with app.test_client() as client:
+        refused = client.post('/api/telegram/webhook', headers=headers, json={
+            'message': {'chat': {'id': 999}, 'text': meta['url']}})
+        accepted = client.post('/api/telegram/webhook', headers=headers, json={
+            'message': {'chat': {'id': 12345}, 'text': f'Read this: {meta["url"]}'}})
+
+    assert refused.status_code == 200
+    assert refused.get_json()['status'] == 'ignored_chat'
+    assert calls == [meta['url']]
+    assert accepted.status_code == 200
+    job = get_job(accepted.get_json()['job_id'])
+    assert job['voice'] == appmod.DEFAULT_VOICE
+    assert job['tts_engine'] == 'chatterbox_nano'
+    assert job['render_target'] == 'local'
+    assert job['notify_telegram'] == 1
 
 
 def test_generated_epub_uses_real_media_duration(tmp_path, monkeypatch):

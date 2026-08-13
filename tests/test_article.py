@@ -225,3 +225,4 @@ class TestPodcastRSS:
         assert '<title>Test Article</title>' in xml
         assert 'url="https://myhost.com/data/audiobooks/test.mp3"' in xml
         assert 'length="1234567"' in xml
+        assert '<pubDate>Sun, 09 Aug 2026 00:00:00 GMT</pubDate>' in xml

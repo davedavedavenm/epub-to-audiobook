@@ -86,6 +86,7 @@ TOC_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 APP_VERSION = os.environ.get('APP_VERSION', 'dev')
 APP_GIT_SHA = os.environ.get('APP_GIT_SHA', 'unknown')
 APP_BUILD_TIME = os.environ.get('APP_BUILD_TIME', 'unknown')
+PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '').strip().rstrip('/')
 HEALTH_KOKORO_TIMEOUT = int(os.environ.get('HEALTH_KOKORO_TIMEOUT', '8'))
 HEALTH_KOKORO_RETRIES = int(os.environ.get('HEALTH_KOKORO_RETRIES', '2'))
 QUEUE_RUNNER_ENABLED = os.environ.get('QUEUE_RUNNER_ENABLED', '1').lower() in ('1', 'true', 'yes')
@@ -4500,6 +4501,56 @@ REF_MIN_SECONDS = 8
 REF_MAX_SECONDS = 45
 
 
+def _article_default_voice() -> str:
+    """Return the configured system narrator, falling back to the settled default."""
+    voice = get_setting('default_voice', DEFAULT_VOICE)
+    return voice if voice in all_voices() else DEFAULT_VOICE
+
+
+def _queue_article(meta: dict, options: dict | None = None) -> tuple[dict, int]:
+    """Build an article EPUB and enqueue it through the ordinary job path.
+
+    Every capture surface calls this function. In particular, Telegram must
+    not insert a partial row and inherit SQLite's legacy Kokoro default while
+    the web UI correctly derives Chatterbox Nano from Beatrice.
+    """
+    options = options or {}
+    safe = sanitize_filename(meta['title'])[:80] or 'article'
+    ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
+    epub_path = ARTICLES_DIR / uuid.uuid4().hex[:8] / f'{safe}.epub'
+    from article import article_to_epub
+    article_to_epub(meta, epub_path)
+
+    voice = options.get('voice') or _article_default_voice()
+    if voice not in all_voices():
+        voice = _article_default_voice()
+    forwarded = {
+        'path': str(epub_path),
+        'voice': voice,
+        'tts_speed': options.get('tts_speed', DEFAULT_TTS_SPEED),
+        # Automatic capture is deliberately local-only. A pasted or messaged
+        # article must never select free Kaggle or paid Vast behind the user's
+        # back merely because another job used it previously.
+        'render_target': 'local',
+        'output_format': 'mp3',
+        'notify_telegram': bool(options.get('notify_telegram')),
+        'source_kind': 'article',
+        'source_url': meta.get('url', ''),
+        'source_site': meta.get('site', ''),
+        'source_date': meta.get('date', ''),
+    }
+    with app.test_request_context('/api/library/convert', method='POST', json=forwarded):
+        response = convert_from_library()
+    body = response[0].get_json() if isinstance(response, tuple) else response.get_json()
+    status = response[1] if isinstance(response, tuple) else 200
+    if status == 200:
+        body['article'] = {key: meta[key] for key in (
+            'title', 'author', 'site', 'word_count', 'estimated_minutes')}
+        body['destination'] = 'podcast'
+        body['podcast_folder'] = _podcast_folder_name(meta.get('site', ''))
+    return body, status
+
+
 def _probe_wav(path: Path) -> dict:
     """Return {seconds, rate, channels} for a WAV, or {} if unreadable."""
     try:
@@ -4549,7 +4600,7 @@ def api_url_convert():
     book and needs no special case in chaptering, preprocessing, tagging, M4B
     or the Audiobookshelf sync.
     """
-    from article import fetch_article, article_to_epub, ExtractionError
+    from article import fetch_article, ExtractionError
     data = request.json or {}
     url = (data.get('url') or '').strip()
     if not url:
@@ -4560,45 +4611,9 @@ def api_url_convert():
         return jsonify({'error': str(e)}), 400
 
     try:
-        safe = sanitize_filename(meta['title'])[:80] or 'article'
-        # NOT LIBRARY_DIR: that is mounted read-only, and it is an rsync mirror
-        # of the OpenBooks download folder, so anything written there would
-        # either fail outright or be clobbered within fifteen minutes. Articles
-        # get their own writable home under /data.
-        ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
-        epub_path = ARTICLES_DIR / f'{safe}.epub'
-        article_to_epub(meta, epub_path)
+        body, status = _queue_article(meta, data)
     except Exception as e:
         return jsonify({'error': f'Could not build an epub from that article: {e}'}), 500
-
-    # Hand off to the existing convert endpoint's logic by forwarding the same
-    # shape it expects. Reusing it (rather than duplicating job creation) is
-    # what keeps this a front door rather than a second pipeline.
-    forwarded = {
-        'path': str(epub_path),
-        'voice': data.get('voice') or DEFAULT_VOICE,
-        'render_target': data.get('render_target') or 'local',
-        # Articles are short and single-chapter: one file is the sensible
-        # default, and an M4B chapter index over one chapter is noise.
-        'output_format': data.get('output_format') or 'mp3',
-        # Everything above this line is identical to a book. These four fields
-        # are the whole difference, and they only change the DESTINATION: an
-        # article is delivered to the Audiobookshelf podcast library, grouped
-        # under its source site, instead of onto the audiobook shelf (#36).
-        'source_kind': 'article',
-        'source_url': meta.get('url', ''),
-        'source_site': meta.get('site', ''),
-        'source_date': meta.get('date', ''),
-    }
-    with app.test_request_context('/api/library/convert', method='POST', json=forwarded):
-        resp = convert_from_library()
-    body = resp[0].get_json() if isinstance(resp, tuple) else resp.get_json()
-    status = resp[1] if isinstance(resp, tuple) else 200
-    if status == 200:
-        body['article'] = {k: meta[k] for k in ('title', 'author', 'site',
-                                                'word_count', 'estimated_minutes')}
-        body['destination'] = 'podcast'
-        body['podcast_folder'] = _podcast_folder_name(meta.get('site', ''))
     return jsonify(body), status
 
 
@@ -5245,7 +5260,7 @@ def audition_sample(name: str):
                     'ab_alice_plain', 'ab_alice_aliss', 'ab_alice_alliss',
                     'ab_alice_nano_raw', 'ab_alice_nano_fixed',
                     'ab_pos_first', 'ab_pos_mid', 'ab_pos_other', 'ab_pos_second') \
-       and not (name.startswith(('ac_', 'na_', 'tb_', 'cf_', 'eg_', 'xt_', 'me_', 'ov_', 'vctk_', 'cv3_')) and re.fullmatch(r'[a-z0-9_]+', name)):
+       and not (name.startswith(('ac_', 'na_', 'tb_', 'cf_', 'eg_', 'xt_', 'me_', 'ov_', 'vctk_', 'cv3_', 'cpu_')) and re.fullmatch(r'[a-z0-9_]+', name)):
         return jsonify({'error': 'Unknown sample'}), 404
     p = PREVIEWS_DIR / f"{name}.mp3"
     if not p.exists():
@@ -5700,7 +5715,10 @@ def job_qa(job_id: str):
 def article_podcast_rss(site: str = None):
     """Serve converted articles as a standard RSS 2.0 podcast feed (#42)."""
     from article import generate_podcast_rss
-    base_url = request.host_url.rstrip('/')
+    # Reverse proxies may legitimately reach Gunicorn over HTTP. An explicit
+    # public origin prevents those internal transport details from leaking
+    # into enclosure URLs as http:// links that need a redirect before audio.
+    base_url = PUBLIC_BASE_URL or request.host_url.rstrip('/')
 
     conn = sqlite3.connect(str(DB_PATH), timeout=10)
     conn.row_factory = sqlite3.Row
@@ -5716,7 +5734,7 @@ def article_podcast_rss(site: str = None):
         if not out_dir.exists():
             continue
 
-        site_name = j.get('publisher') or j.get('site') or 'Articles'
+        site_name = j.get('source_site') or 'Articles'
         if site and site.lower() not in site_name.lower():
             continue
 
@@ -5766,7 +5784,6 @@ def article_audio(job_id: str, filename: str):
 @app.route('/api/telegram/webhook', methods=['POST'])
 def telegram_webhook():
     """Handle incoming Telegram webhook messages for URL article capture (#42)."""
-    import time
     supplied_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
     if not TELEGRAM_WEBHOOK_SECRET:
         return jsonify({'error': 'Telegram webhook secret is not configured'}), 503
@@ -5774,40 +5791,40 @@ def telegram_webhook():
         return jsonify({'error': 'Invalid Telegram webhook secret'}), 401
     data = request.get_json(silent=True) or {}
     msg = data.get('message') or data.get('channel_post') or {}
-    text = (msg.get('text') or '').strip()
-    chat_id = (msg.get('chat') or {}).get('id') or TELEGRAM_CHAT_ID
+    text = (msg.get('text') or msg.get('caption') or '').strip()
+    chat_id = (msg.get('chat') or {}).get('id')
 
     if not text or not chat_id:
         return jsonify({'status': 'ignored'}), 200
 
-    urls = re.findall(r'https?://[^\s]+', text)
+    # Telegram's webhook secret proves Telegram sent the request; it does not
+    # prove the sender is Dave. Without this owner check, anyone who finds the
+    # bot can fill the local CPU queue with arbitrary pages.
+    allowed_chat = str(TELEGRAM_CHAT_ID or '').strip()
+    if not allowed_chat:
+        return jsonify({'error': 'Telegram capture chat is not configured'}), 503
+    if not hmac.compare_digest(str(chat_id), allowed_chat):
+        app.logger.warning('Ignored Telegram article capture from unapproved chat %s', chat_id)
+        return jsonify({'status': 'ignored_chat'}), 200
+
+    entity_urls = [entity.get('url') for entity in
+                   ((msg.get('entities') or []) + (msg.get('caption_entities') or []))
+                   if entity.get('type') == 'text_link' and entity.get('url')]
+    urls = entity_urls + re.findall(r'https?://[^\s]+', text)
     if not urls:
         return jsonify({'status': 'no_url_found'}), 200
 
-    url = urls[0]
+    url = urls[0].rstrip('.,;:!?)]}')
     app.logger.info(f"Telegram article capture triggered for {url}")
 
     try:
-        from article import fetch_article, article_to_epub
+        from article import fetch_article
         art = fetch_article(url)
-        epub_name = f"article_{int(time.time())}.epub"
-        epub_path = UPLOAD_DIR / epub_name
-        article_to_epub(art, epub_path)
-
-        job_id = str(uuid.uuid4())[:8]
+        body, status = _queue_article(art, {'notify_telegram': True})
+        if status != 200:
+            return jsonify(body), status
+        job_id = body['job_id']
         book_name = art['title']
-        output_dirname = f"podcast_{sanitize_filename(art['site'])}_{sanitize_filename(art['title'])[:30]}"
-
-        conn = sqlite3.connect(str(DB_PATH), timeout=10)
-        conn.row_factory = sqlite3.Row
-        conn.execute('''
-            INSERT INTO jobs (id, book_name, author, publisher, input_filename, output_dirname,
-                              voice, status, source_kind, source_url, notify_telegram, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-        ''', (job_id, book_name, art['author'], art['site'], epub_name, output_dirname,
-              DEFAULT_VOICE, 'queued', 'article', url, datetime.now().isoformat()))
-        conn.commit()
-        conn.close()
 
         if TELEGRAM_BOT_TOKEN and chat_id:
             try:
