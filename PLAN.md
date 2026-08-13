@@ -123,9 +123,9 @@ model load OOMs — incident-verified). Therefore:
 3. **RAM upgrade done (2026-07-20)**: zorin now has 31 GB (i5-12400).
    TADA would fit in memory but stays off because it is broken (#23).
    Once #23 is fixed, TADA can run as a normal compose service.
-4. Full one-click integration (GPU_RENDER_ENABLED auto-provisioning TADA via
-   the generalized gpu_manager) remains §3 of this plan — the manual runbook
-   is the validated interim.
+4. ~~Full one-click queue auto-provisioning~~ is retired and prohibited by the
+   current GPU policy. Paid provisioning, if explicitly requested for a
+   specific session, remains a separate manual action.
 
 Auto-resume truths (asked 2026-07-08): app-managed jobs on zorin survive
 restarts (orphan recovery + cross-process lock — incident-tested). Anything

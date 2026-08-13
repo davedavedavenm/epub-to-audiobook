@@ -88,6 +88,8 @@ class TestExtraction:
             content = b'<html><body><p>Too short.</p></body></html>'
             def raise_for_status(self): pass
         monkeypatch.setattr('article.requests.get', lambda *a, **k: R())
+        monkeypatch.setattr('article.socket.getaddrinfo',
+                            lambda *a, **k: [(2, 1, 6, '', ('93.184.216.34', 443))])
         with pytest.raises(ExtractionError) as e:
             fetch_article('https://example.com/x')
         msg = str(e.value).lower()
@@ -99,6 +101,8 @@ class TestExtraction:
             content = b''
             def raise_for_status(self): pass
         monkeypatch.setattr('article.requests.get', lambda *a, **k: R())
+        monkeypatch.setattr('article.socket.getaddrinfo',
+                            lambda *a, **k: [(2, 1, 6, '', ('93.184.216.34', 443))])
         with pytest.raises(ExtractionError) as e:
             fetch_article('https://example.com/x.pdf')
         assert 'pdf' in str(e.value).lower()
@@ -106,6 +110,36 @@ class TestExtraction:
     def test_scheme_is_validated(self):
         with pytest.raises(ExtractionError):
             fetch_article('ftp://example.com/x')
+
+    def test_private_network_destination_is_refused_before_fetch(self, monkeypatch):
+        called = False
+
+        def should_not_fetch(*_args, **_kwargs):
+            nonlocal called
+            called = True
+            raise AssertionError('private destination reached requests')
+
+        monkeypatch.setattr('article.requests.get', should_not_fetch)
+        with pytest.raises(ExtractionError, match='local network'):
+            fetch_article('http://127.0.0.1:8881/api/settings')
+        assert called is False
+
+    def test_redirect_to_private_network_is_refused(self, monkeypatch):
+        class Redirect:
+            status_code = 302
+            headers = {'Location': 'http://192.168.1.41:8881/api/settings'}
+
+            def close(self):
+                pass
+
+        def resolve(host, port, **_kwargs):
+            ip = '93.184.216.34' if host == 'example.com' else '192.168.1.41'
+            return [(2, 1, 6, '', (ip, port))]
+
+        monkeypatch.setattr('article.socket.getaddrinfo', resolve)
+        monkeypatch.setattr('article.requests.get', lambda *a, **k: Redirect())
+        with pytest.raises(ExtractionError, match='local network'):
+            fetch_article('https://example.com/redirect')
 
 
 class TestTitle:
@@ -191,4 +225,3 @@ class TestPodcastRSS:
         assert '<title>Test Article</title>' in xml
         assert 'url="https://myhost.com/data/audiobooks/test.mp3"' in xml
         assert 'length="1234567"' in xml
-

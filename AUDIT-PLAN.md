@@ -1,5 +1,10 @@
 # Audit Remediation Plan — 2026-07-22
 
+> **Historical audit checklist.** It records what was remediated in July; it is
+> not current configuration guidance. `DECISIONS.md`, `STATUS.md` and
+> `GPU-SAFETY.md` govern. In particular, the `AUTOSCALE_*` configuration noted
+> below was retired on 2026-08-13 and queue-driven paid provisioning is banned.
+
 Created from a full read-only audit (code, Docker, docs, tests, frontend, security).
 Every item below is a concrete, verifiable change. Order is by risk-reduction per hour.
 

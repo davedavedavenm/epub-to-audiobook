@@ -1,7 +1,10 @@
 # TTS Landscape Review — July 2026
 
-**Purpose:** current state of the art for best audiobook audio at lowest cost.
-Supersedes the engine tables in LOW-COST-TTS.md where they conflict.
+**Purpose:** historical July 2026 state-of-the-art review for best audiobook
+audio at lowest cost. It does **not** supersede newer entries in `DECISIONS.md`,
+`ENGINES.md` or `LOW-COST-TTS.md`; those files govern wherever this dated
+snapshot conflicts. Re-read current official upstream documentation before
+acting on any vendor, version, capability, licence or price below.
 
 ---
 
@@ -39,7 +42,7 @@ See **§ Verified results 2026-07-24** at the bottom for the measurements.
 |--------|--------|---------|-------|-----------|------------|----------|---------------------|
 | **Chatterbox Turbo** | 350M | MIT | Yes (10s ref) | Chunked | Yes (RTF ~1.3) | Reliable narration, non-fiction | Production engine |
 | **Chatterbox Nano** | 110M | MIT | Yes (10s ref) | Chunked | **Yes (measured RTF 0.83)** | Same quality tier, no GPU needed | **WORKING — default CPU engine** |
-| **VibeVoice** | 1.5B | Research | Yes (10s ref) | **90-min single pass** | GPU preferred | Peak expressiveness, multi-speaker dialogue | **PINNED FINALIST — cloud/GPU** |
+| **VibeVoice** | 1.5B | Research | Yes (10s ref) | Vendor claims up to 90 min | GPU preferred | Expressive long-form candidate | **PINNED FINALIST; corrected cfg ranking pending** |
 | **Qwen3-TTS** | 0.5B-1.5B | Apache 2.0 | Yes (3s ref) | Sentence passes | Yes (Q8 RTF 2.70) | Consistency leader, long-form non-fiction | **PINNED FINALIST — local Q8 / cloud** |
 | **Hume TADA-1B** | 1B | Llama 3.2 Community | Yes (ref+transcript) | No (chunked) | **CPU bf16 (RTF 1.68)** | Peak naturalness, fiction/dialogue | **Opt-in engine (#23 fixed)** |
 | **CosyVoice 3** | 0.5B | Apache 2.0 | Yes (3s ref) | Streaming mode | **No (GPU-only; CPU malformed)** | Multilingual, prosody control | **AUDITIONED — keep; Kaggle-render, see §Verified** |

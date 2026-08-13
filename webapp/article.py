@@ -23,12 +23,15 @@ book, and there is a human preview step here to catch bad extractions.
 from __future__ import annotations
 
 import html
+import ipaddress
 import json
 import re
+import socket
 import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
 import requests
 from bs4 import BeautifulSoup
@@ -37,6 +40,8 @@ from bs4 import BeautifulSoup
 # pretending to be Chrome to scrape harder is not a fight worth picking.
 USER_AGENT = ('Mozilla/5.0 (compatible; epub-to-audiobook/1.0; '
               '+https://github.com/davedavedavenm/epub-to-audiobook)')
+MAX_ARTICLE_BYTES = 5 * 1024 * 1024
+MAX_ARTICLE_REDIRECTS = 5
 
 # Structural furniture that is never the article.
 _STRIP_TAGS = ('script', 'style', 'noscript', 'nav', 'header', 'footer',
@@ -197,6 +202,98 @@ def _extract_body(soup) -> str:
     return '\n\n'.join(x for x in parts if x is not None).strip()
 
 
+def _validate_public_url(url: str) -> None:
+    """Reject non-HTTP and non-public destinations before every request hop."""
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port or (443 if parsed.scheme.lower() == 'https' else 80)
+    except ValueError as exc:
+        raise ExtractionError(f'Invalid URL: {exc}') from exc
+    if parsed.scheme.lower() not in ('http', 'https') or not parsed.hostname:
+        raise ExtractionError('URL must start with http:// or https:// and include a host')
+    if parsed.username is not None or parsed.password is not None:
+        raise ExtractionError('URLs containing embedded credentials are not accepted')
+
+    try:
+        resolved = socket.getaddrinfo(parsed.hostname, port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise ExtractionError(f'Could not resolve that site: {exc}') from exc
+    if not resolved:
+        raise ExtractionError('That site did not resolve to an address')
+    for answer in resolved:
+        address = ipaddress.ip_address(answer[4][0].split('%', 1)[0])
+        if not address.is_global:
+            raise ExtractionError(
+                'For safety, article URLs may not resolve to this machine, '
+                'the local network, link-local, reserved, or other non-public addresses.')
+
+
+def _validate_connected_peer(response) -> None:
+    """Check the address actually connected, closing the DNS-rebinding gap."""
+    if not isinstance(response, requests.Response):
+        return  # lightweight test doubles have no transport socket
+    try:
+        connection = getattr(response.raw, '_connection', None)
+        peer = connection.sock.getpeername()[0]
+        address = ipaddress.ip_address(peer.split('%', 1)[0])
+    except Exception as exc:
+        response.close()
+        raise ExtractionError('Could not verify the remote address safely') from exc
+    if not address.is_global:
+        response.close()
+        raise ExtractionError('The site connected to a non-public address; request refused')
+
+
+def _fetch_public_html(url: str, timeout: int):
+    """Fetch a bounded response, validating every redirect destination."""
+    current = url
+    for _hop in range(MAX_ARTICLE_REDIRECTS + 1):
+        _validate_public_url(current)
+        response = requests.get(
+            current,
+            timeout=timeout,
+            headers={'User-Agent': USER_AGENT,
+                     'Accept': 'text/html,application/xhtml+xml'},
+            allow_redirects=False,
+            stream=True,
+        )
+        _validate_connected_peer(response)
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = response.headers.get('Location')
+            if hasattr(response, 'close'):
+                response.close()
+            if not location:
+                raise ExtractionError('The site returned a redirect without a destination')
+            current = urljoin(current, location)
+            continue
+
+        response.raise_for_status()
+        length = response.headers.get('Content-Length')
+        if length:
+            try:
+                if int(length) > MAX_ARTICLE_BYTES:
+                    raise ExtractionError('That page is too large to import safely')
+            except ValueError:
+                pass
+
+        if hasattr(response, 'iter_content'):
+            body = bytearray()
+            for chunk in response.iter_content(chunk_size=64 * 1024):
+                if not chunk:
+                    continue
+                body.extend(chunk)
+                if len(body) > MAX_ARTICLE_BYTES:
+                    if hasattr(response, 'close'):
+                        response.close()
+                    raise ExtractionError('That page is too large to import safely')
+            response._content = bytes(body)
+            response._content_consumed = True
+        elif len(response.content) > MAX_ARTICLE_BYTES:
+            raise ExtractionError('That page is too large to import safely')
+        return response
+    raise ExtractionError(f'The site redirected more than {MAX_ARTICLE_REDIRECTS} times')
+
+
 def fetch_article(url: str, timeout: int = 25) -> dict:
     """Fetch a URL and return its readable content plus metadata.
 
@@ -204,14 +301,10 @@ def fetch_article(url: str, timeout: int = 25) -> dict:
     failure is the normal case for paywalls and JS-rendered pages, not an
     exceptional one, so the message matters.
     """
-    if not re.match(r'^https?://', url, re.I):
-        raise ExtractionError('URL must start with http:// or https://')
-
     try:
-        r = requests.get(url, timeout=timeout,
-                         headers={'User-Agent': USER_AGENT,
-                                  'Accept': 'text/html,application/xhtml+xml'})
-        r.raise_for_status()
+        r = _fetch_public_html(url, timeout)
+    except ExtractionError:
+        raise
     except requests.HTTPError as e:
         raise ExtractionError(f'The site returned {e.response.status_code}. '
                               f'It may require a login or block automated access.')
@@ -398,4 +491,3 @@ def generate_podcast_rss(channel_title: str, items: list[dict], base_url: str) -
 {joined_items}
   </channel>
 </rss>'''
-

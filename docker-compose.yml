@@ -280,7 +280,7 @@ services:
       retries: 5
       start_period: 60s
 
-  # VibeVoice 1.5B — provisional long-form quality leader. GPU-only and opt-in;
+  # VibeVoice 1.5B — long-form finalist; corrected cfg ranking pending. GPU-only and opt-in;
   # the default Zorin stack remains local/free Chatterbox Nano. Full-book use
   # normally targets free Kaggle. This service is for an explicitly available
   # local CUDA host and never provisions or rents a GPU.
@@ -405,6 +405,11 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      # UI/API authentication is environment-owned; never store the password
+      # in the unauthenticated settings database. Empty password fails closed.
+      - APP_AUTH_USERNAME=${APP_AUTH_USERNAME:-dave}
+      - APP_AUTH_PASSWORD=${APP_AUTH_PASSWORD:-}
+      - APP_TRUSTED_HOSTS=${APP_TRUSTED_HOSTS:-}
       - KOKORO_URL=${KOKORO_URL:-http://kokoro-tts:8880/v1}
       # If set (e.g. http://tts-proxy:8882), conversion containers will send TTS requests via the proxy
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
@@ -437,6 +442,7 @@ services:
       - LOG_DIR=${LOG_DIR:-/data/logs}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET:-}
       - ABS_API_TOKEN=${ABS_API_TOKEN:-}
       - ABS_API_URL=${ABS_API_URL:-http://docker-vm:13378}
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
@@ -469,9 +475,7 @@ services:
       - VOICE_CACHE_ON_START=${VOICE_CACHE_ON_START:-1}
       - VOICE_CACHE_MAX_LOAD=${VOICE_CACHE_MAX_LOAD:-}
       - VOICE_CACHE_DELAY=${VOICE_CACHE_DELAY:-5}
-      # GPU status display (webapp reads worker's status file, these are fallback)
-      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
-      - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
+      # Manual paid-GPU status display (queue-driven autoscaling is retired)
       - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
     mem_limit: 2g
     memswap_limit: 2g
@@ -550,13 +554,11 @@ services:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - QUEUE_RUNNER_ENABLED=1
       - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-1}
-      # GPU auto-scaling (auto-provisions Vast.ai GPU when 3+ books queued)
-      - AUTOSCALE_ENABLED=${AUTOSCALE_ENABLED:-false}
-      - AUTOSCALE_THRESHOLD=${AUTOSCALE_THRESHOLD:-3}
+      # Legacy manual Vast manager. Queue-driven paid provisioning is retired.
       - AUTOSCALE_COST_CAP=${AUTOSCALE_COST_CAP:-1.00}
       - GPU_IDLE_TIMEOUT=${GPU_IDLE_TIMEOUT:-10}
       - VASTAI_TEMPLATE_HASH=${VASTAI_TEMPLATE_HASH:-e2588a22cf5eef43df3d444ef4f25705}
-      - VASTAI_CLI=/tmp/vast.py
+      - VASTAI_CLI=vastai
       - VASTAI_SSH_KEY=/home/appuser/.ssh/vastai_ed25519
       - HOST_VASTAI_SSH_KEY=/home/dave/.ssh/vastai_ed25519
       - VASTAI_API_KEY_FILE=/home/appuser/.config/vastai/vast_api_key
@@ -589,7 +591,7 @@ services:
       # Kaggle GPU render: kernel templates (credentials come from env)
       - ${STACK_PATH:-/opt/epub-to-audiobook}/scripts/kaggle:/app/kaggle_kernels:ro
       - /home/dave/.ssh/vastai_ed25519:/home/appuser/.ssh/vastai_ed25519:ro
-      - /home/dave/.config/vastai:/home/appuser/.config/vastai:ro
+      - ${VASTAI_API_KEY_PATH:-/home/dave/.config/vastai/vast_api_key}:/home/appuser/.config/vastai/vast_api_key:ro
     networks:
       - default
       - dockersock

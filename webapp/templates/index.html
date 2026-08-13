@@ -394,7 +394,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         <button class="nav-tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="tab-history" data-tab="history" onclick="switchTab('history')"><i aria-hidden="true">📂</i> <span>History</span></button>
         <button class="nav-tab" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" onclick="switchTab('settings')"><i aria-hidden="true">⚙️</i> <span>Settings</span></button>
     </nav>
-    <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);" title="GPU Status: Automatically scales to cloud GPUs when the queue is long. See Settings for details.">
+    <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);" title="GPU Status: paid GPUs are manual only; queue length never provisions one.">
         <div style="display: flex; align-items: center;"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label" style="font-size: 0.9rem; font-weight: 600;">GPU OFFLINE</span></div>
     </div>
 </aside>
@@ -519,18 +519,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px; border:2px solid var(--accent);">
                         <h3 style="margin-top:0; font-family:var(--serif);">Render Location</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
-                            Where audiobooks are generated. <strong>Local is the default and is free.</strong>
-                            Cloud GPU rents a paid Vast.ai instance (a few pence per book, but it
-                            <strong>bills by the hour until destroyed</strong>). Only switch to Cloud GPU
-                            when you deliberately want to spend credit for speed.
+                            <strong>Local is the default and is free.</strong> Free Kaggle can be
+                            selected per book. Paid Vast provisioning cannot be enabled from this
+                            unauthenticated web app; it requires an explicitly approved host-admin
+                            session, and queue length never triggers it.
                         </p>
-                        <div style="display:flex; gap:16px; align-items:center;">
-                            <select id="set-GPU_RENDER_ENABLED" class="input-control" style="max-width:320px;" onchange="onRenderModeChange(this)">
-                                <option value="0" selected>💻 Local (free, default)</option>
-                                <option value="1">☁️ Cloud GPU — Vast.ai (paid)</option>
-                            </select>
-                            <span id="render-mode-warn" style="color:var(--error); font-weight:700; font-size:0.85rem;"></span>
-                        </div>
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
@@ -688,7 +681,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top: 0; font-family: var(--serif);">Vast.ai Cloud GPU Speedup (Optional)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); line-height: 1.6; margin-bottom: 16px;">
-                            When you add multiple books to the queue, it can take a long time to process on your local machine. If you provide a Vast.ai API key, the studio will automatically rent a cloud GPU for a few cents an hour to process the books ~15x faster, and then automatically shut it down when finished.
+                            Legacy manual Vast.ai access. Saving a key or adding books to the
+                            queue will <strong>never rent a GPU</strong>. Paid provisioning is a
+                            separate, explicit session action; free local or Kaggle rendering
+                            should be used wherever possible.
                         </p>
                         <div>
                             <label for="set-VASTAI_API_KEY" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Vast.ai API Key</label>
@@ -919,22 +915,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             const ta = document.getElementById('pronunciation-rules');
             if(ta) ta.value = pdata.rules || '';
         } catch(e) {}
-    }
-
-    async function onRenderModeChange(sel) {
-        const warn = document.getElementById('render-mode-warn');
-        if(sel.value === '1') {
-            if(!await appConfirm({
-                title: 'Enable paid Cloud GPU?',
-                message: 'Cloud GPU rents a Vast.ai instance that bills by the hour until it is destroyed. It stays off unless you save this setting.',
-                confirmText: 'Enable paid GPU', cancelText: 'Keep it off', tone: 'danger', icon: '⚠',
-            })) {
-                sel.value = '0'; warn.textContent = ''; return;
-            }
-            warn.textContent = '⚠️ Paid mode — remember to Save, and destroy instances when done.';
-        } else {
-            warn.textContent = '';
-        }
     }
 
     async function savePronunciations(btn) {
@@ -1180,9 +1160,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                                         <div class="rt-opt cloud" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
                                             <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · gpu · weekly quota</div>
                                         </div>
-                                        <div class="rt-opt" data-rt="vast" onclick="pickRender('${bookId}',this)">
-                                            <div class="rt-t">Vast GPU</div><div class="rt-s">paid · fastest</div>
-                                        </div>
                                     </div>
                                     <div class="rt-note" id="rt-note-${bookId}"></div>
                                     <input type="hidden" id="rt-${bookId}" value="local">
@@ -1274,8 +1251,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             } else {
                 note.innerHTML = `<span class="ok">${q.left} of ${q.weekly} free GPU-hrs left this week. A book uses ~2–4h. Nothing is charged.</span>`;
             }
-        } else if (target === 'vast') {
-            note.innerHTML = '<span class="warn">Vast.ai is <b>paid</b> (a few pence/book, billed by the hour). Enable it in Settings first.</span>';
         } else {
             note.innerHTML = '<span class="muted">' + localSpeedNote(bookId) + '</span>';
         }
@@ -1334,7 +1309,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         // Explicit confirmation — a conversion is a long job, never start one by surprise.
         const voiceName = el.closest('.production-workspace')?.querySelector('#voice-' + bookId)?.selectedOptions[0]?.text || voice;
-        const where = { local: 'this computer (free, slower)', kaggle: 'free Kaggle GPU', vast: 'Vast GPU (paid)' }[renderTarget] || renderTarget;
+        const where = { local: 'this computer (free, slower)', kaggle: 'free Kaggle GPU' }[renderTarget] || renderTarget;
         if (!await appConfirm({
             title: 'Start narrating this book?',
             message: 'This creates an audiobook and can take a while. You can watch progress or cancel it any time from the Queue tab.',

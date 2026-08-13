@@ -1,12 +1,5 @@
 # Data directories (contain user files / runtime state — not source)
-data/uploads/
-data/audiobooks/
-data/previews/
-data/library/
-data/logs/
-data/toc_cache/
-data/transcripts/
-data/*.db
+data/
 
 # SSH keys and secrets (sensitive)
 ssh-keys/
@@ -17,6 +10,8 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .env
+.env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -39,6 +34,9 @@ _tmp_*
 # local runtime artifacts
 jobs.db
 *_tts.epub
+docker-compose.override.yml.bak*
+piper/config/
+piper/voices/
 
 # Local working artifacts (kaggle kernels, rendered audio) — not repo material
 output/

@@ -20,7 +20,7 @@
 set -euo pipefail
 
 OWNER="${GHCR_OWNER:-davedavedavenm}"
-VAST="${VASTAI_CLI:-python3 /tmp/vast.py}"
+VAST="${VASTAI_CLI:-vastai}"
 STATE="/tmp/vast-gpu-state"
 
 engine_port() { case "$1" in chatterbox) echo 8004;; tada) echo 8005;; *) echo "unknown engine: $1" >&2; exit 1;; esac; }

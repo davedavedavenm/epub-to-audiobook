@@ -1,7 +1,7 @@
 """
 Queue worker process.
 Runs the queue loop + watchdog separate from the web UI.
-Optionally manages GPU auto-scaling via gpu_manager.
+Optionally manages teardown/health for a manually authorized paid GPU.
 """
 
 import logging
@@ -24,17 +24,17 @@ app.logger.propagate = False
 logging.getLogger('gpu_manager').addHandler(_handler)
 logging.getLogger('gpu_manager').setLevel(logging.INFO)
 
-# GPU auto-scaling (import conditionally so CPU-only deployments work fine)
+# Legacy Vast manager (import conditionally so CPU-only deployments work fine).
+# Queue-driven paid provisioning is deliberately retired: queue length is never
+# authority to spend money. The manager remains for adopting/tearing down an
+# instance that was started manually after an explicit user request.
 try:
-    from gpu_manager import GPUManager, AUTOSCALE_ENABLED, AUTOSCALE_THRESHOLD
+    from gpu_manager import GPUManager
     _gpu = GPUManager()
     set_gpu_manager(_gpu)  # Register with app so API endpoints can read status
-    app.logger.info(
-        f"GPU manager loaded (autoscale={'ON' if AUTOSCALE_ENABLED else 'OFF'}, "
-        f"threshold={AUTOSCALE_THRESHOLD})")
+    app.logger.info("GPU manager loaded (automatic paid provisioning disabled)")
 except ImportError:
     _gpu = None
-    AUTOSCALE_ENABLED = False
     app.logger.info("GPU manager not available — CPU only mode")
 
 
@@ -48,18 +48,12 @@ def main():
                 queued = queued_job_count()
                 running = running_job_count()
 
-                # ── GPU Auto-Scaling ──────────────────────────────
-                if _gpu and AUTOSCALE_ENABLED:
-                    # Scale up: enough books queued and GPU not already active
-                    if queued >= AUTOSCALE_THRESHOLD and _gpu.state == 'idle':
-                        app.logger.info(
-                            f"Auto-scale: {queued} books queued "
-                            f"(threshold={AUTOSCALE_THRESHOLD}), spinning up GPU")
-                        _gpu.scale_up()
-
-                    # Scale down: queue drained and all jobs finished
+                # A manually started paid instance is still torn down
+                # automatically when work drains. There is intentionally no
+                # inverse queue->scale_up path.
+                if _gpu:
                     if queued == 0 and running == 0 and _gpu.state == 'active':
-                        app.logger.info("Auto-scale: queue empty, tearing down GPU")
+                        app.logger.info("Paid GPU: queue empty, tearing down GPU")
                         _gpu.scale_down()
 
                     # Mark activity when jobs are running (resets idle timer)

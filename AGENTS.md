@@ -12,6 +12,34 @@ first.** If a session settles a new question or reverses one, update
 DECISIONS.md in the same session — don't just log it in STATUS.md and leave
 DECISIONS.md stale.
 
+## Authoritative-Source Gate — RTFM Before Experimenting
+
+For every external engine, model, API, SDK, container, deployment tool, or
+integration, agents **must read the current official documentation before
+changing code, parameters, dependencies, or operational advice**. Trial and
+error is for answering questions the documentation does not answer; it is not a
+substitute for reading the manual.
+
+The required order is:
+
+1. Read this repo's `DECISIONS.md` and the relevant repo documentation/history.
+2. Read the vendor/maintainer's current official README, model card, API docs,
+   release notes and parameter documentation that apply to the exact version in
+   use.
+3. If the deployed path uses an unofficial/community wrapper, read and pin that
+   wrapper too, and state the boundary clearly. Official weights do not make a
+   community runtime official.
+4. Record the authoritative URL plus the exact model, tag/commit, important
+   defaults, licence/use restrictions, and pricing date (when cost is relevant)
+   in the evidence trail. A claim without this provenance remains **unverified**.
+5. Only then design an experiment for the remaining unknown. Audible quality
+   still requires Dave's listening verdict; documentation and metrics cannot
+   replace it.
+
+If official documentation is missing, disabled, contradictory, or does not
+cover the deployed behaviour, say so explicitly. Do not silently promote a
+blog, search result, community issue, or remembered default to an official fact.
+
 ## Current Direction & Doc Map (2026-07)
 
 Read these before changing anything TTS- or text-related:
@@ -72,7 +100,8 @@ playbook but skips these is a net negative.
 8. **Status must distinguish claim-levels.** STATUS.md separates *verified* /
    *unverified* / *open* — GitHub issues carry measured evidence. Never move an
    item up a level without the measurement in hand.
-9. **Read this repo, and the vendor's docs, BEFORE researching anything.**
+9. **Pass the Authoritative-Source Gate above before researching or trying
+   anything.**
    *Violations, all on 2026-07-27:* the VCTK accent voices, the Edge Australian
    voices and TADA's `LEADIN` cold-start fix were each "discovered" by research
    while already present in the codebase; and a full day of accent work ran at
@@ -135,4 +164,3 @@ Prefer targeted checks:
 - unit or smoke scripts in `tests/` / `scripts/`
 - `docker compose config`
 - app smoke check against the configured local or remote URL
-

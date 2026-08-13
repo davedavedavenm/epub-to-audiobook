@@ -1,5 +1,77 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-13 repo + live-system audit — VERIFIED FINDINGS, FIXES NOT DEPLOYED
+>
+> **Live baseline:** Zorin checkout `/home/dave/ai/lab/stacks/epub-to-audiobook`
+> had no tracked changes at `934bed5` (untracked runtime/backup artifacts exposed
+> ignore-rule gaps); webapp and worker reported the same revision, all
+> containers had zero restarts, SQLite integrity passed, and the host had no
+> active/failed render work (103 historical jobs: 46 complete, 57 cancelled).
+> `AUTOSCALE_ENABLED=false`, `GPU_RENDER_ENABLED` was unset/off, the app reported
+> GPU state `idle`, and no GPU tunnel/container or status file existed. Vast's
+> provider-level instance query could not authenticate, so the external account
+> itself is **not** proven free of unrelated/orphan instances. The live app was
+> stable and contained no evidence of current app-managed spend; this does not
+> prove every feature works.
+>
+> **Critical audit correction:** the worker still contained a legacy
+> queue-length → `GPUManager.scale_up()` path that did not check the
+> `GPU_RENDER_ENABLED` master gate. It happened to be dormant only because the
+> environment flag was false. Local hardening now removes that path and its
+> Compose switches, makes the manager fail closed without an explicit manual
+> authorization, removes Vast from per-book selection, and rejects any ordinary
+> job target other than local/free Kaggle. Paid enablement is now environment-only:
+> the unauthenticated Settings API/UI cannot arm the manual endpoint. Regression coverage is added. These
+> changes are **not live** until the whole stack is deployed from git.
+>
+> **Other confirmed defects:** production never passes the advertised
+> `--auto-rerender` flag; single-chapter recovery can overwrite whole-book QA
+> evidence; the article RSS enclosure points at an unserved `/data/...` path;
+> generated-EPUB timing is wrong; Vibe's rejected cfg 1.3 remains the
+> app/container default; and the LAN app lacks meaningful authentication and its
+> URL fetcher needs SSRF controls. These remain open unless separately marked fixed.
+>
+> **Additional local fixes:** `deploy.sh` now defaults to `master`/version 2.0.0
+> rather than the stale v1.3 tag; background preview caching is restricted to
+> currently healthy free/local Chatterbox/TADA engines and cannot silently call
+> Polly, Inworld or Edge at startup; and runtime/secret-backup paths are ignored
+> without deleting them. `git lfs pull` restored all 16 tracked narrator WAVs
+> locally; all have RIFF headers and Arthur matches the expected 864,182-byte
+> SHA-256 `8774082c...`.
+> The deprecated runtime download of `vast.py` from a moving GitHub `master`
+> branch is removed; the image now pins Vast's supported official `vastai==1.5.4`
+> package. Its declared `requests>=2.33.0` dependency initially conflicted with
+> the repo's `requests==2.32.4` pin; the repo now pins `requests==2.33.0`, the
+> full requirement set resolves, and a regression guard covers the pairing.
+> Paid use remains blocked in practice until the legacy credential
+> mount is repaired and `vastai show instances` authenticates successfully.
+>
+> **Secret-history audit:** Gitleaks scanned all 550 commits / ~5.2 MB and found
+> the same historical `EVOLUTION_API_KEY` value in two public commits
+> (`docker-compose.yml` at `6737384` and `PLAN-v1.1-fixes.md` at `fcf061e`).
+> Values were redacted during inspection. The current live key is configured
+> and does **not** match the historical value, consistent with rotation, but
+> continued invalidity of the old credential has not been independently proven.
+> GitHub's Dependabot/code/secret-scanning APIs were unavailable for this
+> repository/account and therefore provide no clean-bill evidence.
+>
+> **Documentation decisions settled:** quality is the human admission floor,
+> then free generation wins, then the lowest measured paid cost per finished
+> book. Official upstream documentation for the exact version is mandatory
+> before experimentation. Engine rejection boundaries are now explicit in
+> `DECISIONS.md`. ASR remains structural collapse/completeness evidence only;
+> it cannot grade voice quality or select the better render.
+>
+> **Acquisition boundary:** this repo contains only the wanted-monitor/OpenBooks
+> bridge. The active torrent-first path is in the sibling `infra` repo:
+> LazyLibrarian → Prowlarr → qBittorrent, with Usenet fallback. Do not
+> duplicate those operational docs here.
+>
+> **Local verification after hardening/docs:** 235 tests pass; Ruff, Python
+> compilation, Compose config and `git diff --check` pass. No deployment has
+> been made. The corrected free-Kaggle Vibe cfg 2-vs-3 full-chapter blind test
+> is running; no default will change before Dave listens.
+
 > ## 2026-08-13 `cfg_scale` is the VibeVoice speaker-similarity lever — 1.3 REJECTED BY EAR
 >
 > **Dave, on identical 190-word renders differing only in `cfg_scale`:**
@@ -12,10 +84,11 @@
 > timbre still was not arriving.
 >
 > Every VibeVoice clip ever produced in this repo ran `cfg_scale=1.3`, inherited
-> unexamined from the Yellow Wallpaper kernel. `cfg_scale` governs adherence to
-> the voice conditioning — the direct analogue of Chatterbox's `cfg_weight`,
-> already documented in VOICES.md as THE lever for this class of problem. Nobody
-> had moved it for Vibe.
+> unexamined from the Yellow Wallpaper kernel. The pinned community runtime
+> exposes `cfg_scale`; the short sweep empirically shows speaker-conditioning
+> behaviour analogous to Chatterbox's `cfg_weight`. Microsoft's official TTS
+> documentation does not define that parameter contract, so this is a measured
+> repo finding, not an official Microsoft claim. Nobody had moved it for Vibe.
 >
 > | clip | cfg | f0 median | f0 IQR | centroid | ASR | Dave |
 > |------|----:|----------:|-------:|---------:|----:|------|
@@ -186,8 +259,9 @@
 > one-decimal precision. Full-chapter peak VRAM was not recorded; the measured
 > short-sample Vibe peaks remain 5.166–5.299 GiB allocated / 5.604–5.607 GiB
 > reserved. Exact-revision GHCR builds passed for both finalist images (Actions
-> run `30431465911`); promotion still
-> requires Vibe's 90-minute stress test (#44) and an exact-image CUDA smoke test.
+> run `30431465911`). The later 77-minute single-pass run answered #44's
+> capability question; promotion still requires the corrected cfg 2/3 verdict,
+> an app-path E2E at the winning setting, and an exact-image CUDA smoke test.
 > Default rendering remains local/free Chatterbox Nano. Vast cost numbers remain
 > estimates; no Vast instance was created and no integration code rents one.
 
@@ -218,6 +292,9 @@
 
 > ## MOSS / Qwen / VibeVoice / Higgs audiobook verdict (2026-07-29)
 >
+> **Historical snapshot:** the Vibe-vs-Qwen ranking below is superseded by the
+> cfg 1.3 discovery above; the individual listening quotes remain evidence.
+>
 > **VibeVoice and Qwen pass the full-chapter listening gate.** Qwen was “really
 > good”; Vibe was equally good and possibly better because it was more
 > expressive. Vibe is the provisional quality leader and Qwen the consistency
@@ -233,8 +310,8 @@
 > The final 13-section paragraph-aware render had zero inserted silence and
 > passed duration/ASR (40:31, RTF 1.245, ASR 0.9849, peak VRAM 13.23 GiB), but
 > Dave still heard several joins, weaker expression and off pacing: “not
-> horrible,” but worse than Vibe/Qwen. The next quality step is Vibe's existing
-> 90-minute single-pass stress test (#44), with Qwen retained as co-finalist.
+> horrible,” but worse than Vibe/Qwen. This section's old next step (#44) was
+> subsequently completed by the 77-minute run recorded above.
 
 > ## Audiobook quality gate (2026-07-28)
 >

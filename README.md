@@ -99,7 +99,7 @@ account required.
 git clone https://github.com/davedavedavenm/epub-to-audiobook.git
 cd epub-to-audiobook
 
-# 2. Configure (optional — defaults work out of the box)
+# 2. Configure. Set APP_AUTH_PASSWORD before exposing the web UI.
 cp .env.example .env
 
 # 3. Start. Enable the engines you want via profiles:
@@ -115,8 +115,16 @@ open http://localhost:8881
 ```
 
 **Cost & privacy:** the default path spends nothing and sends your books to no
-one. Optional **Cloud GPU** rendering (Vast.ai) is **off by default** and must
-be enabled in Settings — see [GPU-SAFETY.md](GPU-SAFETY.md).
+one. Optional paid Vast rendering is off by default, cannot be enabled in the
+web Settings UI, and is never triggered by queue length. See
+[GPU-SAFETY.md](GPU-SAFETY.md).
+
+The UI and private APIs use HTTP Basic authentication from
+`APP_AUTH_USERNAME` / `APP_AUTH_PASSWORD`. An empty production password fails
+closed. Podcast RSS/audio and health/version probes remain public so podcast
+clients and container health checks work. Article URL ingest accepts public
+HTTP(S) destinations only and validates each redirect against DNS rebinding and
+local/private address access.
 
 First run of each engine downloads its model once (Kokoro ~, Chatterbox
 ~700 MB, TADA ~5 GB), cached in a Docker volume.
@@ -193,11 +201,13 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | OpenAI-compatible LLM for the smart chapter guard, metadata + adaptive pronunciation. Optional (heuristic fallback). Free: Groq or Gemini — see `.env.example` |
 | `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` / `AUDIOBOOKSHELF_USER` / `AUDIOBOOKSHELF_PORT` | Audiobookshelf rsync sync target |
 | `LIBRARY_DIR` | Folder of ebooks to browse (default: `/mnt/openbooks`) |
-| `GPU_RENDER_ENABLED` | Master gate for paid Vast.ai GPU render (default `0` / off — see GPU-SAFETY.md) |
-| `AUTOSCALE_ENABLED` | Vast.ai GPU autoscaling (default `false`) |
-| `AUTOSCALE_COST_CAP` | Session cost cap for autoscaled GPU |
-| `AUDIO_ASR_VERIFY_ENABLED` | Sampled ASR verification after completion (default `0`) |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Telegram notifications |
+| `APP_AUTH_USERNAME` / `APP_AUTH_PASSWORD` | Required environment-owned UI/API credentials; an empty password fails closed |
+| `APP_TRUSTED_HOSTS` | Optional comma-separated Flask host allowlist (hostnames/IPs without ports) |
+| `GPU_RENDER_ENABLED` | Environment-only host-admin gate for a separate manual paid Vast.ai action (default `0` / off; unavailable through Settings; queueing never provisions) |
+| `AUTOSCALE_COST_CAP` | Safety cap for a manually authorized paid-GPU session; not an autoscale trigger |
+| `ASR_VERIFY` | Structural source/audio comparison (default `1`); detects gross collapse/mismatch, never voice quality |
+| `AUDIO_ASR_VERIFY_ENABLED` | Additional sampled structural ASR check after completion (default `0`) |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_WEBHOOK_SECRET` | Telegram notifications and official webhook-secret validation |
 | `INWORLD_API_KEY` / `AWS_*` | Paid engine credentials |
 
 ## API Endpoints
@@ -213,7 +223,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `/api/jobs/<id>/cancel` `/retry` `/delete` `/download` `/sync` `/logs` | — | Job actions |
 | `/api/queue/status` `/pause` `/reorder` `/retry-failed` | — | Queue controls |
 | `/api/settings` `/api/settings/pronunciations` | GET/POST | Settings + global pronunciation dictionary |
-| `/api/gpu/status` `/api/gpu/scale-up` | — | GPU status / scale-up (gated by `GPU_RENDER_ENABLED`) |
+| `/api/gpu/status` `/api/gpu/scale-up` | — | GPU status / manual scale-up (environment-gated; cannot be armed through the web app) |
 
 ## Documentation
 

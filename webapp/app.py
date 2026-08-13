@@ -5,6 +5,7 @@ Allows users to upload EPUB/PDF files, preview voices, and convert to audiobooks
 """
 
 import os
+import hmac
 import sys
 import subprocess
 import threading
@@ -22,18 +23,72 @@ from collections import Counter
 from typing import Any, Optional, Dict, List
 from gpu_manager import GPUManager
 from epub_generator import package_epub3_with_audio
+from qa_report import merge_qa_reports, read_qa_report, write_qa_report_atomic
 from chapters import list_renderable_chapters, body_end_index
 import guard
 
-from flask import Flask, render_template, request, jsonify, send_file, Response
+from flask import Flask, render_template, request, jsonify, send_file, Response, url_for
 import requests
 
 # Telegram notification settings
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
+TELEGRAM_WEBHOOK_SECRET = os.environ.get('TELEGRAM_WEBHOOK_SECRET', '')
 TTS_PROXY_URL = os.environ.get('TTS_PROXY_URL', '').strip().rstrip('/')
 
 app = Flask(__name__)
+APP_AUTH_USERNAME = os.environ.get('APP_AUTH_USERNAME', 'dave')
+APP_AUTH_PASSWORD = os.environ.get('APP_AUTH_PASSWORD', '')
+_trusted_hosts = [host.strip() for host in
+                  os.environ.get('APP_TRUSTED_HOSTS', '').split(',') if host.strip()]
+if _trusted_hosts:
+    app.config['TRUSTED_HOSTS'] = _trusted_hosts
+
+
+def _public_request_path(path: str) -> bool:
+    return (
+        path in ('/api/health', '/api/version', '/api/articles/rss',
+                 '/rss/podcasts', '/api/telegram/webhook')
+        or path.startswith('/rss/articles/')
+        or path.startswith('/api/articles/audio/')
+    )
+
+
+@app.before_request
+def require_app_authentication():
+    """Protect the UI and APIs with environment-owned HTTP Basic auth.
+
+    Podcast feeds/audio and health/version probes stay public. Telegram has
+    its own official webhook-secret check in the route itself.
+    """
+    if _public_request_path(request.path):
+        return None
+    if app.config.get('TESTING') and app.config.get('AUTH_BYPASS_FOR_TESTS', True):
+        return None
+    if not APP_AUTH_PASSWORD:
+        return jsonify({'error': 'Application authentication is not configured'}), 503
+
+    supplied = request.authorization
+    valid = bool(
+        supplied
+        and hmac.compare_digest(supplied.username or '', APP_AUTH_USERNAME)
+        and hmac.compare_digest(supplied.password or '', APP_AUTH_PASSWORD)
+    )
+    if not valid:
+        return Response(
+            'Authentication required', 401,
+            {'WWW-Authenticate': 'Basic realm="EPUB to Audiobook", charset="UTF-8"'},
+        )
+
+    # Browser-originated writes must come from this app. Requests without an
+    # Origin header (curl, scripts, native clients) still require Basic auth.
+    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        origin = request.headers.get('Origin')
+        if origin:
+            from urllib.parse import urlsplit
+            if not hmac.compare_digest(urlsplit(origin).netloc, request.host):
+                return jsonify({'error': 'Cross-origin write refused'}), 403
+    return None
 
 
 
@@ -405,7 +460,7 @@ def _run_audio_asr_verify_sample(job_id: str, epub_filename: str, output_dirname
 TTS_ENGINES = {
     'kokoro': {
         'name': 'Kokoro',
-        'description': 'High-quality neural TTS with voice mixing',
+        'description': 'Fast legacy/compatibility TTS; retired from quality contention',
         'url_env': 'KOKORO_URL',
         'default_url': 'http://kokoro-tts:8880/v1'
     },
@@ -417,13 +472,13 @@ TTS_ENGINES = {
     },
     'vibevoice': {
         'name': 'VibeVoice 1.5B',
-        'description': 'Provisional quality leader; long-form GPU narration (Kaggle or opt-in local CUDA)',
+        'description': 'Long-form finalist; cfg 2/3 blind ranking pending (Kaggle or opt-in local CUDA)',
         'url_env': 'VIBEVOICE_URL',
         'default_url': 'http://vibevoice-tts:8010/v1'
     },
     'qwen3': {
         'name': 'Qwen3-TTS 1.7B',
-        'description': 'Consistency co-finalist; GPU narration fallback (Kaggle or opt-in local CUDA)',
+        'description': 'Long-form consistency finalist (Kaggle or opt-in local CUDA)',
         'url_env': 'QWEN3_URL',
         'default_url': 'http://qwen3-tts:8011/v1'
     }
@@ -1100,8 +1155,8 @@ def estimate_eta_minutes(voice, engine, file_type, char_count):
     # Enforce a minimum ETA of 10 minutes to allow for heavy text preprocessing on large books
     return max(10, int(eta_seconds / 60))
 
-def calculate_price_estimate(engine: str, char_count: int) -> float:
-    """Calculate estimated USD cost for a given engine and character count."""
+def calculate_price_estimate(engine: str, char_count: int) -> float | None:
+    """Calculate known USD API cost; never label an unknown engine free."""
     # Prices per 1,000,000 characters
     PRICING = {
         'kokoro': 0.0,
@@ -1112,8 +1167,15 @@ def calculate_price_estimate(engine: str, char_count: int) -> float:
         'openai-hd': 30.0,
         'azure': 16.0     # Neural
     }
-
-    rate_per_million = PRICING.get(engine, 0.0)
+    free_engines = {
+        'kokoro', 'edge', 'piper', 'chatterbox', 'chatterbox_nano',
+        'tada', 'cosyvoice', 'vibevoice', 'qwen3', 'melotts', 'omnivoice'
+    }
+    if engine in free_engines:
+        return 0.0
+    if engine not in PRICING:
+        return None
+    rate_per_million = PRICING[engine]
     return (char_count / 1_000_000) * rate_per_million
 
 
@@ -2649,11 +2711,15 @@ def retry_missing_chapters(
             log_file_path = Path(LOG_DIR) / f"{job_id}_retry_ch{ch}_attempt{attempt}.log"
             log_file_path.parent.mkdir(parents=True, exist_ok=True)
             log_file = open(log_file_path, 'w', encoding='utf-8')
+            qa_path = output_path / 'qa_report.json'
+            qa_before = read_qa_report(qa_path)
+            process_succeeded = False
 
             try:
                 proc = subprocess.Popen(clean, stdout=log_file, stderr=subprocess.STDOUT)
                 running_processes[job_id] = proc
                 proc.wait(timeout=timeout_seconds)
+                process_succeeded = proc.returncode == 0
                 if proc.returncode != 0:
                     log_file.close()
                     err_txt = log_file_path.read_text(encoding='utf-8', errors='ignore') if log_file_path.exists() else ""
@@ -2670,6 +2736,19 @@ def retry_missing_chapters(
                 if not log_file.closed:
                     log_file.close()
                 running_processes.pop(job_id, None)
+
+            # A one-chapter converter run writes a one-chapter qa_report.json.
+            # Merge it with the pre-recovery book report instead of allowing it
+            # to overwrite evidence for every chapter already rendered.
+            qa_after = read_qa_report(qa_path)
+            if process_succeeded and qa_after:
+                write_qa_report_atomic(
+                    qa_path, merge_qa_reports(qa_before, qa_after))
+            elif qa_after != qa_before:
+                if qa_before:
+                    write_qa_report_atomic(qa_path, qa_before)
+                else:
+                    qa_path.unlink(missing_ok=True)
 
             # Wait for file system sync
             import time as time_module
@@ -4729,10 +4808,8 @@ def api_settings():
     ]
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
-        'AUTOSCALE_ENABLED', 'AUTOSCALE_THRESHOLD', 'AUTOSCALE_COST_CAP',
+        'AUTOSCALE_COST_CAP',
         'LLM_API_BASE_URL', 'LLM_MODEL_NAME',
-        # Master gate for paid Vast.ai cloud GPU. Default OFF = local render.
-        'GPU_RENDER_ENABLED',
         # Free Kaggle GPU render — username pairs with KAGGLE_API_TOKEN above.
         'KAGGLE_USERNAME',
     ]
@@ -5001,20 +5078,22 @@ def gpu_status():
         pass
     return jsonify({
         'state': 'idle',
-        'autoscale_enabled': os.environ.get('AUTOSCALE_ENABLED', 'false').lower() in ('1', 'true', 'yes'),
-        'autoscale_threshold': int(os.environ.get('AUTOSCALE_THRESHOLD', '3')),
+        # Queue length is never authority to rent a paid GPU. Kept in the
+        # response for compatibility with older frontends.
+        'autoscale_enabled': False,
         'cost_cap': float(os.environ.get('AUTOSCALE_COST_CAP', '1.00')),
     })
 
 
 def gpu_render_enabled() -> bool:
-    """Master safety gate for paid Vast.ai GPU use. Default OFF (local render).
+    """Environment-only safety gate for paid Vast.ai GPU use. Default OFF.
 
     Anything that could spin up a billed cloud GPU MUST check this first.
-    See GPU-SAFETY.md — this protects the Vast.ai balance from accidental /
-    automated scale-ups.
+    It deliberately does not read the unauthenticated settings database: a LAN
+    API caller must never be able to arm spending. Enabling requires deliberate
+    host access plus a service restart for that specific manual session.
     """
-    return str(get_setting('GPU_RENDER_ENABLED', '0')).lower() in ('1', 'true', 'yes', 'on')
+    return os.environ.get('GPU_RENDER_ENABLED', '0').lower() in ('1', 'true', 'yes', 'on')
 
 
 @app.route('/api/gpu/scale-up', methods=['POST'])
@@ -5022,8 +5101,8 @@ def gpu_scale_up():
     """Manually trigger GPU scale-up (gated: default local, never auto-enable)."""
     if not gpu_render_enabled():
         return jsonify({'error': 'Cloud GPU rendering is OFF (default). It rents a '
-                        'paid Vast.ai instance. Turn it on in Settings → Render Location '
-                        'only when you intend to spend credit.'}), 403
+                        'paid Vast.ai instance. It can only be armed by a host '
+                        'administrator for an explicitly approved manual session.'}), 403
     if not _gpu_manager:
         return jsonify({'error': 'GPU manager not available'}), 503
     if _gpu_manager.state == 'active':
@@ -5034,7 +5113,7 @@ def gpu_scale_up():
     # Run scale-up in background thread to avoid blocking the request
     import threading
     def _do_scale_up():
-        _gpu_manager.scale_up()
+        _gpu_manager.scale_up(authorized=True)
     threading.Thread(target=_do_scale_up, daemon=True).start()
     return jsonify({'status': 'provisioning'})
 
@@ -5676,7 +5755,8 @@ def article_podcast_rss(site: str = None):
             continue
         audio_file = audio_files[0]
 
-        audio_rel_path = f"/data/audiobooks/{out_dirname}/{audio_file.name}"
+        audio_rel_path = url_for(
+            'article_audio', job_id=j['id'], filename=audio_file.name)
         items.append({
             'title': j.get('book_name') or audio_file.stem,
             'author': j.get('author') or site_name,
@@ -5694,10 +5774,34 @@ def article_podcast_rss(site: str = None):
     return Response(rss_xml, mimetype='application/rss+xml')
 
 
+@app.route('/api/articles/audio/<job_id>/<path:filename>')
+def article_audio(job_id: str, filename: str):
+    """Public podcast enclosure backed by a completed article job."""
+    if Path(filename).name != filename:
+        return jsonify({'error': 'Invalid audio filename'}), 400
+    job = get_job(job_id)
+    if not job or job.get('source_kind') != 'article' or job.get('status') != 'completed':
+        return jsonify({'error': 'Article audio not found'}), 404
+    outdir = (OUTPUT_DIR / (job.get('output_dirname') or '')).resolve()
+    target = (outdir / filename).resolve()
+    if target.parent != outdir or target.suffix.lower() not in ('.mp3', '.m4b'):
+        return jsonify({'error': 'Invalid audio filename'}), 400
+    if not target.is_file():
+        return jsonify({'error': 'Article audio not found'}), 404
+    mimetype = 'audio/mp4' if target.suffix.lower() == '.m4b' else 'audio/mpeg'
+    return send_file(target, mimetype=mimetype, conditional=True,
+                     download_name=target.name)
+
+
 @app.route('/api/telegram/webhook', methods=['POST'])
 def telegram_webhook():
     """Handle incoming Telegram webhook messages for URL article capture (#42)."""
     import time
+    supplied_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
+    if not TELEGRAM_WEBHOOK_SECRET:
+        return jsonify({'error': 'Telegram webhook secret is not configured'}), 503
+    if not hmac.compare_digest(supplied_secret, TELEGRAM_WEBHOOK_SECRET):
+        return jsonify({'error': 'Invalid Telegram webhook secret'}), 401
     data = request.get_json(silent=True) or {}
     msg = data.get('message') or data.get('channel_post') or {}
     text = (msg.get('text') or '').strip()
@@ -6830,10 +6934,9 @@ def estimate_cost_api():
         cost = calculate_price_estimate(engine, char_count)
 
         gpu_info = None
-        # If using Kokoro, check if a GPU scale-up would be triggered
+        # If using Kokoro, report an already-active manually provisioned GPU.
+        # Queue length deliberately has no paid-GPU effect.
         if engine == 'kokoro' and QUEUE_RUNNER_ENABLED:
-            current_active = running_job_count() + queued_job_count()
-            # If we cross the threshold, suggest GPU cost
             # The helper is _is_gpu_mode(); `is_gpu_active` never existed, so
             # this raised NameError for any Kokoro cost estimate once the queue
             # was non-empty (caught by ruff F821, 2026-07-25).
@@ -6846,16 +6949,11 @@ def estimate_cost_api():
                         'reason': 'GPU is currently active',
                         'rate': f"${gpu_status.get('cost_per_hour', 0):.2f}/hr"
                     }
-            elif (current_active + 1) >= 3:
-                gpu_info = {
-                    'triggered': True,
-                    'reason': f'Queue threshold reached ({current_active + 1}/3)',
-                    'rate': '~ $0.05 - $0.10 / hr (Vast.ai)'
-                }
 
         return jsonify({
             'char_count': char_count,
-            'estimated_cost': round(cost, 2),
+            'estimated_cost': round(cost, 2) if cost is not None else None,
+            'cost_status': 'known' if cost is not None else 'unknown_not_free',
             'engine': engine,
             'gpu_info': gpu_info
         })
@@ -6930,6 +7028,10 @@ def convert_from_library():
         output_dirname = f"{safe_name}_{job_id}"
         tts_engine = all_voices().get(voice, {}).get('engine', 'kokoro')
         render_target = (data.get('render_target') or 'local').lower()
+        if render_target not in ('local', 'kaggle'):
+            return jsonify({'error': 'Paid GPU cannot be selected by queueing a book. '
+                            'Vast provisioning is manual and session-specific; use local '
+                            'or free Kaggle for this job.'}), 400
         engine_fallback_note = None
         health = check_engines_health()
         # A stopped local CUDA service says nothing about Kaggle availability.
@@ -7083,9 +7185,16 @@ def _cache_all_voices_background():
     delay = float(os.environ.get('VOICE_CACHE_DELAY', '5'))
     app.logger.info(
         f"Starting background voice caching (throttled: max_load={max_load}, delay={delay}s)")
-    # all_voices() so an uploaded clone gets a cached preview too — hearing
-    # your own reference back is the whole point of uploading it.
-    for voice_id in all_voices().keys():
+    # Startup maintenance is not authority to call an internet/paid engine or
+    # hammer an opt-in/offline evaluation service. Cache only currently healthy
+    # free local production families. Other previews remain explicit user
+    # actions, where failures/cost are visible rather than hidden at boot.
+    auto_cache_engines = frozenset({'chatterbox', 'chatterbox_nano', 'tada'})
+    health = check_engines_health(max_age=0)
+    cacheable = [voice_id for voice_id, info in all_voices().items()
+                 if info.get('engine', 'kokoro') in auto_cache_engines
+                 and health.get(info.get('engine', 'kokoro')) is True]
+    for voice_id in cacheable:
         preview_path = PREVIEWS_DIR / f"{voice_id}.mp3"
         if preview_path.exists() and preview_path.stat().st_size > 5000:
             continue                                   # already cached
@@ -7112,15 +7221,12 @@ def background_startup():
     threading.Thread(target=index_library_background, daemon=True).start()
     threading.Thread(target=_cache_all_voices_background, daemon=True).start()
 
-
     if QUEUE_RUNNER_ENABLED:
         try:
             resume_inflight_jobs()
             start_watchdog()
             start_next_queued_job()
         except Exception as e:
-            app.logger.error(f"Background startup error: {e}")
-
             app.logger.error(f"Background startup error: {e}")
 
 

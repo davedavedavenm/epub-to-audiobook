@@ -1,5 +1,5 @@
 """
-GPU Auto-Scaling Manager for Vast.ai
+Manual paid-GPU lifecycle manager for Vast.ai
 
 Manages the lifecycle of a GPU Kokoro instance on Vast.ai:
   scale_up()   → search → create instance → wait → tunnel → verify
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 VASTAI_TEMPLATE_HASH = os.environ.get(
     'VASTAI_TEMPLATE_HASH', 'e2588a22cf5eef43df3d444ef4f25705')
 VASTAI_TEMPLATE_ID = int(os.environ.get('VASTAI_TEMPLATE_ID', '343755'))
-VASTAI_CLI = os.environ.get('VASTAI_CLI', '/tmp/vast.py')
+VASTAI_CLI = os.environ.get('VASTAI_CLI', 'vastai')
 VASTAI_SSH_KEY = os.environ.get(
     'VASTAI_SSH_KEY', '/root/.ssh/vastai_ed25519')
 # HOST path for SSH key — used in docker run -v mounts which are interpreted by
@@ -44,9 +44,10 @@ CPU_KOKORO_URL = os.environ.get(
     'CPU_KOKORO_URL', 'http://kokoro-tts:8880/v1')
 DOCKER_GATEWAY_IP = os.environ.get('DOCKER_GATEWAY_IP', '172.19.0.1')
 
-AUTOSCALE_ENABLED = os.environ.get(
-    'AUTOSCALE_ENABLED', 'false').lower() in ('1', 'true', 'yes')
-AUTOSCALE_THRESHOLD = int(os.environ.get('AUTOSCALE_THRESHOLD', '3'))
+# Retired safety control. Older deployments may still carry
+# AUTOSCALE_ENABLED=true, but queue length is never authority to rent a GPU.
+# Keep the public status field for compatibility while forcing it false.
+AUTOSCALE_ENABLED = False
 COST_CAP_DOLLARS = float(os.environ.get('AUTOSCALE_COST_CAP', '1.00'))
 IDLE_TIMEOUT_MINUTES = int(os.environ.get('GPU_IDLE_TIMEOUT', '10'))
 PROVISION_TIMEOUT_S = int(os.environ.get('GPU_PROVISION_TIMEOUT', '600'))
@@ -58,9 +59,9 @@ CPU_CONCURRENT_JOBS = int(os.environ.get('CPU_CONCURRENT_JOBS', '1'))
 
 
 def _vast(*args) -> subprocess.CompletedProcess:
-    """Run a vast.py CLI command."""
-    cmd = ['python3', VASTAI_CLI] + list(args)
-    logger.debug(f"vast.py: {' '.join(cmd)}")
+    """Run the pinned official Vast.ai CLI package."""
+    cmd = [VASTAI_CLI] + list(args)
+    logger.debug(f"vastai: {' '.join(cmd)}")
     return subprocess.run(
         cmd, capture_output=True, text=True, timeout=60)
 
@@ -257,11 +258,16 @@ class GPUManager:
 
     # ── Public API ────────────────────────────────────────────────
 
-    def scale_up(self) -> bool:
+    def scale_up(self, *, authorized: bool = False) -> bool:
         """Provision a GPU instance, create tunnel, verify Kokoro.
 
         Returns True on success, False on failure (falls back to CPU).
         """
+        if not authorized:
+            logger.error(
+                "GPU scale_up refused: paid provisioning requires an explicit "
+                "authorized manual request")
+            return False
         with self._lock:
             if self.state != 'idle':
                 logger.info(f"GPU scale_up skipped (state={self.state})")
@@ -282,7 +288,7 @@ class GPUManager:
         try:
             # 1. Ensure vast.py CLI is available
             if not self._ensure_cli():
-                raise RuntimeError("Cannot download vast.py CLI")
+                raise RuntimeError("Pinned official Vast.ai CLI is unavailable")
 
             # 1b. Ensure tunnel Docker image is available
             if not self._ensure_tunnel_image():
@@ -307,7 +313,7 @@ class GPUManager:
             # 3. Wait for instance to be running
             if not self._wait_instance_running(timeout=PROVISION_TIMEOUT_S):
                 raise RuntimeError(
-                    f"Instance {instance_id} not ready after {PROVISION_TIMEOUT_S}s")
+                    f"Instance {self.instance_id} not ready after {PROVISION_TIMEOUT_S}s")
 
             # 4. Get SSH connection details
             if not self._get_ssh_details():
@@ -334,7 +340,7 @@ class GPUManager:
                 self.last_job_activity = datetime.now()
 
             logger.info(
-                f"GPU: Scale-up complete. Instance {instance_id}, "
+                f"GPU: Scale-up complete. Instance {self.instance_id}, "
                 f"${self.cost_per_hour:.3f}/hr")
             self._save_state()
             return True
@@ -462,7 +468,6 @@ class GPUManager:
                 (datetime.now() - self.session_start).total_seconds() / 60, 1
             ) if self.session_start else 0,
             'autoscale_enabled': AUTOSCALE_ENABLED,
-            'autoscale_threshold': AUTOSCALE_THRESHOLD,
             'cost_cap': COST_CAP_DOLLARS,
         }
         self._persist_status(status)
@@ -487,41 +492,15 @@ class GPUManager:
 
     # ── Private Methods ───────────────────────────────────────────
 
-    VAST_CLI_SHA256 = None
-
     def _ensure_cli(self) -> bool:
-        """Download vast.py if not present, with integrity check."""
-        if Path(VASTAI_CLI).exists():
-            if self.VAST_CLI_SHA256:
-                import hashlib
-                actual = hashlib.sha256(Path(VASTAI_CLI).read_bytes()).hexdigest()
-                if actual != self.VAST_CLI_SHA256:
-                    logger.warning("GPU: vast.py checksum mismatch, re-downloading")
-                    Path(VASTAI_CLI).unlink(missing_ok=True)
-                else:
-                    return True
-            else:
-                return True
-        logger.info("GPU: Downloading vast.py CLI")
-        try:
-            result = subprocess.run(
-                ['curl', '-s',
-                 'https://raw.githubusercontent.com/vast-ai/vast-python/master/vast.py',
-                 '-o', VASTAI_CLI],
-                capture_output=True, timeout=30)
-            if result.returncode != 0:
-                return False
-            if self.VAST_CLI_SHA256:
-                import hashlib
-                actual = hashlib.sha256(Path(VASTAI_CLI).read_bytes()).hexdigest()
-                if actual != self.VAST_CLI_SHA256:
-                    logger.error(f"GPU: vast.py checksum mismatch: expected {self.VAST_CLI_SHA256}, got {actual}")
-                    Path(VASTAI_CLI).unlink(missing_ok=True)
-                    return False
-            return True
-        except Exception as e:
-            logger.error(f"GPU: Failed to download vast.py: {e}")
-            return False
+        """Require the CLI installed in the image; never fetch code at runtime."""
+        import shutil
+        available = bool(shutil.which(VASTAI_CLI))
+        if not available:
+            logger.error(
+                "GPU: pinned official Vast.ai CLI is missing; refusing paid "
+                "provisioning (runtime downloads are prohibited)")
+        return available
 
     def _ensure_tunnel_image(self) -> bool:
         """Pre-pull kroniak/ssh-client Docker image for the SSH tunnel container."""

@@ -1,11 +1,15 @@
 # Low-Cost TTS Strategy
 
-Goal: keep audiobook generation below GBP3/book, ideally much less.
+Goal: produce a genuinely good audiobook for free wherever possible; when a
+paid path is necessary to reach that quality, use the lowest measured total
+cost per finished book.
 
-> **Quality is the admission test; cost is a constraint after that.** A local,
-> free or fast engine that sounds bad is not a successful audiobook engine.
-> Candidates must first pass listening for naturalness, authentic accent,
-> pronunciation (including names and numbers), pacing and long-form comfort.
+> **Quality is the admission test; free/cheapest is the selection rule among
+> engines that pass.** A local, free or fast engine that sounds bad is not a
+> successful audiobook engine. Candidates must first pass Dave's listening for
+> naturalness, authentic accent, pronunciation (including names and numbers),
+> pacing and long-form comfort. Prefer free local/Kaggle generation; if none
+> passes, choose the lowest measured paid cost per finished book.
 
 > **The premise of this document has largely been won (2026-07-25).** It was
 > written when a good local render was impractical and the question was which
@@ -16,9 +20,10 @@ Goal: keep audiobook generation below GBP3/book, ideally much less.
 > engines, but the default answer is now "render it locally and pay nothing".
 > See STATUS.md for the measurement.
 
-Last reviewed: 2026-07-02 (API cost tables); finalist compute costs and local
-CPU feasibility reviewed 2026-07-29. Rough conversion used for quick screening:
-USD1 ~= GBP0.75.
+Last reviewed: 2026-08-13 (project optimisation order, rejection boundaries,
+Vibe comparison validity and paid-GPU safety). Re-check every commercial price
+in the provider's current official documentation before using it. Rough
+conversion used for historical screening: USD1 ~= GBP0.75.
 
 ## 2026-07-28 local accent bake-off
 
@@ -44,12 +49,12 @@ See STATUS.md for exact wall times, durations, memory and clip paths.
 The identical Arthur hard passage was rendered on a free Kaggle P100 (Higgs's
 valid full clip used three separately generated paragraphs after its single
 full-text call truncated at the first blank line). That short test advanced all
-four engines to longer listening tests. The audiobook result is now clearer:
-**VibeVoice and Qwen pass**; Higgs is listenable but seed-dependent; MOSS is not
-a finalist. Vibe's full chapter was “really good” and possibly better than Qwen
-because it was more expressive. Qwen was also “really good” and had the cleanest
-consistency signal. Higgs seed 12345 was “pretty good”; seed 54321 remained
-listenable but felt clipped/joined in several places.
+four engines to longer listening tests. **VibeVoice and Qwen passed that gate**;
+Higgs was listenable but seed-dependent; MOSS was not a finalist. However, the
+Vibe run used the now-rejected `cfg_scale=1.3` and a passage known to handicap
+Vibe. Its old relative ranking against Qwen is therefore superseded. Qwen's
+heard result remains valid; Vibe must be re-graded at cfg 2/3 before the two are
+ranked.
 
 MOSS received the most corrective testing. Its first chapter used 105
 independent chunks plus 104 x 0.35 s joins, so that result was not treated as an
@@ -62,19 +67,21 @@ better for audiobooks.
 | Candidate | Chapter P100 RTF | P100 GPU hours / 12.4h book | Nominal 30h Kaggle week | Full listening result |
 |---|---:|---:|---:|---|
 | MOSS-TTS Local Transformer v1.5 | **1.245** | **15.44h** | 51.5% | Complete low-seam render, but joins/pacing/expression keep it below finalists |
-| VibeVoice 1.5B | **2.266** | **28.10h** | 93.7% | **Provisional quality leader:** really good; possibly better/more expressive than Qwen |
+| VibeVoice 1.5B, old cfg 1.3 run | **2.266** | **28.10h** | 93.7% | Passed in isolation, but **relative ranking superseded**; corrected cfg 2/3 blind test pending |
 | Higgs Audio | **1.558** | **19.32h** | 64.4% | Listenable, but one of two seeds still clipped/joined in places |
 | Qwen3-TTS | **2.056** | **25.49h** | 85.0% | **Co-finalist:** really good; strongest consistency signal |
 
-Production scaffolding now mirrors those heard paths rather than inventing new
-settings: Vibe is one generation per chapter (six-hour HTTP ceiling); Qwen uses
+Production scaffolding mirrors the render structures: Vibe is one generation
+per chapter (six-hour HTTP ceiling); Qwen uses
 roughly 450-character sentence passes with the audition's 350 ms joins. Both
 run on free Kaggle or an explicitly attached local CUDA GPU, and both require a
-complete ASR `qa_report.json` before delivery. The retained Raven Vibe E2E has
+complete structural `qa_report.json` before delivery. ASR inside that report is
+collapse/mismatch evidence only, never a quality ranking. The retained Raven Vibe E2E has
 now passed: 1,130 words, 361.392 s audio, ASR worst WER 0.115, RTF 1.218 for
 the 440 s generation, chaptered M4B, cover and byte-identical Audiobookshelf
-copy. The 90-minute stress test and exact-image CUDA smoke are still open. No
-automatic/paid Vast route was added.
+copy. The current Vibe app default remains cfg 1.3 and is therefore not approved
+for new production until the blind cfg 2/3 result is heard and the winner passes
+an app-path E2E. Ordinary queueing has no paid Vast route.
 
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage
@@ -165,8 +172,10 @@ This means most mainstream premium APIs are too expensive for full-book default 
 
 | Engine | Status | Expected cost/book | Notes |
 |--------|--------|--------------------|-------|
-| Kokoro CPU | Implemented | GBP0 incremental | Best default if time is acceptable. Memory leak is mitigated by restarts and single concurrency. |
-| Kokoro on Vast.ai GPU | Implemented | Usually pennies if batched | Best bulk strategy. Spin up only for queued batches, keep concurrency around 2-3 on RTX 3060. |
+| Chatterbox Nano + Beatrice | Implemented; **default** | GBP0 incremental | Accepted free/local baseline; measured full-book RTF ~0.83–0.87. |
+| Chatterbox Turbo + Arthur | Implemented; opt-in | GBP0 incremental | Accepted quality reference; slower local CPU path. |
+| Kokoro CPU | Implemented; compatibility/debug | GBP0 incremental | Retired from quality contention; speed does not clear the listening floor. |
+| Kokoro on Vast.ai GPU | Legacy manual path | Paid marketplace rate | Never automatic and not recommended: paying to accelerate rejected-quality output violates the project objective. |
 | Piper | Implemented | GBP0 incremental | Legacy/debug only; **rejected for production by ear**. Deployed 64 kbps, same-WAV higher-bitrate, and current Piper 1.6 direct A/Bs all failed badly. Not an automatic fallback. |
 | EdgeTTS | Implemented via `tts-proxy` | GBP0 direct API cost | Good quality and many voices. Treat as unofficial/fragile because it depends on the `edge-tts` package and Microsoft service behavior. |
 | AWS Polly Long-Form | Implemented via `tts-proxy` | Avoid | Proven too expensive for good-quality audiobook use. Keep only as legacy code path; do not use for normal conversions. |
@@ -174,15 +183,21 @@ This means most mainstream premium APIs are too expensive for full-book default 
 
 ## Current External Options
 
+Prices below were rechecked against the providers' official pages on
+2026-08-13. They are screening costs, not approvals: no paid service becomes a
+book fallback until Dave hears a representative long-form sample and the
+actual account bill confirms the calculation.
+
 | Option | Price signal | Rough cost for 600k chars | Fits GBP3/book? | Implementation fit |
 |--------|--------------|---------------------------|-----------------|--------------------|
-| Lemonfox TTS | USD5/mo includes 2M TTS chars; extra USD0.50 per 200k chars | About GBP1.13 if treated as usage, or GBP3.75 for a one-month minimum | Yes if batched; borderline for one isolated book | Promising because it advertises OpenAI/ElevenLabs-compatible APIs. Needs quality and reliability test. |
+| [Lemonfox TTS](https://www.lemonfox.ai/text-to-speech-api) | USD5/mo includes 2M TTS chars; extra USD0.50 per 200k | USD1.50 of included capacity when batched, but USD5 minimum bill for one isolated month | **Cheapest known paid candidate** if quality passes and books are batched | Advertises OpenAI/ElevenLabs-compatible APIs; controlled quality/reliability test still required. |
 | OpenAI `gpt-4o-mini-tts` | Pricing includes text input tokens and audio output tokens; pricing docs estimate USD0.015/min | About GBP5.40 for a 8-hour audiobook by minute pricing | Usually no | Could fit only shorter books. Needs real sample and billing check before trusting. |
-| OpenAI `tts-1` | USD15/1M chars | About GBP6.75 | No for typical novels | Easy API shape, but above target except short books. |
+| [OpenAI `tts-1`](https://developers.openai.com/api/docs/models/tts-1) | USD15/1M chars | USD9 / about GBP6.75 | No for typical novels | Easy API shape, but above the cheapest candidate. |
+| [Inworld TTS-2](https://inworld.ai/pricing) | USD25/1M chars on demand; official page advertises 70 free minutes | USD15 before any free allowance | No for normal books | Sample allowance may be useful; paid rate is not competitive with Lemonfox. |
 | Deepgram Aura-2 | USD0.030/1k chars = USD30/1M chars | About GBP13.50 | No | Good for voice-agent clarity; too expensive for this project's default budget. |
 | Google Chirp 3 HD | USD30/1M chars after free tier | About GBP13.50 | No | Quality candidate, but above target except free-tier experiments. |
-| ElevenLabs Flash/Turbo | USD0.05/1k chars = USD50/1M chars | About GBP22.50 | No | Use only for samples. |
-| ElevenLabs Multilingual v2/v3 | USD0.10/1k chars = USD100/1M chars | About GBP45.00 | No | Premium only; not aligned with this project. |
+| [ElevenLabs Flash/Turbo](https://elevenlabs.io/pricing/api) | USD0.05/1k chars = USD50/1M chars | USD30 / about GBP22.50 | No | Use only for samples. |
+| [ElevenLabs Multilingual](https://elevenlabs.io/pricing/api) | USD0.10/1k chars = USD100/1M chars | USD60 / about GBP45 | No | Premium only; not aligned with this project. |
 
 ## Open-Weight Candidates To Test
 
@@ -206,6 +221,10 @@ These are the most relevant low/no-cost options because they avoid per-character
 
 ## Cost Model For The Next-Gen Engines (2026-07-04)
 
+> Historical measurement table, not current routing policy. The active order is
+> free local, then free Kaggle, then the cheapest paid path that has passed the
+> same human listening floor. Paid GPU use is manual and never queue-triggered.
+
 Assumptions: typical novel = 100k words ≈ 600k chars ≈ **11 hours of audio**
 at ~150 wpm. GBP figures at USD1 ≈ GBP0.75. "RTF" = generation speed relative
 to realtime (2x slower means 1 min of audio takes 2 min to make).
@@ -220,8 +239,8 @@ GPU rows are derived/published, marked accordingly.
 
 | Path | Speed (11h book) | Cost/book | Confidence | Notes |
 |------|------------------|-----------|------------|-------|
-| Kokoro @ Vast RTX 3060 | ~20 min | ~GBP0.01 | Measured (GPU-PLAYBOOK) | Current quality baseline |
-| **Turbo @ Vast RTX 3060 ($0.05–0.06/hr)** | ~2–5h GPU | **~GBP0.11–0.20** | Derived: published "up to 6x RT" | Best value; batch several books per session |
+| Kokoro @ Vast RTX 3060 | ~20 min | ~GBP0.01 | Measured (GPU-PLAYBOOK) | Historical speed measurement; Kokoro no longer clears the quality floor |
+| **Turbo @ Vast RTX 3060 ($0.05–0.06/hr)** | ~2–5h GPU | **~GBP0.11–0.20** | Historical derived estimate: published "up to 6x RT" | Not measured on this GPU; paid/manual only |
 | Turbo @ Vast RTX 4090 ($0.30–0.40/hr) | ~1–1.5h | ~GBP0.30–0.45 | Derived | Pay for wall-clock speed |
 | Turbo @ Windows box (CPU) | ~14h | ~GBP0.15 electricity | **Measured RTF 1.3** | Overnight-doable, free |
 | TADA @ Windows box (CPU) | ~26h | ~GBP0.30 electricity | **Measured RTF 2.4** | Over a day; start-and-check-tomorrow |
@@ -234,9 +253,9 @@ Proxmox, Pis, Hetzner/Oracle VPS — all CPU-only; small VPSes can't even load
 the model). The Windows box is the best local option for both engines. AMD
 780M iGPU gives no usable acceleration on Windows (no ROCm; DirectML flaky).
 
-Bottom line: **a GBP5–10 Vast top-up converts roughly 25–50 books with
-Turbo on the RTX 3060 pattern.** The same GPU rig runs TADA too, so the
-top-up is not wasted whichever engine wins.
+The old estimate that a GBP5–10 Vast top-up could convert 25–50 books was never
+a billed measurement and is not a recommendation. Current official marketplace
+pricing must be checked at the time of an explicitly requested paid run.
 
 Consistency on Vast: interruptible instances can be reclaimed mid-book. The
 repo already carries the mitigations built for Kokoro GPU runs (onstart
@@ -253,8 +272,9 @@ shape as Kokoro-FastAPI), reference voices from `data/voice_refs/`.
 
 ## FREE and CHEAP GPU for TADA (2026-07-08 — answering "prices are fucked")
 
-**Default strategy: Kaggle-first, Vast-burst** (chosen 2026-07-08). Free Kaggle
-covers normal volume; Vast (~$1/book) only when the weekly quota is spent. No
+**Current strategy: free local first, then free Kaggle.** Exhausted Kaggle quota
+is not authority to rent anything: wait for quota reset or ask Dave whether the
+lowest verified paid fallback should be used for that specific book. No
 owned hardware unless volume grows — a used 3060 desktop only pays off past
 ~hundreds of books.
 
@@ -417,12 +437,14 @@ Default path:
 
 1. Audition the target book's hardest passage first. Reject any engine that fails
    naturalness, pronunciation, accent authenticity or long-form comfort.
-2. Use the accepted Chatterbox Turbo “Arthur” outcome as the current local
-   quality reference, while still sampling each new book.
-3. Keep EdgeTTS as the heard-good accent baseline where internet use is acceptable.
-4. Keep OmniVoice as a short-form/local accent candidate while pronunciation
-   overrides and throughput are evaluated; grade Chatterbox Multilingual V3 by ear.
-5. Only then optimise cost and speed. Piper and Melo are not production
+2. Start with free/local Chatterbox Nano + Beatrice; keep accepted Chatterbox
+   Turbo + Arthur as the quality reference and audition alternative.
+3. Use free Kaggle for a better-sounding GPU finalist when it wins the audition;
+   corrected Vibe cfg 2/3 and Qwen are the current long-form comparison.
+4. Re-evaluate listenable CosyVoice on free Kaggle, keep OmniVoice as a
+   short-form accent candidate, and grade Chatterbox Multilingual V3 by ear.
+5. Only then optimise cost and speed. EdgeTTS is conditional (unofficial
+   interface and proper-noun failures). Piper and Melo are not production
    fallbacks. Reconsider Piper only for a materially different, independently
    good model—not another wrapper or encoding change around VCTK-medium.
 

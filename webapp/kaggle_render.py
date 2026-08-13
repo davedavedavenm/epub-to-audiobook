@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from qa_report import merge_qa_report_files
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -114,32 +115,7 @@ def _merge_qa_report(src_path, dst_path):
     final batch overwrite every earlier chapter, so the pre-sync gate appeared
     verified while inspecting only the tail of the book.
     """
-    with open(src_path, encoding="utf-8") as f:
-        incoming = json.load(f)
-    current = {}
-    if os.path.exists(dst_path):
-        try:
-            with open(dst_path, encoding="utf-8") as f:
-                current = json.load(f)
-        except Exception:
-            current = {}
-    chapters = {}
-    for report in (current, incoming):
-        for chapter in report.get("chapters", []):
-            if chapter.get("chapter") is not None:
-                chapters[int(chapter["chapter"])] = chapter
-    merged_chapters = [chapters[k] for k in sorted(chapters)]
-    suggestions = {}
-    suggestions.update(current.get("lexicon_suggestions") or {})
-    suggestions.update(incoming.get("lexicon_suggestions") or {})
-    merged = dict(current or incoming)
-    merged.update({
-        "chapters": merged_chapters,
-        "flagged_chapters": [c["chapter"] for c in merged_chapters if c.get("flagged")],
-        "lexicon_suggestions": suggestions,
-    })
-    with open(dst_path, "w", encoding="utf-8") as f:
-        json.dump(merged, f, indent=2)
+    merge_qa_report_files(src_path, dst_path)
 
 
 def stop_kernel(slug, log=print):

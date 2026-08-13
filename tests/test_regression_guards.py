@@ -14,6 +14,10 @@ CB_SERVER = (ROOT / 'chatterbox' / 'server.py').read_text(encoding='utf-8')
 TADA_SERVER = (ROOT / 'tada' / 'server.py').read_text(encoding='utf-8')
 COMPOSE = (ROOT / 'docker-compose.yml').read_text(encoding='utf-8')
 DEPLOY = (ROOT / 'scripts' / 'deploy.sh').read_text(encoding='utf-8')
+WORKER = (ROOT / 'webapp' / 'worker.py').read_text(encoding='utf-8')
+GPU_MANAGER = (ROOT / 'webapp' / 'gpu_manager.py').read_text(encoding='utf-8')
+AGENT_RULES = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
+DECISIONS = (ROOT / 'DECISIONS.md').read_text(encoding='utf-8')
 
 
 # --- incident 2026-07-07a: retries must actually run ---
@@ -173,8 +177,64 @@ def test_engine_offline_queue_gate():
 # --- GPU cost safety ---
 
 def test_gpu_render_gate_default_off():
-    assert "gpu_render_enabled" in APP and "GPU_RENDER_ENABLED', '0'" in APP.replace('"', "'"), \
+    assert "gpu_render_enabled" in APP and "os.environ.get('GPU_RENDER_ENABLED', '0')" in APP.replace('"', "'"), \
         "GPU render gate weakened — paid GPU no longer default-off"
+    settings_block = APP[APP.index("@app.route('/api/settings'"):
+                         APP.index("@app.route('/api/settings/pronunciations")]
+    assert "'GPU_RENDER_ENABLED'" not in settings_block, \
+        "unauthenticated Settings API can arm paid GPU provisioning"
+
+
+def test_queue_length_cannot_provision_paid_gpu():
+    """Incident: queued books automatically crossed a Vast threshold.
+
+    A queue is work to do, never authorization to spend. Paid provisioning is
+    manual and the manager itself must fail closed if a future caller forgets
+    the authorization argument.
+    """
+    assert '_gpu.scale_up' not in WORKER, \
+        "worker can still rent a paid GPU from queue state"
+    assert 'AUTOSCALE_ENABLED = False' in GPU_MANAGER, \
+        "legacy AUTOSCALE_ENABLED can become active again"
+    assert 'AUTOSCALE_ENABLED=' not in COMPOSE, \
+        "Compose still exposes the retired queue autoscale switch"
+    assert 'def scale_up(self, *, authorized: bool = False)' in GPU_MANAGER, \
+        "Vast manager no longer fails closed without explicit authorization"
+    assert 'raw.githubusercontent.com/vast-ai' not in GPU_MANAGER, \
+        "paid path downloads an unpinned billing CLI at runtime"
+    requirements = (ROOT / 'webapp' / 'requirements.txt').read_text(encoding='utf-8')
+    assert 'vastai==' in requirements, \
+        "official Vast CLI is not version-pinned in the application image"
+    assert 'requests==2.33.0' in requirements, \
+        "requests pin is incompatible with the pinned vastai 1.5.4 package"
+    assert "render_target not in ('local', 'kaggle')" in APP, \
+        "job API accepts a paid render target from ordinary queueing"
+
+
+def test_official_documentation_gate_is_mandatory():
+    """Agents must RTFM before experimenting with external systems."""
+    assert 'Authoritative-Source Gate' in AGENT_RULES
+    assert 'must read the current official documentation' in AGENT_RULES
+    assert 'Official documentation before experimentation' in DECISIONS
+
+
+def test_startup_preview_cache_cannot_call_paid_engines():
+    """Background maintenance may spend CPU, never money or internet quota."""
+    assert "auto_cache_engines = frozenset({'chatterbox', 'chatterbox_nano', 'tada'})" in APP
+    cache_block = APP[APP.index('def _cache_all_voices_background'):
+                      APP.index('def background_startup')]
+    assert "'polly'" not in cache_block
+    assert "'inworld'" not in cache_block
+    assert "'edge'" not in cache_block
+    assert 'health.get' in cache_block
+
+
+def test_unknown_engine_cost_is_not_reported_as_free():
+    """Missing paid pricing must be visible, never silently rounded to $0."""
+    assert "if engine not in PRICING:" in APP
+    assert "return None" in APP[APP.index('def calculate_price_estimate'):
+                                APP.index('# ============ Orphan Job Detection')]
+    assert "'unknown_not_free'" in APP
 
 
 # --- incident 2026-07-08: cross-process recovery race ---
@@ -201,12 +261,17 @@ def test_tada_first_word_leadin_trim():
 
 
 def test_qa_layer2_wired():
-    """QA Layer 2 (ASR verification — the self-correcting loop) must stay
-    reachable: the diff core exists and convert_book exposes --qa."""
+    """Structural ASR remains reachable; it is not a quality/ranking oracle.
+
+    Production auto-rerender is inactive. The retained value is detecting
+    missing, repeated, truncated or grossly mismatched audio for human review.
+    """
     qa = (ROOT / 'webapp' / 'qa_asr.py').read_text(encoding='utf-8')
     assert 'def diff_report' in qa and 'def verify_chapter' in qa, "QA Layer 2 core removed (#7)"
     cb = (ROOT / 'scripts' / 'convert_book.py').read_text(encoding='utf-8')
     assert '--qa' in cb, "convert_book lost the --qa hook — QA Layer 2 unreachable (#7)"
+    assert '--auto-rerender' not in cb and 'Auto-rerendering' not in cb, \
+        "ASR WER can still replace audio without Dave listening"
 
 
 def test_preprocess_reads_engine_from_job_not_unset_local():

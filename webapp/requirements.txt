@@ -1,5 +1,7 @@
 flask==3.1.1
-requests==2.32.4
+# vastai 1.5.4 requires requests>=2.33.0. Keep these pins compatible so the
+# application image can install the supported official Vast CLI.
+requests==2.33.0
 gunicorn==23.0.0
 num2words==0.5.14
 nltk==3.9.1
@@ -8,17 +10,23 @@ beautifulsoup4==4.13.4
 lxml==5.4.0
 boto3==1.39.4
 kaggle==2.2.3
+# Official Vast.ai CLI/SDK. The legacy one-file vast.py is deprecated upstream;
+# pin the supported package instead of downloading a moving master branch at
+# billing time. https://github.com/vast-ai/vast-cli
+vastai==1.5.4
 # Edge voice previews. Used as a LIBRARY: previews previously spawned
 # ghcr.io/p0n1/epub_to_audiobook just to run its `edge-tts` binary, which meant
 # a container + image pull + a working docker CLI for one HTTP call — and it
 # broke outright when the CLI turned out to be missing (2026-07-25).
 edge-tts==7.2.8
-# QA Layer 2 — ASR verification (webapp/qa_asr.py). No longer optional.
+# QA Layer 2 — structural ASR verification (webapp/qa_asr.py). This detects
+# missing/repeated/truncated/grossly wrong text; it does not grade voice quality.
 #
 # It was commented out on the assumption that Whisper was too slow to run on
 # every book. MEASURED 2026-07-27 on zorin's i5-12400: the `base` model at
 # int8 transcribed 675 s of audio in 33.4 s — 20x faster than realtime. A
 # 2.5-hour book costs ~7 minutes of ASR against a ~2-hour render, i.e. about
-# 6%. That is cheap enough to verify every book by default, which is the whole
-# point of #33. The ~140MB model downloads once and caches.
+# 6%. That is cheap enough to retain as a structural guard. Dave's listening is
+# authoritative for naturalness, accent, prosody and pronunciation. The ~140MB
+# model downloads once and caches.
 faster-whisper==1.1.1

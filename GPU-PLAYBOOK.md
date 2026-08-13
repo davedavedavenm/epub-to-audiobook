@@ -96,19 +96,23 @@ the one-time model download.
 
 ## Overview
 
-Run Kokoro TTS on a rented cloud GPU (RTX 3060, ~$0.05/hr) for **15x faster** audiobook conversion.
-Same audio quality, same API, same voices — just faster.
-
-**Cost Strategy:** 
-- **Bulk/Standard Quality (Kokoro):** ~$0.01 per book | 11 books in one session = ~$0.18 total using RTX 3060.
-- **High-Fidelity/Intent-Aware Quality:** Up to ~$1.00 - $3.00 per book. Willing to scale up to heavier GPUs (RTX 3090/4090 at ~$0.30+/hr) for next-gen models (like F5-TTS or advanced Kokoro variants) to achieve Amazon Polly Long-Form level intonation and prosody. Quality is the absolute priority over chasing zero cost for premium reads.
+This is a legacy manual paid-run playbook, not a default rendering strategy.
+Use free local generation or free Kaggle whenever an engine passes Dave's
+listening floor. Kokoro is retired from quality contention, so never rent a GPU
+merely to accelerate Kokoro. A paid session is justified only for the cheapest
+measured option that clears the listening floor when no free path does, and it
+requires Dave's explicit approval for that session.
 
 ## Prerequisites
 
 - Vast.ai account with credit (https://vast.ai)
-- Vast.ai CLI on zorin: `curl -s https://raw.githubusercontent.com/vast-ai/vast-python/master/vast.py -o /tmp/vast.py`
-  - No pip on zorin; use `python3 /tmp/vast.py` for all vastai commands
-- API key saved: `python3 /tmp/vast.py set api-key <YOUR_KEY>`
+- Vast.ai's supported official CLI is the `vastai` package. The application
+  image pins `vastai==1.5.4`; the old single-file `vast.py` is deprecated and
+  must not be downloaded from a moving `master` branch at billing time. See
+  <https://github.com/vast-ai/vast-cli> and <https://docs.vast.ai/cli/hello-world>.
+- Before any future paid run, repair/verify CLI authentication and use the
+  pinned `vastai` command inside the worker; the 2026-08-13 audit found the
+  legacy credential mount could not authenticate.
   - Stored at `~/.config/vastai/vast_api_key` on zorin
 - SSH key at `~/.ssh/vastai_ed25519` on zorin
 - SSH public key uploaded to Vast.ai dashboard (Account > SSH Keys)
@@ -133,11 +137,11 @@ The template includes:
 ### 1. Spin up GPU instance FROM THE TEMPLATE
 
 ```bash
-# On zorin — ALWAYS use the template:
-python3 /tmp/vast.py create instance <OFFER_ID> --template e2588a22cf5eef43df3d444ef4f25705
+# After the pinned CLI credential check is repaired — ALWAYS use the template:
+vastai create instance <OFFER_ID> --template e2588a22cf5eef43df3d444ef4f25705
 
 # To browse matching offers first (template pre-filters, but you can also search):
-python3 /tmp/vast.py search offers "gpu_name=RTX_3060 num_gpus=1 dph<=0.06 reliability>0.95 inet_down>500" --order dph
+vastai search offers "gpu_name=RTX_3060 num_gpus=1 dph<=0.06 reliability>0.95 inet_down>500" --order dph
 # Pick an offer ID from the list, then use the create command above
 ```
 
@@ -149,7 +153,7 @@ python3 /tmp/vast.py search offers "gpu_name=RTX_3060 num_gpus=1 dph<=0.06 relia
 
 ```bash
 # Check status (wait for "running"):
-python3 /tmp/vast.py show instances
+vastai show instances
 # Look for SSH Addr and SSH Port columns
 
 # Verify Kokoro is running (onstart auto-starts it with watchdog):
@@ -238,7 +242,7 @@ for j in jobs:
 docker compose up -d worker webapp
 
 # 2. Destroy the GPU instance:
-python3 /tmp/vast.py destroy instance <INSTANCE_ID>
+vastai destroy instance <INSTANCE_ID>
 
 # 3. Kill the SSH tunnel:
 pkill -f "ssh.*8890"
@@ -274,7 +278,7 @@ With 3 concurrent jobs: ~1-1.5 hours wall time.
 | Docker gateway IP | `172.19.0.1` |
 | Vast.ai API key | `~/.config/vastai/vast_api_key` on zorin |
 | SSH key | `~/.ssh/vastai_ed25519` on zorin |
-| Vastai CLI | `python3 /tmp/vast.py` (no pip on zorin) |
+| Vastai CLI | Official `vastai==1.5.4`, pinned in the worker image; credential repair required before paid use |
 | Stack path | `$STACK_PATH` (e.g. `/home/dave/ai/lab/stacks/epub-to-audiobook`) on zorin |
 | EPUB library | `/mnt/openbooks/` on zorin |
 | ABS audiobooks | `/opt/stacks/audiobookshelf/audiobooks/` on docker-vm |
@@ -314,8 +318,10 @@ docker rm -f audiobook-<JOB_ID>
 
 **Instance disappeared:** Vast.ai preemptible instances can be reclaimed. Just spin up a new one from the template.
 
-**Can't install vastai CLI:** apt is broken on zorin. Download directly:
-`curl -s https://raw.githubusercontent.com/vast-ai/vast-python/master/vast.py -o /tmp/vast.py`
+**Vast CLI unavailable/auth rejected:** do not download `vast.py` from a moving
+branch. Rebuild the worker image from the pinned `vastai==1.5.4` requirement,
+then repair the read-only credential mount and prove `vastai show instances`
+before any paid run.
 
 **SSH tunnel -f flag fails:** Through nested SSH, `-f` doesn't work. Use `nohup ... &` instead.
 

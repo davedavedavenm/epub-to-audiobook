@@ -2,6 +2,7 @@ import os
 import json
 import re
 import shutil
+import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
@@ -9,6 +10,7 @@ from ebooklib import epub
 from bs4 import BeautifulSoup
 import nltk
 import traceback
+from chapters import list_renderable_chapters
 
 # Ensure nltk data is available
 try:
@@ -38,9 +40,11 @@ def _read_chunks(chunks_jsonl_path):
     return chunks
 
 class ChunkIterator:
-    def __init__(self, chunks):
+    def __init__(self, chunks, target_duration=None):
         total_chars = sum(len(c.get('text', '').strip()) for c in chunks)
         total_dur = sum(c.get('duration_s', 0.0) for c in chunks)
+        if target_duration is not None and total_chars > 0:
+            total_dur = float(target_duration)
         self.sec_per_char = (total_dur / total_chars) if total_chars > 0 else 0.06
 
     def next_duration(self, text):
@@ -137,6 +141,24 @@ def generate_smil(html_file_name, audio_file_name, durations):
     smil.extend(['    </seq>', '  </body>', '</smil>'])
     return "\n".join(smil), current_time
 
+
+def _audio_duration(path: Path) -> float:
+    """Probe the finished media; estimated synthesis timings are not delivery truth."""
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+         '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
+        capture_output=True, text=True, timeout=30, check=True)
+    duration = float(result.stdout.strip())
+    if duration <= 0:
+        raise ValueError(f'non-positive audio duration for {path}')
+    return duration
+
+
+def _href_matches(item_href: str, chapter_href: str) -> bool:
+    item = item_href.replace('\\', '/').lstrip('./')
+    chapter = chapter_href.replace('\\', '/').lstrip('./')
+    return item == chapter or chapter.endswith('/' + item) or item.endswith('/' + chapter)
+
 def _fix_uids(book):
     import uuid
     for i, itm in enumerate(book.get_items()):
@@ -145,6 +167,11 @@ def _fix_uids(book):
         itm.uid = str(itm.id)
 
     def _fix_toc(toc, counter=1):
+        # EbookLib returns a bare Link for a one-entry TOC in some books. Treat
+        # it as a one-item collection; otherwise packaging falls into the broad
+        # exception handler and quietly copies the original EPUB with no audio.
+        if not isinstance(toc, (list, tuple)):
+            toc = [toc]
         new_toc = []
         for item in toc:
             if isinstance(item, (tuple, list)):
@@ -158,6 +185,8 @@ def _fix_uids(book):
                 if isinstance(item, epub.EpubHtml):
                     # Link objects are safer in TOC for NCX generation
                     item = epub.Link(item.file_name, item.title, item.id)
+                if isinstance(item, epub.Link) and not getattr(item, 'href', ''):
+                    continue
                 if not getattr(item, 'uid', None):
                     item.uid = f"gen_nav_{counter}_{str(uuid.uuid4())[:8]}"
                     counter += 1
@@ -185,7 +214,7 @@ def package_epub3_with_audio(input_epub_path, output_epub_path, audio_dir, chunk
         _fix_uids(book)
 
         chunks = _read_chunks(chunks_jsonl_path)
-        chunk_iter = ChunkIterator(chunks)
+        rendered_chapters = list_renderable_chapters(input_epub_path)
 
         audio_items = {}
         for ch_idx, mp3_path in audio_files.items():
@@ -204,18 +233,38 @@ def package_epub3_with_audio(input_epub_path, output_epub_path, audio_dir, chunk
         smil_items = []
         total_book_duration = 0.0
 
-        for idx, html_item in enumerate(html_items):
-            ch_idx = idx + 1
+        overlaid_html_items = []
+        for chapter in rendered_chapters:
+            ch_idx = chapter['index']
+            html_item = next(
+                (item for item in html_items
+                 if _href_matches(item.file_name, chapter['href'])), None)
+            if html_item is None:
+                print(f"WARNING: no EPUB spine item found for rendered chapter {ch_idx} ({chapter['href']})")
+                continue
             print(f"DEBUG: Checking chapter {ch_idx} (file: {html_item.file_name})")
             if ch_idx in audio_items:
                 audio_item = audio_items[ch_idx]
                 print(f"DEBUG: Instrumenting chapter {ch_idx} using audio {audio_item.file_name}")
 
+                actual_duration = _audio_duration(audio_files[ch_idx])
+                # Use actual finished-media duration. Transcript chunk timings
+                # can omit encoder padding and previously leaked across chapter
+                # boundaries; character weighting is only used to divide this
+                # exact chapter duration among word spans.
+                chapter_chunks = [c for c in chunks if c.get('chapter') == ch_idx]
+                timing_chunks = chapter_chunks or [{'text': html_item.get_content().decode(
+                    'utf-8', errors='ignore'), 'duration_s': actual_duration}]
+                chunk_iter = ChunkIterator(timing_chunks, target_duration=actual_duration)
                 new_html, durations = instrument_html(html_item.content, chunk_iter)
+                estimated = sum(durations)
+                if estimated > 0:
+                    durations = [duration * actual_duration / estimated for duration in durations]
                 html_item.content = new_html.encode('utf-8')
 
                 smil_content, chap_duration = generate_smil(html_item.file_name, audio_item.file_name, durations)
                 total_book_duration += chap_duration
+                overlaid_html_items.append((ch_idx, html_item))
 
                 smil_item = epub.EpubItem(f"smil_{ch_idx}", f"SMIL/chapter_{ch_idx}.smil", "application/smil+xml", smil_content.encode('utf-8'))
                 book.add_item(smil_item)
@@ -223,7 +272,7 @@ def package_epub3_with_audio(input_epub_path, output_epub_path, audio_dir, chunk
 
         _fix_uids(book)
         epub.write_epub(output_epub_path, book)
-        _post_process_opf(output_epub_path, html_items, smil_items, total_book_duration)
+        _post_process_opf(output_epub_path, overlaid_html_items, smil_items, total_book_duration)
         print("Successfully created EPUB3 with Instrumented Read-Along")
     except Exception as e:
         print(f"Error generating EPUB3: {e}")
@@ -247,8 +296,7 @@ def _post_process_opf(epub_path, html_items, smil_items, total_duration):
             with open(opf_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            for idx, html in enumerate(html_items):
-                ch_idx = idx + 1
+            for ch_idx, html in html_items:
                 smil_id = f"smil_{ch_idx}"
                 hid = getattr(html, 'id', None)
                 if not hid: continue

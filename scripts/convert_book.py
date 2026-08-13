@@ -346,10 +346,6 @@ def main():
     ap.add_argument('--qa', action='store_true',
                     help='QA Layer 2: ASR-verify each chapter locally (needs faster-whisper)')
     ap.add_argument('--qa-model', default='base', help='whisper model size for --qa (tiny/base/small)')
-    ap.add_argument('--auto-rerender', action='store_true',
-                    help='Automatically re-render chapters that fail ASR QA verification (WER >= threshold)')
-    ap.add_argument('--max-rerenders', type=int, default=2,
-                    help='Maximum automatic re-render retries per flagged chapter (default: 2)')
     ap.add_argument('--progress-url', default='', help='POST real per-chapter progress here (e.g. an ntfy.sh topic) so a remote UI can show true progress, not an estimate')
     ap.add_argument('--search-and-replace-file', default=None,
                     help='Path to a file containing search==replace rules (one per line) to apply to text')
@@ -490,39 +486,6 @@ def main():
             try:
                 from qa_asr import verify_chapter
                 rep = verify_chapter(fn, text, model_size=a.qa_model)
-                if rep['flagged'] and getattr(a, 'auto_rerender', False):
-                    max_retries = getattr(a, 'max_rerenders', 2)
-                    retry_count = 0
-                    while rep['flagged'] and retry_count < max_retries:
-                        retry_count += 1
-                        seed_offset = retry_count * 10000
-                        print(f"[chapter {idx}] QA FLAGGED (WER={rep['wer']}). Auto-rerendering (attempt {retry_count}/{max_retries}) with seed offset {seed_offset}...", flush=True)
-                        try:
-                            retry_wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx,
-                                              model=a.model, speed=a.speed, job_id=a.job_id,
-                                              request_timeout=a.request_timeout,
-                                              join_silence_ms=a.join_silence_ms,
-                                              seed_offset=seed_offset)
-                            retry_mp3 = _to_mp3(retry_wav, denoise=a.denoise, meta=meta)
-                            tmp_fn = out / f"{idx:03d}_retry_{retry_count}{suffix}.mp3"
-                            if retry_mp3:
-                                tmp_fn.write_bytes(retry_mp3)
-                            else:
-                                tmp_fn = out / f"{idx:03d}_retry_{retry_count}{suffix}.wav"
-                                tmp_fn.write_bytes(retry_wav)
-                            retry_rep = verify_chapter(tmp_fn, text, model_size=a.qa_model)
-                            print(f"[chapter {idx}] Auto-rerender attempt {retry_count} WER={retry_rep['wer']} (was {rep['wer']})", flush=True)
-                            if retry_rep['wer'] < rep['wer']:
-                                print(f"[chapter {idx}] Retained better render (WER {rep['wer']} -> {retry_rep['wer']})", flush=True)
-                                tmp_fn.replace(fn)
-                                rep = retry_rep
-                            else:
-                                print(f"[chapter {idx}] Discarded retry (WER {retry_rep['wer']} >= {rep['wer']})", flush=True)
-                                if tmp_fn.exists():
-                                    tmp_fn.unlink()
-                        except Exception as re_err:
-                            print(f"[chapter {idx}] Auto-rerender failed: {str(re_err)[:120]}", flush=True)
-
                 qa_reports.append({'chapter': idx,
                                    'wer': rep['wer'], 'flagged': rep['flagged'],
                                    'n_source': rep['n_source'], 'n_heard': rep['n_heard'],

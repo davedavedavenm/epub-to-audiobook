@@ -14,20 +14,61 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
-## VibeVoice `cfg_scale` — Active
+## Project optimisation order: quality floor, then free, then cheapest — Active
 
-`cfg_scale=1.3` is **rejected**. Use **2.0–3.0**; 3.0 tracks the Arthur
-reference most closely on pitch and range, 2.0 scores marginally better on ASR.
-Settled by ear 2026-08-13 on identical 190-word renders: Dave, *"2 and 3 are
-fine. 1 is trash."*
+An audiobook must first pass Dave's human listening floor for naturalness,
+accent, pronunciation, pacing and long-form comfort. Among engines that pass
+that floor, choose in this order:
 
-**Why:** `cfg_scale` is VibeVoice's voice-conditioning adherence lever — the
-analogue of Chatterbox's `cfg_weight`. At 1.3 the clone does not carry the
-narrator's timbre: pitch IQR 14.4 against the reference's 72.8, i.e. nearly
-monotone. Raising it moves pitch, range and brightness monotonically toward the
-reference at no cost to intelligibility. 1.3 was inherited unexamined from an
-early kernel, never chosen. Above 3.0 is untested and cfg 3.0 still carries only
-about half the reference's pitch range.
+1. **Free generation wherever possible** — normally local CPU or free Kaggle.
+2. If no free path reaches the quality floor, use the **lowest measured total
+   cost per finished book** that does.
+3. Pay more only when a cheaper passing option is unavailable or has failed the
+   same controlled listening comparison.
+
+Speed is not worth a bill by itself. Cost comparisons must use measured
+book-level totals (including startup/retry overhead where known), not vendor
+headline rates or hypothetical hardware speedups presented as facts.
+
+**Why:** stated directly by Dave on 2026-08-13. This refines, rather than
+reverses, the existing quality-priority decision: bad free audio is still not a
+successful audiobook, but cost decides between options that are genuinely good.
+
+## Official documentation before experimentation — Active
+
+Before changing or evaluating any external engine, model, API, SDK, container,
+deployment tool or integration, read the relevant repo decisions/history and
+the current official vendor documentation for the exact version in use. Record
+the official URL, model/version or commit, supported parameters/defaults,
+licence/use limits and dated pricing where relevant. If a community runtime or
+wrapper is used, pin and document it separately; official model weights do not
+make an unofficial runtime official.
+
+Experiments answer only what authoritative documentation leaves unknown. A
+claim without source/version provenance stays **unverified**, and audible
+quality still requires Dave's listening verdict.
+
+**Why:** repeated sessions spent time rediscovering documented behaviour or
+tuning the wrong default because agents experimented before reading the manual.
+Mandated directly by Dave on 2026-08-13.
+
+## VibeVoice `cfg_scale` — 1.3 rejected; production choice open
+
+`cfg_scale=1.3` is **rejected**. Both **2.0 and 3.0 passed a short 190-word
+listening screen**; 3.0 tracked the Arthur reference more closely on pitch and
+range, while 2.0 scored marginally better on structural ASR. Dave: *"2 and 3
+are fine. 1 is trash."* This does not select a production default: the pinned
+full-chapter blind A/B must be heard first, then the winning setting must pass
+through the actual app path.
+
+**Why:** the pinned community runtime exposes `cfg_scale`; Microsoft's official
+TTS documentation does not define it as a supported tuning contract. Its role
+here is therefore an empirical repo finding, not an official Microsoft fact.
+At 1.3 the clone's pitch IQR was 14.4 against the reference's 72.8 (nearly
+monotone). Raising it moved pitch, range and brightness toward the reference
+without a structural intelligibility loss in that short test. 1.3 was inherited
+unexamined from an early kernel. Above 3.0 is untested, and cfg 3.0 still carried
+only about half the reference's pitch range.
 
 ## Prior VibeVoice listening verdicts — SUPERSEDED, need re-run
 
@@ -54,14 +95,17 @@ See STATUS.md 2026-08-12 for the six-arm sweep.
 
 ## VibeVoice long-form capability — Active
 
-VibeVoice holds a stable speaker across continuous real prose: 916 words /
-4m19s single-pass measured at f0 spread 25 Hz and ASR 0.979. Length is not a
-degradation factor, and peak VRAM does not grow with it (5.31 GiB flat).
+VibeVoice completed 13,666 source words in one generation, producing about 77
+minutes of audio on a free Kaggle P100 (13,597 ASR words, WER 0.0887). This
+reproduces the practical substance of Microsoft's "up to 90 minutes" claim and
+answers issue #44's capability question. The issue is still open only because
+its GitHub state is stale. A separate 916-word / 4m19s run showed stable pitch
+and measured 5.31 GiB peak VRAM.
 
-**Why:** closes the memory question behind #44 and removes "will it hold
-together" as a blocker on rendering full chapters. The remaining #44 wording
-("90-minute single-pass") is a vendor capability claim the per-chapter renderer
-never exercises — do not spend GPU proving it. Date: 2026-08-12.
+**Boundary:** the 77-minute run's VRAM probe was attached to the parent while
+generation ran in a subprocess and therefore reported zero. Long-duration VRAM
+remains unmeasured; do not extrapolate the 4-minute 5.31 GiB result. Long-form
+quality still requires human listening. Date corrected: 2026-08-13.
 
 ## Audition-passage validity per engine — Open, NOT settled
 
@@ -119,6 +163,11 @@ Default is LOCAL. Never spin up a Vast.ai instance or enable
 Always destroy any instance created in-session. See GPU-SAFETY.md before any
 GPU action.
 
+**Queue length must never provision a paid GPU.** The legacy
+`AUTOSCALE_ENABLED` queue trigger is retired: paid Vast provisioning is manual,
+session-specific and requires an explicit action after the cost has been shown.
+Free Kaggle is not a paid fallback and remains opt-in per job.
+
 **Why:** costs real money; this is a standing safety rule, not a per-task
 judgment call.
 
@@ -149,15 +198,48 @@ listenability outrank locality, cost, memory or speed when picking an engine.
 
 ## Long-form engine shortlist — Evolving
 
-As of 2026-07-29: VibeVoice and Qwen are the finalists on the full-chapter
-listening gate. Vibe is the provisional quality leader (more expressive);
-Qwen is the consistency leader. MOSS is eliminated (single-pass renders
-collapsed / weaker than Vibe-Qwen on repeat listening). Higgs is usable but
-not dependable enough to lead.
+VibeVoice and Qwen remain the finalists on the full-chapter listening gate.
+The 2026-07-29 ranking of Vibe as provisional quality leader and Qwen as
+consistency leader is **not current**: all Vibe clips in that comparison used
+the now-rejected `cfg_scale=1.3` and the audition passage separately shown to
+handicap Vibe. Re-run a pinned full-chapter comparison at cfg 2.0 and 3.0 before
+ranking them. MOSS remains eliminated; Higgs remains usable but not dependable
+enough to lead.
 
 **Why:** see STATUS.md for the underlying RTF/ASR measurements and listening
 notes — this entry only tracks the current standing, not the evidence trail.
 Check STATUS.md for anything newer before treating this as final.
+
+## Engine rejection and hold boundaries — Active
+
+"Rejected" applies only to the exact model, version, runtime, voice, settings
+and delivery path that were actually rendered and heard. Agents must not
+generalise a failed wrapper or voice into an engine-family verdict, and must not
+reopen a closed path without both current official upstream evidence and a
+materially different controlled listening hypothesis. See `ENGINES.md` and
+`VOICES.md` for official sources and the complete listening evidence.
+
+| Candidate/path | Settled status | Boundary / condition for reconsideration |
+|---|---|---|
+| Chatterbox Nano + Beatrice | **Accepted default** | Free local baseline. A replacement must first beat it by ear. |
+| Chatterbox Turbo + Arthur | **Accepted quality reference** | Free local but slower; retain for books where it wins the audition. |
+| VibeVoice full precision | **Finalist; ranking withheld** | Old cfg 1.3 comparisons are invalid. Grade the pinned cfg 2/3 long-form blind test, then prove the winning setting through the app path. |
+| Qwen3-TTS full precision | **Finalist** | Full chapter passed; compare against corrected Vibe under equivalent text and listening conditions. |
+| CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
+| TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
+| Chatterbox Multilingual V3 | **Unverified by ear** | Rendered accent clips exist; listen before promoting or rejecting. |
+| Higgs Audio V2 | **Reserve, not finalist** | Usable but seed-dependent seams. Reopen only for a materially improved official release/runtime or a book-specific audition. |
+| OmniVoice current weights/path | **Short-form hold** | Accents were good; CPU RTF ~9 and non-commercial weights block normal books. Reconsider on official performance/licence change or a bounded short use. |
+| EdgeTTS through `edge-tts` | **Conditional hold** | Free direct cost and accents were acceptable, but the interface is unofficial/fragile and proper nouns failed. Re-test only with a pronunciation fix and current service docs. |
+| MOSS-TTS Local Transformer v1.5 | **Rejected as audiobook finalist** | Multiple corrective long-form structures still collapsed or sounded joined/off-paced. Reopen only for a materially changed official release, not another seed/chunk tweak. |
+| MeloTTS tested UK/AU voices | **Rejected for production** | Human listening rejected overall TTS, pronunciation and numbers. Reopen only for a materially different official model/voice release. |
+| Piper official VCTK-medium path | **Rejected for production** | Current/deployed runtime plus encoding-controlled A/Bs all failed. This does not reject every future Piper model; it closes this exact official model path. |
+| Kokoro tested voices | **Retired from quality contention** | Keep only compatibility/debug uses unless a materially new official model clears the listening floor. Never use paid GPU merely to make rejected-quality audio faster. |
+| AWS Polly Long-Form | **Rejected on cost/value** | Recheck current official price and run a quality/cost audition only if it becomes the cheapest option capable of passing the human floor. |
+
+No ASR score in this table is a quality verdict. Dave's listening is the
+admission/rejection evidence; measurements only establish completeness,
+runtime and the exact tested boundary.
 
 ## Book acquisition pipeline docs — moved to infra — Active
 
@@ -200,14 +282,35 @@ without pretending it can hear like the listener.
 specifically as audiobooks (missed 4 of 12 wanted titles on 2026-08-07).
 Fixed in commit `908d82b` alongside recovering openbooks queue idempotency guard.
 
-## Automatic QA Re-Render (#41) — Active
+## ASR WER auto-rerender (#41) — Retired
 
-Structural QA verification failures (WER >= 0.08) automatically trigger up to 2
-re-renders with seed offsets (`seed + attempt * 10000`), retaining the audio
-with the lowest WER.
+The `--auto-rerender` implementation is removed. ASR WER must never replace a
+render or choose among seeds: it cannot judge audible quality and has produced
+false conclusions in both directions. Structural ASR may hold grossly
+incomplete/mismatched output for review. Any future retry mechanism must use
+deterministic completeness failures only or preserve alternatives for Dave to
+hear blind.
 
-**Why:** Sampling defects (seed variation or cold-start artefacts) are
-self-healed automatically without human intervention or per-book parameter tuning.
+**Why:** live audit on 2026-08-13 found the missing production flag and a
+single-chapter recovery path that could overwrite a whole-book QA report. The
+old entry overstated both implementation and evidence. Retired by Dave on
+2026-08-13 after the audit explanation.
+
+## LAN authentication, podcast access and article SSRF boundary — Active
+
+The UI and private APIs require environment-owned HTTP Basic credentials. An
+empty password fails closed; the settings database cannot set or reveal it.
+Podcast RSS/audio plus health/version probes remain public for non-browser
+clients. Telegram's public webhook requires the official
+`X-Telegram-Bot-Api-Secret-Token` header. Article URL ingest permits public
+HTTP(S) destinations only, checks all resolved addresses plus the connected
+peer, validates every redirect, and bounds response size.
+
+**Official basis:** Flask 3.1 request lifecycle/security documentation,
+Python `ipaddress`/`urllib.parse`, Requests redirect controls, and Telegram Bot
+API `setWebhook(secret_token=...)`, read 2026-08-13. This closes the audited
+unauthenticated mutation and server-side request-forgery paths without breaking
+podcast clients.
 
 ## Article Podcast RSS Feed & Telegram Capture (#42) — Active
 
@@ -235,5 +338,3 @@ and WAL/SHM sidecars.
 
 **Why:** Eliminates intermittent `READONLY` errors when saving Settings after system
 reboots or file permission shifts.
-
-

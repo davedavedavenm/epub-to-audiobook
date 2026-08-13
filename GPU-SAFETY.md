@@ -9,10 +9,15 @@ balance in minutes by leaving an instance running.**
 1. **Default is LOCAL.** Audiobook rendering runs on local CPU unless the
    user has *explicitly, in this session,* asked for cloud GPU. Never infer
    it. "Make it faster" is NOT permission to spend money — ask.
-2. **The UI gate defaults OFF.** Settings → *Render Location* is
-   `💻 Local (free)` by default. The backend setting `GPU_RENDER_ENABLED`
-   defaults `0`. The `/api/gpu/scale-up` endpoint returns 403 unless it is
-   explicitly turned on. Do not flip this setting on the user's behalf.
+2. **The web UI cannot arm paid rendering.** `GPU_RENDER_ENABLED` is
+   environment-only and defaults `0`; the unauthenticated Settings API does not
+   accept it. The `/api/gpu/scale-up` endpoint returns 403 unless a host admin
+   deliberately enables it and restarts the service for that approved session.
+   Do not flip it on the user's behalf.
+   **Queue length must never rent a GPU.** `AUTOSCALE_ENABLED` is a retired
+   legacy trigger and must have no provisioning effect. Paid Vast use is a
+   manual, session-specific action after an explicit request and cost display;
+   free Kaggle remains an explicit per-job choice.
 3. **Never spin up a Vast instance without an explicit user request for
    *this* task.** Not to "test", not to "benchmark", not to "save time".
 4. **If you create an instance, you destroy it in the same session.**
@@ -46,9 +51,9 @@ balance in minutes by leaving an instance running.**
 ## For the implementing agent building GPU features
 
 - Every code path that can bill money MUST call `gpu_render_enabled()`
-  (app.py) and refuse when false. Add the same gate to any new auto-scale
-  trigger. Belt and braces: gate at the endpoint AND before any
-  `scale_up()` / instance-create call.
+  (app.py) and refuse when false. Queue-driven autoscale triggers are
+  prohibited, not merely gated. Belt and braces: gate at the manual endpoint
+  AND require an explicit authorization argument before any `scale_up()` /
+  instance-create call.
 - Keep the default OFF in every layer: DB setting, env var, UI control.
-- Never add an "auto-enable GPU when queue is long" path that is on by
-  default.
+- Never add an "auto-enable GPU when queue is long" path at all.
