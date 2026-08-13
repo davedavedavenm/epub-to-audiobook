@@ -77,8 +77,8 @@
 > **Verification and deployment:** 243 tests pass; Ruff, Python compilation,
 > Compose config, shell syntax, staged Gitleaks and `git diff --check` pass. A
 > real Zorin `ffprobe` probe and a real bounded public fetch also passed. The
-> whole stack deployed commit `80b0fac`; live checks proved exact SHA/overall
-> health, Host and Origin rejection,
+> the whole stack deployed the audited revision; live checks proved exact
+> SHA/overall health, Host and Origin rejection,
 > Telegram secret enforcement, loopback SSRF rejection, five RSS enclosures and
 > a successful `206` request against the first enclosure. Both webapp and worker
 > are healthy with zero restarts. The corrected free-Kaggle Vibe cfg 2-vs-3
@@ -91,7 +91,10 @@
 > Pangolin SSO. The stacked prompt was redundant, broke the public login flow,
 > and made Pangolin's `/` health check report `unhealthy` on an otherwise healthy
 > service. Same-origin writes, trusted hosts, Telegram secret validation, SSRF
-> controls and all paid-GPU guards remain in force.
+> controls and all paid-GPU guards remain in force. The corrected stack was
+> verified with LAN `200`, no `WWW-Authenticate` challenge, an external `302`
+> to Pangolin's login, and a Pangolin target state of `healthy` after its probe
+> moved from `/` to `/api/health`.
 
 > ## 2026-08-13 `cfg_scale` is the VibeVoice speaker-similarity lever — 1.3 REJECTED BY EAR
 >

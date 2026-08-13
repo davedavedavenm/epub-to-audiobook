@@ -36,6 +36,40 @@ See **§ Verified results 2026-07-24** at the bottom for the measurements.
 
 ---
 
+## CPU-only candidate update (2026-08-13 — official sources checked)
+
+These are candidates for an isolated local listening bake-off, not production
+recommendations. Exact upstream HEADs recorded before any experiment:
+
+| Candidate | Official facts | Repo boundary | Trial priority |
+|---|---|---|---:|
+| [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts) (`7fc13c7`) | MIT; 100M; CPU-first; two cores; streaming; voice cloning; official README says infinitely long input and about 6x realtime on an M4; does not support pause tags | Strongest genuinely new candidate. Zorin speed, UK clone identity, names and long-form pacing are unmeasured. | **1** |
+| [Neuphonic NeuTTS](https://github.com/neuphonic/neutts) (`ac69851`) | NeuTTS-Air is Apache-2.0, ~360M active / ~552M incl. embeddings; Q4 GGUF CPU route; instant cloning needs 3–15s clean WAV plus exact transcript; 2048-token context covers about 30s. Published CPU token benchmarks exclude the codec. | Viable candidate, but chunk joins and full-pipeline RTF must be measured; do not quote backbone tokens/s as audiobook speed. Nano uses a different custom licence. | **2** |
+| [KittenTTS](https://github.com/KittenML/KittenTTS) v0.8.1 / HEAD `9f3e0d8` | Apache-2.0 developer preview; ONNX CPU models at 15M/40M/80M; 24kHz; speed control; eight preset voices; no documented voice cloning. | Cheap screening candidate, but no verified UK narrator or identity cloning makes it less likely to beat Nano for this repo. | **3** |
+| [Chatterbox Multilingual V3](https://github.com/resemble-ai/chatterbox) (`5de7a54`, already pinned) | MIT; 500M; official release claims improved speaker similarity, accent preservation and reduced hallucination. | Not a new engine: already containerised and measured at CPU RTF 4.15–4.81. Existing clips need Dave's listening verdict before more work. | **0** |
+
+### Controlled CPU-engine admission path
+
+1. Run the official pinned runtime in an isolated evaluation container on
+   Zorin: CPU-only, four-core cap, explicit memory cap, no queue registration,
+   no startup cache and no paid/cloud fallback.
+2. Render the same easy prose, canonical hard sample and Arthur reference for
+   every cloning engine. Record source hash, upstream commit/model, wall time,
+   finished duration, RTF and peak memory.
+3. Present blind clips to Dave. ASR may prove gross completeness only; it must
+   not rank naturalness, accent, pronunciation or voice similarity.
+4. Only a short-sample winner earns a continuous 15–30 minute chapter. Listen
+   for drift, joins and comfort before estimating a book runtime.
+5. Only a long-form winner gets an OpenAI-compatible adapter, explicit Compose
+   evaluation profile and sample endpoint. Production voice registration and
+   job routing remain a separate, later decision.
+
+This makes adding a candidate cheap and reversible while preventing model
+downloads, background preview caching or ordinary book queues from silently
+turning an experiment into production.
+
+---
+
 ## Current engine comparison (mid-2026)
 
 | Engine | Params | License | Clone | Long-form | CPU viable | Best for | Status in this repo |
