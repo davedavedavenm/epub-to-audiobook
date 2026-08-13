@@ -18,6 +18,21 @@ For current build state and remaining work see [STATUS.md](STATUS.md). Settled
 choices live in [DECISIONS.md](DECISIONS.md); contributors and agents must check
 that file before reopening an engine, cost or deployment question.
 
+## Where this app fits
+
+This repository starts at the **human decision to generate** an ebook or the
+human action of sending an article URL. It does not own book discovery,
+indexers, torrent/Usenet clients or the reading-list import. On Dave's homelab,
+the canonical secret-free cross-host diagram and machine-readable inventory are
+in the sibling private `infra` repo at
+`docs/protocols/book-audiobook-system-map.md`; detailed acquisition repair stays
+in `docs/protocols/book-acquisition-pipeline.md` there.
+
+The boundary is intentional: Goodreads/LazyLibrarian may acquire and notify,
+but may not automatically submit a book to this conversion queue. Local CPU is
+the default after a person submits; free Kaggle is explicit per job; paid Vast
+requires a separately authorised environment-gated session.
+
 ## The safe defaults
 
 - **Quality first, then free, then the lowest measured cost per finished book.**

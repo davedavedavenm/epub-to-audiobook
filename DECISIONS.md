@@ -206,6 +206,12 @@ GPU action.
 session-specific and requires an explicit action after the cost has been shown.
 Free Kaggle is not a paid fallback and remains opt-in per job.
 
+**Host schedulers are part of this boundary.** On 2026-08-13 an undocumented
+Zorin cron was found polling for *House of Huawei* and prepared to submit it to
+Kaggle automatically. It had not created a job. The cron was retired with a
+backup and sentinel guard. A future “no automatic cloud render” audit must
+inspect cron/timers and external callers, not only `app.py` and Compose.
+
 **Why:** costs real money; this is a standing safety rule, not a per-task
 judgment call.
 

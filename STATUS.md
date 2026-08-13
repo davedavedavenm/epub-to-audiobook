@@ -1,5 +1,20 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-13 cross-host map and automatic-queue audit — VERIFIED / REPAIRED
+>
+> The sibling `infra` repo now contains the canonical visual and
+> machine-readable book/audiobook topology. Live tracing corrected the active
+> library path: homelab-pi stages ebooks, Zorin rsyncs them every 15 minutes to
+> `/home/dave/booklib`, and that local path — not host `/mnt/openbooks` — is the
+> UI/worker `LIBRARY_DIR`. LazyLibrarian delivers acquired audiobooks directly
+> to Audiobookshelf; infra `book_sync.sh` is ebook-only by default.
+>
+> The same audit found an untracked Zorin cron still armed to auto-submit
+> *House of Huawei* to free Kaggle when it appeared. Its sentinel was absent but
+> no matching job existed. The cron is now removed with a mode-`0600` backup and
+> a second sentinel guard. Current Zorin crontab contains zero automatic book
+> submitters. Free Kaggle remains explicit per job; paid GPU remains off/manual.
+
 > ## 2026-08-13 current baseline, Vibe verdict and cache contract — VERIFIED / DEPLOYED
 >
 > **Live services:** `epub-to-audiobook-worker` is running/healthy, exit 0 and

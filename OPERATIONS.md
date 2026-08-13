@@ -126,7 +126,8 @@ How books get from "wanted" to the audiobook library — LazyLibrarian,
 Prowlarr, qBittorrent/SABnzbd, VPN coverage, `book_sync.sh` delivery,
 credentials, and failure modes — is host-stack infrastructure, not this
 app. It's documented in the `infra` repo at
-`docs/protocols/book-acquisition-pipeline.md`, with `book_sync.sh` and
+`docs/protocols/book-audiobook-system-map.md` (one-page visual + JSON topology)
+and `docs/protocols/book-acquisition-pipeline.md` (detailed runbook), with `book_sync.sh` and
 `pipeline_healthcheck.sh` tracked at `stacks/docker-vm/media-stack/scripts/`
 there (moved 2026-08-01; see `infra/DECISIONS.md`). Don't re-add that
 material here.
@@ -143,6 +144,28 @@ acceptable audiobook exists. For a new Goodreads account, LazyLibrarian's
 official docs require the account-specific shelf RSS route because new API keys
 are no longer issued; configure the RSS provider with `DLTYPES=A`. Never commit
 the feed URL, which may contain an account token.
+
+Live deployment detail, verified 2026-08-13: homelab-pi stages incoming ebooks
+at `~/Downloads/openbooks/books`; Zorin user cron rsyncs that source every 15
+minutes into local `/home/dave/booklib`; UI and worker use that local path as
+`LIBRARY_DIR`. Host `/mnt/openbooks` is a read-only SSHFS view but is not the
+current app library. LazyLibrarian owns acquired-audiobook delivery directly to
+Audiobookshelf; infra's `book_sync.sh` audiobook leg is disabled by default.
+
+### 2026-08-13 — undocumented automatic Kaggle submitter retired
+
+- **Finding:** Zorin user cron still ran
+  `/home/dave/scripts/huawei_autorender.py` every 20 minutes. Its sentinel was
+  absent, and it would call `/api/library/convert` with
+  `render_target=kaggle` when *House of Huawei* appeared. No exact matching job
+  existed, so it had not fired.
+- **Disposition:** removed that one cron line after backing up the full crontab
+  to `/home/dave/scripts/crontab.bak-20260813-retire-huawei-autorender` mode
+  `0600`; added `.huawei_autorender.done` mode `0600` as a second guard. The
+  script is preserved for evidence/rollback.
+- **Rule:** audit host cron and timers as well as repository code before
+  claiming there is no automatic cloud path. Free Kaggle is explicit per job;
+  an external host scheduler can violate that rule without touching app code.
 
 ## Common failures → responses
 
