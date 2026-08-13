@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-13 current baseline, Vibe verdict and cache contract — VERIFIED / DEPLOY IN PROGRESS
+> ## 2026-08-13 current baseline, Vibe verdict and cache contract — VERIFIED / DEPLOYED
 >
 > **Live services:** `epub-to-audiobook-worker` is running/healthy, exit 0 and
 > `OOMKilled=false`; the earlier 3 August exit-137 report is stale. `piper-tts`
@@ -26,12 +26,22 @@
 > only for a direct-upstream versus app-path check of B's isolated defect; the
 > completed blind-handoff monitor was removed.
 >
-> **Preview cache:** the audit found 82 exact cached IDs among 88 configured
-> voices; the six missing artifacts are TADA/Qwen/Vibe evaluation voices.
-> Unconfigured Polly/Inworld voices are excluded and cannot spend money in the
-> background. Code now makes Play a persisted-cache read, exposes ready/total
-> counts, hides unready auditions and adds Kokoro to the throttled free-local
-> warmer. Live optional-engine prewarming and 88/88 verification are in progress.
+> **Preview cache:** `/api/voices` now reports **88/88 configured voices ready**.
+> Four exact TADA previews were generated on the local CPU; the validated Qwen
+> Arthur candidate and Dave's selected Vibe B/cfg-2.0 file were persisted under
+> their exact catalogue IDs. Every file is non-trivial and each configured
+> preview route returns audio immediately. Unconfigured Polly/Inworld voices are
+> excluded and cannot spend money in the background. Play is now a cache read,
+> the UI hides unready auditions, and the free-local warmer is load-throttled,
+> skip-existing and disableable. TADA was enabled only for this local prewarm and
+> then returned to its normal opt-in state.
+>
+> **Repository/onboarding:** README, Getting Started, Decisions, engine/voice,
+> operations, cost and current-plan documents now agree on audiobook-first,
+> local/free defaults, the human-listening boundary, Vibe cfg 2.0 and cached
+> auditions. New Linux/PowerShell bootstrap helpers write a real absolute
+> `STACK_PATH`, enable Nano and wait for health; documented shell helpers now
+> carry executable bits. The complete suite passes: **247 tests**.
 >
 > **CPU auditions:** the Voices page also surfaces the already-rendered Pocket
 > TTS/Peter Yearsley, NeuTTS Air/Jo and KittenTTS/Jasper + Rosie clips. These are

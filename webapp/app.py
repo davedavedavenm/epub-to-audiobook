@@ -443,7 +443,7 @@ TTS_ENGINES = {
     },
     'vibevoice': {
         'name': 'VibeVoice 1.5B',
-        'description': 'Long-form finalist; cfg 2/3 blind ranking pending (Kaggle or opt-in local CUDA)',
+        'description': 'Long-form finalist; cfg 2.0 won the pinned blind test (Kaggle or opt-in local CUDA)',
         'url_env': 'VIBEVOICE_URL',
         'default_url': 'http://vibevoice-tts:8010/v1'
     },
