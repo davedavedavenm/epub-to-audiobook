@@ -14,6 +14,73 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
+## VibeVoice `cfg_scale` — Active
+
+`cfg_scale=1.3` is **rejected**. Use **2.0–3.0**; 3.0 tracks the Arthur
+reference most closely on pitch and range, 2.0 scores marginally better on ASR.
+Settled by ear 2026-08-13 on identical 190-word renders: Dave, *"2 and 3 are
+fine. 1 is trash."*
+
+**Why:** `cfg_scale` is VibeVoice's voice-conditioning adherence lever — the
+analogue of Chatterbox's `cfg_weight`. At 1.3 the clone does not carry the
+narrator's timbre: pitch IQR 14.4 against the reference's 72.8, i.e. nearly
+monotone. Raising it moves pitch, range and brightness monotonically toward the
+reference at no cost to intelligibility. 1.3 was inherited unexamined from an
+early kernel, never chosen. Above 3.0 is untested and cfg 3.0 still carries only
+about half the reference's pitch range.
+
+## Prior VibeVoice listening verdicts — SUPERSEDED, need re-run
+
+Every VibeVoice quality judgement recorded before 2026-08-13 was made at
+`cfg_scale=1.3` (now rejected) and, where the audition passage was used, on text
+that costs Vibe roughly 0.13 ASR. This includes the 2026-07-29 full-chapter
+finalist gate and the "Vibe provisional quality leader / Qwen consistency
+leader" ranking.
+
+**Do not cite those verdicts as current.** Re-run the comparison at
+`cfg_scale` 2.0–3.0 before ranking Vibe against Qwen again. The handicap ran
+against Vibe, so a fair re-run can only improve its standing — but it has to be
+run, not assumed.
+
+## VibeVoice generation settings — Active
+
+`ddpm_inference_steps = 10` for VibeVoice. Do not raise it. Measured 2026-08-12:
+raising it to 20 then 30 degraded ASR similarity monotonically (0.872 → 0.847 →
+0.809) on identical text, voice and seed, while costing 20–45% more GPU time.
+Peak VRAM is 5.31 GiB regardless of steps or input length.
+
+**Why:** this looks like an obvious quality knob and it is not — it is inverted.
+See STATUS.md 2026-08-12 for the six-arm sweep.
+
+## VibeVoice long-form capability — Active
+
+VibeVoice holds a stable speaker across continuous real prose: 916 words /
+4m19s single-pass measured at f0 spread 25 Hz and ASR 0.979. Length is not a
+degradation factor, and peak VRAM does not grow with it (5.31 GiB flat).
+
+**Why:** closes the memory question behind #44 and removes "will it hold
+together" as a blocker on rendering full chapters. The remaining #44 wording
+("90-minute single-pass") is a vendor capability claim the per-chapter renderer
+never exercises — do not spend GPU proving it. Date: 2026-08-12.
+
+## Audition-passage validity per engine — Open, NOT settled
+
+The canonical `voice_sample.SAMPLE_TEXT` measurably handicaps VibeVoice:
+0.81–0.87 ASR on it versus 0.98+ on plain prose, across ddpm steps and seeds.
+`voice_sample.MODERN_ENGINES` is `("chatterbox", "tada")` — VibeVoice and Qwen
+are in neither branch by consideration, only by omission.
+
+Two things follow, both **unresolved**:
+1. Whether Vibe needs the legacy number treatment (`modern=False`) is untested.
+   Run that arm before changing `MODERN_ENGINES`.
+2. The 2026-07-29 "Vibe provisional quality leader / Qwen consistency leader"
+   ranking was formed on auditions using this passage. It has not been re-run
+   fairly. Do not cite that ranking as settled until it has.
+
+**Why this is an entry at all:** the failure is silent. The audition renders,
+passes structural QA, and sounds like an engine problem rather than an input
+problem. Date: 2026-08-12.
+
 ## TTS engine defaults & Narrator — Active
 
 Chatterbox Nano is the default production engine, and **Beatrice (Nano)** (`uk_female_samuel_nano`) is the default system narrator voice. Piper is legacy/debug only (`ENABLE_PIPER_PROFILE=1` required, not a fallback). Chatterbox Turbo and TADA require explicit opt-in (`ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`).

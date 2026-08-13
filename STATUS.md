@@ -1,5 +1,157 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-13 `cfg_scale` is the VibeVoice speaker-similarity lever — 1.3 REJECTED BY EAR
+>
+> **Dave, on identical 190-word renders differing only in `cfg_scale`:**
+> *"2 and 3 are fine. 1 is trash."* (1 = cfg 1.3, 2 = cfg 2.0, 3 = cfg 3.0.)
+>
+> **How this surfaced:** after the Breakneck A/B Dave said neither clip "sounded
+> like Arthur", though both were decent. That was checked as a plumbing fault
+> first and cleared — the reference is genuine (URL serves the real 864182-byte
+> WAV, sha256 `8774082c...` matches). So the conditioning was correct and the
+> timbre still was not arriving.
+>
+> Every VibeVoice clip ever produced in this repo ran `cfg_scale=1.3`, inherited
+> unexamined from the Yellow Wallpaper kernel. `cfg_scale` governs adherence to
+> the voice conditioning — the direct analogue of Chatterbox's `cfg_weight`,
+> already documented in VOICES.md as THE lever for this class of problem. Nobody
+> had moved it for Vibe.
+>
+> | clip | cfg | f0 median | f0 IQR | centroid | ASR | Dave |
+> |------|----:|----------:|-------:|---------:|----:|------|
+> | **Arthur reference** | — | **131.2** | **72.8** | **2135** | — | target |
+> | baseline | 1.3 | 112.9 | **14.4** | 1838 | 0.976 | **"trash"** |
+> | | 2.0 | 114.9 | 31.9 | 1919 | 0.992 | fine |
+> | | 3.0 | **130.4** | 39.8 | 1955 | 0.984 | fine |
+>
+> Pitch, pitch range and brightness all move monotonically toward the reference
+> as `cfg_scale` rises; at 3.0 median pitch lands on Arthur's (130.4 vs 131.2).
+> The baseline's pitch IQR of 14.4 against Arthur's 72.8 is near-monotone, which
+> is the most likely thing Dave was hearing. Intelligibility does not suffer
+> (ASR 0.976–0.992, best at 2.0). One measure dissents — mean-MFCC cosine drifts
+> down — but that statistic is dominated by gross spectral shape and is a weak
+> speaker proxy; recorded so it is not rediscovered as a contradiction.
+>
+> **Even cfg 3.0 carries about half Arthur's pitch range.** Above 3.0 is untested.
+>
+> **What this invalidates:** every VibeVoice listening judgement in this repo was
+> made at `cfg_scale=1.3` — the full-chapter finalist gate (2026-07-29), the
+> 27-minute Yellow Wallpaper clip, the Raven E2E job, and the "Vibe provisional
+> quality leader / Qwen consistency leader" ranking. Note the direction of the
+> error: **Vibe won that gate while handicapped**, at the setting Dave has now
+> called trash, on an audition passage that separately costs it ~0.13 ASR. A
+> fair re-run can only move Vibe up.
+>
+> **Kernel hardening shipped with this sweep:** the Yellow Wallpaper kernel
+> downloads the reference with no integrity check, while `run_vibevoice.py`
+> asserts RIFF magic, exact byte count and sha256 — because the voices are
+> Git-LFS tracked and a pointer file looks like a successful download. Those
+> assertions are now in the sweep kernels too.
+>
+> **Unrelated but found today: the local voice files are LFS pointers.**
+> `chatterbox/voices/uk_male_minter.wav` on the Windows working copy is 131
+> bytes of pointer text, not audio. Kaggle renders are unaffected (they fetch
+> from GitHub) but anything reading that path locally gets text. Run `git lfs pull`.
+>
+> Artifacts: `scratch/vibe90/cfg_out/`, reference at
+> `scratch/vibe90/ARTHUR_reference.wav`.
+
+> ## 2026-08-12 VibeVoice drift sweep — the audition passage is the variable, not length or ddpm
+>
+> **Origin:** an outside "low-cost TTS" report was reviewed against this repo and
+> found to be mostly cost analysis aimed at hardware we do not render on. While
+> auditioning Arthur on VibeVoice to check the report's premise, Dave heard the
+> 62-second audition clip as "the first part and last part sounded totally
+> different" — while calling the earlier 27-minute Yellow Wallpaper clip
+> excellent. Both ran identical settings. That contradiction is what was tested.
+>
+> **Method:** one Kaggle kernel, one model load, six arms, everything held fixed
+> except the named variable (`scratch/stage_sweep_kernel.py`, kernel
+> `davedavedavedavenm/vibevoice-drift-sweep`). Engine
+> `microsoft/VibeVoice-1.5B`, runtime `vibevoice-community/VibeVoice@07cb79f`,
+> reference `uk_male_minter` (Arthur), fp16 + SDPA, `cfg_scale=1.3`,
+> `do_sample: False`. "hard" = the canonical `voice_sample.SAMPLE_TEXT`
+> preprocessed with `modern=True`; "easy" = Yellow Wallpaper prose.
+>
+> | arm | text | words | ddpm | seed | audio s | RTF | peak VRAM | ASR sim |
+> |-----|------|------:|-----:|-----:|--------:|----:|----------:|--------:|
+> | A | hard | 182 | 10 | 12345 | 61.5 | 1.18 | 5.31 GiB | 0.872 |
+> | B | hard | 182 | 20 | 12345 | 62.4 | 1.43 | 5.31 GiB | 0.847 |
+> | C | hard | 182 | 30 | 12345 | 53.7 | 1.69 | 5.31 GiB | 0.809 |
+> | D | easy | 217 | 10 | 12345 | 64.5 | 1.18 | 5.31 GiB | **0.988** |
+> | E | easy | 916 | 10 | 12345 | 258.8 | 1.22 | 5.31 GiB | **0.979** |
+> | F | hard | 182 | 10 | 777 | 51.9 | 1.16 | 5.31 GiB | 0.836 |
+>
+> Median f0 per sixth of each clip (drift proxy): E spread **25 Hz**, D **37 Hz**,
+> F **17 Hz** — versus B **219 Hz** and C **115 Hz**. Arm A sat at the tracker's
+> floor throughout (very low/creaky). Clips in `scratch/vibe90/sweep_out/`.
+>
+> **Findings, in order of usefulness:**
+>
+> 1. **The hard audition passage is what destabilises VibeVoice.** Every arm on
+>    it scores 0.81–0.87; every arm on plain prose scores 0.98+. Same voice,
+>    same engine, same settings.
+> 2. **Length is exonerated.** 916 words / 4m19s is the *most* stable arm
+>    (f0 spread 25 Hz, ASR 0.979). Short inputs are not the problem — the
+>    `MIN_CHARS = 220` parallel from `build_chapter_kernel.py` does not apply here.
+> 3. **ddpm steps are exonerated and inverted.** 10 → 20 → 30 degraded ASR
+>    monotonically (0.872 → 0.847 → 0.809). More diffusion is worse. Leave it at 10.
+> 4. **Not seed luck.** A different seed on the hard text still scores 0.836.
+> 5. **Peak VRAM is 5.31 GiB flat** across every arm including the 916-word one
+>    — measured in-process, so this figure is sound up to ~4 minutes of audio.
+>    See the correction below: the equivalent measurement at 77 minutes failed,
+>    so do not extrapolate this to full-length single-pass renders.
+> 6. **VibeVoice is fit for books.** Continuous real prose at 4+ minutes shows
+>    essentially no drift. Nothing here argues against rendering full chapters.
+>
+> **Suspected mechanism, NOT yet confirmed:** the audition render forced
+> `modern=True`, which leaves bare digit strings in the text (`3400`, `230000`,
+> `52%`, `$1.2 billion`, `£24.6 billion`). Chatterbox and TADA cope; Vibe may
+> not. The confirming arm (`modern=False` on the same passage) has not been run.
+> Do not treat this as settled.
+>
+> **Caveat that matters for the finalist ranking:** every VibeVoice audition to
+> date has gone through this passage, including the listening that produced the
+> 2026-07-29 "Vibe provisional quality leader / Qwen consistency leader" call.
+> That comparison was made on input that measurably handicaps Vibe. It may
+> survive a fair rerun; it has not had one.
+>
+> **Two live traps found in passing:**
+> - `voice_sample.MODERN_ENGINES` is `("chatterbox", "tada")`. VibeVoice and Qwen
+>   are absent, so auditioning either through the normal path applies the legacy
+>   treatment (numbers spelled out, phonetic respellings). Whichever side Vibe
+>   belongs on, the current state is unconsidered rather than chosen.
+> - The proven Vibe kernel's `verify()` carries `min_minutes=20, max_minutes=70`.
+>   Any short render reports `KernelWorkerStatus.ERROR` **after** writing correct
+>   audio and a valid QA report. An audition-length render always looks failed.
+>
+> **Also verified today:** `kaggle kernels output` now pulls artifacts correctly
+> (a 78 MB WAV came down clean). The July `kernels.get` permission failure that
+> blocked the CosyVoice audition runs is gone — those are unblocked.
+>
+> **CORRECTION 2026-08-13 — the Holmes run answered #44 after all.** It was
+> left running overnight rather than stopped, and completed: **13,666 source
+> words rendered in a single generation, ~77 minutes of audio, WER 0.0887**
+> (flagged only because the threshold is 0.08), 13,597 words heard against
+> 13,666 expected, on a Tesla P100. So VibeVoice's 90-minute single-pass claim
+> is **real and reproduced here**, and #44's capability question is answered
+> yes. Artifacts: `scratch/vibe90/out/`.
+>
+> The judgement that it was the wrong *priority* still stands — a real book
+> answers the same question and leaves something worth listening to — but it
+> was not wasted, and this entry originally said it was. The 30 flagged
+> divergences are almost all ASR failures on archaic vocabulary (brougham,
+> ostlers, twopence, landau, vizard, pshaw, chamois), which per the ASR
+> evidence boundary is not evidence the engine mispronounced them.
+>
+> **Instrumentation bug, mine:** the peak-VRAM probe added to that kernel
+> reported 0.0 GiB because it ran in the parent process while generation
+> happened inside the `convert_book.py` subprocess. **The 90-minute VRAM figure
+> was therefore never captured.** The 5.31 GiB in the table above is sound —
+> that sweep measured in-process — but it covers up to 916 words only. Treat
+> "VRAM is flat with length" as established to ~4 minutes and untested at 77.
+
+
 > ## 2026-08-09 Studio Upgrade & Production Baseline — DEPLOYED (559a1f5, c316cce)
 >
 > All features and fixes from the August 2026 Studio Upgrade session are tested
