@@ -14,9 +14,15 @@ out = Path('/output')
 out.mkdir(parents=True, exist_ok=True)
 started = time.perf_counter()
 model = TTSModel.load_model()
-voice = model.get_state_for_audio_prompt('/repo/chatterbox/voices/uk_male_minter.wav')
+# Cloning weights are gated by Kyutai's Hugging Face model terms. The official
+# Peter Yearsley catalogue voice gives us a legitimate UK audiobook screen
+# without bypassing that access decision or smuggling a token into the image.
+voice = model.get_state_for_audio_prompt('peter_yearsley')
 audio = model.generate_audio(voice, sample_text())
-wav = out / 'cpu_pocket_arthur.wav'
+wav = out / 'cpu_pocket_peter_yearsley.wav'
 scipy.io.wavfile.write(wav, model.sample_rate, audio.detach().cpu().numpy())
 finish('Pocket TTS', '2.1.0 / upstream 7fc13c7', started, wav,
-       out / 'cpu_pocket_arthur.mp3', {'voice': 'Arthur reference clone'})
+       out / 'cpu_pocket_peter_yearsley.mp3', {
+           'voice': 'official peter_yearsley preset',
+           'cloning_boundary': 'requires accepted Kyutai Hugging Face model terms',
+       })

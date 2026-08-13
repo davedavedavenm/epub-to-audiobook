@@ -9,7 +9,7 @@ Official upstreams pinned for the 2026-08-13 screen:
 
 | Engine | Pin | Licence / boundary |
 |---|---|---|
-| Pocket TTS | PyPI `2.1.0`; upstream HEAD `7fc13c7` recorded | MIT; Arthur reference clone |
+| Pocket TTS | PyPI `2.1.0`; upstream HEAD `7fc13c7` recorded | MIT code; official `peter_yearsley` preset. Voice cloning weights require accepting Kyutai's Hugging Face model terms and authenticated download; never bypass that gate. |
 | NeuTTS Air | PyPI `1.4.1`; upstream HEAD `ac69851` recorded | Apache-2.0 Air Q4 GGUF; official `jo.pt` + exact `jo.txt`, because Arthur's exact reference transcript is not in this repo |
 | KittenTTS | official v0.8.1 wheel; upstream HEAD `9f3e0d8` recorded | Apache-2.0 developer preview; preset voices only |
 
