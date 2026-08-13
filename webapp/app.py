@@ -5259,7 +5259,8 @@ def audition_sample(name: str):
                     'ab_daisy_before', 'ab_daisy_after',
                     'ab_alice_plain', 'ab_alice_aliss', 'ab_alice_alliss',
                     'ab_alice_nano_raw', 'ab_alice_nano_fixed',
-                    'ab_pos_first', 'ab_pos_mid', 'ab_pos_other', 'ab_pos_second') \
+                    'ab_pos_first', 'ab_pos_mid', 'ab_pos_other', 'ab_pos_second',
+                    'vibe_blind_A', 'vibe_blind_B') \
        and not (name.startswith(('ac_', 'na_', 'tb_', 'cf_', 'eg_', 'xt_', 'me_', 'ov_', 'vctk_', 'cv3_', 'cpu_')) and re.fullmatch(r'[a-z0-9_]+', name)):
         return jsonify({'error': 'Unknown sample'}), 404
     p = PREVIEWS_DIR / f"{name}.mp3"

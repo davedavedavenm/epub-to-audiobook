@@ -144,10 +144,10 @@ select.input-control { cursor: pointer; }
 /* Studio design system overrides */
 :root{
   --paper:#0a0e17; --paper-raised:#121826; --surface-2:#1a2234;
-  --ink:#f8fafc; --text-primary:#f8fafc; --text-secondary:#94a3b8; --ink-soft:#94a3b8; --ink-3:#64748b;
+  --ink:#f8fafc; --text-primary:#f8fafc; --text-secondary:#bcc6d5; --ink-soft:#bcc6d5; --ink-3:#91a0b5;
   --bg-sidebar:#060911; --bg-element:#161e2e; --bg-hover:#1e293b; --text-on-dark:#f8fafc;
-  --accent:#6366f1; --accent-deep:#4f46e5; --accent-tint:#1e1b4b; --accent-ink:#a5b4fc;
-  --cloud:#06b6d4; --cloud-tint:#164e63; --cloud-ink:#67e8f9; --gilt:#6366f1;
+  --accent:#ef7052; --accent-deep:#d95438; --accent-tint:#351c1a; --accent-ink:#ffb9a9;
+  --cloud:#25a7a1; --cloud-tint:#12302f; --cloud-ink:#7ddbd6; --gilt:#ef7052;
   --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.14); --success:#10b981; --error:#ef4444;
   --serif:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --sans:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -169,22 +169,42 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .mono,.job-detail-item b,.setup-label,.sidebar-tag{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
 
 /* sidebar / nav */
-.sidebar{ background:var(--bg-sidebar); padding:30px 20px; border-right:1px solid rgba(255,255,255,.06); }
-.sidebar-brand{ font-family:var(--sans); font-size:1.25rem; font-weight:600; letter-spacing:-.01em; margin-bottom:2px; display:flex; align-items:center; gap:10px; }
-.sidebar-brand::first-letter{ color:inherit; }
-.sidebar-brand::before{ content:""; width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 0 var(--accent); animation:reclight 2.4s infinite; }
+.sidebar{ width:312px; background:var(--bg-sidebar); padding:26px 22px 24px; border-right:1px solid rgba(255,255,255,.08); }
+.app-main{ margin-left:312px; }
+.brand-home{ width:100%; display:flex; align-items:center; gap:13px; padding:10px; margin:0 0 6px; border:1px solid transparent; border-radius:12px; background:transparent; color:#fff; text-align:left; cursor:pointer; font:inherit; }
+.brand-home:hover{ background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.08); }
+.brand-home:focus-visible,.nav-tab:focus-visible,.topbar-home:focus-visible,.menu-toggle:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+.brand-mark{ width:42px; height:42px; display:grid; place-items:center; flex:none; border-radius:11px; color:#fff; background:var(--accent); box-shadow:0 10px 24px -14px rgba(239,112,82,.95); }
+.brand-mark svg{ width:23px; height:23px; }
+.sidebar-brand{ font-family:var(--sans); font-size:1.34rem; font-weight:750; line-height:1.15; letter-spacing:-.025em; display:block; }
+.sidebar-brand::before,.sidebar-brand::first-letter{ content:none; color:inherit; }
+.brand-home small{ display:block; margin-top:3px; color:rgba(245,247,250,.62); font-size:.71rem; font-weight:600; letter-spacing:.02em; }
 @keyframes reclight{ 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)} 70%{box-shadow:0 0 0 7px transparent} 100%{box-shadow:0 0 0 0 transparent} }
-.sidebar-tag{ font-size:.6rem; letter-spacing:.24em; color:rgba(236,238,244,.35); margin-bottom:38px; }
-.nav-tab{ font-family:var(--sans); font-size:.94rem; font-weight:500; color:rgba(236,238,244,.6); padding:10px 13px; border-radius:9px; gap:12px; }
-.nav-tab i{ font-size:.95rem; opacity:.7; }
-.nav-tab:hover{ background:rgba(236,238,244,.06); color:#fff; }
-.nav-tab.active{ background:var(--accent); color:#fff; box-shadow:none; }
+.sidebar-tag{ font-size:.66rem; letter-spacing:.18em; color:rgba(236,238,244,.58); margin:0 10px 28px 65px; }
+.nav-links{ gap:6px; }
+.nav-tab{ min-height:58px; font-family:var(--sans); color:rgba(245,247,250,.82); padding:8px 10px; border-radius:12px; gap:12px; }
+.nav-icon{ width:38px; height:38px; display:grid; place-items:center; flex:none; border-radius:10px; color:rgba(245,247,250,.74); background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.04); }
+.nav-icon svg{ width:20px; height:20px; }
+.nav-copy{ min-width:0; display:flex; flex-direction:column; gap:1px; }
+.nav-name{ font-size:1.02rem; font-weight:700; line-height:1.2; letter-spacing:-.01em; }
+.nav-note{ font-size:.71rem; font-weight:500; line-height:1.25; color:rgba(245,247,250,.5); }
+.nav-tab:hover{ background:rgba(236,238,244,.075); color:#fff; }
+.nav-tab:hover .nav-icon{ color:#fff; }
+.nav-tab.active{ background:rgba(239,112,82,.14); color:#fff; box-shadow:inset 3px 0 0 var(--accent); }
+.nav-tab.active .nav-icon{ color:#fff; background:var(--accent); border-color:var(--accent); }
+.nav-tab.active .nav-note{ color:rgba(255,255,255,.7); }
 .nav-tab.active::before{ display:none; }
 .gpu-dot.active{ background:var(--success); box-shadow:0 0 8px color-mix(in srgb,var(--success) 60%,transparent); }
 
 /* top bar */
-.top-bar{ padding:22px 64px; align-items:center; background:color-mix(in srgb,var(--paper) 90%,transparent); }
-.page-title{ font-family:var(--sans); font-size:1.7rem; font-weight:600; letter-spacing:-.02em; }
+.top-bar{ padding:20px clamp(24px,5vw,64px); align-items:center; background:color-mix(in srgb,var(--paper) 92%,transparent); }
+.topbar-left{ display:flex; align-items:center; gap:16px; min-width:0; }
+.topbar-home{ min-height:44px; display:inline-flex; align-items:center; gap:8px; padding:9px 12px; color:var(--text-secondary); background:var(--surface-2); border:1px solid var(--border); border-radius:10px; cursor:pointer; font:inherit; font-size:.86rem; font-weight:700; }
+.topbar-home:hover{ color:var(--text-primary); border-color:var(--border-strong); }
+.topbar-home svg{ width:18px; height:18px; }
+.page-heading{ min-width:0; }
+.page-title{ font-family:var(--sans); font-size:1.9rem; font-weight:750; line-height:1.1; letter-spacing:-.03em; }
+.page-subtitle{ margin:5px 0 0; color:var(--text-secondary); font-size:.88rem; line-height:1.4; }
 .page-title::after{ display:none; }
 .theme-btn{ background:var(--surface-2); border:1px solid var(--border); border-radius:8px; }
 
@@ -221,7 +241,7 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .library-item .production-workspace{ padding:22px 18px; margin-top:0; }
 
 /* setup / labels / progress / job data */
-.setup-label{ font-size:.66rem; letter-spacing:.12em; color:var(--ink-3); font-weight:400; }
+.setup-label{ font-size:.72rem; letter-spacing:.105em; color:var(--text-secondary); font-weight:650; }
 .progress-bar{ background:var(--surface-2); height:6px; }
 .progress-fill{ background:var(--accent); }
 .job-detail-row{ font-family:var(--mono); font-size:.62rem; letter-spacing:.08em; color:var(--ink-3); }
@@ -364,35 +384,61 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 .qwave.done i{ background:var(--success); opacity:.5; }
 .qwave.failed i{ background:var(--error); opacity:.4; }
 
-.menu-toggle{ display:none; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); padding:5px 11px; font-size:1.15rem; line-height:1.2; cursor:pointer; transition:border-color .2s, background .2s; flex:none; }
+.home-intro{ overflow:hidden; padding:clamp(24px,4vw,40px); background:linear-gradient(125deg,color-mix(in srgb,var(--paper-raised) 86%,var(--accent-tint)),var(--paper-raised)); }
+.home-eyebrow{ margin:0 0 10px; color:var(--accent-ink); font-family:var(--mono); font-size:.7rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; }
+.home-intro h2{ max-width:720px; margin:0; font-size:clamp(1.55rem,3vw,2.25rem); line-height:1.12; letter-spacing:-.035em; }
+.home-intro p{ max-width:690px; margin:13px 0 0; color:var(--text-secondary); font-size:1rem; line-height:1.65; }
+.quick-actions{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:24px; }
+.quick-action{ min-height:80px; display:flex; align-items:center; gap:13px; padding:14px; color:var(--text-primary); background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:12px; cursor:pointer; text-align:left; font:inherit; }
+.quick-action:hover{ border-color:var(--accent); background:var(--surface-2); }
+.quick-action strong{ display:block; font-size:.97rem; }
+.quick-action span{ display:block; margin-top:3px; color:var(--text-secondary); font-size:.75rem; line-height:1.35; }
+.quick-action svg{ width:23px; height:23px; flex:none; color:var(--accent); }
+.library-heading{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.library-heading h2{ margin:0; font-size:1.35rem; letter-spacing:-.02em; }
+.library-heading p{ margin:5px 0 0; color:var(--text-secondary); font-size:.88rem; }
+.empty-state{ padding:40px 24px; text-align:center; border:1px dashed var(--border-strong); border-radius:12px; background:var(--surface-2); }
+.empty-state h3{ margin:0 0 7px; font-size:1.14rem; }
+.empty-state p{ max-width:480px; margin:0 auto 18px; color:var(--text-secondary); line-height:1.55; }
+.menu-toggle{ display:none; min-height:44px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; color:var(--text-primary); padding:8px 12px; font:inherit; font-size:.88rem; font-weight:700; line-height:1.2; cursor:pointer; transition:border-color .2s, background .2s; flex:none; }
 .menu-toggle:hover{ border-color:var(--accent); background:var(--bg-hover); }
 .sidebar-overlay{ position:fixed; inset:0; background:rgba(10,12,16,.55); opacity:0; pointer-events:none; transition:opacity .3s; z-index:999; }
 .sidebar-overlay.active{ opacity:1; pointer-events:auto; }
-@media(max-width:768px){
+@media(max-width:980px){
   .menu-toggle{ display:block; }
-  .sidebar{ position:fixed; left:-288px; transition:left 0.3s; z-index:1000; }
+  .sidebar{ position:fixed; left:-312px; transition:left 0.3s; z-index:1000; overflow-y:auto; }
   .sidebar.open{ left:0; }
   .app-main{ margin-left:0; }
   .library-grid{ grid-template-columns:1fr; }
   .top-bar{ padding:14px 20px; }
   .content-body{ padding:28px 20px 72px; }
-  .page-title{ font-size:1.35rem; }
+  .page-title{ font-size:1.5rem; }
+  .topbar-home{ display:none; }
   .li-main{ flex-wrap:wrap; }
   .li-actions{ width:100%; justify-content:flex-end; }
 }
+@media(max-width:720px){
+  .quick-actions{ grid-template-columns:1fr; }
+  .page-subtitle{ display:none; }
+  .theme-btn{ min-width:44px; min-height:44px; padding:8px; }
+  .library-heading{ align-items:flex-start; flex-direction:column; }
+}
 </style>
 </head><body>
-<aside class="sidebar">
-    <div class="sidebar-brand">Studio</div>
-    <div class="sidebar-tag">Audiobook · self-hosted</div>
+<aside class="sidebar" aria-label="Primary navigation">
+    <button class="brand-home" type="button" onclick="switchTab('library')" aria-label="Go home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m5 11V8m5 10V6m5 13V4" stroke-linecap="round"/></svg></span>
+        <span><span class="sidebar-brand">Audiobook Studio</span><small>Make books worth listening to</small></span>
+    </button>
+    <div class="sidebar-tag">Local · self-hosted</div>
     <nav class="nav-links" role="tablist" aria-label="Studio sections">
-        <button class="nav-tab active" id="tab-btn-library" role="tab" aria-selected="true" aria-controls="tab-library" data-tab="library" onclick="switchTab('library')"><i aria-hidden="true">📚</i> <span>Library</span></button>
-        <button class="nav-tab" id="tab-btn-articles" role="tab" aria-selected="false" aria-controls="tab-articles" data-tab="articles" onclick="switchTab('articles')"><i aria-hidden="true">📰</i> <span>Articles</span></button>
-        <button class="nav-tab" id="tab-btn-convert" role="tab" aria-selected="false" aria-controls="tab-convert" data-tab="convert" onclick="switchTab('convert')"><i aria-hidden="true">📤</i> <span>Upload</span></button>
-        <button class="nav-tab" id="tab-btn-queue" role="tab" aria-selected="false" aria-controls="tab-queue" data-tab="queue" onclick="switchTab('queue')"><i aria-hidden="true">⏳</i> <span>Queue</span> <span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
-        <button class="nav-tab" id="tab-btn-voices" role="tab" aria-selected="false" aria-controls="tab-voices" data-tab="voices" onclick="switchTab('voices')"><i aria-hidden="true">🗣️</i> <span>Voices</span></button>
-        <button class="nav-tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="tab-history" data-tab="history" onclick="switchTab('history')"><i aria-hidden="true">📂</i> <span>History</span></button>
-        <button class="nav-tab" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" onclick="switchTab('settings')"><i aria-hidden="true">⚙️</i> <span>Settings</span></button>
+        <button class="nav-tab active" id="tab-btn-library" role="tab" aria-selected="true" aria-controls="tab-library" data-tab="library" onclick="switchTab('library')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-6h6v6"/></svg></span><span class="nav-copy"><span class="nav-name">Home</span><span class="nav-note">Library and quick actions</span></span></button>
+        <button class="nav-tab" id="tab-btn-articles" role="tab" aria-selected="false" aria-controls="tab-articles" data-tab="articles" onclick="switchTab('articles')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14v18H5z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span><span class="nav-copy"><span class="nav-name">Articles</span><span class="nav-note">Paste a link, make audio</span></span></button>
+        <button class="nav-tab" id="tab-btn-convert" role="tab" aria-selected="false" aria-controls="tab-convert" data-tab="convert" onclick="switchTab('convert')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 14v6h14v-6"/></svg></span><span class="nav-copy"><span class="nav-name">Add a book</span><span class="nav-note">Upload EPUB, PDF or text</span></span></button>
+        <button class="nav-tab" id="tab-btn-queue" role="tab" aria-selected="false" aria-controls="tab-queue" data-tab="queue" onclick="switchTab('queue')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="nav-copy"><span class="nav-name">Queue</span><span class="nav-note">What is rendering now</span></span><span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
+        <button class="nav-tab" id="tab-btn-voices" role="tab" aria-selected="false" aria-controls="tab-voices" data-tab="voices" onclick="switchTab('voices')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V6a3 3 0 0 1 6 0v12"/><path d="M5 12a7 7 0 0 0 14 0M12 19v3"/></svg></span><span class="nav-copy"><span class="nav-name">Voices</span><span class="nav-note">Listen before choosing</span></span></button>
+        <button class="nav-tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="tab-history" data-tab="history" onclick="switchTab('history')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v11H4z"/><path d="M4 7V4h6l2 2h5v3"/></svg></span><span class="nav-copy"><span class="nav-name">Finished</span><span class="nav-note">Play and download audio</span></span></button>
+        <button class="nav-tab" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" onclick="switchTab('settings')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.8-1L14.4 3h-4.8l-.4 3.1a8 8 0 0 0-1.8 1l-2.4-1-2 3.4L5.1 11a7 7 0 0 0 0 2L3 14.5l2 3.4 2.4-1a8 8 0 0 0 1.8 1l.4 3.1h4.8l.4-3.1a8 8 0 0 0 1.8-1l2.4 1 2-3.4-2.1-1.5a7 7 0 0 0 .1-1z"/></svg></span><span class="nav-copy"><span class="nav-name">Settings</span><span class="nav-note">Defaults and connections</span></span></button>
     </nav>
     <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);" title="GPU Status: paid GPUs are manual only; queue length never provisions one.">
         <div style="display: flex; align-items: center;"><span id="gpu-state-dot" class="gpu-dot"></span> <span id="gpu-state-label" style="font-size: 0.9rem; font-weight: 600;">GPU OFFLINE</span></div>
@@ -401,9 +447,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 <div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 <main class="app-main">
     <header class="top-bar">
-        <div style="display:flex; align-items:center; gap:16px; min-width:0;">
-            <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu" aria-expanded="false" onclick="toggleSidebar()">☰</button>
-            <h1 class="page-title" id="view-title">Library</h1>
+        <div class="topbar-left">
+            <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu" aria-expanded="false" onclick="toggleSidebar()">☰ Menu</button>
+            <button class="topbar-home" type="button" onclick="switchTab('library')" aria-label="Go home"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-6h6v6"/></svg> Home</button>
+            <div class="page-heading"><h1 class="page-title" id="view-title">Home</h1><p class="page-subtitle" id="view-subtitle">Your books, voice choices and next actions in one place.</p></div>
         </div>
         <div class="theme-selector">
             <button class="theme-btn" id="btn-light" aria-label="Switch to light theme" onclick="setTheme('light')">☀️</button>
@@ -412,7 +459,18 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     </header>
     <div class="content-body">
         <div class="tab-panel active" id="tab-library" role="tabpanel" aria-labelledby="tab-btn-library">
+            <section class="card home-intro" aria-labelledby="home-intro-title">
+                <p class="home-eyebrow">Your listening desk</p>
+                <h2 id="home-intro-title">Start with what you want to hear.</h2>
+                <p>Add a book, turn an article link into audio, or compare narrators. Rendering stays on this machine by default, so the normal route costs nothing.</p>
+                <div class="quick-actions">
+                    <button class="quick-action" type="button" onclick="switchTab('convert')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 14v6h14v-6"/></svg><span><strong>Add a book</strong><span>Upload EPUB, PDF or text</span></span></button>
+                    <button class="quick-action" type="button" onclick="switchTab('articles')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14v18H5z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg><span><strong>Narrate an article</strong><span>Paste a public web link</span></span></button>
+                    <button class="quick-action" type="button" onclick="switchTab('voices')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6a3 3 0 0 1 6 0v12"/><path d="M5 12a7 7 0 0 0 14 0M12 19v3"/></svg><span><strong>Listen to voices</strong><span>Preview before you commit</span></span></button>
+                </div>
+            </section>
             <div class="card">
+                <div class="library-heading"><div><h2>Your library</h2><p>Books already available to preview or narrate.</p></div></div>
                 <div style="display:flex; gap:12px; align-items:center; margin-bottom:24px;">
                     <input type="text" id="library-search" class="input-control" style="flex:1;"
                            placeholder="Search your collection..." oninput="renderLibrary()">
@@ -863,8 +921,12 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     let currentPreviewPath = null;
 
     function toggleSidebar() {
-        document.querySelector('.sidebar').classList.toggle('open');
-        document.querySelector('.sidebar-overlay').classList.toggle('active');
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        const isOpen = sidebar.classList.toggle('open');
+        overlay.classList.toggle('active', isOpen);
+        overlay.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        document.getElementById('menu-toggle')?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     }
 
     function switchTab(tabId) {
@@ -879,11 +941,20 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         document.querySelector('.sidebar-overlay')?.classList.remove('active');
         const menuBtn = document.getElementById('menu-toggle');
         if(menuBtn) menuBtn.setAttribute('aria-expanded', 'false');
+        const headings = {
+            library: ['Home', 'Your books, voice choices and next actions in one place.'],
+            articles: ['Articles', 'Paste a link and let the default local narrator take it from there.'],
+            convert: ['Add a book', 'Upload a manuscript and choose how it should sound.'],
+            queue: ['Queue', 'See what is rendering, waiting or needs attention.'],
+            voices: ['Voices', 'Listen before choosing a narrator.'],
+            history: ['Finished', 'Play or download completed books and articles.'],
+            settings: ['Settings', 'Manage narration defaults and service connections.']
+        };
+        const heading = headings[tabId] || [tabId, ''];
         const titleEl = document.getElementById('view-title');
-        if(titleEl) {
-            if (tabId === 'convert') titleEl.textContent = 'Upload';
-            else titleEl.textContent = tabId.charAt(0).toUpperCase() + tabId.slice(1);
-        }
+        const subtitleEl = document.getElementById('view-subtitle');
+        if(titleEl) titleEl.textContent = heading[0];
+        if(subtitleEl) subtitleEl.textContent = heading[1];
         localStorage.setItem('audiobook-tab', tabId);
         if(tabId === 'library') loadLibrary();
         if(tabId === 'articles') loadArticlesTab();
@@ -1102,7 +1173,13 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 </div>
             </div>`;
 
-        grid.innerHTML = batchHeader + filtered.map(b => {
+        const emptyState = `<div class="empty-state">
+            <h3>${query ? 'No books match that search' : 'Your library is ready for its first book'}</h3>
+            <p>${query ? 'Try a shorter title or clear the search.' : 'Upload an EPUB, PDF or text file. You can preview the manuscript and narrator before starting.'}</p>
+            ${query ? '<button class="btn" type="button" onclick="document.getElementById(\'library-search\').value=\'\'; renderLibrary();">Clear search</button>' : '<button class="btn btn-primary" type="button" onclick="switchTab(\'convert\')">Add a book</button>'}
+        </div>`;
+
+        grid.innerHTML = (filtered.length ? batchHeader : emptyState) + filtered.map(b => {
             const bookId = encodeURIComponent(b.path).replace(/%/g, '_');
             let statusBadge = '';
             if(b.status === 'completed') statusBadge = '<span class="li-tag done">✓ Audiobook ready</span>';
@@ -1343,6 +1420,28 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const allIds = usable.map(([id]) => id);
         const cmpA = online[0] || allIds[0] || '';
         const cmpB = online[1] || online[0] || allIds[1] || cmpA;
+        const blindCard = `
+            <div class="card" id="blind-listening-test" style="margin-bottom:32px; border-color:color-mix(in srgb,var(--accent) 48%,var(--border));">
+                <p class="home-eyebrow">Ready to judge now</p>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap;">
+                    <div style="max-width:720px;">
+                        <h2 style="margin:0; font-size:1.45rem; letter-spacing:-.025em;">Blind long-form voice test</h2>
+                        <p style="margin:9px 0 0; color:var(--text-secondary); line-height:1.6;">Both clips read the same 351-word opening from <em>The Yellow Wallpaper</em>. They were cut at matching source words and checked for missing or repeated text. Listen for naturalness, pacing and whether you would tolerate the voice for a full book.</p>
+                    </div>
+                    <span class="li-tag done">Ready to play</span>
+                </div>
+                <div class="compare-grid">
+                    <div class="compare-cell">
+                        <div class="compare-label"><span class="compare-tag">A</span><span>Blind clip A · 1:33</span></div>
+                        <audio controls preload="metadata" src="/api/sample/vibe_blind_A.mp3" aria-label="Play blind clip A"></audio>
+                    </div>
+                    <div class="compare-cell">
+                        <div class="compare-label"><span class="compare-tag b">B</span><span>Blind clip B · 1:39</span></div>
+                        <audio controls preload="metadata" src="/api/sample/vibe_blind_B.mp3" aria-label="Play blind clip B"></audio>
+                    </div>
+                </div>
+            </div>
+        `;
         const compareCard = `
             <div class="card" style="margin-bottom:32px;">
                 <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px; flex-wrap:wrap;">
@@ -1419,7 +1518,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
 
-        container.innerHTML = cloneCard + compareCard + engines.map(engine => {
+        container.innerHTML = blindCard + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
             return `

@@ -97,7 +97,8 @@ def test_years_spelled_for_both_modern_and_legacy():
 def test_candidate_sample_accepts_extensionless_and_mp3_urls():
     with appmod.app.test_client() as client:
         for name in ('me_british', 'vctk_irish_m_p364_native',
-                     'cv3_southafrican_male'):
+                     'cv3_southafrican_male', 'vibe_blind_A',
+                     'vibe_blind_B'):
             sample = appmod.PREVIEWS_DIR / f'{name}.mp3'
             sample.write_bytes(b'ID3candidate-audio')
             for path in (f'/api/sample/{name}', f'/api/sample/{name}.mp3'):
