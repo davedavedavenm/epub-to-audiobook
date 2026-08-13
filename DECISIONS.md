@@ -272,9 +272,9 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 | **Unverified by ear** | Rendered accent clips exist; listen before promoting or rejecting. |
-| Pocket TTS 2.1 Peter Yearsley preset | **CPU screen; listening pending** | Complete RTF 1.033 clip exists. One >50-token warning makes long-form completeness unproven; cloning cannot be evaluated unless Dave accepts Kyutai's model terms. |
-| NeuTTS Air 1.4.1 Q4 + Jo | **CPU screen; listening pending** | Complete sentence-chunked RTF 4.929 clip exists. Whole-passage input truncated, so chunking is mandatory; Arthur identity is untested because his exact reference transcript is unavailable. |
-| KittenTTS 0.8.1 Jasper/Rosie | **CPU screen; listening pending** | Complete RTF 2.304/1.761 clips exist. Preset-only/no-clone boundary means it must win by ear as-is; no UK identity claim. |
+| Pocket TTS 2.1 Peter Yearsley preset | **Voice passes; numeric handling fails tested path** | Dave judged the voice decent/good, but numbers and dollar/currency amounts were poor. Complete RTF 1.033 clip exists. Long-form completeness and cloning remain unproven. |
+| NeuTTS Air 1.4.1 Q4 + Jo | **Voice passes; numeric handling fails tested path** | Dave judged the voice decent/good, but numbers and dollar/currency amounts were poor. Complete sentence-chunked RTF 4.929 clip exists; chunking remains mandatory. |
+| KittenTTS 0.8.1 Jasper/Rosie | **Both voices pass; numeric handling fails tested path** | Dave judged both preset voices decent/good, but numbers and dollar/currency amounts were poor. Complete RTF 2.304/1.761 clips exist; these remain preset-only with no UK-identity claim. |
 | Higgs Audio V2 | **Reserve, not finalist** | Usable but seed-dependent seams. Reopen only for a materially improved official release/runtime or a book-specific audition. |
 | OmniVoice current weights/path | **Short-form hold** | Accents were good; CPU RTF ~9 and non-commercial weights block normal books. Reconsider on official performance/licence change or a bounded short use. |
 | EdgeTTS through `edge-tts` | **Conditional hold** | Free direct cost and accents were acceptable, but the interface is unofficial/fragile and proper nouns failed. Re-test only with a pronunciation fix and current service docs. |
@@ -287,6 +287,13 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 No ASR score in this table is a quality verdict. Dave's listening is the
 admission/rejection evidence; measurements only establish completeness,
 runtime and the exact tested boundary.
+
+The 2026-08-13 Pocket/NeuTTS/Kitten result is a listening verdict about the
+exact app-path clips, not a root-cause finding. Do not reject the engines or
+add speculative respellings from that result alone. First render the same
+pinned numbers-and-currency corpus through both direct upstream and app paths,
+then have Dave hear the blind A/B. None of these candidates replaces the
+Chatterbox Nano/Beatrice production default yet.
 
 ## Book acquisition pipeline docs — moved to infra — Active
 

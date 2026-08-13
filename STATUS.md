@@ -58,11 +58,14 @@
 > `STACK_PATH`, enable Nano and wait for health; documented shell helpers now
 > carry executable bits. The complete suite passes: **247 tests**.
 >
-> **CPU auditions:** the Voices page also surfaces the already-rendered Pocket
-> TTS/Peter Yearsley, NeuTTS Air/Jo and KittenTTS/Jasper + Rosie clips. These are
-> listening candidates only; none is wired into production or made a default.
+> **CPU auditions:** Dave has now heard the already-rendered Pocket TTS/Peter
+> Yearsley, NeuTTS Air/Jo and KittenTTS/Jasper + Rosie clips. All four voices
+> are decent/good and clear the basic voice-quality screen. All four struggle
+> materially with numbers and dollar/currency amounts. None is wired into
+> production or made a default; the cause remains open pending a controlled
+> direct-upstream versus app-path listening A/B using identical numeric text.
 >
-> ## 2026-08-13 public article delivery + CPU engine screen — VERIFIED / LISTENING PENDING
+> ## 2026-08-13 public article delivery + CPU engine screen — VERIFIED / HEARD; NUMERIC CAUSE OPEN
 >
 > **RSS/Pangolin:** the live public feed returned `200`, parsed as RSS 2.0 and
 > contained six episodes; a real enclosure byte-range request returned `206`.
@@ -84,14 +87,20 @@
 > (RTF 1.033, peak 1307.6 MiB) using its official Peter Yearsley preset, but
 > emitted a 50-token chunk-limit warning and its cloning weights remain behind
 > Kyutai's model-terms gate. Kitten Jasper measured RTF 2.304 / 1047.9 MiB and
-> Rosie RTF 1.761 / 1090.4 MiB; these are preset voices, not clones. No engine
-> is admitted or rejected until Dave listens. NeuTTS's first whole-passage run
-> truncated because the official model documents an approximately 30-second
+> Rosie RTF 1.761 / 1090.4 MiB; these are preset voices, not clones. Dave heard
+> all four voices as decent/good, while all four handled numbers and
+> dollar/currency amounts poorly. This passes their basic voice-quality screen
+> but does not establish whether the shared weakness comes from preprocessing,
+> each wrapper or each model. NeuTTS's first whole-passage run truncated because
+> the official model documents an approximately 30-second
 > context. The corrected ten-sentence render's persisted MP3 measures 72.672 s;
 > synthesis produced it in 357.875 s
 > (RTF 4.925, peak 2842.4 MiB) with its official Jo reference. That clip is
 > complete by duration/chunk accounting, but the engine emitted phonemizer
-> word-count warnings and needs listening before any conclusion.
+> word-count warnings. The next evidence gate is an identical pinned
+> numbers-and-currency corpus rendered through direct upstream and app paths,
+> followed by Dave's blind listening verdict. Chatterbox Nano/Beatrice remains
+> the production default.
 >
 > **Cost boundary:** all screens are isolated four-core CPU containers with no
 > queue registration, GPU devices or paid fallback. `GPU_RENDER_ENABLED=0`
