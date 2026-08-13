@@ -19,6 +19,10 @@
 > naturalness and the production/default decision remains open. The completed
 > handoff monitor was removed.
 >
+> **CPU auditions:** the Voices page also surfaces the already-rendered Pocket
+> TTS/Peter Yearsley, NeuTTS Air/Jo and KittenTTS/Jasper + Rosie clips. These are
+> listening candidates only; none is wired into production or made a default.
+>
 > ## 2026-08-13 public article delivery + CPU engine screen — VERIFIED / LISTENING PENDING
 >
 > **RSS/Pangolin:** the live public feed returned `200`, parsed as RSS 2.0 and

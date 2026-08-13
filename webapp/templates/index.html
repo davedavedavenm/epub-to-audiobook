@@ -1442,6 +1442,21 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 </div>
             </div>
         `;
+        const cpuCard = `
+            <div class="card" id="cpu-listening-tests" style="margin-bottom:32px;">
+                <p class="home-eyebrow">Free · local CPU auditions</p>
+                <div style="max-width:760px;">
+                    <h2 style="margin:0; font-size:1.35rem; letter-spacing:-.025em;">New engines you can hear before we integrate them</h2>
+                    <p style="margin:9px 0 0; color:var(--text-secondary); line-height:1.6;">These are real rendered clips, not availability claims. They run without paid compute, but remain evaluation candidates: listening here does not enable an engine or change the default narrator.</p>
+                </div>
+                <div class="compare-grid">
+                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">CPU</span><span>Pocket TTS · Peter Yearsley</span></div><audio controls preload="metadata" src="/api/sample/cpu_pocket_peter_yearsley.mp3" aria-label="Play Pocket TTS Peter Yearsley audition"></audio></div>
+                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">CPU</span><span>NeuTTS Air · Jo</span></div><audio controls preload="metadata" src="/api/sample/cpu_neutts_jo.mp3" aria-label="Play NeuTTS Air Jo audition"></audio></div>
+                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">CPU</span><span>KittenTTS · Jasper</span></div><audio controls preload="metadata" src="/api/sample/cpu_kitten_jasper.mp3" aria-label="Play KittenTTS Jasper audition"></audio></div>
+                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">CPU</span><span>KittenTTS · Rosie</span></div><audio controls preload="metadata" src="/api/sample/cpu_kitten_rosie.mp3" aria-label="Play KittenTTS Rosie audition"></audio></div>
+                </div>
+            </div>
+        `;
         const compareCard = `
             <div class="card" style="margin-bottom:32px;">
                 <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px; flex-wrap:wrap;">
@@ -1518,7 +1533,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
 
-        container.innerHTML = blindCard + compareCard + cloneCard + engines.map(engine => {
+        container.innerHTML = blindCard + cpuCard + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
             return `
