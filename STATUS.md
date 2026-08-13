@@ -1,5 +1,38 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-13 public article delivery + CPU engine screen — VERIFIED / LISTENING PENDING
+>
+> **RSS/Pangolin:** the live public feed returned `200`, parsed as RSS 2.0 and
+> contained six episodes; a real enclosure byte-range request returned `206`.
+> Pangolin exceptions are restricted to the exact feed and enclosure paths;
+> `/api/jobs` still redirects to SSO. `PUBLIC_BASE_URL` now makes feed and
+> enclosure URLs canonical HTTPS rather than leaking the internal LAN origin.
+>
+> **Article capture:** the Articles-tab URL paste and Telegram link capture now
+> share one queue path. Both use the configured default narrator, derive its
+> actual engine, create MP3 article jobs and force the local/free render target.
+> Telegram additionally requires both its official secret header and the
+> configured owner chat ID. The bot webhook must be verified live after the
+> full-stack deploy before this item moves from code-verified to operationally
+> verified.
+>
+> **CPU candidates:** Pocket TTS and KittenTTS produced complete canonical
+> audition files without a GPU. Pocket measured 64.080 s audio in 66.220 s
+> (RTF 1.033, peak 1307.6 MiB) using its official Peter Yearsley preset, but
+> emitted a 50-token chunk-limit warning and its cloning weights remain behind
+> Kyutai's model-terms gate. Kitten Jasper measured RTF 2.304 / 1047.9 MiB and
+> Rosie RTF 1.761 / 1090.4 MiB; these are preset voices, not clones. No engine
+> is admitted or rejected until Dave listens. NeuTTS's first whole-passage run
+> truncated because the official model documents an approximately 30-second
+> context. The corrected ten-sentence render produced 72.610 s in 357.875 s
+> (RTF 4.929, peak 2842.4 MiB) with its official Jo reference. That clip is
+> complete by duration/chunk accounting, but the engine emitted phonemizer
+> word-count warnings and needs listening before any conclusion.
+>
+> **Cost boundary:** all screens are isolated four-core CPU containers with no
+> queue registration, GPU devices or paid fallback. `GPU_RENDER_ENABLED=0`
+> remains the live production setting.
+
 > ## 2026-08-13 repo + live-system audit — VERIFIED FINDINGS, FIXES DEPLOYED
 >
 > **Live baseline:** Zorin checkout `/home/dave/ai/lab/stacks/epub-to-audiobook`

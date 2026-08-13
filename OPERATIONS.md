@@ -69,6 +69,33 @@ back. This incident did not touch conversion state or generated media.
   field out for them and the job log records that the request was ignored. For
   Chatterbox pacing use `CHATTERBOX_EXAGGERATION` / `CHATTERBOX_CFG_WEIGHT`.
 
+## Article capture and podcast delivery
+
+- **Paste:** open **Articles**, paste a public HTTP(S) article URL and submit.
+  The job uses the configured system-default narrator, local/free rendering and
+  MP3 output automatically.
+- **Send:** send an article URL to the configured Telegram bot. The webhook
+  accepts the URL only when Telegram supplies the configured secret header and
+  the incoming chat ID matches `TELEGRAM_CHAT_ID`; text, captions and Telegram
+  `text_link` entities are supported.
+- **Subscribe:** use `PUBLIC_BASE_URL/api/articles/rss` (currently
+  `https://audio.magnusfamily.co.uk/api/articles/rss`). Podcast clients cannot
+  complete interactive Pangolin SSO, so the exact feed and enclosure paths are
+  anonymous. Treat possession of the feed URL as read access to every published
+  article narration.
+- **Pangolin:** keep SSO on for the resource. Add ordered ACCEPT path rules only
+  for `api/articles/rss`, `api/articles/audio/*/*`, and
+  `api/telegram/webhook`. A request to `/api/jobs` on the public hostname must
+  still redirect to SSO. The webhook itself must return `401` without
+  `X-Telegram-Bot-Api-Secret-Token`.
+- **Telegram registration:** call the official Bot API `setWebhook` with the
+  HTTPS callback URL and the existing `TELEGRAM_WEBHOOK_SECRET`; then require
+  `getWebhookInfo.url` to match and `last_error_message` to be empty. Never put
+  the token or secret in source, logs or this document.
+
+`PUBLIC_BASE_URL` is required behind a reverse proxy so RSS links and enclosure
+URLs use the public HTTPS origin. It must not include a trailing slash.
+
 ## Proving the delivery chain
 
 `bash scripts/e2e_proof.sh` renders one public-domain chapter on every free

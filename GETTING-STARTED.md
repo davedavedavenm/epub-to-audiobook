@@ -67,6 +67,24 @@ That's the whole thing. Everything below is optional.
 
 ---
 
+## Turn articles into a private podcast
+
+Open **Articles**, paste a public article URL, and submit it. The app fetches
+the readable text and automatically queues an MP3 using your current default
+narrator and the free local render target. You do not need to choose an engine
+for each article.
+
+If Telegram is configured, sending a URL to the bot does exactly the same thing.
+Only the configured owner chat is accepted. Completed article narrations appear
+in the RSS feed shown on the Articles screen; add that feed URL to your podcast
+app.
+
+When the app is behind Pangolin, keep the UI behind SSO but allow the exact RSS
+and audio-enclosure paths through without interactive authentication. Anyone
+who has that feed URL can listen to its episodes, so do not publish it openly.
+
+---
+
 ## How long does it take?
 
 Making an audiobook is real work for your computer — it's generating speech
@@ -100,7 +118,9 @@ automatically.
 Voices are grouped by **engine**. You don't have to care about this to start —
 but when you want the best result:
 
-- **Kokoro** — the default. Fast, clear, low effort. Great for a first run.
+- **Chatterbox Nano** — the default. A fast local CPU engine using the Beatrice
+  human-cloned British narrator.
+- **Kokoro** — fast, clear and useful for comparison, but no longer the default.
 - **Chatterbox Turbo** — voice-cloned British narrators (Arthur, Edmund,
   Harriet, Beatrice). Excellent for long books; runs on CPU or GPU. Enable with
   the `chatterbox` profile.

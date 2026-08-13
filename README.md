@@ -31,6 +31,7 @@ For current build state and remaining work see [STATUS.md](STATUS.md).
 - **Studio Console Web UI** - modern dark obsidian slate theme with Google Fonts (Plus Jakarta Sans & JetBrains Mono)
 - **Dedicated Articles Tab (`📰 Articles`)** - paste any article URL for instant narration, with fast QA bypass (sub-minute synthesis)
 - **Podcast RSS 2.0 Feed (`/api/articles/rss`)** - automatic podcast feed for streaming articles directly in Pocket Casts, Overcast, Apple Podcasts, or Audiobookshelf
+- **Owner-only Telegram capture** - send the bot an article URL and it enters the same local/default-voice article queue as the Articles tab
 - **Library Batch Management** - select all library ebooks, pick narrators and engines, and batch convert in one click
 - **Studio Web Audio Player** - sticky glassmorphic bottom bar for listening to audiobooks, articles, and voice auditions across tabs with playback speed controls (1.0x–2.0x)
 
@@ -122,9 +123,11 @@ web Settings UI, and is never triggered by queue length. See
 The app is intentionally passwordless on a trusted LAN. If it is exposed
 outside that LAN, put it behind an authenticated reverse proxy such as Pangolin
 SSO and include that public hostname in `APP_TRUSTED_HOSTS`; do not stack an
-application HTTP Basic prompt behind proxy SSO. Podcast RSS/audio and
-health/version probes remain public so podcast clients and container health
-checks work. Article URL ingest accepts public HTTP(S) destinations only and
+application HTTP Basic prompt behind proxy SSO. Podcast RSS/audio must bypass
+SSO by narrowly scoped path rules because podcast clients cannot complete an
+interactive login; the Telegram callback needs its own exact-path exception
+and remains protected by Telegram's secret header plus the owner chat ID.
+Article URL ingest accepts public HTTP(S) destinations only and
 validates each redirect against DNS rebinding and local/private address access.
 
 First run of each engine downloads its model once (Kokoro ~, Chatterbox
@@ -158,7 +161,7 @@ STACK_PATH=/home/dave/ai/lab/stacks/epub-to-audiobook   # or wherever you like
 git clone https://github.com/davedavedavenm/epub-to-audiobook.git "$STACK_PATH"
 cd "$STACK_PATH"
 cp .env.example .env
-./scripts/deploy.sh            # builds webapp/worker + piper; set ENABLE_CHATTERBOX_PROFILE=1 for more
+./scripts/deploy.sh            # builds webapp/worker + Chatterbox Nano; optional engines stay opt-in
 ./scripts/smoke-check.sh http://localhost:8881
 ```
 
@@ -203,6 +206,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` / `AUDIOBOOKSHELF_USER` / `AUDIOBOOKSHELF_PORT` | Audiobookshelf rsync sync target |
 | `LIBRARY_DIR` | Folder of ebooks to browse (default: `/mnt/openbooks`) |
 | `APP_TRUSTED_HOSTS` | Comma-separated Flask host allowlist (LAN addresses and any Pangolin/reverse-proxy hostname; no ports) |
+| `PUBLIC_BASE_URL` | Canonical public HTTPS origin used in RSS/channel/enclosure URLs when deployed behind Pangolin or another reverse proxy |
 | `GPU_RENDER_ENABLED` | Environment-only host-admin gate for a separate manual paid Vast.ai action (default `0` / off; unavailable through Settings; queueing never provisions) |
 | `AUTOSCALE_COST_CAP` | Safety cap for a manually authorized paid-GPU session; not an autoscale trigger |
 | `ASR_VERIFY` | Structural source/audio comparison (default `1`); detects gross collapse/mismatch, never voice quality |
@@ -218,6 +222,9 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `/api/version` | GET | Build fingerprint (version + git SHA) |
 | `/api/preview/<voice_id>` | GET | Voice preview audio |
 | `/api/convert` | POST | Start conversion (upload) |
+| `/api/articles/rss` | GET | Podcast RSS feed of completed article narrations |
+| `/api/articles/narrate_url` | POST | Fetch a public article and queue it with the current local defaults |
+| `/api/telegram/webhook` | POST | Secret- and owner-validated Telegram article capture callback |
 | `/api/library` / `/api/library/convert` | GET / POST | List / convert library books |
 | `/api/jobs` | GET | List jobs |
 | `/api/jobs/<id>/cancel` `/retry` `/delete` `/download` `/sync` `/logs` | — | Job actions |

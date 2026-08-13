@@ -135,6 +135,11 @@ Chatterbox Nano is the default production engine, and **Beatrice (Nano)** (`uk_f
 
 Web article URL ingest (`POST /api/articles/narrate_url`) and short content (< 15,000 chars) skip post-flight ASR verification by default. Generated article audio is automatically published to the Podcast RSS 2.0 feed (`/api/articles/rss`).
 
+The Articles-tab paste action and owner-only Telegram capture both use the same
+queue helper and the current system default narrator. They always create a
+local, free, MP3 article job; neither path may choose a paid/cloud target or
+inherit the legacy SQLite `kokoro` default accidentally.
+
 **Why:** Short articles do not suffer from multi-chapter drift, and skipping post-flight ASR reduces turnaround time from minutes to seconds.
 
 ## Offline Whisper ASR Caching — Active
@@ -228,6 +233,9 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 | **Unverified by ear** | Rendered accent clips exist; listen before promoting or rejecting. |
+| Pocket TTS 2.1 Peter Yearsley preset | **CPU screen; listening pending** | Complete RTF 1.033 clip exists. One >50-token warning makes long-form completeness unproven; cloning cannot be evaluated unless Dave accepts Kyutai's model terms. |
+| NeuTTS Air 1.4.1 Q4 + Jo | **CPU screen; listening pending** | Complete sentence-chunked RTF 4.929 clip exists. Whole-passage input truncated, so chunking is mandatory; Arthur identity is untested because his exact reference transcript is unavailable. |
+| KittenTTS 0.8.1 Jasper/Rosie | **CPU screen; listening pending** | Complete RTF 2.304/1.761 clips exist. Preset-only/no-clone boundary means it must win by ear as-is; no UK identity claim. |
 | Higgs Audio V2 | **Reserve, not finalist** | Usable but seed-dependent seams. Reopen only for a materially improved official release/runtime or a book-specific audition. |
 | OmniVoice current weights/path | **Short-form hold** | Accents were good; CPU RTF ~9 and non-commercial weights block normal books. Reconsider on official performance/licence change or a bounded short use. |
 | EdgeTTS through `edge-tts` | **Conditional hold** | Free direct cost and accents were acceptable, but the interface is unofficial/fragile and proper nouns failed. Re-test only with a pronunciation fix and current service docs. |
@@ -315,12 +323,15 @@ The app is intentionally passwordless on the trusted LAN. External browser
 access uses Pangolin SSO at `audio.magnusfamily.co.uk`; the application must not
 add a second password prompt behind it. Flask trusted-host validation includes
 the LAN names/addresses and the Pangolin hostname, and browser writes retain
-same-origin enforcement. Podcast RSS/audio and health/version routes remain
-public at the application and may bypass Pangolin SSO by exact path rule so
-non-browser clients and health checks work.
+same-origin enforcement. Podcast delivery bypasses Pangolin SSO only for the
+exact feed path `api/articles/rss` and enclosure shape
+`api/articles/audio/*/*`; the health probe is evaluated by Pangolin against the
+private target. The Telegram callback has its own exact
+`api/telegram/webhook` bypass. All other public-host paths retain SSO.
 
 Telegram's public webhook requires the official
-`X-Telegram-Bot-Api-Secret-Token` header. Article URL ingest permits public
+`X-Telegram-Bot-Api-Secret-Token` header and the incoming chat must equal the
+configured owner `TELEGRAM_CHAT_ID`. Article URL ingest permits public
 HTTP(S) destinations only, checks all resolved addresses plus the connected
 peer, validates every redirect, and bounds response size.
 
@@ -336,7 +347,9 @@ server-side request-forgery controls.
 Articles are served via a standard RSS 2.0 podcast feed (`/api/articles/rss`) with
 audio enclosures for Pocket Casts/Overcast/ABS, and article URLs sent via Telegram
 webhook (`/api/telegram/webhook`) are automatically fetched, converted to EPUB,
-and enqueued for narration.
+and enqueued for narration. Deployments behind a proxy set `PUBLIC_BASE_URL` so
+the feed emits canonical HTTPS enclosure URLs instead of its internal LAN
+origin.
 
 **Why:** Decouples article narrations from the main audiobook shelf into a clean
 podcast feed and provides one-tap link capture from phone/desktop via Telegram.

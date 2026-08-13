@@ -43,12 +43,17 @@ recommendations. Exact upstream HEADs recorded before any experiment:
 
 | Candidate | Official facts | Repo boundary | Trial priority |
 |---|---|---|---:|
-| [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts) (`7fc13c7`) | MIT; 100M; CPU-first; two cores; streaming; voice cloning; official README says infinitely long input and about 6x realtime on an M4; does not support pause tags | Strongest genuinely new candidate. Zorin speed, UK clone identity, names and long-form pacing are unmeasured. | **1** |
-| [Neuphonic NeuTTS](https://github.com/neuphonic/neutts) (`ac69851`) | NeuTTS-Air is Apache-2.0, ~360M active / ~552M incl. embeddings; Q4 GGUF CPU route; instant cloning needs 3–15s clean WAV plus exact transcript; 2048-token context covers about 30s. Published CPU token benchmarks exclude the codec. | Viable candidate, but chunk joins and full-pipeline RTF must be measured; do not quote backbone tokens/s as audiobook speed. Nano uses a different custom licence. | **2** |
-| [KittenTTS](https://github.com/KittenML/KittenTTS) v0.8.1 / HEAD `9f3e0d8` | Apache-2.0 developer preview; ONNX CPU models at 15M/40M/80M; 24kHz; speed control; eight preset voices; no documented voice cloning. | Cheap screening candidate, but no verified UK narrator or identity cloning makes it less likely to beat Nano for this repo. | **3** |
+| [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts) (`7fc13c7`) | MIT; 100M; CPU-first; two cores; streaming; voice cloning; official README says infinitely long input and about 6x realtime on an M4; does not support pause tags | **Rendered:** official Peter Yearsley preset, 64.080 s in 66.220 s (RTF 1.033, 1307.6 MiB). It warned one input chunk exceeded its 50-token maximum; cloning weights require accepting Kyutai's model terms. Listening pending. | **1** |
+| [Neuphonic NeuTTS](https://github.com/neuphonic/neutts) (`ac69851`) | NeuTTS-Air is Apache-2.0, ~360M active / ~552M incl. embeddings; Q4 GGUF CPU route; instant cloning needs 3–15s clean WAV plus exact transcript; 2048-token context covers about 30s. Published CPU token benchmarks exclude the codec. | **Rendered:** official Jo reference, ten sentence chunks, 72.610 s in 357.875 s (RTF 4.929, 2842.4 MiB). Whole-passage input truncated; explicit chunking is mandatory. Phonemizer warnings and joins need listening. | **2** |
+| [KittenTTS](https://github.com/KittenML/KittenTTS) v0.8.1 / HEAD `9f3e0d8` | Apache-2.0 developer preview; ONNX CPU models at 15M/40M/80M; 24kHz; speed control; eight preset voices; no documented voice cloning. | **Rendered:** Jasper RTF 2.304 / 1047.9 MiB; Rosie RTF 1.761 / 1090.4 MiB. Presets only, no UK clone. Listening pending. | **3** |
 | [Chatterbox Multilingual V3](https://github.com/resemble-ai/chatterbox) (`5de7a54`, already pinned) | MIT; 500M; official release claims improved speaker similarity, accent preservation and reduced hallucination. | Not a new engine: already containerised and measured at CPU RTF 4.15–4.81. Existing clips need Dave's listening verdict before more work. | **0** |
 
 ### Controlled CPU-engine admission path
+
+The 2026-08-13 screens live in `evaluations/cpu-engines/`. Every run was a
+one-shot four-core CPU container with no GPU device, queue registration or paid
+fallback. A complete short clip is only a listening candidate. None of Pocket,
+NeuTTS or Kitten is a production engine or approved default.
 
 1. Run the official pinned runtime in an isolated evaluation container on
    Zorin: CPU-only, four-core cap, explicit memory cap, no queue registration,
