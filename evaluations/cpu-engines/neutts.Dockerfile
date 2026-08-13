@@ -3,6 +3,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ffmpeg git libopenblas-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 ENV CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS"
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.8.0 torchaudio==2.8.0 torchao==0.12.0
 RUN pip install --no-cache-dir "neutts[llama,onnx]==1.4.1" soundfile==0.13.1
 RUN git clone --filter=blob:none --no-checkout https://github.com/neuphonic/neutts.git /upstream \
     && cd /upstream \
