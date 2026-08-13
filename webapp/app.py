@@ -37,51 +37,21 @@ TELEGRAM_WEBHOOK_SECRET = os.environ.get('TELEGRAM_WEBHOOK_SECRET', '')
 TTS_PROXY_URL = os.environ.get('TTS_PROXY_URL', '').strip().rstrip('/')
 
 app = Flask(__name__)
-APP_AUTH_USERNAME = os.environ.get('APP_AUTH_USERNAME', 'dave')
-APP_AUTH_PASSWORD = os.environ.get('APP_AUTH_PASSWORD', '')
 _trusted_hosts = [host.strip() for host in
                   os.environ.get('APP_TRUSTED_HOSTS', '').split(',') if host.strip()]
 if _trusted_hosts:
     app.config['TRUSTED_HOSTS'] = _trusted_hosts
 
 
-def _public_request_path(path: str) -> bool:
-    return (
-        path in ('/api/health', '/api/version', '/api/articles/rss',
-                 '/rss/podcasts', '/api/telegram/webhook')
-        or path.startswith('/rss/articles/')
-        or path.startswith('/api/articles/audio/')
-    )
-
-
 @app.before_request
-def require_app_authentication():
-    """Protect the UI and APIs with environment-owned HTTP Basic auth.
+def enforce_same_origin_writes():
+    """Reject browser writes from another origin.
 
-    Podcast feeds/audio and health/version probes stay public. Telegram has
-    its own official webhook-secret check in the route itself.
+    The application is intentionally passwordless on the trusted LAN. External
+    identity belongs to the Pangolin resource in front of the public hostname;
+    stacking HTTP Basic here breaks that SSO flow. Scripts without an Origin
+    header remain usable for local operations.
     """
-    if _public_request_path(request.path):
-        return None
-    if app.config.get('TESTING') and app.config.get('AUTH_BYPASS_FOR_TESTS', True):
-        return None
-    if not APP_AUTH_PASSWORD:
-        return jsonify({'error': 'Application authentication is not configured'}), 503
-
-    supplied = request.authorization
-    valid = bool(
-        supplied
-        and hmac.compare_digest(supplied.username or '', APP_AUTH_USERNAME)
-        and hmac.compare_digest(supplied.password or '', APP_AUTH_PASSWORD)
-    )
-    if not valid:
-        return Response(
-            'Authentication required', 401,
-            {'WWW-Authenticate': 'Basic realm="EPUB to Audiobook", charset="UTF-8"'},
-        )
-
-    # Browser-originated writes must come from this app. Requests without an
-    # Origin header (curl, scripts, native clients) still require Basic auth.
     if request.method not in ('GET', 'HEAD', 'OPTIONS'):
         origin = request.headers.get('Origin')
         if origin:

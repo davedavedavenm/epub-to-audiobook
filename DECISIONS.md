@@ -296,21 +296,40 @@ single-chapter recovery path that could overwrite a whole-book QA report. The
 old entry overstated both implementation and evidence. Retired by Dave on
 2026-08-13 after the audit explanation.
 
-## LAN authentication, podcast access and article SSRF boundary — Active
+## Application HTTP Basic authentication — Superseded
 
 The UI and private APIs require environment-owned HTTP Basic credentials. An
 empty password fails closed; the settings database cannot set or reveal it.
 Podcast RSS/audio plus health/version probes remain public for non-browser
-clients. Telegram's public webhook requires the official
+clients.
+
+**Superseded 2026-08-13:** this ignored the actual deployment boundary. The app
+is LAN-only and its public hostname already has Pangolin SSO. Stacking HTTP
+Basic behind Pangolin created a second incompatible login and made Pangolin's
+health check report the healthy target as unhealthy. Dave explicitly reversed
+this after testing the real public URL.
+
+## LAN, Pangolin SSO, podcast access and article SSRF boundary — Active
+
+The app is intentionally passwordless on the trusted LAN. External browser
+access uses Pangolin SSO at `audio.magnusfamily.co.uk`; the application must not
+add a second password prompt behind it. Flask trusted-host validation includes
+the LAN names/addresses and the Pangolin hostname, and browser writes retain
+same-origin enforcement. Podcast RSS/audio and health/version routes remain
+public at the application and may bypass Pangolin SSO by exact path rule so
+non-browser clients and health checks work.
+
+Telegram's public webhook requires the official
 `X-Telegram-Bot-Api-Secret-Token` header. Article URL ingest permits public
 HTTP(S) destinations only, checks all resolved addresses plus the connected
 peer, validates every redirect, and bounds response size.
 
 **Official basis:** Flask 3.1 request lifecycle/security documentation,
 Python `ipaddress`/`urllib.parse`, Requests redirect controls, and Telegram Bot
-API `setWebhook(secret_token=...)`, read 2026-08-13. This closes the audited
-unauthenticated mutation and server-side request-forgery paths without breaking
-podcast clients.
+API `setWebhook(secret_token=...)`, plus Pangolin's public-resource
+authentication and ordered path-rule documentation, read 2026-08-13. This
+keeps identity at the real ingress boundary without weakening webhook or
+server-side request-forgery controls.
 
 ## Article Podcast RSS Feed & Telegram Capture (#42) — Active
 

@@ -99,7 +99,7 @@ account required.
 git clone https://github.com/davedavedavenm/epub-to-audiobook.git
 cd epub-to-audiobook
 
-# 2. Configure. Set APP_AUTH_PASSWORD before exposing the web UI.
+# 2. Configure. Add any reverse-proxy hostname to APP_TRUSTED_HOSTS.
 cp .env.example .env
 
 # 3. Start. Enable the engines you want via profiles:
@@ -119,12 +119,13 @@ one. Optional paid Vast rendering is off by default, cannot be enabled in the
 web Settings UI, and is never triggered by queue length. See
 [GPU-SAFETY.md](GPU-SAFETY.md).
 
-The UI and private APIs use HTTP Basic authentication from
-`APP_AUTH_USERNAME` / `APP_AUTH_PASSWORD`. An empty production password fails
-closed. Podcast RSS/audio and health/version probes remain public so podcast
-clients and container health checks work. Article URL ingest accepts public
-HTTP(S) destinations only and validates each redirect against DNS rebinding and
-local/private address access.
+The app is intentionally passwordless on a trusted LAN. If it is exposed
+outside that LAN, put it behind an authenticated reverse proxy such as Pangolin
+SSO and include that public hostname in `APP_TRUSTED_HOSTS`; do not stack an
+application HTTP Basic prompt behind proxy SSO. Podcast RSS/audio and
+health/version probes remain public so podcast clients and container health
+checks work. Article URL ingest accepts public HTTP(S) destinations only and
+validates each redirect against DNS rebinding and local/private address access.
 
 First run of each engine downloads its model once (Kokoro ~, Chatterbox
 ~700 MB, TADA ~5 GB), cached in a Docker volume.
@@ -201,8 +202,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | OpenAI-compatible LLM for the smart chapter guard, metadata + adaptive pronunciation. Optional (heuristic fallback). Free: Groq or Gemini — see `.env.example` |
 | `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` / `AUDIOBOOKSHELF_USER` / `AUDIOBOOKSHELF_PORT` | Audiobookshelf rsync sync target |
 | `LIBRARY_DIR` | Folder of ebooks to browse (default: `/mnt/openbooks`) |
-| `APP_AUTH_USERNAME` / `APP_AUTH_PASSWORD` | Required environment-owned UI/API credentials; an empty password fails closed |
-| `APP_TRUSTED_HOSTS` | Optional comma-separated Flask host allowlist (hostnames/IPs without ports) |
+| `APP_TRUSTED_HOSTS` | Comma-separated Flask host allowlist (LAN addresses and any Pangolin/reverse-proxy hostname; no ports) |
 | `GPU_RENDER_ENABLED` | Environment-only host-admin gate for a separate manual paid Vast.ai action (default `0` / off; unavailable through Settings; queueing never provisions) |
 | `AUTOSCALE_COST_CAP` | Safety cap for a manually authorized paid-GPU session; not an autoscale trigger |
 | `ASR_VERIFY` | Structural source/audio comparison (default `1`); detects gross collapse/mismatch, never voice quality |

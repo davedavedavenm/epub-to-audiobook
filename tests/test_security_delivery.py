@@ -1,4 +1,3 @@
-import base64
 import sys
 from pathlib import Path
 from zipfile import ZipFile
@@ -10,32 +9,20 @@ from app import app, get_db, save_job  # noqa: E402
 from qa_report import merge_qa_reports  # noqa: E402
 
 
-def _basic(username='dave', password='correct-horse'):
-    token = base64.b64encode(f'{username}:{password}'.encode()).decode()
-    return {'Authorization': f'Basic {token}'}
-
-
-def test_private_api_requires_environment_auth(monkeypatch):
-    monkeypatch.setattr(appmod, 'APP_AUTH_USERNAME', 'dave')
-    monkeypatch.setattr(appmod, 'APP_AUTH_PASSWORD', 'correct-horse')
-    app.config.update(TESTING=True, AUTH_BYPASS_FOR_TESTS=False)
+def test_lan_ui_and_api_are_intentionally_passwordless():
+    app.config.update(TESTING=True)
     with app.test_client() as client:
-        denied = client.get('/api/jobs')
-        assert denied.status_code == 401
-        assert denied.headers['WWW-Authenticate'].startswith('Basic ')
-        assert client.get('/api/jobs', headers=_basic()).status_code == 200
+        assert client.get('/').status_code == 200
+        assert client.get('/api/jobs').status_code == 200
         assert client.get('/api/health').status_code in (200, 503)
-    app.config['AUTH_BYPASS_FOR_TESTS'] = True
 
 
-def test_cross_origin_write_is_refused(monkeypatch):
-    monkeypatch.setattr(appmod, 'APP_AUTH_PASSWORD', 'correct-horse')
-    app.config.update(TESTING=True, AUTH_BYPASS_FOR_TESTS=False)
-    headers = {**_basic(), 'Origin': 'https://attacker.example'}
+def test_cross_origin_write_is_refused():
+    app.config.update(TESTING=True)
+    headers = {'Origin': 'https://attacker.example'}
     with app.test_client() as client:
         response = client.post('/api/queue/pause', headers=headers)
         assert response.status_code == 403
-    app.config['AUTH_BYPASS_FOR_TESTS'] = True
 
 
 def test_telegram_webhook_requires_official_secret_header(monkeypatch):

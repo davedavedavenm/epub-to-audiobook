@@ -28,8 +28,8 @@
 > `--auto-rerender` path is removed; single-chapter recovery atomically merges
 > whole-book QA evidence; article RSS now encloses a deliberately public,
 > validated audio route; EPUB overlays map only renderable chapters and use
-> `ffprobe` duration from the finished media; HTTP Basic auth and trusted-host /
-> same-origin write checks protect the UI and private APIs; Telegram uses its
+> `ffprobe` duration from the finished media; trusted-host and same-origin write
+> checks protect the app while Pangolin SSO protects its public URL; Telegram uses its
 > official webhook-secret header; and article fetch validates every DNS,
 > connected-peer and redirect address while bounding response size. Vibe's
 > rejected cfg 1.3 is still not being replaced until the blind cfg 2/3 chapter
@@ -78,12 +78,20 @@
 > Compose config, shell syntax, staged Gitleaks and `git diff --check` pass. A
 > real Zorin `ffprobe` probe and a real bounded public fetch also passed. The
 > whole stack deployed commit `80b0fac`; live checks proved exact SHA/overall
-> health, authenticated and rejected private access, Host and Origin rejection,
+> health, Host and Origin rejection,
 > Telegram secret enforcement, loopback SSRF rejection, five RSS enclosures and
 > a successful `206` request against the first enclosure. Both webapp and worker
 > are healthy with zero restarts. The corrected free-Kaggle Vibe cfg 2-vs-3
 > full-chapter blind test is still running; no default will change before Dave
 > listens.
+
+> **Authentication correction (2026-08-13):** application HTTP Basic was
+> removed after testing the actual deployment boundary. The app is intentionally
+> passwordless on the trusted LAN; `audio.magnusfamily.co.uk` already has
+> Pangolin SSO. The stacked prompt was redundant, broke the public login flow,
+> and made Pangolin's `/` health check report `unhealthy` on an otherwise healthy
+> service. Same-origin writes, trusted hosts, Telegram secret validation, SSRF
+> controls and all paid-GPU guards remain in force.
 
 > ## 2026-08-13 `cfg_scale` is the VibeVoice speaker-similarity lever — 1.3 REJECTED BY EAR
 >

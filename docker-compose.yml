@@ -405,10 +405,8 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
-      # UI/API authentication is environment-owned; never store the password
-      # in the unauthenticated settings database. Empty password fails closed.
-      - APP_AUTH_USERNAME=${APP_AUTH_USERNAME:-dave}
-      - APP_AUTH_PASSWORD=${APP_AUTH_PASSWORD:-}
+      # LAN access is intentionally passwordless. The public hostname is
+      # protected by Pangolin SSO; do not stack HTTP Basic behind it.
       - APP_TRUSTED_HOSTS=${APP_TRUSTED_HOSTS:-}
       - KOKORO_URL=${KOKORO_URL:-http://kokoro-tts:8880/v1}
       # If set (e.g. http://tts-proxy:8882), conversion containers will send TTS requests via the proxy
