@@ -126,6 +126,12 @@ playbook but skips these is a net negative.
     preprocessing, cache freshness and output transcoding. Then render a direct
     upstream-vs-app A/B. Report the listening verdict separately from the
     root-cause conclusion; leave the cause open when the A/B has not been heard.
+14. **A voice is offered only after its exact preview is cached and playable.**
+    The Voices screen is an audition surface, not a synthesis trigger: a Play
+    click must never start cold generation. After adding, renaming or changing
+    a voice, generate its persisted preview, verify the exact ID through
+    `/api/voices`, open `/api/preview/<voice_id>` yourself, and record the
+    ready/total count. Never describe a wiped or incomplete cache as ready.
 
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.

@@ -217,6 +217,15 @@ nothing else here can do.
 - **No accent controls.** It will not solve Irish or Welsh. Its value here is
   long-form coherence and multi-speaker, not accent.
 
+**Listening update, 2026-08-13:** the pinned long-form blind comparison selected
+`cfg_scale=2.0` (B). Dave heard it as much clearer and otherwise excellent,
+apart from one brief garble after “romantic felicity”. `cfg_scale=3.0` (A) was
+muffled and distant even though the voice/emotion itself was acceptable;
+`1.3` had already been rejected. Acoustic similarity metrics had favoured 3.0,
+so this is a useful warning: pitch/timbre statistics cannot replace listening.
+Use 2.0 for further Vibe tests, but keep the production/default decision open
+until the isolated defect is checked through the real app path.
+
 **The lesson, recorded because it is the same one three times over:** I keep
 converting "this doesn't solve the problem I'm currently fixated on" into "this
 isn't worth looking at". VibeVoice does not fix accents — and it is still
@@ -301,6 +310,11 @@ recorded speech if any is available.
 | Irish, South African or Australian, online | Edge remains an acceptable **accent** baseline, but is not approved for Chinese-business nonfiction because company-name pronunciation failed. It is not local. |
 | Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
 | British/general narration, local | **Beatrice (Nano)** (`uk_female_samuel_nano` via Chatterbox Nano) is the system default narrator. Fast CPU inference (~0.87x RTF) with human-cloned British voice. |
+
+The Voices page is an audition surface, not a synthesis trigger. It offers only
+voices with a persisted non-trivial preview; Play must be immediate. Paid or
+network engines are never warmed in the background merely because their voice
+definitions exist.
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,

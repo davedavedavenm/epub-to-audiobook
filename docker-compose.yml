@@ -280,7 +280,7 @@ services:
       retries: 5
       start_period: 60s
 
-  # VibeVoice 1.5B — long-form finalist; corrected cfg ranking pending. GPU-only and opt-in;
+  # VibeVoice 1.5B — cfg 2.0 won the pinned long-form listening test. GPU-only and opt-in;
   # the default Zorin stack remains local/free Chatterbox Nano. Full-book use
   # normally targets free Kaggle. This service is for an explicitly available
   # local CUDA host and never provisions or rents a GPU.
@@ -296,7 +296,7 @@ services:
     environment:
       - VIBEVOICE_MODEL=${VIBEVOICE_MODEL:-microsoft/VibeVoice-1.5B}
       - VIBEVOICE_DTYPE=${VIBEVOICE_DTYPE:-float16}
-      - VIBEVOICE_CFG_SCALE=${VIBEVOICE_CFG_SCALE:-1.3}
+      - VIBEVOICE_CFG_SCALE=${VIBEVOICE_CFG_SCALE:-2.0}
       - VIBEVOICE_DDPM_STEPS=${VIBEVOICE_DDPM_STEPS:-10}
     volumes:
       - vibevoice-cache:/data/hf

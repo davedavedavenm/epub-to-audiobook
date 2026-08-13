@@ -1,4 +1,4 @@
-# PLAN V5 — what is next (2026-07-27)
+# PLAN V5 — what is next (reviewed 2026-08-13)
 
 Successor to PLAN-V4, which is complete. V4 was about **truth** — subsystems
 that reported success while doing nothing. V5 is about **automation and reach**:
@@ -29,31 +29,13 @@ incl. the `_trim_leadin` bug) · **#40** (duplicate-book naming).
 
 ---
 
-## 1. Automatic re-render of chunks that fail verification — #41
+## 1. Automatic ASR-driven re-render — Rejected/removed (#41 closed)
 
-The highest-value item, and the direct answer to the constraint above.
-
-The ASR layer already transcribes every chunk and computes divergence from the
-source text. Today that produces a **report**. It should produce a **fix**.
-
-- [ ] 1.1 On a chunk whose divergence exceeds threshold, re-render it with a
-      different seed and keep the better of the two by WER.
-- [ ] 1.2 Cap retries (2–3) so a pathological chunk cannot stall a book.
-- [ ] 1.3 Log every retry with before/after WER — silent self-healing is its own
-      kind of dishonesty, and this project has been bitten by that before.
-- [ ] 1.4 Test: a chunk that transcribes badly triggers exactly one re-render;
-      a clean chunk triggers none.
-
-**Why it works:** the defects seen today — TADA saying "Ellis" for "Alice", the
-stray `LEADIN` leaking through — are *sampling* artefacts, not systematic ones.
-A different seed usually gets them right. This attacks the whole class without
-naming any instance.
-
-**Known limit, must be written into the code:** ASR normalises a mispronounced
-proper noun back to the expected word. Verified 2026-07-27 — Whisper transcribed
-a clearly-wrong "Alice" as "Alice", and a deliberately mis-spelled "Aliss" as
-"Alice" too. So this catches drops, insertions and gross substitutions, **not**
-pronunciation. Do not let a clean WER report imply a clean render.
+The implementation existed but was removed on 2026-08-13. WER cannot choose
+the better-sounding render: it normalises audible mispronunciations and also
+flags acceptable speech. Keeping it as an automatic replacement oracle would
+let an algorithm overwrite audio Dave had never heard. ASR remains structural
+evidence for gross truncation, repetition or mismatch only.
 
 ## 2. Articles: RSS feed, so any podcast app works — #42
 
@@ -68,17 +50,17 @@ pronunciation. Do not let a clean WER report imply a clean render.
 Dave: *"probably also worth deciding whether the web UI is best suited to
 articles at the moment. My suggestion is it isn't."*
 
-- [ ] 3.1 Send a link to the bot → it converts and replies with the audio.
-- [ ] 3.2 Reuse the existing Telegram integration; no new auth, no new app.
-- [ ] 3.3 Keep the URL tab for bulk work; it stops being the capture path.
+- [x] 3.1 Send a link to the owner bot → it queues the article with local defaults.
+- [x] 3.2 Reuse the existing Telegram integration and require Telegram's official
+      webhook-secret header plus the configured owner chat ID.
+- [x] 3.3 Keep the Articles URL paste path; both routes share one queue function.
 
 **Why:** opening a web UI to save a link is the wrong shape for "as and when I
 come across something". Telegram already works from phone and desktop.
 
 ## 4. Chatterbox Multilingual V3 for accents — #43
 
-- [ ] 4.1 Install V3 (500M) and A/B against Nano `cfg_weight=0` on identical
-      references.
+- [x] 4.1 Install V3 (500M) and render Irish/South-African auditions.
 - [ ] 4.2 If it wins, make it the accented-narrator engine.
 - [ ] 4.3 Expose `cfg_weight` per voice — accented narrators default `0`,
       ordinary narrators stay `0.5`.
@@ -120,6 +102,34 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       in-app tab and menu selection. Navigation must not destroy or orphan it.
 - [x] 7.4 Keep the control accessible and synchronized with playing, paused and
       ended events. Verify pause → navigate → resume from the same position.
+
+## 8. Voice cache is the audition contract
+
+- [x] 8.1 Play endpoints serve only persisted, non-trivial MP3s; they do not
+      cold-render on click.
+- [x] 8.2 Expose configured ready/total counts and hide unready auditions.
+- [x] 8.3 Warm healthy free local engines with load throttling, skip-existing
+      behavior and an off-switch; never auto-call paid/network engines.
+- [~] 8.4 Keep the live production cache at 100% of configured/offered voices
+      and verify each missing optional-engine artifact after deployment.
+
+## 9. VibeVoice selected setting through the production path
+
+- [x] 9.1 Blind cfg 2.0 versus 3.0 on identical long-form text. cfg 2.0 won;
+      cfg 3.0 was muffled/distant.
+- [x] 9.2 Set the VibeVoice default to cfg 2.0.
+- [ ] 9.3 Reproduce or clear the brief garble after “romantic felicity” with a
+      direct-upstream versus app-path A/B before promoting VibeVoice.
+- [ ] 9.4 Re-rank the corrected Vibe path against Qwen on the same text.
+
+## 10. Public onboarding and support
+
+- [x] 10.1 Make the first-run command start the actual default engine profile.
+- [x] 10.2 Add health, engine and preview-cache proof commands plus evidence to
+      collect when opening an issue.
+- [x] 10.3 Document Pangolin/SSO RSS boundaries and the audiobook-first
+      Goodreads/LazyLibrarian integration without committing private topology
+      or feed tokens.
 
 ---
 

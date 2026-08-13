@@ -52,14 +52,17 @@ quality still requires Dave's listening verdict.
 tuning the wrong default because agents experimented before reading the manual.
 Mandated directly by Dave on 2026-08-13.
 
-## VibeVoice `cfg_scale` — 1.3 rejected; production choice open
+## VibeVoice `cfg_scale` — 2.0 selected; 1.3 and 3.0 rejected — Active
 
-`cfg_scale=1.3` is **rejected**. Both **2.0 and 3.0 passed a short 190-word
-listening screen**; 3.0 tracked the Arthur reference more closely on pitch and
-range, while 2.0 scored marginally better on structural ASR. Dave: *"2 and 3
-are fine. 1 is trash."* This does not select a production default: the pinned
-full-chapter blind A/B must be heard first, then the winning setting must pass
-through the actual app path.
+Use **`cfg_scale=2.0`** for VibeVoice. The pinned 351-word blind test unblinded
+as A=`3.0`, B=`2.0`. Dave selected B: *"much better ... otherwise perfect.
+really really good."* A was rejected as muffled and distant despite an
+acceptable/emotional voice. The default in Compose is therefore 2.0.
+
+This selects the generation setting, not the production narrator. B contained
+one brief garble after “romantic felicity”; VibeVoice remains provisional until
+that exact defect is checked through direct-upstream versus app-path rendering.
+Chatterbox Nano/Beatrice remains the system default meanwhile.
 
 **Why:** the pinned community runtime exposes `cfg_scale`; Microsoft's official
 TTS documentation does not define it as a supported tuning contract. Its role
@@ -67,10 +70,11 @@ here is therefore an empirical repo finding, not an official Microsoft fact.
 At 1.3 the clone's pitch IQR was 14.4 against the reference's 72.8 (nearly
 monotone). Raising it moved pitch, range and brightness toward the reference
 without a structural intelligibility loss in that short test. 1.3 was inherited
-unexamined from an early kernel. Above 3.0 is untested, and cfg 3.0 still carried
-only about half the reference's pitch range.
+unexamined from an early kernel. The longer human test overruled 3.0's more
+reference-like pitch statistics: acoustic metrics did not predict its muffled,
+distant sound. Above 3.0 is untested and has no reason to be pursued.
 
-## Prior VibeVoice listening verdicts — SUPERSEDED, need re-run
+## Prior VibeVoice listening verdicts — Superseded
 
 Every VibeVoice quality judgement recorded before 2026-08-13 was made at
 `cfg_scale=1.3` (now rejected) and, where the audition passage was used, on text
@@ -78,10 +82,39 @@ that costs Vibe roughly 0.13 ASR. This includes the 2026-07-29 full-chapter
 finalist gate and the "Vibe provisional quality leader / Qwen consistency
 leader" ranking.
 
-**Do not cite those verdicts as current.** Re-run the comparison at
-`cfg_scale` 2.0–3.0 before ranking Vibe against Qwen again. The handicap ran
-against Vibe, so a fair re-run can only improve its standing — but it has to be
-run, not assumed.
+**Do not cite those verdicts as current.** The corrected cfg 2/3 comparison has
+now selected 2.0, but Vibe versus Qwen and Vibe's production/default status
+remain open until the selected setting passes the exact app path.
+
+## Voice auditions are persisted before they are offered — Active
+
+A voice Play button must never begin cold synthesis. The audition UI offers a
+voice only when `/data/previews/<voice-id>.mp3` exists and is non-trivial; the
+API exposes configured ready/total counts. Healthy free local families may be
+warmed in the background with load throttling, skip-existing behavior and an
+off-switch. Startup maintenance must never call paid Polly/Inworld voices or a
+network Edge voice without explicit operator action. Unconfigured paid engines
+remain hidden.
+
+**Why:** Dave requires every offered voice to be testable immediately. Previous
+cold previews took minutes, timed out after successful synthesis, saturated the
+host and made healthy services look offline.
+
+## Existing audiobook first; generation only as fallback — Active
+
+For a reading-list integration, request an **audiobook only** first. Prefer the
+free torrent path, then the existing Usenet fallback. Do not simultaneously
+mark the ebook Wanted and do not auto-queue TTS merely because a book was added
+to Goodreads. This app is used only after no acceptable existing audiobook is
+available; the absence/quality judgement is operator evidence, not something
+ASR or a search timeout can decide.
+
+For new Goodreads accounts, use the account-specific `to-read` RSS feed as a
+LazyLibrarian RSS/WishList provider with `DLTYPES=A`. Goodreads no longer
+issues new API keys and LazyLibrarian documents its supplied key as read-only,
+so OAuth shelf sync is not a valid new-account setup. The feed URL may contain
+a private token and must never be committed. Operational ownership remains in
+the sibling `infra` repo.
 
 ## VibeVoice generation settings — Active
 

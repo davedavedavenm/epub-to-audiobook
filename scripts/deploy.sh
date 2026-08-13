@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REF="${1:-master}"
-VERSION="${APP_VERSION:-2.0.0}"
+VERSION="${APP_VERSION:-2.1.0}"
 REPO_URL="${2:-https://github.com/davedavedavenm/epub-to-audiobook.git}"
 STACK_PATH="${3:-/home/dave/ai/lab/stacks/epub-to-audiobook}"
 

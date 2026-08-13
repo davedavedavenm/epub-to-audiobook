@@ -18,6 +18,7 @@ WORKER = (ROOT / 'webapp' / 'worker.py').read_text(encoding='utf-8')
 GPU_MANAGER = (ROOT / 'webapp' / 'gpu_manager.py').read_text(encoding='utf-8')
 AGENT_RULES = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
 DECISIONS = (ROOT / 'DECISIONS.md').read_text(encoding='utf-8')
+INDEX = (ROOT / 'webapp' / 'templates' / 'index.html').read_text(encoding='utf-8')
 
 
 # --- incident 2026-07-07a: retries must actually run ---
@@ -220,13 +221,27 @@ def test_official_documentation_gate_is_mandatory():
 
 def test_startup_preview_cache_cannot_call_paid_engines():
     """Background maintenance may spend CPU, never money or internet quota."""
-    assert "auto_cache_engines = frozenset({'chatterbox', 'chatterbox_nano', 'tada'})" in APP
+    assert "auto_cache_engines = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada'})" in APP
     cache_block = APP[APP.index('def _cache_all_voices_background'):
                       APP.index('def background_startup')]
     assert "'polly'" not in cache_block
     assert "'inworld'" not in cache_block
     assert "'edge'" not in cache_block
     assert 'health.get' in cache_block
+
+
+def test_play_button_never_starts_cold_voice_synthesis():
+    """Auditions are an immediate persisted-cache read, never a hidden render."""
+    route = APP[APP.index("@app.route('/api/preview/<voice_id>')"):
+                APP.index("@app.route('/api/convert'")]
+    assert 'get_voice_preview(' not in route
+    assert '_preview_is_cached(voice_id)' in route
+    assert "'preview_cached': _preview_is_cached(voice_id)" in APP
+    assert 'v.preview_cached === true' in INDEX
+
+
+def test_vibevoice_uses_listening_selected_cfg_two():
+    assert 'VIBEVOICE_CFG_SCALE=${VIBEVOICE_CFG_SCALE:-2.0}' in COMPOSE
 
 
 def test_unknown_engine_cost_is_not_reported_as_free():

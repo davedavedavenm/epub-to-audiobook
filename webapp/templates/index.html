@@ -914,7 +914,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     function engineConfigured(e) { return !engineUnconfigured[e]; }
     // Voices we are willing to offer as a choice at all.
     function selectableVoices() {
-        return Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine));
+        return Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine) && v.preview_cached === true);
     }
     let libraryBooks = [];
     let selectedFile = null;
@@ -1420,24 +1420,25 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const allIds = usable.map(([id]) => id);
         const cmpA = online[0] || allIds[0] || '';
         const cmpB = online[1] || online[0] || allIds[1] || cmpA;
+        const uncachedConfigured = Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine) && v.preview_cached !== true);
         const blindCard = `
             <div class="card" id="blind-listening-test" style="margin-bottom:32px; border-color:color-mix(in srgb,var(--accent) 48%,var(--border));">
-                <p class="home-eyebrow">Ready to judge now</p>
+                <p class="home-eyebrow">Listening decision · 13 August 2026</p>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap;">
                     <div style="max-width:720px;">
-                        <h2 style="margin:0; font-size:1.45rem; letter-spacing:-.025em;">Blind long-form voice test</h2>
-                        <p style="margin:9px 0 0; color:var(--text-secondary); line-height:1.6;">Both clips read the same 351-word opening from <em>The Yellow Wallpaper</em>. They were cut at matching source words and checked for missing or repeated text. Listen for naturalness, pacing and whether you would tolerate the voice for a full book.</p>
+                        <h2 style="margin:0; font-size:1.45rem; letter-spacing:-.025em;">VibeVoice: cfg 2.0 selected</h2>
+                        <p style="margin:9px 0 0; color:var(--text-secondary); line-height:1.6;">Dave selected B as substantially clearer and otherwise excellent, with one short garble after “romantic felicity”. A was rejected as muffled and distant. The clips remain here as the audible record; the isolated B defect still needs an app-path check before VibeVoice becomes a production default.</p>
                     </div>
-                    <span class="li-tag done">Ready to play</span>
+                    <span class="li-tag done">B selected</span>
                 </div>
                 <div class="compare-grid">
                     <div class="compare-cell">
-                        <div class="compare-label"><span class="compare-tag">A</span><span>Blind clip A · 1:33</span></div>
-                        <audio controls preload="metadata" src="/api/sample/vibe_blind_A.mp3" aria-label="Play blind clip A"></audio>
+                        <div class="compare-label"><span class="compare-tag">A</span><span>Rejected · cfg 3.0 · 1:33</span></div>
+                        <audio controls preload="metadata" src="/api/sample/vibe_blind_A.mp3" aria-label="Play rejected VibeVoice cfg 3.0 clip"></audio>
                     </div>
                     <div class="compare-cell">
-                        <div class="compare-label"><span class="compare-tag b">B</span><span>Blind clip B · 1:39</span></div>
-                        <audio controls preload="metadata" src="/api/sample/vibe_blind_B.mp3" aria-label="Play blind clip B"></audio>
+                        <div class="compare-label"><span class="compare-tag b">B</span><span>Selected · cfg 2.0 · 1:39</span></div>
+                        <audio controls preload="metadata" src="/api/sample/vibe_blind_B.mp3" aria-label="Play selected VibeVoice cfg 2.0 clip"></audio>
                     </div>
                 </div>
             </div>
@@ -1547,7 +1548,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                                     <div class="voice-meta">${v.accent} - ${v.gender}</div>
                                     <div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div>
                                     <div class="paused-badge">Paused</div>
-                                    <div class="loading-badge">Generating sample — first play can take a few minutes…</div>
+                                    <div class="loading-badge">Loading cached sample…</div>
                                 </div>
                                 <button class="preview-btn" id="vb-${id}" onclick="playVoicePreview('${id}', this)" title="Listen to this voice" aria-label="Listen to ${escapeHtml(v.name)}">
                                     <span style="margin-left: 2px;">&#9654;</span>
@@ -1557,7 +1558,15 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     </div>
                 </div>
             `;
-        }).join('') + unconfiguredSection;
+        }).join('') + (uncachedConfigured.length ? `
+            <div class="engine-section" style="opacity:.72;">
+                <div class="engine-header">PREVIEW CACHE
+                    <span style="color:var(--ink-3); font-size:.8rem;">${uncachedConfigured.length} voice${uncachedConfigured.length === 1 ? '' : 's'} preparing</span>
+                </div>
+                <div style="font-size:.85rem; color:var(--ink-3); padding:6px 0 2px;">
+                    These voices are intentionally absent from the pickers until their persisted samples are ready. A Play button never starts a cold synthesis job.
+                </div>
+            </div>` : '') + unconfiguredSection;
         loadCloneList();
         syncPreviewUi();
     }
@@ -1682,7 +1691,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 const warn = (d.warnings || []).length
                     ? `<div style="margin-top:6px; color:#a56d0a;">${d.warnings.map(escapeHtml).join('<br>')}</div>` : '';
                 status.innerHTML = `<span class="ok">Saved as <b>${escapeHtml(d.voice_id)}</b> — ${d.seconds}s, ${d.rate}Hz. `
-                    + `Reload the page, then preview it below before rendering a book.</span>${warn}`;
+                    + `Its healthy local variants are caching now and will appear here only when they play instantly.</span>${warn}`;
                 fileEl.value = '';
                 loadCloneList();
             }
@@ -1940,12 +1949,12 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const original = btn.textContent;
         btn.disabled = true;
         try {
-            status.textContent = `Rendering ${voices[aId]?.name || aId}… first render can take a minute.`;
+            status.textContent = `Loading cached sample for ${voices[aId]?.name || aId}…`;
             let resp = await fetch(`/api/preview/${aId}`);
             if (!resp.ok) throw new Error('Voice A preview failed');
             comparisonPreviews.a = { voiceId: aId, blob: await resp.blob() };
             document.getElementById('compare-label-a').textContent = `${voices[aId]?.name || aId} (${voices[aId]?.accent || ''})`;
-            status.textContent = `Rendering ${voices[bId]?.name || bId}…`;
+            status.textContent = `Loading cached sample for ${voices[bId]?.name || bId}…`;
             resp = await fetch(`/api/preview/${bId}`);
             if (!resp.ok) throw new Error('Voice B preview failed');
             comparisonPreviews.b = { voiceId: bId, blob: await resp.blob() };

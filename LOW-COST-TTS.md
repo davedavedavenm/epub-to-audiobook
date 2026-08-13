@@ -52,9 +52,10 @@ full-text call truncated at the first blank line). That short test advanced all
 four engines to longer listening tests. **VibeVoice and Qwen passed that gate**;
 Higgs was listenable but seed-dependent; MOSS was not a finalist. However, the
 Vibe run used the now-rejected `cfg_scale=1.3` and a passage known to handicap
-Vibe. Its old relative ranking against Qwen is therefore superseded. Qwen's
-heard result remains valid; Vibe must be re-graded at cfg 2/3 before the two are
-ranked.
+Vibe. Its old relative ranking against Qwen is therefore superseded. The
+corrected blind comparison later selected cfg 2.0 over cfg 3.0; Qwen's heard
+result remains valid, but the two have not yet been re-ranked through the same
+production path.
 
 MOSS received the most corrective testing. Its first chapter used 105
 independent chunks plus 104 x 0.35 s joins, so that result was not treated as an
@@ -67,7 +68,7 @@ better for audiobooks.
 | Candidate | Chapter P100 RTF | P100 GPU hours / 12.4h book | Nominal 30h Kaggle week | Full listening result |
 |---|---:|---:|---:|---|
 | MOSS-TTS Local Transformer v1.5 | **1.245** | **15.44h** | 51.5% | Complete low-seam render, but joins/pacing/expression keep it below finalists |
-| VibeVoice 1.5B, old cfg 1.3 run | **2.266** | **28.10h** | 93.7% | Passed in isolation, but **relative ranking superseded**; corrected cfg 2/3 blind test pending |
+| VibeVoice 1.5B, old cfg 1.3 timing run | **2.266** | **28.10h** | 93.7% | Timing retained; quality ranking superseded. Corrected cfg 2.0 won by ear, with one brief defect still under app-path investigation. |
 | Higgs Audio | **1.558** | **19.32h** | 64.4% | Listenable, but one of two seeds still clipped/joined in places |
 | Qwen3-TTS | **2.056** | **25.49h** | 85.0% | **Co-finalist:** really good; strongest consistency signal |
 
@@ -79,9 +80,10 @@ complete structural `qa_report.json` before delivery. ASR inside that report is
 collapse/mismatch evidence only, never a quality ranking. The retained Raven Vibe E2E has
 now passed: 1,130 words, 361.392 s audio, ASR worst WER 0.115, RTF 1.218 for
 the 440 s generation, chaptered M4B, cover and byte-identical Audiobookshelf
-copy. The current Vibe app default remains cfg 1.3 and is therefore not approved
-for new production until the blind cfg 2/3 result is heard and the winner passes
-an app-path E2E. Ordinary queueing has no paid Vast route.
+copy. The Vibe app default is now the listening-selected cfg 2.0, but it is not
+approved as the production narrator until the brief “romantic felicity” garble
+is reproduced or cleared in a direct-upstream versus app-path E2E. Ordinary
+queueing has no paid Vast route.
 
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage

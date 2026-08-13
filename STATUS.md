@@ -1,23 +1,37 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-13 navigation redesign + VibeVoice blind handoff — VERIFIED / LISTENING PENDING
+> ## 2026-08-13 current baseline, Vibe verdict and cache contract — VERIFIED / DEPLOY IN PROGRESS
 >
-> **UI:** the whole stack is deployed at revision `033dcfb`. The first navigation
+> **Live services:** `epub-to-audiobook-worker` is running/healthy, exit 0 and
+> `OOMKilled=false`; the earlier 3 August exit-137 report is stale. `piper-tts`
+> is intentionally stopped: its historical exit 137 was not an OOM kill and the
+> tested Piper path is rejected for production. Chatterbox Nano/Beatrice remains
+> the default local narrator. No paid GPU path is armed.
+>
+> **UI:** the first navigation
 > destination is now explicitly **Home**, the brand and persistent top-bar Home
 > control both return there, navigation targets have larger high-contrast labels
 > plus descriptions, and widths up to 980 px use a labelled Menu drawer rather
 > than crushing the content. A real browser check at 780×493 loaded Home and the
 > Voices listening card successfully.
 >
-> **Blind test:** A and B are now playable at the top of **Voices**. Both contain
+> **VibeVoice verdict:** A and B contain
 > the same first 351 source words from *The Yellow Wallpaper*; timed transcription
 > alignment measured sequence ratios of 0.9957 and 1.0000 at the cut points, and
 > `ffprobe` measured 93.408 s / 1,868,698 bytes and 99.432 s / 1,989,178 bytes.
-> Both browser players reached `readyState=4` and were played after deployment.
-> These automated checks establish only that the clips contain the intended
-> passage without structural repetition; Dave's listening verdict alone decides
-> naturalness and the production/default decision remains open. The completed
-> handoff monitor was removed.
+> Both browser players reached `readyState=4`. Dave selected **B = cfg 2.0** as
+> much better and otherwise excellent, with one brief garble after “romantic
+> felicity”. **A = cfg 3.0** is rejected as muffled/distant; cfg 1.3 was already
+> rejected. Compose now defaults Vibe to 2.0. Production promotion remains open
+> only for a direct-upstream versus app-path check of B's isolated defect; the
+> completed blind-handoff monitor was removed.
+>
+> **Preview cache:** the audit found 82 exact cached IDs among 88 configured
+> voices; the six missing artifacts are TADA/Qwen/Vibe evaluation voices.
+> Unconfigured Polly/Inworld voices are excluded and cannot spend money in the
+> background. Code now makes Play a persisted-cache read, exposes ready/total
+> counts, hides unready auditions and adds Kokoro to the throttled free-local
+> warmer. Live optional-engine prewarming and 88/88 verification are in progress.
 >
 > **CPU auditions:** the Voices page also surfaces the already-rendered Pocket
 > TTS/Peter Yearsley, NeuTTS Air/Jo and KittenTTS/Jasper + Rosie clips. These are
@@ -707,14 +721,17 @@ correct, but the gap remains) and **#27** (chatterbox pronunciation ear-test).
 
 - Zorin's automatic startup voice cache invoked missing TADA previews with no
   conversion job queued, filling the 10 GiB cgroup and repeatedly killing the
-  engine. The default cache switch is now off.
+  engine. The cache was switched off at containment time. **Superseded
+  2026-07-25 after the 31 GB host upgrade:** it now defaults on with load
+  throttling, skip-existing behavior and an off-switch; paid/network engines
+  remain excluded.
 - TADA and Chatterbox profiles are no longer enabled by the default deploy.
   Both remain available as explicit opt-ins. On the upgraded 31 GB box,
   Chatterbox runs comfortably for previews. TADA is opt-in and now works
   (#23 fixed 2026-07-27); the cgroup kill described above was the fp32 load,
   and the cap is now 14g.
-- Kokoro, Piper, the UI/worker, and Nango remain the local service set. The
-  high-quality clone engines should run on a separately validated target.
+- Historical note: Piper was still present in this service set at the time. It
+  is now intentionally stopped; Chatterbox Nano is the supported local default.
 
 ## Recent fixes (2026-07-13)
 

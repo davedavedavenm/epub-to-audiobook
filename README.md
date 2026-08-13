@@ -1,23 +1,46 @@
 # EPUB to Audiobook Converter
 
-**Version:** 2.0.x (repo)
+**Version:** 2.1.x (repo)
 
-A self-hosted web application for converting **any** ebook (EPUB, PDF, MOBI,
-and more) into an audiobook using AI text-to-speech, entirely on your own
-machine. A clean "Studio Console" web UI with book-cover library, voice
-previews, per-book render targets (local or free cloud GPU), job management,
-adaptive text preprocessing, and Audiobookshelf integration.
+A self-hosted app for turning ebooks and articles into audiobooks. Its normal
+path is local CPU, free of charge, with a web library, persisted voice
+auditions, queue/recovery, text preprocessing, article podcast RSS and optional
+Audiobookshelf delivery.
+
+The product rule is deliberate: **use an existing good audiobook first**. This
+app is the fallback when one is unavailable or unacceptable. When external
+book acquisition is connected, it should request the audiobook before the
+ebook and must not silently queue paid TTS.
 
 > **New here? Start with the [full walkthrough → GETTING-STARTED.md](GETTING-STARTED.md)** — install, convert your first book, connect an AI for smarter pronunciation, add your own voices, and set up Audiobookshelf.
 
-For current build state and remaining work see [STATUS.md](STATUS.md).
+For current build state and remaining work see [STATUS.md](STATUS.md). Settled
+choices live in [DECISIONS.md](DECISIONS.md); contributors and agents must check
+that file before reopening an engine, cost or deployment question.
+
+## The safe defaults
+
+- **Quality first, then free, then the lowest measured cost per finished book.**
+- **Local CPU is the default.** No queue state can rent a GPU. Paid Vast
+  rendering is an explicit operator-only action and is off by default.
+- **Beatrice on Chatterbox Nano** is the default narrator. Piper is deliberately
+  stopped unless a legacy/debug comparison is requested; its tested production
+  path failed the listening bar.
+- **Voice Play buttons are cache reads.** They never start a hidden synthesis
+  job. A voice appears in audition pickers only after a non-trivial preview MP3
+  is persisted.
+- **Human listening decides audio quality.** ASR is retained only to detect
+  missing, repeated, truncated or grossly mismatched speech.
+- **The LAN app is passwordless.** If published, protect the UI with one SSO
+  layer at the reverse proxy. Expose only the exact podcast/feed paths a client
+  cannot access through interactive SSO.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## Features
 
 ### TTS Engines
-- **Chatterbox Nano** - default local engine with **Beatrice (Nano)** (`uk_female_samuel_nano`) as system default narrator. Fast CPU inference (~0.87x RTF, faster than realtime), voice-cloned British narrators (Beatrice, Arthur, Harriet, Edmund). Runs out of the box with `docker compose up -d`.
+- **Chatterbox Nano** - default local engine with **Beatrice (Nano)** (`uk_female_samuel_nano`) as system default narrator. Fast CPU inference (~0.87x RTF, faster than realtime), voice-cloned British narrators (Beatrice, Arthur, Harriet, Edmund). The bootstrap helper and deployment wrapper enable its Compose profile automatically.
 - **Kokoro TTS** - neural local engine; very low runtime cost, CPU or Vast.ai GPU
   - British, American, European, and multilingual voice packs
   - Voice mixing support (blend two voices)
@@ -25,7 +48,8 @@ For current build state and remaining work see [STATUS.md](STATUS.md).
   controls. Enable with explicit `ENABLE_CHATTERBOX_PROFILE=1` compose profile.
 - **Hume TADA** - expressive natural-voice model via TADA-1B. Enable with explicit `ENABLE_TADA_PROFILE=1` compose profile.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
-- **Piper TTS** - legacy local fallback (`ENABLE_PIPER_PROFILE=1`)
+- **Piper TTS** - rejected production path; legacy/debug only
+  (`ENABLE_PIPER_PROFILE=1`)
 
 ### Web Application & Media Delivery
 - **Studio Console Web UI** - modern dark obsidian slate theme with Google Fonts (Plus Jakarta Sans & JetBrains Mono)
@@ -48,8 +72,9 @@ text — see [PREPROCESSING.md](PREPROCESSING.md):
   book is analysed and per-book pronunciation rules are generated automatically
   (e.g. "US" → "U S", unusual names, misread numbers). Not hardcoded — adapts
   per book. Plus global and per-job regex rules.
-- **Planned (QA Layer 2)** - Whisper ASR verification of the generated audio
-  against the source text to auto-catch mispronunciations. See PLAN.md.
+- **Structural QA** - optional Whisper comparison catches collapse,
+  truncation/repetition and gross source mismatch. It does not grade a voice,
+  accent, prosody or an isolated pronunciation.
 
 The upstream converter's `--remove_endnotes` flag is deliberately not used: it
 corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
@@ -90,7 +115,7 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
   for the chapter guard, metadata + adaptive pronunciation
 - **Download as ZIP**
 
-## Quick Start (works on any machine, incl. for friends)
+## Quick start
 
 Everything runs in Docker on **local CPU by default** — no GPU and no cloud
 account required.
@@ -100,19 +125,35 @@ account required.
 git clone https://github.com/davedavedavenm/epub-to-audiobook.git
 cd epub-to-audiobook
 
-# 2. Configure. Add any reverse-proxy hostname to APP_TRUSTED_HOSTS.
-cp .env.example .env
+# 2. Linux/macOS: configure an absolute host path, start Nano and verify it
+./scripts/bootstrap.sh
 
-# 3. Start. Enable the engines you want via profiles:
-docker compose up -d                                              # Kokoro only (fast)
-docker compose --profile chatterbox up -d                        # + Chatterbox Turbo (best UK voices)
-docker compose --profile tada up -d                              # + TADA (expressive; research model)
-docker compose --profile vibevoice up -d                         # + VibeVoice (CUDA GPU already attached)
-docker compose --profile qwen3 up -d                             # + Qwen3-TTS (CUDA GPU already attached)
-docker compose --profile piper --profile chatterbox --profile tada up -d   # everything
+# Windows PowerShell instead:
+# .\scripts\bootstrap.ps1
 
-# 4. Open the UI
-open http://localhost:8881
+# 3. Open http://localhost:8881
+```
+
+The bootstrap helper does not overwrite an existing `.env`. It is important
+because conversion containers need the clone's real absolute host path; copying
+the placeholder `STACK_PATH` unchanged is not a working installation.
+
+Do not start every profile “just in case”. Optional engines have different
+resource/licence boundaries:
+
+```bash
+docker compose --profile chatterbox-nano --profile chatterbox up -d  # Turbo CPU/GPU
+docker compose --profile chatterbox-nano --profile tada up -d        # TADA, heavy CPU
+docker compose --profile chatterbox-nano --profile vibevoice up -d   # attached NVIDIA GPU only
+docker compose --profile chatterbox-nano --profile qwen3 up -d       # attached NVIDIA GPU only
+```
+
+The Linux production wrapper enables Nano automatically and deploys webapp and
+worker from the same Git revision:
+
+```bash
+./scripts/deploy.sh master
+./scripts/smoke-check.sh http://localhost:8881
 ```
 
 **Cost & privacy:** the default path spends nothing and sends your books to no
@@ -130,8 +171,10 @@ and remains protected by Telegram's secret header plus the owner chat ID.
 Article URL ingest accepts public HTTP(S) destinations only and
 validates each redirect against DNS rebinding and local/private address access.
 
-First run of each engine downloads its model once (Kokoro ~, Chatterbox
-~700 MB, TADA ~5 GB), cached in a Docker volume.
+First run downloads model assets into Docker volumes. Voice preview warming is
+load-throttled, skip-existing and switchable with `VOICE_CACHE_ON_START=0` on a
+small host. `/api/voices` reports `cache.configured_ready` and
+`cache.configured_total`; the Voices screen exposes only ready auditions.
 
 ## Where do I find my audiobooks?
 
@@ -185,7 +228,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | European | Dora | Alex, Santa |
 
 ### Other Voices
-- **Piper:** `fable`, `alloy`, `echo`, `onyx`, `nova`, `shimmer`
+- **Piper:** legacy/debug entries only; not a production recommendation
 - **EdgeTTS:** British/American/Australian incl. Ryan, Sonia, Libby, Ava, Andrew, Brian, Aria, Jenny
 - **Inworld (paid):** Graham, Rupert, Olivia, Blake, Elizabeth, Dennis, Ashley, Luna
 
@@ -198,7 +241,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `KOKORO_URL` | Kokoro TTS endpoint (default: `http://kokoro-tts:8880/v1`) |
 | `CHATTERBOX_URL` | Chatterbox Turbo endpoint (default: `http://chatterbox-tts:8004/v1`) |
 | `TADA_URL` | TADA endpoint (default: `http://tada-tts:8005/v1`) |
-| `VIBEVOICE_URL` | VibeVoice endpoint (default: `http://vibevoice-tts:8010/v1`; opt-in CUDA profile) |
+| `VIBEVOICE_URL` | VibeVoice endpoint (default: `http://vibevoice-tts:8010/v1`; opt-in CUDA profile; selected `cfg_scale=2.0`) |
 | `QWEN3_URL` | Qwen3-TTS endpoint (default: `http://qwen3-tts:8011/v1`; opt-in CUDA profile) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
@@ -218,9 +261,9 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/voices` | GET | List available voices (grouped by engine) |
+| `/api/voices` | GET | Voice catalogue plus configured preview-cache readiness |
 | `/api/version` | GET | Build fingerprint (version + git SHA) |
-| `/api/preview/<voice_id>` | GET | Voice preview audio |
+| `/api/preview/<voice_id>` | GET | Persisted voice preview audio; never cold-renders |
 | `/api/convert` | POST | Start conversion (upload) |
 | `/api/articles/rss` | GET | Podcast RSS feed of completed article narrations |
 | `/api/articles/narrate_url` | POST | Fetch a public article and queue it with the current local defaults |
@@ -242,7 +285,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 - [LOW-COST-TTS.md](LOW-COST-TTS.md) — engine bake-off, costs & GPU strategy
 - [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) — one-command Vast GPU runbook
 - [GPU-SAFETY.md](GPU-SAFETY.md) — cloud GPU cost-safety rules
-- [PLAN.md](PLAN.md) — roadmap (adaptive QA, GPU, UI)
+- [PLAN-V5.md](PLAN-V5.md) — current forward plan
 - [AGENTS.md](AGENTS.md) — guide for AI agents working in this repo
 
 ## Credits
@@ -250,7 +293,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 - [Kokoro-FastAPI](https://github.com/remsky/kokoro-fastapi) / [Kokoro](https://github.com/hexgrad/kokoro) - neural TTS
 - [Chatterbox](https://github.com/resemble-ai/chatterbox) - voice-cloning TTS
 - [Hume TADA](https://github.com/HumeAI/tada) - text-audio-aligned TTS
-- [Piper](https://github.com/rhasspy/piper) / [openedai-speech](https://github.com/matatonic/openedai-speech)
+- [Piper](https://github.com/rhasspy/piper) / [openedai-speech](https://github.com/matatonic/openedai-speech) — legacy/debug integration only
 - [epub_to_audiobook](https://github.com/p0n1/epub_to_audiobook) - core conversion tool
 - Voice references: public-domain [LibriVox](https://librivox.org) narrators
 

@@ -4410,7 +4410,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 @app.route('/')
 def index():
     """Main upload page."""
-    return render_template('index.html', voices=all_voices(), engines=TTS_ENGINES)
+    return render_template('index.html', voices=voices_for_client(), engines=TTS_ENGINES)
 
 
 
@@ -4644,6 +4644,28 @@ def all_voices() -> dict:
     return merged
 
 
+def _preview_is_cached(voice_id: str) -> bool:
+    """A voice is audition-ready only when a non-trivial persisted MP3 exists."""
+    preview = PREVIEWS_DIR / f"{voice_id}.mp3"
+    try:
+        return preview.is_file() and preview.stat().st_size > 5000
+    except OSError:
+        return False
+
+
+def voices_for_client() -> dict:
+    """Voice catalogue annotated with the only readiness claim the UI needs.
+
+    The browser must never turn a Play click into minutes of synthesis. Cold
+    generation belongs to the throttled background warmer; the audition UI
+    offers only previews already present in the persistent cache.
+    """
+    return {
+        voice_id: {**info, 'preview_cached': _preview_is_cached(voice_id)}
+        for voice_id, info in all_voices().items()
+    }
+
+
 @app.route('/api/voices/custom', methods=['GET'])
 def list_custom_voices():
     """Reference voices uploaded through the UI."""
@@ -4704,9 +4726,18 @@ def upload_custom_voice():
 
     app.logger.info('custom voice uploaded: %s (%ss, %sHz)',
                     voice_id, info.get('seconds'), info.get('rate'))
+    # Prepare every healthy local variant immediately, but outside the request
+    # and through the same load-aware cache worker used at startup. The voice
+    # is not offered in the audition UI until its persisted MP3 exists.
+    threading.Thread(
+        target=_cache_voice_batch,
+        args=([f'{voice_id}_nano', voice_id],),
+        daemon=True,
+    ).start()
     return jsonify({'status': 'ok', 'voice_id': voice_id, **info,
                     'warnings': warnings,
-                    'note': 'Preview it in the Voices tab before rendering a book.'})
+                    'note': 'Healthy local variants are being cached. They appear '
+                            'in Voices only when they are ready to play instantly.'})
 
 
 @app.route('/api/voices/custom/<voice_id>', methods=['DELETE'])
@@ -4776,9 +4807,20 @@ def engines_health():
 @app.route('/api/voices')
 def list_voices():
     """Return available voices grouped by engine."""
+    voices = voices_for_client()
+    configured = {
+        voice_id: info for voice_id, info in voices.items()
+        if info.get('engine') not in engines_unconfigured()
+    }
     return jsonify({
-        'voices': all_voices(),
-        'engines': TTS_ENGINES
+        'voices': voices,
+        'engines': TTS_ENGINES,
+        'cache': {
+            'configured_total': len(configured),
+            'configured_ready': sum(
+                1 for info in configured.values() if info['preview_cached']
+            ),
+        },
     })
 
 
@@ -5272,15 +5314,18 @@ def audition_sample(name: str):
 
 @app.route('/api/preview/<voice_id>')
 def voice_preview(voice_id: str):
-    """Stream voice preview audio."""
+    """Stream an already-cached voice preview; a Play click never synthesises."""
     if voice_id not in all_voices():
         return jsonify({'error': 'Voice not found'}), 404
 
-    preview_path = get_voice_preview(voice_id)
-    if preview_path and preview_path.exists():
+    preview_path = PREVIEWS_DIR / f"{voice_id}.mp3"
+    if _preview_is_cached(voice_id):
         return send_file(preview_path, mimetype='audio/mpeg')
 
-    return jsonify({'error': 'Preview not available'}), 500
+    return jsonify({
+        'error': 'Preview is still being prepared by the background cache. '
+                 'It is not offered in the Voices page until it is ready.'
+    }), 425
 
 
 @app.route('/api/convert', methods=['POST'])
@@ -7152,6 +7197,35 @@ def batch_convert_library():
 
 
 
+def _cache_voice_batch(voice_ids):
+    """Cache a bounded voice list, waiting for spare host capacity per item."""
+    import time
+    ncpu = os.cpu_count() or 4
+    max_load = float(os.environ.get('VOICE_CACHE_MAX_LOAD') or round(ncpu * 0.6, 1))
+    delay = float(os.environ.get('VOICE_CACHE_DELAY', '5'))
+    health = check_engines_health(max_age=0)
+    allowed = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada'})
+    for voice_id in voice_ids:
+        info = all_voices().get(voice_id, {})
+        engine = info.get('engine', 'kokoro')
+        if engine not in allowed or health.get(engine) is not True:
+            continue
+        if _preview_is_cached(voice_id):
+            continue
+        for _ in range(90):
+            try:
+                if os.getloadavg()[0] <= max_load:
+                    break
+            except Exception:
+                break
+            time.sleep(10)
+        try:
+            get_voice_preview(voice_id)
+        except Exception as e:
+            app.logger.error(f"Failed to cache voice {voice_id}: {e}")
+        time.sleep(delay)
+
+
 def _cache_all_voices_background():
     """Pre-generate voice samples — THROTTLED.
 
@@ -7167,9 +7241,8 @@ def _cache_all_voices_background():
     if os.environ.get('VOICE_CACHE_ON_START', '0').lower() not in ('1', 'true', 'yes'):
         app.logger.info("Background voice caching disabled (VOICE_CACHE_ON_START=0)")
         return
-    import time
     ncpu = os.cpu_count() or 4
-    max_load = float(os.environ.get('VOICE_CACHE_MAX_LOAD', str(round(ncpu * 0.6, 1))))
+    max_load = float(os.environ.get('VOICE_CACHE_MAX_LOAD') or round(ncpu * 0.6, 1))
     delay = float(os.environ.get('VOICE_CACHE_DELAY', '5'))
     app.logger.info(
         f"Starting background voice caching (throttled: max_load={max_load}, delay={delay}s)")
@@ -7177,28 +7250,12 @@ def _cache_all_voices_background():
     # hammer an opt-in/offline evaluation service. Cache only currently healthy
     # free local production families. Other previews remain explicit user
     # actions, where failures/cost are visible rather than hidden at boot.
-    auto_cache_engines = frozenset({'chatterbox', 'chatterbox_nano', 'tada'})
+    auto_cache_engines = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada'})
     health = check_engines_health(max_age=0)
     cacheable = [voice_id for voice_id, info in all_voices().items()
                  if info.get('engine', 'kokoro') in auto_cache_engines
                  and health.get(info.get('engine', 'kokoro')) is True]
-    for voice_id in cacheable:
-        preview_path = PREVIEWS_DIR / f"{voice_id}.mp3"
-        if preview_path.exists() and preview_path.stat().st_size > 5000:
-            continue                                   # already cached
-        # Never start a heavy synthesis while the box is already loaded.
-        for _ in range(90):                            # wait up to ~15 min
-            try:
-                if os.getloadavg()[0] <= max_load:
-                    break
-            except Exception:
-                break
-            time.sleep(10)
-        try:
-            get_voice_preview(voice_id)
-        except Exception as e:
-            app.logger.error(f"Failed to cache voice {voice_id}: {e}")
-        time.sleep(delay)                              # let the box breathe
+    _cache_voice_batch(cacheable)
     app.logger.info("Background voice caching complete.")
 
 def background_startup():

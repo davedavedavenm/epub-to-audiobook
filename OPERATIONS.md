@@ -2,7 +2,22 @@
 
 How the system behaves under failure, what the states mean, how to respond,
 and the honest record of incidents found during hardening. **This file is the
-documented plan — if it isn't written here or in PLAN.md, it doesn't count.**
+runbook; current forward work belongs in PLAN-V5.md and current evidence in
+STATUS.md.**
+
+## Current live baseline — 2026-08-13
+
+- `epub-to-audiobook-worker` is **running and healthy**, with `OOMKilled=false`
+  and exit code 0. The earlier “down after exit 137 on 3 August” report is
+  obsolete.
+- `piper-tts` is stopped. Its last historical exit code is 137, but Docker does
+  not report an OOM kill. This is expected product state: Piper is a rejected
+  production path and is legacy/debug opt-in only.
+- The supported baseline is webapp + worker + Kokoro + Chatterbox Nano. Prove
+  live state with `/api/health`, `/api/engines/health`, both container revision
+  labels and direct output/file checks; do not infer it from this dated note.
+- Preview readiness is measured through `/api/voices`. `configured_ready` must
+  equal `configured_total` before claiming every offered voice is cached.
 
 ## 2026-07-26 — Revoked Evolution notification key repaired
 
@@ -44,15 +59,16 @@ back. This incident did not touch conversion state or generated media.
   check on 2026-07-25 found Turbo *and* kokoro up alongside nano and piper
   (opt-ins from earlier sessions, never brought down). Harmless on 31 GB, but
   read engine state from `/api/engines/health`, not from this paragraph.
-- **TADA stays OFF.** #23 is still open: the image builds again since the
-  `hume-tada` pin fix and it starts healthy, but the first synthesis exceeds its
-  10 GiB cgroup within ~7 s (`OOMKilled=true`). Do not simply raise the cap —
-  it consumed 10 GiB while the host had ~10 GiB free.
+- **TADA is opt-in, not broken.** The old fp32 CPU path exceeded its cap; bf16
+  fits and a live CPU synthesis measured RTF 1.68. Keep it off by default
+  because it is heavy, then enable deliberately with
+  `ENABLE_TADA_PROFILE=1`. Issue #23 is closed.
 - **Startup voice-preview caching now defaults ON** (`VOICE_CACHE_ON_START=1`),
-  so every voice previews instantly. What makes that safe is the throttle (wait
-  for a quiet box, pause between voices) plus per-engine `mem_limit`s, not the
-  default — the Jul-18 OOM predates the 31 GB upgrade. Set it to `0` on a
-  smaller host.
+  for healthy free local engines. What makes that safe is the throttle (wait for
+  a quiet box, pause between voices), skip-existing behavior and per-engine
+  `mem_limit`s. The Voices UI exposes only persisted previews, so Play never
+  causes a cold render. Paid Polly/Inworld and network Edge are excluded from
+  startup warming. Set the switch to `0` on a smaller host.
 - GPU engines are now a **quality ceiling, not a throughput answer**: reach for
   CosyVoice 3 (Kaggle/Vast GPU) or TADA for their specific character, not for
   speed.
@@ -119,6 +135,14 @@ What this repo owns from that pipeline: the **wanted monitor** watcher
 (`scripts/wanted/wanted_monitor.py` + `run_wanted_monitor.sh`), which checks
 LazyLibrarian's Wanted list against this app's library and notifies via
 Telegram/WhatsApp when a title lands — see `scripts/wanted/README.md`.
+
+The integration contract is nevertheless part of this product: an external
+reading list should queue **AudioBook Wanted only**, with torrents preferred and
+Usenet as fallback. An ebook/TTS job is a later human-approved fallback when no
+acceptable audiobook exists. For a new Goodreads account, LazyLibrarian's
+official docs require the account-specific shelf RSS route because new API keys
+are no longer issued; configure the RSS provider with `DLTYPES=A`. Never commit
+the feed URL, which may contain an account token.
 
 ## Common failures → responses
 
