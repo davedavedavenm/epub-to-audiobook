@@ -64,15 +64,17 @@
 > verified.
 >
 > **CPU candidates:** Pocket TTS and KittenTTS produced complete canonical
-> audition files without a GPU. Pocket measured 64.080 s audio in 66.220 s
+> audition files without a GPU. The persisted MP3 measures 64.128 s; the
+> original render completed in 66.220 s
 > (RTF 1.033, peak 1307.6 MiB) using its official Peter Yearsley preset, but
 > emitted a 50-token chunk-limit warning and its cloning weights remain behind
 > Kyutai's model-terms gate. Kitten Jasper measured RTF 2.304 / 1047.9 MiB and
 > Rosie RTF 1.761 / 1090.4 MiB; these are preset voices, not clones. No engine
 > is admitted or rejected until Dave listens. NeuTTS's first whole-passage run
 > truncated because the official model documents an approximately 30-second
-> context. The corrected ten-sentence render produced 72.610 s in 357.875 s
-> (RTF 4.929, peak 2842.4 MiB) with its official Jo reference. That clip is
+> context. The corrected ten-sentence render's persisted MP3 measures 72.672 s;
+> synthesis produced it in 357.875 s
+> (RTF 4.925, peak 2842.4 MiB) with its official Jo reference. That clip is
 > complete by duration/chunk accounting, but the engine emitted phonemizer
 > word-count warnings and needs listening before any conclusion.
 >
