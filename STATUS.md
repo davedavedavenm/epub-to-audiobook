@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-13 repo + live-system audit — VERIFIED FINDINGS, FIXES NOT DEPLOYED
+> ## 2026-08-13 repo + live-system audit — VERIFIED FINDINGS, FIXES DEPLOYED
 >
 > **Live baseline:** Zorin checkout `/home/dave/ai/lab/stacks/epub-to-audiobook`
 > had no tracked changes at `934bed5` (untracked runtime/backup artifacts exposed
@@ -8,11 +8,10 @@
 > containers had zero restarts, SQLite integrity passed, and the host had no
 > active/failed render work (103 historical jobs: 46 complete, 57 cancelled).
 > `AUTOSCALE_ENABLED=false`, `GPU_RENDER_ENABLED` was unset/off, the app reported
-> GPU state `idle`, and no GPU tunnel/container or status file existed. Vast's
-> provider-level instance query could not authenticate, so the external account
-> itself is **not** proven free of unrelated/orphan instances. The live app was
-> stable and contained no evidence of current app-managed spend; this does not
-> prove every feature works.
+> GPU state `idle`, and no GPU tunnel/container or status file existed. After
+> repairing the exact-key mount, the pinned official Vast CLI authenticated from
+> the worker and returned **zero provider instances**. The paid-GPU environment
+> gate remains explicitly off.
 >
 > **Critical audit correction:** the worker still contained a legacy
 > queue-length → `GPUManager.scale_up()` path that did not check the
@@ -20,16 +19,21 @@
 > environment flag was false. Local hardening now removes that path and its
 > Compose switches, makes the manager fail closed without an explicit manual
 > authorization, removes Vast from per-book selection, and rejects any ordinary
-> job target other than local/free Kaggle. Paid enablement is now environment-only:
-> the unauthenticated Settings API/UI cannot arm the manual endpoint. Regression coverage is added. These
-> changes are **not live** until the whole stack is deployed from git.
+> job target other than local/free Kaggle. Paid enablement is now
+> environment-only: the Settings API/UI cannot arm the manual endpoint.
+> Regression coverage is added. These changes are live on both webapp and worker
+> from git revision `80b0fac`.
 >
-> **Other confirmed defects:** production never passes the advertised
-> `--auto-rerender` flag; single-chapter recovery can overwrite whole-book QA
-> evidence; the article RSS enclosure points at an unserved `/data/...` path;
-> generated-EPUB timing is wrong; Vibe's rejected cfg 1.3 remains the
-> app/container default; and the LAN app lacks meaningful authentication and its
-> URL fetcher needs SSRF controls. These remain open unless separately marked fixed.
+> **Other confirmed defects and disposition:** the unused ASR-driven
+> `--auto-rerender` path is removed; single-chapter recovery atomically merges
+> whole-book QA evidence; article RSS now encloses a deliberately public,
+> validated audio route; EPUB overlays map only renderable chapters and use
+> `ffprobe` duration from the finished media; HTTP Basic auth and trusted-host /
+> same-origin write checks protect the UI and private APIs; Telegram uses its
+> official webhook-secret header; and article fetch validates every DNS,
+> connected-peer and redirect address while bounding response size. Vibe's
+> rejected cfg 1.3 is still not being replaced until the blind cfg 2/3 chapter
+> test is heard.
 >
 > **Additional local fixes:** `deploy.sh` now defaults to `master`/version 2.0.0
 > rather than the stale v1.3 tag; background preview caching is restricted to
@@ -43,15 +47,18 @@
 > package. Its declared `requests>=2.33.0` dependency initially conflicted with
 > the repo's `requests==2.32.4` pin; the repo now pins `requests==2.33.0`, the
 > full requirement set resolves, and a regression guard covers the pairing.
-> Paid use remains blocked in practice until the legacy credential
-> mount is repaired and `vastai show instances` authenticates successfully.
+> The legacy credential mount is now an exact untracked key-file mount readable
+> by the worker group; `vastai show instances --raw` authenticates successfully
+> and returned zero instances. This repairs observability only and does not arm
+> paid provisioning.
 >
 > **Secret-history audit:** Gitleaks scanned all 550 commits / ~5.2 MB and found
 > the same historical `EVOLUTION_API_KEY` value in two public commits
 > (`docker-compose.yml` at `6737384` and `PLAN-v1.1-fixes.md` at `fcf061e`).
-> Values were redacted during inspection. The current live key is configured
-> and does **not** match the historical value, consistent with rotation, but
-> continued invalidity of the old credential has not been independently proven.
+> Values were redacted during inspection. The old credential was tested directly
+> against Evolution's official `GET /instance/fetchInstances` endpoint: it
+> returns **401**, while the distinct current key returns **200**.
+> Rotation/revocation is therefore proven.
 > GitHub's Dependabot/code/secret-scanning APIs were unavailable for this
 > repository/account and therefore provide no clean-bill evidence.
 >
@@ -67,10 +74,16 @@
 > LazyLibrarian → Prowlarr → qBittorrent, with Usenet fallback. Do not
 > duplicate those operational docs here.
 >
-> **Local verification after hardening/docs:** 235 tests pass; Ruff, Python
-> compilation, Compose config and `git diff --check` pass. No deployment has
-> been made. The corrected free-Kaggle Vibe cfg 2-vs-3 full-chapter blind test
-> is running; no default will change before Dave listens.
+> **Verification and deployment:** 243 tests pass; Ruff, Python compilation,
+> Compose config, shell syntax, staged Gitleaks and `git diff --check` pass. A
+> real Zorin `ffprobe` probe and a real bounded public fetch also passed. The
+> whole stack deployed commit `80b0fac`; live checks proved exact SHA/overall
+> health, authenticated and rejected private access, Host and Origin rejection,
+> Telegram secret enforcement, loopback SSRF rejection, five RSS enclosures and
+> a successful `206` request against the first enclosure. Both webapp and worker
+> are healthy with zero restarts. The corrected free-Kaggle Vibe cfg 2-vs-3
+> full-chapter blind test is still running; no default will change before Dave
+> listens.
 
 > ## 2026-08-13 `cfg_scale` is the VibeVoice speaker-similarity lever — 1.3 REJECTED BY EAR
 >
