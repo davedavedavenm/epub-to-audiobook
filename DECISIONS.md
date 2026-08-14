@@ -322,9 +322,9 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 | **Unverified by ear** | Rendered accent clips exist; listen before promoting or rejecting. |
-| Pocket TTS 2.1 Peter Yearsley preset | **Voice/numeric pass; long-form file ready** | Dave selected normalized A; no residual defect reported. A 3,600-word app-path file is structurally complete at 16:27; listen before book admission. Cloning remains unproven. |
+| Pocket TTS 2.1 Peter Yearsley preset | **Promising; pacing improvement gate open** | In the 3,600-word file, the body was decent with some emotion but sometimes lifeless/poorly paced. The title/author run-on was our malformed Gutenberg metadata input, not an engine verdict. Re-test cleaned, paragraph-aware input before book admission. Cloning remains unproven. |
 | NeuTTS Air 1.4.1 Q4 + Jo | **Voice and normalized numeric path pass; residual insertion** | Dave selected normalized A, but heard “the e order” around “the order”. Treat that as a separate synthesis defect. Sentence chunking remains mandatory. |
-| KittenTTS 0.8.1 Jasper/Rosie | **Both voices/numeric pass; Rosie long-form file ready** | Dave selected normalized A for Jasper, with a scratchy opening, and normalized B for Rosie. Rosie's 3,600-word app-path file is structurally complete at 21:16; listen before book admission. Preset-only; no UK-identity claim. |
+| KittenTTS 0.8.1 Jasper/Rosie | **Rosie leads; pacing improvement gate open** | Dave selected normalized A for Jasper (scratchy opening) and B for Rosie. In Rosie's 3,600-word file, the body was not bad and better than Peter for pace/tone. The run-on opening was our malformed Gutenberg metadata input. Re-test cleaned, paragraph-aware input before book admission. Preset-only; no UK-identity claim. |
 | Higgs Audio V2 | **Reserve, not finalist** | Usable but seed-dependent seams. Reopen only for a materially improved official release/runtime or a book-specific audition. |
 | OmniVoice current weights/path | **Short-form hold** | Accents were good; CPU RTF ~9 and non-commercial weights block normal books. Reconsider on official performance/licence change or a bounded short use. |
 | EdgeTTS through `edge-tts` | **Conditional hold** | Free direct cost and accents were acceptable, but the interface is unofficial/fragile and proper nouns failed. Re-test only with a pronunciation fix and current service docs. |
@@ -359,6 +359,14 @@ numbers/currency and acronym letter-spacing, without the legacy phonetic
 lexicon. Every official English preset may be registered, but it is not
 audition-ready until its persisted preview exists, and it is not book-approved
 until a 15–30 minute app-path render is heard.
+
+The first Peter/Rosie long-form gate is valid evidence about the voices' body
+quality, but **invalid evidence about title/author delivery**. Both engines were
+sent the identical flattened first request beginning `Title: ... Author: ...`
+and continuing directly into the first sentence. The source was Project
+Gutenberg's generated `pg-header`, not book prose. Exact `pg-header`/`pg-footer`
+containers are now excluded structurally. Paragraph-aware request boundaries
+remain an A/B candidate, not a production default, until heard.
 
 ## Book acquisition pipeline docs — moved to infra — Active
 

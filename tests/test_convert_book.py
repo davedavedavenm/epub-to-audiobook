@@ -43,3 +43,20 @@ def test_concat_wav_produces_one_decodable_stream():
 def test_concat_wav_empty_is_safe():
     cb = _load_cb()
     assert cb._concat_wav([]) == b''
+
+
+def test_chunk_default_retains_legacy_cross_paragraph_packing():
+    cb = _load_cb()
+    text = "First paragraph ends here.\n\nSecond paragraph begins here."
+    assert cb.chunk(text, 200) == [
+        "First paragraph ends here. Second paragraph begins here."
+    ]
+
+
+def test_chunk_can_preserve_real_paragraph_boundaries():
+    cb = _load_cb()
+    text = "First paragraph ends here.\n\nSecond paragraph begins here."
+    assert cb.chunk(text, 200, preserve_paragraphs=True) == [
+        "First paragraph ends here.",
+        "Second paragraph begins here.",
+    ]

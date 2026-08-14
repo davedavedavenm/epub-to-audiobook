@@ -188,6 +188,13 @@ _NOTE_BODY_ROLES = {'doc-footnote', 'doc-endnote', 'doc-endnotes'}
 
 _PURE_DIGIT_RE = re.compile(r'^\[?\d{1,4}\]?$')
 
+# Project Gutenberg's generated EPUB wrapper uses these stable structural IDs
+# for its catalogue/download boilerplate.  They are not part of the book and,
+# when flattened into a TTS request, fields such as "Title" and "Author" run
+# together without sentence punctuation.  Match exact IDs only: broad text
+# heuristics risk deleting a publisher's legitimate introduction or credits.
+_PROJECT_GUTENBERG_BOILERPLATE_IDS = {'pg-header', 'pg-footer'}
+
 
 def _attr_tokens(tag, name):
     """Return an attribute's value as a set of whitespace-split tokens."""
@@ -204,34 +211,42 @@ def _attr_tokens(tag, name):
 
 
 def sanitize_html(html: str) -> str:
-    """Structurally remove footnote/endnote apparatus from one HTML document.
+    """Structurally remove non-book apparatus from one HTML document.
 
     Works on the markup rather than extracted text, so it is immune to
     quote styles and publisher formatting quirks. Conservative by design:
-    only removes elements that are unambiguously note markers or bodies.
+    only removes elements that are unambiguously generated boilerplate, note
+    markers, or note bodies.
     """
     soup = BeautifulSoup(html, 'lxml')
 
-    # 1. Note bodies: <aside epub:type="footnote">, role="doc-endnote", etc.
+    # 1. Project Gutenberg's generated catalogue/download wrapper.  The nested
+    # pg-machine-header and separators disappear with their exact parent.
+    for element_id in _PROJECT_GUTENBERG_BOILERPLATE_IDS:
+        tag = soup.find(id=element_id)
+        if tag is not None:
+            tag.decompose()
+
+    # 2. Note bodies: <aside epub:type="footnote">, role="doc-endnote", etc.
     for tag in soup.find_all(True):
         if (_attr_tokens(tag, 'epub:type') & _NOTE_BODY_TYPES
                 or _attr_tokens(tag, 'role') & _NOTE_BODY_ROLES):
             tag.decompose()
 
-    # 2. Note reference anchors: epub:type="noteref" / role="doc-noteref"
+    # 3. Note reference anchors: epub:type="noteref" / role="doc-noteref"
     for a in soup.find_all('a'):
         if (_attr_tokens(a, 'epub:type') & _NOTEREF_TYPES
                 or _attr_tokens(a, 'role') & _NOTEREF_ROLES):
             a.decompose()
 
-    # 3. Superscripts whose visible text is just a (bracketed) number
+    # 4. Superscripts whose visible text is just a (bracketed) number
     for sup in soup.find_all('sup'):
         if getattr(sup, 'decomposed', False):
             continue
         if _PURE_DIGIT_RE.match(sup.get_text(strip=True) or ''):
             sup.decompose()
 
-    # 4. Internal links whose visible text is just a (bracketed) number
+    # 5. Internal links whose visible text is just a (bracketed) number
     #    (endnote markers in EPUBs without semantic markup or <sup> tags)
     for a in soup.find_all('a', href=True):
         if getattr(a, 'decomposed', False):

@@ -31,6 +31,23 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _truncate_words_preserving_paragraphs(text: str, limit: int) -> str:
+    """Take exactly *limit* words without flattening source paragraph breaks."""
+    remaining = limit
+    kept: list[str] = []
+    for paragraph in text.split("\n\n"):
+        words = paragraph.split()
+        if not words:
+            continue
+        take = words[:remaining]
+        if take:
+            kept.append(" ".join(take))
+            remaining -= len(take)
+        if remaining == 0:
+            break
+    return "\n\n".join(kept)
+
+
 def build_excerpt(source: Path, output: Path, words: int, chapter: int) -> dict:
     chapters = list_renderable_chapters(source)
     selected = next((item for item in chapters if item["index"] == chapter), None)
@@ -40,12 +57,12 @@ def build_excerpt(source: Path, output: Path, words: int, chapter: int) -> dict:
 
     with zipfile.ZipFile(source) as archive:
         text = _plain_text(archive.read(selected["href"]).decode("utf-8", "ignore"))
-    excerpt_words = text.split()[:words]
+    excerpt = _truncate_words_preserving_paragraphs(text, words)
+    excerpt_words = excerpt.split()
     if len(excerpt_words) < words:
         raise ValueError(
             f"chapter {chapter} has only {len(excerpt_words)} words; requested {words}"
         )
-    excerpt = " ".join(excerpt_words)
     excerpt_hash = hashlib.sha256(excerpt.encode("utf-8")).hexdigest()
 
     title = f"Listening Gate — {source.stem} — Chapter {chapter} — {words} words"

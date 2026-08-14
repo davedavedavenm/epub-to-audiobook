@@ -25,9 +25,9 @@ accent-engine verdicts are dated in the table.
 | Qwen3-TTS (2026-07-29) | Full chapter **“really good”** and audiobook-listenable. Strongest consistency result; 33:03, RTF 2.056, ASR similarity 0.9848. Current co-finalist. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-13 corrected test) | **cfg 2.0 selected:** “much better ... otherwise perfect, really really good,” with one brief garble after “romantic felicity”. cfg 3.0 rejected as muffled/distant; cfg 1.3 already rejected. App-path root-cause check remains before production promotion. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
-| Pocket TTS / Peter Yearsley (2026-08-14) | Decent/good voice. Dave selected the normalized arm; numbers/currency passed. A same-text 3,600-word app-path file is structurally complete at 16:27; human long-form verdict open. | CPU only (zorin) |
+| Pocket TTS / Peter Yearsley (2026-08-14) | Decent/promising body with some emotion, but sometimes lifeless and poorly paced. The run-on title/author opening was proven to be malformed Gutenberg metadata we supplied. Clean paragraph-aware A/B pending; not book-approved. | CPU only (zorin) |
 | NeuTTS Air / Jo (2026-08-14) | Decent/good voice. Dave selected the normalized arm, but heard “the e order” around “the order”; retain this as a separate synthesis defect rather than a number-handling failure. | CPU only (zorin) |
-| KittenTTS / Jasper and Rosie (2026-08-14) | Both decent/good. Dave selected the normalized arm for both. Jasper's opening was slightly scratchy; Rosie gave perhaps the best handling. Rosie's same-text 3,600-word app-path file is structurally complete at 21:16; human long-form verdict open. | CPU only (zorin) |
+| KittenTTS / Jasper and Rosie (2026-08-14) | Both decent/good; Jasper's short opening was scratchy. Rosie's long-form body was not bad and better than Peter for pace/tone. Her run-on title/author opening was the same proven bad Gutenberg input. Clean paragraph-aware A/B pending; not book-approved. | CPU only (zorin) |
 
 **Read this as a data point, not a recommendation.** It reflects one listener
 and one hard passage/book; the hardware used is stated per row. TADA's ceiling is genuinely
@@ -44,6 +44,16 @@ used the official APIs but bypassed app normalization. The 2026-08-14 blind
 pairs isolated raw versus explicit spoken wording with model, voice and
 settings fixed; normalized wording won 4/4. This closes the shared numeric
 root cause while leaving the distinct Jo/Jasper artifacts open.
+
+The long-form opening failure is also diagnosed at the input boundary, not by
+inference from sound: captured request 1 was identical for Peter and Rosie and
+contained Project Gutenberg catalogue fields with no terminal punctuation,
+then the first book sentence. The app now removes Gutenberg's exact structural
+wrapper. The official [Pocket README](https://github.com/kyutai-labs/pocket-tts/blob/7fc13c7/README.md#unsupported-features)
+says adding silence through text input is unsupported, while Kitten 0.8.1
+documents only `generate(text, voice=...)`; undocumented engine knobs are not
+being invented. Paragraph-boundary preservation is therefore tested in our
+converter and must win by ear before rollout.
 
 ## Official voice inventory for the screened CPU engines (2026-08-14)
 

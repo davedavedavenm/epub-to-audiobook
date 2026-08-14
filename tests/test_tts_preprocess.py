@@ -132,6 +132,38 @@ def test_sanitize_decimal_kept():
     assert '$2.58' in _sanitized()
 
 
+def test_sanitize_project_gutenberg_generated_header_and_footer():
+    html = '''<html><body>
+    <div id="pg-header">
+      <div id="pg-machine-header">
+        <p><strong>Title</strong>: The Yellow Wallpaper</p>
+        <p><strong>Author</strong>: Charlotte Perkins Gilman</p>
+        <p>Credits: An Anonymous Volunteer and David Widger</p>
+      </div>
+      <div id="pg-start-separator">*** START OF THE PROJECT GUTENBERG EBOOK ***</div>
+    </div>
+    <h1>The Yellow Wallpaper</h1>
+    <p>It is very seldom that mere ordinary people secure ancestral halls.</p>
+    <div id="pg-footer"><p>Project Gutenberg download terms.</p></div>
+    </body></html>'''
+    out = tp.sanitize_html(html)
+    assert 'Credits:' not in out
+    assert 'START OF THE PROJECT GUTENBERG' not in out
+    assert 'download terms' not in out
+    assert '<h1>The Yellow Wallpaper</h1>' in out
+    assert 'It is very seldom' in out
+
+
+def test_sanitize_does_not_remove_similarly_named_publisher_content():
+    html = '''<html><body>
+    <section id="publisher-header"><p>Publisher introduction.</p></section>
+    <p>The real book begins.</p>
+    </body></html>'''
+    out = tp.sanitize_html(html)
+    assert 'Publisher introduction.' in out
+    assert 'The real book begins.' in out
+
+
 # --- End to end text pipeline ---
 
 def test_pipeline_endnote_and_numbers():

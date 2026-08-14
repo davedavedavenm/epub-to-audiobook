@@ -110,6 +110,11 @@ def renderable_wordcount(z, name):
 
 def _title_for(html, fallback):
     """Human title for a chapter: first heading, else <title>, else fallback."""
+    # Use the same sanitized document as narration and word-count selection.
+    # Project Gutenberg's generated wrapper may contain its own heading/title;
+    # choosing from raw HTML labels the track as "The Project Gutenberg eBook"
+    # even though that boilerplate is (correctly) not narrated.
+    html = sanitize_html(html)
     for m in re.finditer(r'<h[1-6][^>]*>(.*?)</h[1-6]>', html, re.I | re.S):
         t = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', m.group(1))).strip()
         if t:

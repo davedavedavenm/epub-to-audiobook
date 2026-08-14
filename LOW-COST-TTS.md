@@ -50,6 +50,14 @@ shared numeric failure was our raw-input evaluation path. Jo retained one
 the best handling. The free local Chatterbox Nano/Beatrice baseline remains
 unchanged pending a separate long-form admission gate.
 
+That long-form gate is now heard. Peter's body was decent and could become very
+good, but sometimes felt lifeless or poorly paced. Rosie's body was not bad and
+arguably better for pace and tone. Both openings ran `Title`, `Author` and other
+fields together because the exact captured input contained Project Gutenberg's
+machine header joined to the first sentence. This is a proven source-path
+defect, not an engine diagnosis. A cleaned, paragraph-aware A/B is required
+before either free CPU engine is admitted for books; Rosie currently leads.
+
 ## 2026-07-28 local accent bake-off
 
 Two candidates were containerised and actually rendered on zorin, using the

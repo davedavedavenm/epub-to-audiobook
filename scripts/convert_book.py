@@ -137,8 +137,9 @@ def chapter_text(z, name):
     return text
 
 
-def chunk(text, n):
-    text = re.sub(r'\s+', ' ', text)
+def _chunk_passage(text, n):
+    """Sentence-pack one passage without inventing punctuation or pauses."""
+    text = re.sub(r'\s+', ' ', text).strip()
     sents = re.split(r'(?<=[.!?"”])\s+', text)
     out, cur = [], ''
     for s in sents:
@@ -149,6 +150,24 @@ def chunk(text, n):
     if cur:
         out.append(cur)
     return out or [text]
+
+
+def chunk(text, n, preserve_paragraphs=False):
+    """Split text into bounded synthesis requests.
+
+    The production-compatible default retains the historic flat behaviour.
+    The opt-in paragraph mode never packs the end of one source paragraph and
+    the start of the next into the same model request.  It does not add spoken
+    text or synthetic silence; it only preserves a boundary already present in
+    the EPUB so the candidate can be heard in a controlled A/B before rollout.
+    """
+    if not preserve_paragraphs:
+        return _chunk_passage(text, n)
+    paragraphs = [p for p in re.split(r'\n\s*\n', text) if p.strip()]
+    out = []
+    for paragraph in paragraphs:
+        out.extend(_chunk_passage(paragraph, n))
+    return out or [_chunk_passage(text, n)[0]]
 
 
 def _concat_wav(chunks, join_silence_ms=0):
@@ -291,13 +310,14 @@ def _capture_chunk(job_id, chapter_idx, text, voice, model):
 
 
 def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', speed=1.0,
-          job_id=None, request_timeout=3600, join_silence_ms=0, seed_offset=0):
+          job_id=None, request_timeout=3600, join_silence_ms=0, seed_offset=0,
+          preserve_paragraphs=False):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
     caller encodes one MP3 from that."""
     import time
     parts = []
-    chunks = chunk(text, chunk_chars)
+    chunks = chunk(text, chunk_chars, preserve_paragraphs=preserve_paragraphs)
     total_chunks = len(chunks)
     for chunk_idx, c in enumerate(chunks, 1):
         print(f"Processing chapter-{chapter_idx}_chunk_{chunk_idx}_of_{total_chunks}", flush=True)
@@ -348,6 +368,9 @@ def main():
                          'can legitimately need more than one hour for one chapter.')
     ap.add_argument('--join-silence-ms', type=int, default=0,
                     help='PCM silence inserted between generated chunks (0 = none)')
+    ap.add_argument('--preserve-paragraph-boundaries', action='store_true',
+                    help='never combine text from two source paragraphs in one TTS request; '
+                         'evaluation-only until a listening verdict approves it')
     ap.add_argument('--min-words', type=int, default=120,
                     help='skip chapters shorter than this (front-matter)')
     ap.add_argument('--denoise', action='store_true',
@@ -490,7 +513,8 @@ def main():
             wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx,
                         model=a.model, speed=a.speed, job_id=a.job_id,
                         request_timeout=a.request_timeout,
-                        join_silence_ms=a.join_silence_ms)
+                        join_silence_ms=a.join_silence_ms,
+                        preserve_paragraphs=a.preserve_paragraph_boundaries)
             mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
                 fn = out / f"{idx:03d}{suffix}.mp3"

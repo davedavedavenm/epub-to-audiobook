@@ -138,6 +138,11 @@ styles and publisher typography:
   and links whose visible text is a bare/bracketed number.
 - Remove note **bodies**: `epub:type` footnote/endnote/rearnote asides and
   sections (`role="doc-footnote"` etc.).
+- Remove exact Project Gutenberg generated `pg-header` / `pg-footer` wrappers.
+  Their catalogue fields are not book narration; flattening them produced the
+  heard `Title: ... Author: ... Credits: ...` run-on in both Peter and Rosie.
+  Exact IDs are used deliberately—no phrase heuristic may delete legitimate
+  publisher front matter.
 - Conservative by design: `<sup>note</sup>` (words) and normal links survive.
 
 ### Stage 2 — Deterministic text normalization (implemented)
@@ -220,6 +225,11 @@ passage" for why it was chosen and how to regenerate it with
 `scripts/extract_test_passage.py`). Verified 2026-07-04: the pipeline strips
 all five of its endnote markers structurally while leaving "2.6 percent",
 "140 years", and the quoted material intact.
+
+Long-form listening fixtures must retain the source's `\n\n` paragraph
+boundaries. `scripts/build_listening_excerpt.py` does so while taking an exact
+word count. Converter paragraph-boundary preservation is an explicit A/B flag
+until approved by ear; the historic flat mode remains production-compatible.
 
 ## Invariants
 

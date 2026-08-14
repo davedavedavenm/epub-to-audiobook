@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-14 Pocket + Kitten app integration — LIVE / PREVIEWS VERIFIED / LONG-FORM VERDICT OPEN
+> ## 2026-08-14 Pocket + Kitten app integration — LIVE / LONG-FORM HEARD / CORRECTIVE A/B IN PROGRESS
 >
 > Pocket TTS 2.1 and KittenTTS 0.8.1 now have isolated, non-root, CPU-only
 > OpenAI-compatible services behind explicit Compose/deploy opt-ins. The app
@@ -21,13 +21,25 @@
 > 15–30 minute app-path file is heard. The shared six-core host now reserves
 > capacity for the product by capping each candidate service at four CPU cores.
 >
-> **Long-form files are ready for Dave's verdict.** Peter: **16:27**, 19,742,312
+> **Long-form verdict:** Peter: **16:27**, 19,742,312
 > bytes, 80/80 chunks. Rosie: **21:16**, 25,520,552 bytes, 80/80 chunks. Both
 > captured inputs are exactly 3,600 words with excerpt SHA-256
 > `a47c6ae855c7c5e23b5e852bcff9a97cac0dd157508594fc444dace68cb02972`;
-> both MP3s decode end-to-end. ASR was not used as a voice-quality judge.
-> Human listening, and therefore book admission, remains open. Full local
-> verification at the corrected revision: **277 tests**, Ruff and Compose pass.
+> both MP3s decode end-to-end. ASR was not used as a voice-quality judge. Dave
+> found Peter's body decent/promising but sometimes lifeless and poorly paced;
+> Rosie's body was not bad and better than Peter for pace/tone. Neither is yet
+> book-approved.
+>
+> **Opening root cause proven:** both captured first requests contain the same
+> flattened Project Gutenberg machine metadata (`Title`, `Author`, dates,
+> credits) joined directly to the first sentence. The source EPUB's generated
+> `pg-header` was passed as narration, so the run-on title/author failure is our
+> input defect, not evidence that two engines independently failed the same way.
+> Exact Gutenberg header/footer containers are now structurally excluded; the
+> track-title selector uses that same sanitized document. The listening-excerpt
+> builder also now retains paragraph boundaries instead of flattening them.
+> A controlled current-vs-paragraph-aware Peter/Rosie render is in progress;
+> paragraph-aware chunking is not the production default without an ear verdict.
 
 > ## 2026-08-14 VibeVoice cfg-2 production-path gate — DEFECT FOUND / FIXED / FREE RERUN ACTIVE
 >
