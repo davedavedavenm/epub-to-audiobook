@@ -226,6 +226,66 @@ def test_telegram_article_capture_is_owner_only_and_uses_same_defaults(tmp_path,
     assert job['notify_telegram'] == 1
 
 
+def test_telegram_article_capture_queues_all_distinct_urls(tmp_path, monkeypatch):
+    meta = _article_capture_fixture(tmp_path, monkeypatch)
+    first = 'https://example.com/first'
+    second = 'https://example.com/second'
+    calls = []
+
+    def fetch(url):
+        calls.append(url)
+        return {**meta, 'url': url, 'title': f'Article {len(calls)}'}
+
+    monkeypatch.setattr('article.fetch_article', fetch)
+    monkeypatch.setattr(appmod, 'TELEGRAM_WEBHOOK_SECRET', 'telegram-secret')
+    monkeypatch.setattr(appmod, 'TELEGRAM_CHAT_ID', '12345')
+    monkeypatch.setattr(appmod, 'TELEGRAM_BOT_TOKEN', '')
+    headers = {'X-Telegram-Bot-Api-Secret-Token': 'telegram-secret'}
+
+    with app.test_client() as client:
+        response = client.post('/api/telegram/webhook', headers=headers, json={
+            'message': {
+                'chat': {'id': 12345},
+                'text': f'{first}\n{second}.\nDuplicate: {first}',
+            },
+        })
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['status'] == 'enqueued'
+    assert payload['enqueued_count'] == 2
+    assert payload['failed_count'] == 0
+    assert calls == [first, second]
+    assert len(payload['jobs']) == 2
+    for item in payload['jobs']:
+        job = get_job(item['job_id'])
+        assert job['source_url'] == item['url']
+        assert job['render_target'] == 'local'
+        assert job['notify_telegram'] == 1
+
+
+def test_telegram_article_failure_is_acknowledged_without_retry(tmp_path, monkeypatch):
+    _article_capture_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr('article.fetch_article',
+                        lambda _url: (_ for _ in ()).throw(RuntimeError('paywall')))
+    monkeypatch.setattr(appmod, 'TELEGRAM_WEBHOOK_SECRET', 'telegram-secret')
+    monkeypatch.setattr(appmod, 'TELEGRAM_CHAT_ID', '12345')
+    monkeypatch.setattr(appmod, 'TELEGRAM_BOT_TOKEN', '')
+
+    with app.test_client() as client:
+        response = client.post('/api/telegram/webhook', headers={
+            'X-Telegram-Bot-Api-Secret-Token': 'telegram-secret'}, json={
+                'message': {'chat': {'id': 12345},
+                            'text': 'https://example.com/paywall'},
+            })
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['status'] == 'processed_with_errors'
+    assert payload['enqueued_count'] == 0
+    assert payload['failed_count'] == 1
+
+
 def test_generated_epub_uses_real_media_duration(tmp_path, monkeypatch):
     from ebooklib import epub
     import epub_generator as generator

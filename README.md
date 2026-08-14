@@ -76,7 +76,7 @@ requires a separately authorised environment-gated session.
 - **Studio Console Web UI** - modern dark obsidian slate theme with Google Fonts (Plus Jakarta Sans & JetBrains Mono)
 - **Dedicated Articles Tab (`📰 Articles`)** - paste any article URL for instant narration, with fast QA bypass (sub-minute synthesis)
 - **Podcast RSS 2.0 Feed (`/api/articles/rss`)** - automatic podcast feed for streaming articles directly in Pocket Casts, Overcast, Apple Podcasts, or Audiobookshelf
-- **Owner-only Telegram capture** - send the bot an article URL and it enters the same local/default-voice article queue as the Articles tab
+- **Owner-only Telegram capture** - send one URL or a multi-link message; every distinct article enters the same local/default-voice queue as the Articles tab
 - **Library Batch Management** - select library ebooks and one cached narrator;
   that narrator determines the engine, so a preview can never be paired with a
   different synthesis backend.

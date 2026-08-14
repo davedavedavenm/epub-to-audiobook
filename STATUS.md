@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-14 VibeVoice documented turn-reset gate — RENDERED / HUMAN VERDICT OPEN
+> ## 2026-08-14 VibeVoice documented turn-reset gate — HEARD / BOTH VIBE ARMS REJECTED
 >
 > The earlier negative verdict remains scoped to one flattened `Speaker 1:`
 > chapter. The exact pinned community runtime documents a materially different
@@ -28,9 +28,13 @@
 > already-supported local Chatterbox Turbo path: **10:50.800** / 13,017,164
 > bytes. All three MP3s decode end-to-end and their downloaded hashes match the
 > render manifests. ASR is used only for Vibe content-completeness; it does not
-> rank voice quality. The A/B/C engine/schedule mapping remains blind pending
-> Dave's listening verdict. Nano/Beatrice remains default and no paid compute
-> or automatic cloud path was enabled.
+> rank voice quality. Dave rejected both Vibe arms A and B as unacceptable.
+> Chatterbox Turbo + Arthur arm C was "almost perfect" with no progressive fast
+> speech; the one heard defect was `co-heirs` sounding like `coheirs`. This
+> closes the documented-turn remedy without reversing Vibe's production
+> rejection. Turbo + Arthur remains an accepted free local book option.
+> Nano/Beatrice remains default and no paid compute or automatic cloud path was
+> enabled.
 >
 > Kaggle's 2026-08 image exposed global NumPy package contamination. The final
 > successful harness follows the repo's proven `uv` isolation pattern: managed

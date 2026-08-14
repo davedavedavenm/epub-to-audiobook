@@ -109,7 +109,10 @@ back. This incident did not touch conversion state or generated media.
 - **Paste:** open **Articles**, paste a public HTTP(S) article URL and submit.
   The job uses the configured system-default narrator, local/free rendering and
   MP3 output automatically.
-- **Send:** send an article URL to the configured Telegram bot. The webhook
+- **Send:** send one URL, or paste several URLs separated by spaces/newlines,
+  to the configured Telegram bot. Each distinct URL in the message is fetched
+  and queued as its own conversion; the bot replies with queued/failed counts.
+  Up to 20 links are accepted per message. The webhook
   accepts the URL only when Telegram supplies the configured secret header and
   the incoming chat ID matches `TELEGRAM_CHAT_ID`; text, captions and Telegram
   `text_link` entities are supported.

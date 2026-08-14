@@ -5944,7 +5944,7 @@ def article_audio(job_id: str, filename: str):
 
 @app.route('/api/telegram/webhook', methods=['POST'])
 def telegram_webhook():
-    """Handle incoming Telegram webhook messages for URL article capture (#42)."""
+    """Handle one or more article URLs from the owner Telegram chat (#42)."""
     supplied_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
     if not TELEGRAM_WEBHOOK_SECRET:
         return jsonify({'error': 'Telegram webhook secret is not configured'}), 503
@@ -5971,41 +5971,71 @@ def telegram_webhook():
     entity_urls = [entity.get('url') for entity in
                    ((msg.get('entities') or []) + (msg.get('caption_entities') or []))
                    if entity.get('type') == 'text_link' and entity.get('url')]
-    urls = entity_urls + re.findall(r'https?://[^\s]+', text)
+    raw_urls = entity_urls + re.findall(r'https?://[^\s]+', text)
+    # Telegram can expose the same link both as an entity and in message text.
+    # Preserve the user's order while preventing duplicate conversions.
+    urls = []
+    seen_urls = set()
+    for raw_url in raw_urls:
+        url = raw_url.rstrip('.,;:!?)]}')
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            urls.append(url)
     if not urls:
         return jsonify({'status': 'no_url_found'}), 200
 
-    url = urls[0].rstrip('.,;:!?)]}')
-    app.logger.info(f"Telegram article capture triggered for {url}")
+    # A Telegram message is limited in size, but keep a hard queue-flood guard
+    # as defence in depth. The owner receives an explicit count if links remain.
+    max_urls = 20
+    omitted = max(0, len(urls) - max_urls)
+    urls = urls[:max_urls]
+    app.logger.info("Telegram article capture triggered for %d URL(s)", len(urls))
 
-    try:
-        from article import fetch_article
-        art = fetch_article(url)
-        body, status = _queue_article(art, {'notify_telegram': True})
-        if status != 200:
-            return jsonify(body), status
-        job_id = body['job_id']
-        book_name = art['title']
+    from article import fetch_article
+    jobs = []
+    errors = []
+    for url in urls:
+        try:
+            art = fetch_article(url)
+            body, status = _queue_article(art, {'notify_telegram': True})
+            if status != 200:
+                detail = body.get('error') or f'queue returned HTTP {status}'
+                raise RuntimeError(detail)
+            jobs.append({'url': url, 'job_id': body['job_id'],
+                         'title': art['title'], 'site': art.get('site', '')})
+        except Exception as e:
+            detail = str(e)[:300]
+            app.logger.error("Telegram article capture failed for %s: %s", url, detail)
+            errors.append({'url': url, 'error': detail})
 
-        if TELEGRAM_BOT_TOKEN and chat_id:
-            try:
-                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-                              json={'chat_id': chat_id, 'text': f"Enqueued article narration: {book_name} ({art['site']})"},
-                              timeout=5)
-            except Exception:
-                pass
+    if TELEGRAM_BOT_TOKEN and chat_id:
+        lines = [f"Article capture: {len(jobs)} queued, {len(errors)} failed."]
+        lines.extend(f"✅ {item['title']} ({item['site']})" for item in jobs)
+        lines.extend(f"❌ {item['url'][:100]} — {item['error'][:120]}" for item in errors)
+        if omitted:
+            lines.append(f"⚠️ {omitted} additional link(s) not processed; send another message.")
+        try:
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                          json={'chat_id': chat_id, 'text': '\n'.join(lines)[:4096]},
+                          timeout=5)
+        except Exception:
+            pass
 
-        return jsonify({'status': 'enqueued', 'job_id': job_id, 'title': book_name}), 200
-    except Exception as e:
-        app.logger.error(f"Telegram article capture failed for {url}: {e}")
-        if TELEGRAM_BOT_TOKEN and chat_id:
-            try:
-                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-                              json={'chat_id': chat_id, 'text': f"Could not capture article: {e}"},
-                              timeout=5)
-            except Exception:
-                pass
-        return jsonify({'error': str(e)}), 400
+    # Telegram retries a webhook delivery after a non-2xx response. Article
+    # extraction failures are processing results, not webhook-auth failures, so
+    # acknowledge the update with 200 to avoid duplicate queue entries.
+    result = {
+        'status': 'enqueued' if jobs else 'processed_with_errors',
+        'enqueued_count': len(jobs),
+        'failed_count': len(errors),
+        'omitted_count': omitted,
+        'jobs': jobs,
+        'errors': errors,
+    }
+    # Preserve the original single-link response fields for existing clients.
+    if len(jobs) == 1 and not errors and not omitted:
+        result.update({'job_id': jobs[0]['job_id'], 'title': jobs[0]['title']})
+    return jsonify(result), 200
 
 
 @app.route('/api/jobs/<job_id>/qa/apply', methods=['POST'])

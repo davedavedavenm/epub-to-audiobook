@@ -217,8 +217,13 @@ listening gate. Date corrected: 2026-08-14.
 The pinned community runtime's documented repeated-same-speaker-turn remedy is
 such a materially different path. Two complete 1,998-word arms (four turns and
 seven turns) plus a same-text Chatterbox Turbo reference are rendered and
-structurally validated as of 2026-08-14. Their human listening verdict is open;
-this does **not** reverse the single-turn rejection or change any default.
+structurally validated as of 2026-08-14. Dave rejected both Vibe arms as
+unacceptable. The same-text Chatterbox Turbo + Arthur control was "almost
+perfect" with stable pacing; its only heard defect was reading `co-heirs` as
+`coheirs`. The documented turn-reset remedy therefore does **not** reverse the
+Vibe production rejection. Chatterbox Turbo + Arthur remains an accepted free
+local full-book choice, but this comparison alone does not change the system
+default.
 
 ## Audition-passage validity per engine — Open, NOT settled
 
@@ -503,9 +508,11 @@ server-side request-forgery controls.
 ## Article Podcast RSS Feed & Telegram Capture (#42) — Active
 
 Articles are served via a standard RSS 2.0 podcast feed (`/api/articles/rss`) with
-audio enclosures for Pocket Casts/Overcast/ABS, and article URLs sent via Telegram
-webhook (`/api/telegram/webhook`) are automatically fetched, converted to EPUB,
-and enqueued for narration. Deployments behind a proxy set `PUBLIC_BASE_URL` so
+audio enclosures for Pocket Casts/Overcast/ABS, and one or more article URLs sent
+in a single owner Telegram message via webhook (`/api/telegram/webhook`) are
+automatically fetched, converted to EPUB, deduplicated within that message and
+enqueued individually for narration. Deployments behind a proxy set
+`PUBLIC_BASE_URL` so
 the feed emits canonical HTTPS enclosure URLs instead of its internal LAN
 origin.
 

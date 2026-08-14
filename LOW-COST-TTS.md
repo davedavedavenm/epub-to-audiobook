@@ -135,9 +135,12 @@ same speaker label as its remedy when output speaks too fast. A 2026-08-14
 free-Kaggle gate has now rendered two complete same-text Arthur arms inside one
 generation each: four turns produced 7:16 and seven turns 6:59 for 1,998 words;
 a same-text local Chatterbox Turbo reference produced 10:50. All decode and the
-Vibe completeness gates pass, but the human pacing/quality verdict is still
-open. Until Dave hears them, this evidence does not reverse the single-turn
-rejection or change Qwen/default ordering.
+Vibe completeness gates pass. Dave rejected both Vibe arms as unacceptable;
+the documented reset remedy therefore does not reverse the single-turn
+rejection. The Turbo + Arthur control was almost perfect and maintained stable
+pacing, with `co-heirs` → `coheirs` the only heard defect. This reinforces
+Turbo + Arthur as the accepted free local quality path without automatically changing
+the system default.
 
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage

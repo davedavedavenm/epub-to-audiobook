@@ -125,7 +125,10 @@ the readable text and automatically queues an MP3 using your current default
 narrator and the free local render target. You do not need to choose an engine
 for each article.
 
-If Telegram is configured, sending a URL to the bot does exactly the same thing.
+If Telegram is configured, send the bot either one article URL or paste several
+URLs into one message (spaces or separate lines are both fine). Every distinct
+URL is automatically fetched and queued as a separate local conversion using
+the current default narrator; the bot replies with the queued and failed counts.
 Only the configured owner chat is accepted. Completed article narrations appear
 in the RSS feed shown on the Articles screen; add that feed URL to your podcast
 app.
