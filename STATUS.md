@@ -1,5 +1,28 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-14 GitHub Actions image-build failures — REPAIRED / VERIFIED GREEN
+>
+> The repeated red runs were not failing unit tests or failed webapp images.
+> `build-engines.yml` treated every `webapp/**` change as a reason to rebuild
+> all four large engine images; Chatterbox then failed because the old PyTorch
+> CUDA 12.4 index no longer served its exact `nvidia-cudnn-cu12==9.1.0.70`
+> dependency, and matrix `fail-fast` cancelled TADA, VibeVoice and Qwen before
+> they could report their own result.
+>
+> Commit `548f933` separated the webapp image into its own path-filtered
+> workflow, made the engine workflow calculate a changed-engine matrix with
+> native Git/GitHub job outputs, and disabled matrix fail-fast. Chatterbox now
+> installs the matched `torch==2.6.0` / `torchaudio==2.6.0` CUDA 12.6 pair using
+> PyTorch's official v2.6 wheel index. Regression tests prevent `webapp/**` or
+> `scripts/convert_book.py` from being added back to the all-engine trigger.
+>
+> **Proof:** local suite **255 passed** (253 existing plus two workflow guards).
+> GitHub run `31780315340` passed lint, tests and Compose validation; run
+> `31780315404` built/pushed the isolated webapp image; run `31780315342`
+> independently built/pushed **Chatterbox, TADA, VibeVoice and Qwen**, all
+> successful. No deployment, engine default, GPU or paid-compute setting was
+> changed.
+
 > ## 2026-08-14 CPU numbers/currency root-cause A/B — HEARD / CAUSE CLOSED
 >
 > The original Peter, Jo, Jasper and Rosie auditions used each pinned engine's
