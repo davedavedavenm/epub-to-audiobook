@@ -368,6 +368,13 @@ Gutenberg's generated `pg-header`, not book prose. Exact `pg-header`/`pg-footer`
 containers are now excluded structurally. Paragraph-aware request boundaries
 remain an A/B candidate, not a production default, until heard.
 
+The corrective 600-word gate is rendered and structurally validated at
+revision `cc1b0c6`: current 280-character sentence packing (15 requests) versus
+exact source-paragraph boundaries (28 requests), for both Peter and Rosie.
+No engine parameter changed. The four files are ready for Dave's listening
+verdict; do not promote paragraph-aware chunking merely because it is newer or
+structurally neater—twice as many model resets may sound worse.
+
 ## Book acquisition pipeline docs — moved to infra — Active
 
 The LazyLibrarian/Prowlarr/qBittorrent/SABnzbd grab-and-delivery pipeline

@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-14 Pocket + Kitten app integration — LIVE / LONG-FORM HEARD / CORRECTIVE A/B IN PROGRESS
+> ## 2026-08-14 Pocket + Kitten app integration — LIVE / CORRECTIVE A/B READY FOR LISTENING
 >
 > Pocket TTS 2.1 and KittenTTS 0.8.1 now have isolated, non-root, CPU-only
 > OpenAI-compatible services behind explicit Compose/deploy opt-ins. The app
@@ -38,8 +38,20 @@
 > Exact Gutenberg header/footer containers are now structurally excluded; the
 > track-title selector uses that same sanitized document. The listening-excerpt
 > builder also now retains paragraph boundaries instead of flattening them.
-> A controlled current-vs-paragraph-aware Peter/Rosie render is in progress;
-> paragraph-aware chunking is not the production default without an ear verdict.
+> A controlled current-vs-paragraph-aware Peter/Rosie render is now ready.
+> Every arm uses the same clean 600-word excerpt (SHA-256
+> `b7f27ba46801efe5041d422c194f0111b3bda0cc2772181dc97f7e7e6178a970`),
+> exact deployed revision `cc1b0c6122b4907c1456d81a1d8c935fa185ab05`, 280-character
+> ceiling, explicit normalization, official voice/model defaults and no LLM,
+> ASR, GPU or paid compute. Current packing uses 15 requests; paragraph-aware
+> uses 28. Peter current/paragraph: **2:49 / 2:48**, 3,382,468 / 3,369,508
+> bytes. Rosie current/paragraph: **3:40 / 3:40**, 4,400,068 bytes each.
+> All four decode cleanly end-to-end and have distinct hashes. Captured text
+> begins `It is very seldom...`; no Gutenberg metadata remains. The first
+> Peter-current attempt was deliberately stopped during setup and left two
+> stale capture records; validation uses the successful final contiguous 15
+> records (exactly 600 words), matching the only MP3 written. Paragraph-aware
+> chunking remains opt-in pending Dave's verdict.
 
 > ## 2026-08-14 VibeVoice cfg-2 production-path gate — DEFECT FOUND / FIXED / FREE RERUN ACTIVE
 >

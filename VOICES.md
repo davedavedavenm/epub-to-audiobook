@@ -334,7 +334,9 @@ same-text long-form Peter (16:27) and Rosie (21:16) files: Rosie led on body
 pace/tone; Peter was decent/promising but uneven. Neither is book-approved.
 Their shared run-on title/author opening was identical malformed Project
 Gutenberg metadata supplied by our test path, so corrected paragraph-aware
-previews—not the broken opening—decide the next gate.
+previews—not the broken opening—decide the next gate. The corrected 600-word
+current-vs-paragraph-aware Peter/Rosie pairs are now structurally validated and
+ready to hear; no new default is set until that verdict.
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,

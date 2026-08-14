@@ -159,8 +159,9 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       identical 3,600-word input hash and clean full decode. Dave heard both:
       Rosie leads on body pace/tone; Peter is promising but uneven. The shared
       run-on opening was proven to be flattened Gutenberg metadata supplied by
-      our path. Corrected current-vs-paragraph-aware previews are now required
-      before admission.
+      our path. Corrected 600-word current-vs-paragraph-aware Peter/Rosie pairs
+      are rendered, full-decode validated and ready for Dave's verdict before
+      admission.
 - [ ] 11.6 Enable only engines that pass 11.5 as opt-in choices. Chatterbox
       Nano/Beatrice remains the default unless another engine beats it by ear;
       none may enable a paid/cloud fallback.

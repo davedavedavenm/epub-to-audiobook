@@ -57,6 +57,8 @@ fields together because the exact captured input contained Project Gutenberg's
 machine header joined to the first sentence. This is a proven source-path
 defect, not an engine diagnosis. A cleaned, paragraph-aware A/B is required
 before either free CPU engine is admitted for books; Rosie currently leads.
+That controlled 600-word A/B is now rendered locally for both voices and ready
+to hear. It cost GBP0 and used no GPU/cloud fallback.
 
 ## 2026-07-28 local accent bake-off
 
