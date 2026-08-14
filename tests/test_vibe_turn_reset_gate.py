@@ -33,16 +33,12 @@ def _words(value: str) -> int:
 
 def test_vibe_turn_schedules_change_only_same_speaker_boundaries():
     builder = _load_builder()
-    paragraphs = builder.extract_paragraphs()
-    full = "\n\n".join(paragraphs)
-    assert hashlib.sha256(full.encode()).hexdigest() == builder.FULL_TEXT_SHA
-
-    raw = "\n\n".join(paragraphs[:78])
-    assert hashlib.sha256(raw.encode()).hexdigest() == builder.RAW_EXCERPT_SHA
-    assert raw.count("draught , and") == 1
-    corrected = [p.replace("draught , and", "draught, and")
-                 for p in paragraphs[:78]]
-    source = re.sub(r"\s+", " ", "\n\n".join(corrected)).strip()
+    paragraphs = builder.fixture_paragraphs()
+    fixture = "\n\n".join(paragraphs)
+    assert hashlib.sha256(fixture.encode()).hexdigest() == builder.FIXTURE_TEXT_SHA
+    assert "draught , and" not in fixture
+    assert fixture.count("draught, and") == 1
+    source = re.sub(r"\s+", " ", fixture).strip()
     assert hashlib.sha256(source.encode()).hexdigest() == builder.SOURCE_SHA
     assert _words(source) == 1998
 
@@ -51,7 +47,7 @@ def test_vibe_turn_schedules_change_only_same_speaker_boundaries():
         "long_turns": [503, 489, 514, 492],
     }
     for schedule, ranges in builder.GROUPS.items():
-        segments = builder._groups(corrected, ranges)
+        segments = builder._groups(paragraphs, ranges)
         assert [_words(segment) for segment in segments] == expected_counts[schedule]
         assert re.sub(r"\s+", " ", " ".join(segments)).strip() == source
         script = "\n".join("Speaker 1: " + segment for segment in segments)

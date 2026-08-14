@@ -20,15 +20,14 @@ import json
 import re
 from pathlib import Path
 
-from build_chapter_kernel import extract_paragraphs
-
-
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "scratch" / "vibe_turn_reset"
+FIXTURE = Path(__file__).resolve().parent / "fixtures" / "yellow_wallpaper_turn_reset_78.txt"
 RUNTIME_SHA = "07cb79feadd2d3fd7f47530d4c964a12857936a0"
 REF_SHA = "8774082c3acf6c215dc9307a4a9cce5fd50d4242fc9263534ed420675873e252"
 FULL_TEXT_SHA = "317e27c2769f23325e169bbbd0714fa462f063d601dc62c7fd6c003915714daa"
 RAW_EXCERPT_SHA = "e27148a07d668355f99cbeab74635427e41f1c9ba245a10fdf14e58508827761"
+FIXTURE_TEXT_SHA = "203787eef3b8dfdadcd5be9cf14af51f866d5020c527887f3ad683a26d6a0623"
 SOURCE_SHA = "3b8808c4295c11cae751a33067a502452e3ebe4a10c7aaea5cadfe108625f0f4"
 RUNTIME_DOCS = (
     "https://github.com/vibevoice-community/VibeVoice/blob/"
@@ -242,21 +241,24 @@ def _groups(paragraphs: list[str], ranges: list[tuple[int, int]]) -> list[str]:
     return [" ".join(paragraphs[start:end]) for start, end in ranges]
 
 
+def fixture_paragraphs() -> list[str]:
+    """Load the committed, corrected excerpt used by clean CI and Kaggle."""
+    text = FIXTURE.read_text(encoding="utf-8").strip()
+    assert hashlib.sha256(text.encode()).hexdigest() == FIXTURE_TEXT_SHA
+    paragraphs = text.split("\n\n")
+    assert len(paragraphs) == 78
+    return paragraphs
+
+
 def main() -> int:
     builder_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    all_paragraphs = extract_paragraphs()
-    full_text = "\n\n".join(all_paragraphs)
-    assert hashlib.sha256(full_text.encode()).hexdigest() == FULL_TEXT_SHA
-    raw = "\n\n".join(all_paragraphs[:78])
-    assert hashlib.sha256(raw.encode()).hexdigest() == RAW_EXCERPT_SHA
-    assert raw.count("draught , and") == 1
-    corrected = raw.replace("draught , and", "draught, and")
+    corrected_paragraphs = fixture_paragraphs()
+    corrected = "\n\n".join(corrected_paragraphs)
+    assert "draught , and" not in corrected
+    assert corrected.count("draught, and") == 1
     source_text = re.sub(r"\s+", " ", corrected).strip()
     assert hashlib.sha256(source_text.encode()).hexdigest() == SOURCE_SHA
     assert len(re.sub(r"[^a-z0-9' ]+", " ", source_text.lower()).split()) == 1998
-
-    corrected_paragraphs = [p.replace("draught , and", "draught, and")
-                            for p in all_paragraphs[:78]]
     # Each arm gets a separate private Kaggle job and therefore a fresh model
     # process. This prevents order or retained generation state becoming an
     # uncontrolled variable. The local ignored manifest preserves the blind map.
