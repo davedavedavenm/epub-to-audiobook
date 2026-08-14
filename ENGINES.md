@@ -56,6 +56,13 @@ or accent label is inferred where upstream does not provide one.
 | [NeuTTS Air 1.4.1](https://github.com/neuphonic/neutts/blob/ac69851f28fc63a487917e7c2e27f0d75c759cba/README.md) | Official references: English `dave`, `jo`, `emily`, `paul`, `sophie`, `steven`; Spanish `mateo`; German `greta`; French `juliette`. The four 2E names also work as ordinary references for Air. | Clone-first engine: clean mono 16–44 kHz WAV, 3–15 seconds, natural continuous speech, plus its exact transcript. |
 | [KittenTTS 0.8.1](https://github.com/KittenML/KittenTTS/blob/0.8.1/README.md) | `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`, `Kiki`, `Leo`. | No official voice-cloning path is documented for this release. |
 
+Pocket and Kitten now have isolated opt-in CPU services in this repository.
+Their OpenAI-compatible wrappers call the official APIs above, reject unknown
+voices instead of substituting one, and expose no paid/GPU fallback. Both use
+the listener-selected `explicit` number/currency profile across previews and
+book/recovery paths. This is integration, not production admission: long-form
+completeness and listening remain open.
+
 The first recorded Vibe GPU-memory measurement comes from a later **short
 accent sample**, not the heard full chapter: on a Kaggle P100, Irish peaked at
 **5.299 GiB allocated / 5.607 GiB reserved** and South African at **5.166 /

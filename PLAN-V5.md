@@ -139,9 +139,11 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       production queue while auditioning.
 - [x] 11.2 Prove the shared number/currency failure was raw evaluation input;
       deterministic normalization won 4/4 controlled listening comparisons.
-- [ ] 11.3 Give each candidate an opt-in, health-checked CPU service and route
+- [~] 11.3 Give each candidate an opt-in, health-checked CPU service and route
       the same normalized text through preview, worker, recovery and finalise
-      paths. NeuTTS must retain sentence chunking for its documented context.
+      paths. Pocket and Kitten are implemented and locally regression-tested;
+      live container proof is pending. NeuTTS remains deferred and must retain
+      sentence chunking for its documented context if admitted.
 - [ ] 11.4 Render and validate a persistent preview for every voice before that
       voice is returned by the selectable catalogue. Never cold-render on Play.
 - [ ] 11.5 Put the best heard voice from each candidate through a 15–30 minute

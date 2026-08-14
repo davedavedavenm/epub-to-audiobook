@@ -43,7 +43,7 @@ import requests  # noqa: E402
 from lexicon import SEED_PRONUNCIATION  # noqa: E402
 
 _LEXICON = {}
-_MODERN = True   # this script only drives the modern engines
+_TEXT_PROFILE = 'modern'
 _SEARCH_REPLACE_RULES = []
 
 def load_search_and_replace(path):
@@ -112,14 +112,19 @@ class _P(HTMLParser):
 def chapter_text(z, name):
     p = _P(); p.feed(sanitize_html(z.read(name).decode('utf-8', 'ignore')))
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
-    text = normalize_text_for_tts(text, modern=_MODERN)
+    modern = _TEXT_PROFILE == 'modern'
+    text = normalize_text_for_tts(text, modern=modern)
     # Modern engines read real words natively; phonetic respellings ("Bay-JING")
     # make them worse (heard "bay...zhing"). For modern, keep ONLY acronym
     # letter-spacing rules ("CEO" -> "C E O" — heard "see you" otherwise);
     # other misreads go to the QA loop with targeted natural spellings.
     if _LEXICON:
         from tts_preprocess import _is_letter_spacing
-        lex = _LEXICON if not _MODERN else {
+        # The explicit profile is the measured Pocket/Kitten contract: spell
+        # numbers and currency, but retain only safe acronym letter-spacing
+        # from the lexicon. Legacy phonetic respellings were not part of the
+        # winning A/B and must not be smuggled into the production path.
+        lex = _LEXICON if _TEXT_PROFILE == 'legacy' else {
             k: v for k, v in _LEXICON.items() if _is_letter_spacing(k, v)}
         if lex:
             text = apply_lexicon(text, lex)
@@ -351,6 +356,11 @@ def main():
                     help='Path to a file containing search==replace rules (one per line) to apply to text')
     ap.add_argument('--model', default='tts-1',
                     help='TTS model name to send in request')
+    ap.add_argument('--text-profile', choices=('auto', 'modern', 'explicit', 'legacy'),
+                    default='auto',
+                    help='Text normalization contract. explicit spells numbers/currency '
+                         'without legacy phonetic respellings; the app always sends this '
+                         'explicitly. auto preserves compatibility for direct callers.')
     ap.add_argument('--job-id', default='',
                     help='job id; when set, the text sent to the engine is recorded to '
                          '$TRANSCRIPTS_DIR/<job-id>/chunks.jsonl so the post-flight ASR '
@@ -359,9 +369,9 @@ def main():
     ap.add_argument('--speed', type=float, default=1.0,
                     help='playback rate sent to the engine (OpenAI `speed`). '
                          'Honoured by Kokoro, Piper, Edge and CosyVoice. '
-                         'Chatterbox Turbo/Nano IGNORE it — that model has no '
-                         'speed control; use CHATTERBOX_EXAGGERATION / '
-                         'CHATTERBOX_CFG_WEIGHT for its pacing instead.')
+                         'Chatterbox Turbo/Nano, TADA, Pocket and Kitten ignore '
+                         'this field because their documented APIs expose no '
+                         'OpenAI-style speed control.')
     a = ap.parse_args()
 
     # Load search and replace rules if specified
@@ -369,10 +379,16 @@ def main():
     if a.search_and_replace_file:
         _SEARCH_REPLACE_RULES = load_search_and_replace(a.search_and_replace_file)
 
-    # modern voice-clone engines read numbers/years natively; skip spelling.
-    modern = ('_tada' in a.voice) or (a.voice.startswith('uk_') and '_tada' not in a.voice) or a.chunk_chars >= 280
-    global _MODERN
-    _MODERN = modern
+    # Every app path supplies this explicitly. ``auto`` is retained only for
+    # backwards-compatible direct script use and reproduces the old heuristic.
+    text_profile = a.text_profile
+    if text_profile == 'auto':
+        modern = (('_tada' in a.voice)
+                  or (a.voice.startswith('uk_') and '_tada' not in a.voice)
+                  or a.chunk_chars >= 280)
+        text_profile = 'modern' if modern else 'legacy'
+    global _TEXT_PROFILE
+    _TEXT_PROFILE = text_profile
 
     epub = a.epub
     if epub.startswith('http'):

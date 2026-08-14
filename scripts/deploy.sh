@@ -63,6 +63,12 @@ fi
 if [[ "${ENABLE_QWEN3_PROFILE:-0}" == "1" ]]; then
   PROFILE_ARGS+=(--profile qwen3)
 fi
+if [[ "${ENABLE_POCKET_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile pocket)
+fi
+if [[ "${ENABLE_KITTEN_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile kitten)
+fi
 
 echo "Enabled Compose profiles: ${PROFILE_ARGS[*]}"
 APP_GIT_SHA="${GIT_SHA}" APP_BUILD_TIME="${BUILD_TIME}" APP_VERSION="${VERSION}" \

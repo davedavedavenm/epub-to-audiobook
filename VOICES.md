@@ -325,9 +325,11 @@ definitions exist.
 | KittenTTS 0.8.1 | `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`, `Kiki`, `Leo`. | Fixed preset list; no officially documented cloning path. |
 
 Source details and exact upstream links are maintained in `ENGINES.md`.
-Only Peter, Jo, Jasper and Rosie are currently cached for these evaluation
-engines; do not expose the other names as Play buttons until their persisted
-previews exist.
+The app now registers all 21 English Pocket presets and all eight Kitten
+presets behind opt-in CPU profiles. It still does not expose a cold Play
+button: each voice becomes audition-ready only after its persisted preview is
+non-trivial. Peter, Jasper and Rosie are the only voices with a human listening
+verdict so far; catalogue presence is not quality approval.
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,

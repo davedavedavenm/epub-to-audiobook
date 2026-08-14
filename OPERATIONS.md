@@ -55,6 +55,9 @@ back. This incident did not touch conversion state or generated media.
   (`ENABLE_PIPER_PROFILE=1`) after failing the controlled quality A/B. Turbo and
   TADA stay opt-in (`ENABLE_CHATTERBOX_PROFILE=1` /
   `ENABLE_TADA_PROFILE=1`) because they are heavy.
+  Pocket and Kitten are also opt-in (`ENABLE_POCKET_PROFILE=1` /
+  `ENABLE_KITTEN_PROFILE=1`) while their long-form listening gate remains open.
+  They are CPU-only, free/local, and never arm a cloud or paid fallback.
   **That describes a fresh deploy, not necessarily the running box.** A live
   check on 2026-07-25 found Turbo *and* kokoro up alongside nano and piper
   (opt-ins from earlier sessions, never brought down). Harmless on 31 GB, but
@@ -69,6 +72,10 @@ back. This incident did not touch conversion state or generated media.
   `mem_limit`s. The Voices UI exposes only persisted previews, so Play never
   causes a cold render. Paid Polly/Inworld and network Edge are excluded from
   startup warming. Set the switch to `0` on a smaller host.
+- Pocket and Kitten use the `explicit` converter text profile in all app paths:
+  spoken numbers/currency plus safe acronym spacing, without legacy phonetic
+  respellings. This is a measured listening decision, not a generic model
+  assumption; first render and recovery commands must both carry it.
 - GPU engines are now a **quality ceiling, not a throughput answer**: reach for
   CosyVoice 3 (Kaggle/Vast GPU) or TADA for their specific character, not for
   speed.

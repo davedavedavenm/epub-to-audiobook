@@ -1,0 +1,6 @@
+fastapi==0.116.1
+uvicorn==0.35.0
+pydantic==2.11.7
+soundfile==0.13.1
+https://github.com/KittenML/KittenTTS/releases/download/0.8.1/kittentts-0.8.1-py3-none-any.whl
+

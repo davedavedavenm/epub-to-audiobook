@@ -61,6 +61,43 @@ def test_engine_url_qwen3():
     assert model == 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'
 
 
+def test_engine_url_pocket():
+    url, model = get_engine_url('pocket', JOB_ID)
+    assert url == appmod.POCKET_URL
+    assert model == 'pocket-tts-2.1'
+
+
+def test_engine_url_kitten():
+    url, model = get_engine_url('kitten', JOB_ID)
+    assert url == appmod.KITTEN_URL
+    assert model == 'KittenML/kitten-tts-mini-0.8'
+
+
+def test_cpu_candidates_use_measured_explicit_text_profile():
+    assert appmod.text_profile_for_engine('pocket') == 'explicit'
+    assert appmod.text_profile_for_engine('kitten') == 'explicit'
+    assert appmod.text_profile_for_engine('chatterbox_nano') == 'modern'
+    assert appmod.text_profile_for_engine('kokoro') == 'legacy'
+
+
+def test_cpu_candidate_catalogues_match_official_lists():
+    pocket = [key for key, value in appmod.VOICES.items() if value['engine'] == 'pocket']
+    kitten = [key for key, value in appmod.VOICES.items() if value['engine'] == 'kitten']
+    assert len(pocket) == 21
+    assert len(kitten) == 8
+    assert 'pocket_peter_yearsley' in pocket
+    assert {'kitten_bella', 'kitten_jasper', 'kitten_luna', 'kitten_bruno',
+            'kitten_rosie', 'kitten_hugo', 'kitten_kiki', 'kitten_leo'} == set(kitten)
+
+
+def test_cpu_candidate_previews_use_explicit_numeric_profile():
+    for engine in ('pocket', 'kitten'):
+        out = appmod._preview_text_for(engine)
+        assert '$1.2' not in out
+        assert 'one point two billion dollars' in out
+        assert 'fifty-two percent' in out
+
+
 def test_engine_url_edge():
     url, model = get_engine_url('edge', JOB_ID)
     assert url == _proxy_or(f'http://tts-proxy:8882/j/{JOB_ID}/v1')

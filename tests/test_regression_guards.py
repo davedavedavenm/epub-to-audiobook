@@ -221,13 +221,31 @@ def test_official_documentation_gate_is_mandatory():
 
 def test_startup_preview_cache_cannot_call_paid_engines():
     """Background maintenance may spend CPU, never money or internet quota."""
-    assert "auto_cache_engines = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada'})" in APP
     cache_block = APP[APP.index('def _cache_all_voices_background'):
                       APP.index('def background_startup')]
+    for engine in ('kokoro', 'chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten'):
+        assert f"'{engine}'" in cache_block
     assert "'polly'" not in cache_block
     assert "'inworld'" not in cache_block
     assert "'edge'" not in cache_block
     assert 'health.get' in cache_block
+
+
+def test_cpu_candidates_are_opt_in_cpu_only_and_cached_before_play():
+    for service, profile in (('pocket-tts:', 'pocket'), ('kitten-tts:', 'kitten')):
+        assert service in COMPOSE
+        assert f'- {profile}' in COMPOSE
+    assert COMPOSE.count('CUDA_VISIBLE_DEVICES=') >= 2
+    assert 'ENABLE_POCKET_PROFILE' in DEPLOY
+    assert 'ENABLE_KITTEN_PROFILE' in DEPLOY
+    assert "'pocket', 'kitten'" in APP
+
+
+def test_every_converter_command_carries_engine_text_profile():
+    assert APP.count("'--text-profile', text_profile_for_engine(tts_engine)") == 2
+    converter = (ROOT / 'scripts' / 'convert_book.py').read_text(encoding='utf-8')
+    assert "choices=('auto', 'modern', 'explicit', 'legacy')" in converter
+    assert "_TEXT_PROFILE == 'legacy'" in converter
 
 
 def test_play_button_never_starts_cold_voice_synthesis():

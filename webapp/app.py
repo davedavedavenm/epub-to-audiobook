@@ -75,6 +75,8 @@ CHATTERBOX_NANO_URL = os.environ.get('CHATTERBOX_NANO_URL', 'http://chatterbox-n
 TADA_URL = os.environ.get('TADA_URL', 'http://tada-tts:8005/v1')
 VIBEVOICE_URL = os.environ.get('VIBEVOICE_URL', 'http://vibevoice-tts:8010/v1')
 QWEN3_URL = os.environ.get('QWEN3_URL', 'http://qwen3-tts:8011/v1')
+POCKET_URL = os.environ.get('POCKET_URL', 'http://pocket-tts:8012/v1')
+KITTEN_URL = os.environ.get('KITTEN_URL', 'http://kitten-tts:8013/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
@@ -452,6 +454,18 @@ TTS_ENGINES = {
         'description': 'Long-form consistency finalist (Kaggle or opt-in local CUDA)',
         'url_env': 'QWEN3_URL',
         'default_url': 'http://qwen3-tts:8011/v1'
+    },
+    'pocket': {
+        'name': 'Pocket TTS 2.1',
+        'description': 'Opt-in free CPU candidate; complete official English voice catalogue',
+        'url_env': 'POCKET_URL',
+        'default_url': 'http://pocket-tts:8012/v1'
+    },
+    'kitten': {
+        'name': 'KittenTTS 0.8.1',
+        'description': 'Opt-in free CPU candidate; eight official preset voices',
+        'url_env': 'KITTEN_URL',
+        'default_url': 'http://kitten-tts:8013/v1'
     }
 }
 
@@ -632,6 +646,41 @@ VOICES = {
     # the audiobook listening gate until their samples have been rendered/heard.
     'uk_male_minter_vibevoice': {'name': 'Arthur — VibeVoice (quality finalist)', 'accent': 'British', 'gender': 'Male', 'engine': 'vibevoice'},
     'uk_male_minter_qwen3': {'name': 'Arthur — Qwen3-TTS (consistency finalist)', 'accent': 'British', 'gender': 'Male', 'engine': 'qwen3'},
+
+    # ============ FREE CPU CANDIDATES (OFFICIAL CATALOGUES) ============
+    # Pocket's upstream catalogue does not publish reliable accent/gender
+    # metadata for every preset, so do not infer it from a name. Peter, Jasper
+    # and Rosie passed the short normalized-input listening screen; all voices
+    # remain candidates until their own previews and a long-form gate are heard.
+    'pocket_alba': {'name': 'Alba (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_anna': {'name': 'Anna (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_azelma': {'name': 'Azelma (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_bill_boerst': {'name': 'Bill Boerst (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_caro_davy': {'name': 'Caro Davy (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_charles': {'name': 'Charles (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_cosette': {'name': 'Cosette (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_eponine': {'name': 'Eponine (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_eve': {'name': 'Eve (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_fantine': {'name': 'Fantine (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_george': {'name': 'George (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_jane': {'name': 'Jane (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_jean': {'name': 'Jean (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_javert': {'name': 'Javert (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_marius': {'name': 'Marius (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_mary': {'name': 'Mary (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_michael': {'name': 'Michael (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_paul': {'name': 'Paul (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_peter_yearsley': {'name': 'Peter Yearsley (Pocket — heard)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_stuart_bell': {'name': 'Stuart Bell (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'pocket_vera': {'name': 'Vera (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
+    'kitten_bella': {'name': 'Bella (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_jasper': {'name': 'Jasper (Kitten — heard)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_luna': {'name': 'Luna (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_bruno': {'name': 'Bruno (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_rosie': {'name': 'Rosie (Kitten — heard)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_hugo': {'name': 'Hugo (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_kiki': {'name': 'Kiki (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_leo': {'name': 'Leo (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
@@ -2477,8 +2526,9 @@ def get_voice_preview(voice_id: str) -> Path:
                 await edge_tts.Communicate(ptext, voice_id).save(str(preview_path))
 
             asyncio.run(_edge())
-        elif engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
-            # Chatterbox/TADA preview (direct to the local service).
+        elif engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
+                       'pocket', 'kitten'):
+            # Direct preview from an isolated local engine service.
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
             # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
             # 180s cap was SHORTER than that, so every chatterbox sample was
@@ -2486,6 +2536,8 @@ def get_voice_preview(voice_id: str) -> Path:
             # (2026-07-14). Be generous; this is a background job.
             _url = (VIBEVOICE_URL if engine == 'vibevoice'
                     else QWEN3_URL if engine == 'qwen3'
+                    else POCKET_URL if engine == 'pocket'
+                    else KITTEN_URL if engine == 'kitten'
                     else TADA_URL if engine == 'tada'
                     else CHATTERBOX_NANO_URL if engine == 'chatterbox_nano'
                     else CHATTERBOX_URL)
@@ -2777,9 +2829,29 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         return VIBEVOICE_URL, 'microsoft/VibeVoice-1.5B'
     elif tts_engine == 'qwen3':
         return QWEN3_URL, 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'
+    elif tts_engine == 'pocket':
+        return POCKET_URL, 'pocket-tts-2.1'
+    elif tts_engine == 'kitten':
+        return KITTEN_URL, 'KittenML/kitten-tts-mini-0.8'
     else:
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else KOKORO_URL
         return url, 'kokoro'
+
+
+def text_profile_for_engine(tts_engine: str) -> str:
+    """Return the measured preprocessing contract for an engine family.
+
+    Pocket and Kitten won their controlled A/B only when numbers/currency were
+    spoken explicitly. They must not inherit the raw-number modern profile,
+    while their neural frontends also must not receive legacy phonetic
+    respellings. Keeping this mapping centralized makes preview, first render
+    and recovery use the same input contract.
+    """
+    if tts_engine in ('pocket', 'kitten'):
+        return 'explicit'
+    if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
+        return 'modern'
+    return 'legacy'
 
 
 def build_retry_cmd_from_job(job: dict) -> list[str]:
@@ -2819,6 +2891,7 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
         '--out', str(output_path),
         '--model', tts_model,
+        '--text-profile', text_profile_for_engine(tts_engine),
         # Without this the render cannot be verified afterwards: the converter
         # is the only place every engine passes through, so it is where the
         # transcript record has to be written (#33).
@@ -4005,8 +4078,21 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # applies (bug caught running the real worker path 2026-07-08).
             _pjob = get_job(job_id)
             _pengine = (_pjob.get('tts_engine') if _pjob else None) or 'kokoro'
-            _modern = _pengine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3')
-            _, files_changed = preprocess_epub(epub_path, preprocessed_path, lexicon=lexicon, modern=_modern)
+            _text_profile = text_profile_for_engine(_pengine)
+            _modern = _text_profile == 'modern'
+            # Explicit numbers/currency won 4/4 controlled CPU A/Bs. Keep only
+            # acronym letter-spacing from the lexicon for that profile so a
+            # Pocket/Kitten book cannot acquire legacy phonetic respellings.
+            _preprocess_lexicon = lexicon
+            if _text_profile == 'explicit':
+                from tts_preprocess import _is_letter_spacing
+                _preprocess_lexicon = {
+                    key: value for key, value in lexicon.items()
+                    if _is_letter_spacing(key, value)
+                }
+            _, files_changed = preprocess_epub(
+                epub_path, preprocessed_path,
+                lexicon=_preprocess_lexicon, modern=_modern)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
             epub_path = preprocessed_path
@@ -4051,7 +4137,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # SLOW_ENGINE_MIN_TIMEOUT: chatterbox/tada on CPU run near realtime;
         # polluted ETA metrics produced absurd timeouts (375m for a ~14h book,
         # incident 2026-07-07). Floor the timeout at char_count/4 chars-per-sec.
-        if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
+        if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
+                          'pocket', 'kitten'):
             floor_seconds = int(char_count / 4.0)
             if timeout_seconds < floor_seconds:
                 timeout_seconds = floor_seconds
@@ -4125,6 +4212,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             '--voice', voice if tts_engine in ('edge', 'inworld') else effective_voice,
             '--out', str(output_path),
             '--model', tts_model,
+            '--text-profile', text_profile_for_engine(tts_engine),
             # THE main render path. Without --job-id the converter cannot write
             # transcript chunks, and the book ships unverifiable (#33). A first
             # attempt at this fix only patched the watchdog's retry builder
@@ -4170,11 +4258,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # field, so say so rather than implying it worked.
         if tts_speed and float(tts_speed) != 1.0:
             cmd.extend(['--speed', str(tts_speed)])
-            if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada'):
+            if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten'):
                 append_job_log(job_id,
                                f"NOTE: speed {tts_speed}x requested, but {tts_engine} has no "
-                               f"speed control and will ignore it (its pacing levers are "
-                               f"exaggeration/cfg_weight). Audio will render at 1.0x.")
+                               f"documented OpenAI-style speed control and will ignore it. "
+                               f"Audio will render at the engine's native pace.")
             else:
                 append_job_log(job_id, f"Narration speed: {tts_speed}x")
 
@@ -4447,6 +4535,8 @@ def check_engines_health(max_age=20):
         'tada': f"{TADA_URL.rstrip('/')}/audio/voices",
         'vibevoice': f"{VIBEVOICE_URL.rstrip('/')}/audio/voices",
         'qwen3': f"{QWEN3_URL.rstrip('/')}/audio/voices",
+        'pocket': f"{POCKET_URL.rstrip('/')}/audio/voices",
+        'kitten': f"{KITTEN_URL.rstrip('/')}/audio/voices",
         'piper': f"{PIPER_URL.rstrip('/')}/models",  # openedai-speech has no /audio/voices
     }
     out = {}
@@ -7372,7 +7462,8 @@ def _cache_voice_batch(voice_ids):
     max_load = float(os.environ.get('VOICE_CACHE_MAX_LOAD') or round(ncpu * 0.6, 1))
     delay = float(os.environ.get('VOICE_CACHE_DELAY', '5'))
     health = check_engines_health(max_age=0)
-    allowed = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada'})
+    allowed = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada',
+                         'pocket', 'kitten'})
     for voice_id in voice_ids:
         info = all_voices().get(voice_id, {})
         engine = info.get('engine', 'kokoro')
@@ -7418,7 +7509,8 @@ def _cache_all_voices_background():
     # hammer an opt-in/offline evaluation service. Cache only currently healthy
     # free local production families. Other previews remain explicit user
     # actions, where failures/cost are visible rather than hidden at boot.
-    auto_cache_engines = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada'})
+    auto_cache_engines = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada',
+                                    'pocket', 'kitten'})
     health = check_engines_health(max_age=0)
     cacheable = [voice_id for voice_id, info in all_voices().items()
                  if info.get('engine', 'kokoro') in auto_cache_engines

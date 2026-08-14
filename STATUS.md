@@ -1,5 +1,33 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-14 Pocket + Kitten app integration — IMPLEMENTED / LIVE PROOF PENDING
+>
+> Pocket TTS 2.1 and KittenTTS 0.8.1 now have isolated, non-root, CPU-only
+> OpenAI-compatible services behind explicit Compose/deploy opt-ins. The app
+> registers Pocket's 21 official English presets and Kitten's eight official
+> presets, probes both services, and warms only healthy local voices. A Play
+> control still requires a persisted non-trivial MP3; catalogue registration
+> does not bypass the cache gate.
+>
+> Preview, first-render and recovery paths now share an explicit text profile
+> for these engines: numbers/currency are spoken deterministically while
+> legacy phonetic respellings are excluded. This matches the arm Dave selected
+> for Peter, Jasper and Rosie and corrects the raw-input evaluation mistake.
+> Chatterbox Nano/Beatrice remains the production default; neither candidate
+> is admitted for books until container output and a 15–30 minute app-path
+> listening gate pass. Local verification: **271 tests**, Ruff, Python compile,
+> Compose config and diff checks pass. Docker Desktop was unavailable on the
+> Windows workstation, so real image/runtime proof must be performed on Zorin.
+
+> ## 2026-08-14 Goodreads audiobook-only wishlist — LIVE VERIFIED
+>
+> The supplied private `to-read` RSS feed is active in LazyLibrarian as an
+> RSS/WishList provider with `DLTYPES=A`. Its URL/token remains runtime-only and
+> is not recorded here. A live import added *Unruly* as Audiobook Wanted while
+> leaving ebook status unset, and the full acquisition verifier passed. The
+> Goodreads shelf therefore feeds the existing-audiobook search path rather
+> than starting TTS conversion.
+
 > ## 2026-08-14 generated-audiobook replacement sweep — LIVE VERIFIED
 >
 > Existing audio is now explicitly preferred not only before generation but
@@ -1213,14 +1241,14 @@ work (#7, #10).
 
 ## Doc map
 
-**Live plan: PLAN-V4.md** (correctness sprint). Preceding: PLAN-V3.md (two
-items still open). **PLAN.md is PLAN V2 and is superseded** — marked as such,
-kept for the reasoning only.
+**Live plan: PLAN-V5.md.** PLAN-V4 and earlier plans are historical;
+**PLAN.md is PLAN V2 and is superseded** — kept for reasoning only.
 
 | Doc | What it's for | State |
 |---|---|---|
 | **STATUS.md** | current-state index — this file | live |
-| **PLAN-V4.md** | active plan: correctness / making silence loud | live |
+| **PLAN-V5.md** | current forward plan | live |
+| PLAN-V4.md | previous correctness sprint | historical |
 | PLAN-V3.md | previous sprint; #8 and #9 still open | mostly done |
 | PLAN.md | PLAN V2 | **superseded** |
 | AUDIT-PLAN.md | 2026-07-22 audit remediation | 76 done / 9 open |

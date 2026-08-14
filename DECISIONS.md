@@ -343,6 +343,14 @@ Jasper's scratchy opening remain separate synthesis defects; Rosie gave the
 strongest overall handling. None of these candidates replaces the Chatterbox
 Nano/Beatrice production default until its own long-form gate is passed.
 
+Pocket and Kitten are therefore implemented as **opt-in CPU-only candidates**,
+never as defaults or automatic fallbacks. Their preview, first-render and
+recovery commands use the named `explicit` text profile: deterministic spoken
+numbers/currency and acronym letter-spacing, without the legacy phonetic
+lexicon. Every official English preset may be registered, but it is not
+audition-ready until its persisted preview exists, and it is not book-approved
+until a 15–30 minute app-path render is heard.
+
 ## Book acquisition pipeline docs — moved to infra — Active
 
 The LazyLibrarian/Prowlarr/qBittorrent/SABnzbd grab-and-delivery pipeline

@@ -31,21 +31,30 @@ SAMPLE_TEXT = (
 from lexicon import SEED_PRONUNCIATION as SAMPLE_LEXICON  # noqa: E402
 
 MODERN_ENGINES = ("chatterbox", "tada")
+EXPLICIT_ENGINES = ("pocket", "kitten")
 
 
 def sample_text_for(engine: str) -> str:
     """The sample, put through the SAME preprocessing a real render of this engine
     would apply — so the voice you audition is the voice you'd actually get.
 
-    Asymmetric on purpose (MODERN-ENGINE CONTRACT):
+    Asymmetric on purpose (measured engine contracts):
       * chatterbox/tada -> numbers/dates left ALONE, no phonetic respellings.
+      * pocket/kitten -> explicit numbers/currency, acronym spacing only. This
+        is the arm Dave selected for Peter, Jasper and Rosie on 2026-08-14.
       * kokoro/piper/edge/polly -> numbers spelled out, which they need.
     Sending raw text to everything would make the dumb engines mangle "$1.2
     billion" and you'd be judging a preprocessing bug, not the voice.
     """
     try:
-        from tts_preprocess import normalize_text_for_tts
-        return normalize_text_for_tts(SAMPLE_TEXT, lexicon=SAMPLE_LEXICON,
-                                      modern=engine in MODERN_ENGINES)
+        from tts_preprocess import normalize_text_for_tts, _is_letter_spacing
+        lexicon = SAMPLE_LEXICON
+        if engine in EXPLICIT_ENGINES:
+            lexicon = {
+                key: value for key, value in SAMPLE_LEXICON.items()
+                if _is_letter_spacing(key, value)
+            }
+        return normalize_text_for_tts(
+            SAMPLE_TEXT, lexicon=lexicon, modern=engine in MODERN_ENGINES)
     except Exception:
         return SAMPLE_TEXT

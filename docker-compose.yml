@@ -350,6 +350,60 @@ services:
       retries: 5
       start_period: 300s
 
+  # Pocket TTS 2.1 — free, local, CPU-only candidate. Peter Yearsley and the
+  # explicit number/currency input profile passed the short listening screen;
+  # this remains opt-in until a full-book gate is heard. All 21 official
+  # English presets are exposed and cached before the UI offers Play.
+  pocket-tts:
+    build:
+      context: ./pocket
+    container_name: pocket-tts
+    logging: *default-logging
+    ports:
+      - "8012:8012"
+    restart: unless-stopped
+    mem_limit: 4g
+    memswap_limit: 4g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+      - POCKET_THREADS=${POCKET_THREADS:-4}
+    volumes:
+      - pocket-cache:/data/hf
+    profiles:
+      - pocket
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+  # KittenTTS 0.8.1 — free, local, CPU-only developer-preview candidate.
+  # Jasper and Rosie passed the normalized-input short screen; no preset is a
+  # production default until its long-form output is heard.
+  kitten-tts:
+    build:
+      context: ./kitten
+    container_name: kitten-tts
+    logging: *default-logging
+    ports:
+      - "8013:8013"
+    restart: unless-stopped
+    mem_limit: 4g
+    memswap_limit: 4g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+    volumes:
+      - kitten-cache:/data/hf
+    profiles:
+      - kitten
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
@@ -417,6 +471,8 @@ services:
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
       - VIBEVOICE_URL=${VIBEVOICE_URL:-http://vibevoice-tts:8010/v1}
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
+      - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
+      - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks
@@ -526,6 +582,8 @@ services:
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
       - VIBEVOICE_URL=${VIBEVOICE_URL:-http://vibevoice-tts:8010/v1}
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
+      - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
+      - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks
@@ -633,3 +691,5 @@ volumes:
   omnivoice-cache:
   vibevoice-cache:
   qwen3-cache:
+  pocket-cache:
+  kitten-cache:

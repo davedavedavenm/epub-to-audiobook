@@ -61,6 +61,11 @@ requires a separately authorised environment-gated session.
 - **Chatterbox Turbo** - production narration engine with official pacing
   controls. Enable with explicit `ENABLE_CHATTERBOX_PROFILE=1` compose profile.
 - **Hume TADA** - expressive natural-voice model via TADA-1B. Enable with explicit `ENABLE_TADA_PROFILE=1` compose profile.
+- **Pocket TTS 2.1** - free CPU-only candidate with all 21 officially
+  documented English presets. Opt-in with `ENABLE_POCKET_PROFILE=1`; uses the
+  listener-selected explicit number/currency text profile.
+- **KittenTTS 0.8.1** - free CPU-only developer-preview candidate with all
+  eight official presets. Opt-in with `ENABLE_KITTEN_PROFILE=1`; not a default.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **Piper TTS** - rejected production path; legacy/debug only
   (`ENABLE_PIPER_PROFILE=1`)
@@ -165,6 +170,8 @@ resource/licence boundaries:
 ```bash
 docker compose --profile chatterbox-nano --profile chatterbox up -d  # Turbo CPU/GPU
 docker compose --profile chatterbox-nano --profile tada up -d        # TADA, heavy CPU
+docker compose --profile chatterbox-nano --profile pocket up -d      # Pocket, CPU candidate
+docker compose --profile chatterbox-nano --profile kitten up -d      # Kitten, CPU candidate
 docker compose --profile chatterbox-nano --profile vibevoice up -d   # attached NVIDIA GPU only
 docker compose --profile chatterbox-nano --profile qwen3 up -d       # attached NVIDIA GPU only
 ```
@@ -264,6 +271,8 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `TADA_URL` | TADA endpoint (default: `http://tada-tts:8005/v1`) |
 | `VIBEVOICE_URL` | VibeVoice endpoint (default: `http://vibevoice-tts:8010/v1`; opt-in CUDA profile; selected `cfg_scale=2.0`) |
 | `QWEN3_URL` | Qwen3-TTS endpoint (default: `http://qwen3-tts:8011/v1`; opt-in CUDA profile) |
+| `POCKET_URL` | Pocket TTS endpoint (default: `http://pocket-tts:8012/v1`; opt-in CPU profile) |
+| `KITTEN_URL` | KittenTTS endpoint (default: `http://kitten-tts:8013/v1`; opt-in CPU profile) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | OpenAI-compatible LLM for the smart chapter guard, metadata + adaptive pronunciation. Optional (heuristic fallback). Free: Groq or Gemini — see `.env.example` |

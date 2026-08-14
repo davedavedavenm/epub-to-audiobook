@@ -205,6 +205,8 @@ This means most mainstream premium APIs are too expensive for full-book default 
 | Kokoro on Vast.ai GPU | Legacy manual path | Paid marketplace rate | Never automatic and not recommended: paying to accelerate rejected-quality output violates the project objective. |
 | Piper | Implemented | GBP0 incremental | Legacy/debug only; **rejected for production by ear**. Deployed 64 kbps, same-WAV higher-bitrate, and current Piper 1.6 direct A/Bs all failed badly. Not an automatic fallback. |
 | EdgeTTS | Implemented via `tts-proxy` | GBP0 direct API cost | Good quality and many voices. Treat as unofficial/fragile because it depends on the `edge-tts` package and Microsoft service behavior. |
+| Pocket TTS 2.1 | Opt-in CPU service; long-form gate open | GBP0 | 21 official English presets; explicit spoken number/currency profile; no automatic fallback. |
+| KittenTTS 0.8.1 | Opt-in CPU service; long-form gate open | GBP0 | Eight official presets; developer preview; explicit spoken number/currency profile. |
 | AWS Polly Long-Form | Implemented via `tts-proxy` | Avoid | Proven too expensive for good-quality audiobook use. Keep only as legacy code path; do not use for normal conversions. |
 | Inworld TTS 1.5 | Implemented via `tts-proxy` | Likely over budget for full books | Keep as experimental/premium unless real account pricing proves otherwise. |
 
