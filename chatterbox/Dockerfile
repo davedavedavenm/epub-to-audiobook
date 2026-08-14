@@ -9,9 +9,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements.txt .
-# chatterbox-tts pins torch==2.6.0 — preinstall the CUDA build of exactly that
-# version so pip keeps it (GPU-capable, falls back to CPU cleanly).
-RUN pip install --no-cache-dir torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124  && pip install --no-cache-dir -r requirements.txt
+# The pinned Chatterbox commit requires torch/torchaudio 2.6.0. Install the
+# matched CUDA 12.6 pair using PyTorch's official v2.6 command before the app
+# requirements, so pip cannot replace it with an unrelated CPU/newer build.
+# The former cu124 index stopped serving its exact cuDNN dependency and made
+# every GHCR build fail even though no Chatterbox source had changed.
+RUN pip install --no-cache-dir \
+        torch==2.6.0 torchaudio==2.6.0 \
+        --index-url https://download.pytorch.org/whl/cu126 \
+ && pip install --no-cache-dir -r requirements.txt
 
 COPY server.py .
 COPY voices/ /app/voices/

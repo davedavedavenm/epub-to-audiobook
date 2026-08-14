@@ -131,6 +131,26 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       Goodreads/LazyLibrarian integration without committing private topology
       or feed tokens.
 
+## 11. Admit the new CPU engines without offering cold voices
+
+- [x] 11.1 Pin the official Pocket TTS, NeuTTS Air and KittenTTS versions,
+      record their official voice inventories, and isolate them from the
+      production queue while auditioning.
+- [x] 11.2 Prove the shared number/currency failure was raw evaluation input;
+      deterministic normalization won 4/4 controlled listening comparisons.
+- [ ] 11.3 Give each candidate an opt-in, health-checked CPU service and route
+      the same normalized text through preview, worker, recovery and finalise
+      paths. NeuTTS must retain sentence chunking for its documented context.
+- [ ] 11.4 Render and validate a persistent preview for every voice before that
+      voice is returned by the selectable catalogue. Never cold-render on Play.
+- [ ] 11.5 Put the best heard voice from each candidate through a 15–30 minute
+      app-path render and human listening gate before enabling book conversion.
+      Peter and Rosie lead the operational shortlist; Jo's insertion and
+      Jasper's scratchy opening remain open defects.
+- [ ] 11.6 Enable only engines that pass 11.5 as opt-in choices. Chatterbox
+      Nano/Beatrice remains the default unless another engine beats it by ear;
+      none may enable a paid/cloud fallback.
+
 ---
 
 ## Done today, for reference

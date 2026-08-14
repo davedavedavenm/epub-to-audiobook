@@ -18,9 +18,6 @@ on:
       - 'tada/**'
       - 'vibevoice/**'
       - 'qwen3/**'
-      - 'chatterbox/voices/**'
-      - 'webapp/**'
-      - 'scripts/convert_book.py'
       - '.github/workflows/build-engines.yml'
   workflow_dispatch: {}
 
@@ -29,23 +26,70 @@ permissions:
   packages: write
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Keep this native: no third-party path-filter action is needed. A manual
+      # run or a workflow edit deliberately rebuilds every engine; ordinary
+      # pushes rebuild only images whose Docker context actually changed.
+      - name: Select changed engine images
+        id: matrix
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          all_engines=false
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            all_engines=true
+          fi
+
+          if [[ "$all_engines" == "true" ]]; then
+            changed_files='.github/workflows/build-engines.yml'
+          else
+            changed_files="$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA")"
+          fi
+
+          include='[]'
+          add_engine() {
+            local engine="$1" context="$2" dockerfile="$3"
+            include="$(jq -c \
+              --arg engine "$engine" \
+              --arg context "$context" \
+              --arg dockerfile "$dockerfile" \
+              '. + [{engine: $engine, context: $context, dockerfile: $dockerfile}]' \
+              <<<"$include")"
+          }
+
+          if grep -Eq '^(chatterbox/|\.github/workflows/build-engines\.yml$)' <<<"$changed_files"; then
+            add_engine chatterbox ./chatterbox ./chatterbox/Dockerfile
+          fi
+          if grep -Eq '^(tada/|\.github/workflows/build-engines\.yml$)' <<<"$changed_files"; then
+            add_engine tada ./tada ./tada/Dockerfile
+          fi
+          if grep -Eq '^(vibevoice/|chatterbox/voices/|\.github/workflows/build-engines\.yml$)' <<<"$changed_files"; then
+            add_engine vibevoice . ./vibevoice/Dockerfile
+          fi
+          if grep -Eq '^(qwen3/|chatterbox/voices/|\.github/workflows/build-engines\.yml$)' <<<"$changed_files"; then
+            add_engine qwen3 . ./qwen3/Dockerfile
+          fi
+
+          echo "matrix=$(jq -cn --argjson include "$include" '{include: $include}')" >> "$GITHUB_OUTPUT"
+
   build-engines:
+    needs: changes
+    if: needs.changes.outputs.matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          - engine: chatterbox
-            context: ./chatterbox
-            dockerfile: ./chatterbox/Dockerfile
-          - engine: tada
-            context: ./tada
-            dockerfile: ./tada/Dockerfile
-          - engine: vibevoice
-            context: .
-            dockerfile: ./vibevoice/Dockerfile
-          - engine: qwen3
-            context: .
-            dockerfile: ./qwen3/Dockerfile
+        include: ${{ fromJSON(needs.changes.outputs.matrix).include }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,29 +115,3 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-${{ matrix.engine }}:latest
           platforms: linux/amd64
-
-  build-webapp:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push webapp
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./webapp/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-webapp:latest
-          platforms: linux/amd64
-          build-args: |
-            APP_VERSION=ci
-            APP_GIT_SHA=${{ github.sha }}
-            APP_BUILD_TIME=${{ github.event.head_commit.timestamp }}
