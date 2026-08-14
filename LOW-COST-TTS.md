@@ -39,13 +39,16 @@ clips were served in the app but did not pass through its text normalizer.
 | KittenTTS / Jasper | Decent/good voice | Numbers and dollar/currency amounts |
 | KittenTTS / Rosie | Decent/good voice | Numbers and dollar/currency amounts |
 
-This is a listening result, not a diagnosis. The engines remain candidates,
-not defaults or rejections. The 2026-08-14 follow-up has now rendered a pinned
+The initial listening result was not a diagnosis. The engines remain
+candidates, not defaults or rejections. The 2026-08-14 follow-up rendered a pinned
 corpus of years, decimals, percentages, ranges, pound amounts and dollar
 amounts both raw and explicitly normalized, while holding every engine setting
-fixed. All eight clips passed source-hash, duration and size validation and now
-await Dave's blind verdict. The free local Chatterbox Nano/Beatrice baseline
-remains unchanged.
+fixed. All eight clips passed source-hash, duration and size validation. Dave
+selected the normalized arm for Peter, Jo, Jasper and Rosie: the original
+shared numeric failure was our raw-input evaluation path. Jo retained one
+“the e order” insertion; Jasper started slightly scratchy; Rosie gave perhaps
+the best handling. The free local Chatterbox Nano/Beatrice baseline remains
+unchanged pending a separate long-form admission gate.
 
 ## 2026-07-28 local accent bake-off
 

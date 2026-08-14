@@ -1,11 +1,11 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-14 CPU numbers/currency root-cause A/B — VALIDATED / LISTENING PENDING
+> ## 2026-08-14 CPU numbers/currency root-cause A/B — HEARD / CAUSE CLOSED
 >
 > The original Peter, Jo, Jasper and Rosie auditions used each pinned engine's
 > official API with raw `voice_sample` text. They were playable in the app but
 > bypassed `normalize_text_for_tts`; prior “app-path clip” wording was wrong.
-> The heard failure therefore does not yet establish engine fault.
+> The heard failure therefore did not establish engine fault.
 >
 > A controlled blind test now holds model, version, voice, seed/settings and
 > source semantics fixed. Raw arms use source SHA-256 `84f91361...a5b0` (330
@@ -22,7 +22,7 @@
 > harness fails closed if it is absent. The corrected Pocket arm has the same
 > normalized-input hash as every other engine. Blind assignments are retained
 > only in the ignored evaluation manifest. No production engine/default or GPU
-> setting changed; Dave's A/B verdict is the next gate.
+> setting changed.
 >
 > **Live handoff:** full-stack deployment `425de55` completed with matching
 > healthy webapp/worker revision. The Voices page puts the diagnostic card
@@ -34,6 +34,25 @@
 > clips and private assignment manifest remain in the ignored evaluation
 > output, while only the eight lowercase allowlisted handoff files remain in
 > the preview cache.
+>
+> **Verdict/unblinding:** Peter A, Jo A, Jasper A and Rosie B were all the
+> normalized arm. Dave therefore selected explicit spoken wording **4/4**. The
+> original shared numbers/currency failure was caused by the evaluation path
+> passing raw symbols/digits, not an inherent shared engine limitation. Peter
+> had no reported residual defect. Jo inserted/stumbled “the e order” around
+> “the order”; Jasper's opening was slightly scratchy; Rosie gave perhaps the
+> best handling of the content. Those two artifacts remain synthesis-quality
+> evidence separate from numeric normalization. Any future integration of
+> these engines must use the normalized path; Chatterbox Nano/Beatrice remains
+> the production default pending long-form admission tests.
+>
+> **Official voice inventory:** Pocket documents 21 English catalogue voices
+> plus five named non-English voices and custom-WAV input. NeuTTS documents six
+> English, one Spanish, one German and one French ready reference plus custom
+> 3–15 second cloning. Kitten documents eight fixed presets. Exact names,
+> source links and boundaries are recorded in `ENGINES.md` and `VOICES.md`.
+> Only Peter, Jo, Jasper and Rosie are currently cached for these evaluation
+> engines; the other official names are inventory, not yet playable claims.
 
 > ## 2026-08-13 cross-host map and automatic-queue audit — VERIFIED / REPAIRED
 >
@@ -95,12 +114,12 @@
 >
 > **CPU auditions:** Dave has now heard the already-rendered Pocket TTS/Peter
 > Yearsley, NeuTTS Air/Jo and KittenTTS/Jasper + Rosie clips. All four voices
-> are decent/good and clear the basic voice-quality screen. All four struggle
-> materially with numbers and dollar/currency amounts. None is wired into
-> production or made a default; the cause remains open pending a controlled
-> direct-upstream versus app-path listening A/B using identical numeric text.
+> are decent/good and clear the basic voice-quality screen. The original raw
+> clips struggled with numbers/currency; the controlled follow-up selected
+> normalized text for all four and closed that shared cause as evaluation-path
+> error. None is wired into production or made a default.
 >
-> ## 2026-08-13 public article delivery + CPU engine screen — VERIFIED / HEARD; NUMERIC CAUSE OPEN
+> ## 2026-08-13 public article delivery + CPU engine screen — VERIFIED / HEARD; NUMERIC CAUSE CLOSED 2026-08-14
 >
 > **RSS/Pangolin:** the live public feed returned `200`, parsed as RSS 2.0 and
 > contained six episodes; a real enclosure byte-range request returned `206`.
@@ -124,18 +143,18 @@
 > Kyutai's model-terms gate. Kitten Jasper measured RTF 2.304 / 1047.9 MiB and
 > Rosie RTF 1.761 / 1090.4 MiB; these are preset voices, not clones. Dave heard
 > all four voices as decent/good, while all four handled numbers and
-> dollar/currency amounts poorly. This passes their basic voice-quality screen
-> but does not establish whether the shared weakness comes from preprocessing,
-> each wrapper or each model. NeuTTS's first whole-passage run truncated because
+> dollar/currency amounts poorly in the raw-input evaluation. The later
+> controlled A/B selected explicit normalization for all four, proving the
+> shared weakness came from the evaluation path. NeuTTS's first whole-passage run truncated because
 > the official model documents an approximately 30-second
 > context. The corrected ten-sentence render's persisted MP3 measures 72.672 s;
 > synthesis produced it in 357.875 s
 > (RTF 4.925, peak 2842.4 MiB) with its official Jo reference. That clip is
 > complete by duration/chunk accounting, but the engine emitted phonemizer
-> word-count warnings. The next evidence gate is an identical pinned
-> numbers-and-currency corpus rendered through direct upstream and app paths,
-> followed by Dave's blind listening verdict. Chatterbox Nano/Beatrice remains
-> the production default.
+> word-count warnings. Jo's later normalized arm retained one insertion;
+> Jasper's had a scratchy opening; Rosie gave the strongest content handling.
+> Chatterbox Nano/Beatrice remains the production default pending each
+> candidate's separate long-form gate.
 >
 > **Cost boundary:** all screens are isolated four-core CPU containers with no
 > queue registration, GPU devices or paid fallback. `GPU_RENDER_ENABLED=0`

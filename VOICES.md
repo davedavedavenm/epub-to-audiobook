@@ -1,6 +1,6 @@
 # Voices and accents
 
-**Last updated: 2026-07-28.** What works, what does not, and the wrong turns —
+**Last updated: 2026-08-14.** What works, what does not, and the wrong turns —
 recorded so nobody walks back down them. Every claim here was heard or measured,
 not reasoned about; where something is untested it says so.
 
@@ -315,6 +315,19 @@ The Voices page is an audition surface, not a synthesis trigger. It offers only
 voices with a persisted non-trivial preview; Play must be immediate. Paid or
 network engines are never warmed in the background merely because their voice
 definitions exist.
+
+### Screened CPU-engine voice inventory (official upstream names)
+
+| Engine | Ready upstream names | What “more voices” means |
+|---|---|---|
+| Pocket TTS 2.1 | English: `alba`, `anna`, `azelma`, `bill_boerst`, `caro_davy`, `charles`, `cosette`, `eponine`, `eve`, `fantine`, `george`, `jane`, `jean`, `javert`, `marius`, `mary`, `michael`, `paul`, `peter_yearsley`, `stuart_bell`, `vera`. Italian `giovanni`; Spanish `lola`; German `juergen`; Portuguese `rafael`; French `estelle`. | Also accepts a WAV/Hugging Face reference; the cloning asset gate must be accepted legitimately. |
+| NeuTTS Air 1.4.1 | English: `dave`, `jo`, `emily`, `paul`, `sophie`, `steven`; Spanish `mateo`; German `greta`; French `juliette`. | These are references, not a closed preset bank. A custom clean 3–15 s mono WAV plus exact transcript creates another voice. |
+| KittenTTS 0.8.1 | `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`, `Kiki`, `Leo`. | Fixed preset list; no officially documented cloning path. |
+
+Source details and exact upstream links are maintained in `ENGINES.md`.
+Only Peter, Jo, Jasper and Rosie are currently cached for these evaluation
+engines; do not expose the other names as Play buttons until their persisted
+previews exist.
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,

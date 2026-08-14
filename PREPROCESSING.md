@@ -242,9 +242,12 @@ point; do not let them drift.
 The isolated Pocket/NeuTTS/Kitten evaluation scripts violated that principle
 on 2026-08-13: they imported raw `SAMPLE_TEXT` directly and their cached files
 were later served in the app. They did not exercise this pipeline. The
-2026-08-14 pinned raw-versus-normalized A/B corrects the evidence without yet
-classifying those engines as modern or legacy. Its normalized arm fails closed
-unless the app-pinned `num2words==0.5.14` dependency is present.
+2026-08-14 pinned raw-versus-normalized A/B corrected the evidence: Dave chose
+the normalized arm for all four voices. Any future Pocket/NeuTTS/Kitten
+integration must therefore use explicit number/currency normalization. The
+normalized arm fails closed unless the app-pinned `num2words==0.5.14`
+dependency is present. Jo's residual insertion and Jasper's scratchy opening
+are separate synthesis artifacts, not reasons to undo the normalization.
 
 | Transform | modern (chatterbox / tada) | legacy (kokoro / piper / edge / polly) |
 | --- | --- | --- |

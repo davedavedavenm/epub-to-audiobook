@@ -63,8 +63,31 @@ NUMERIC_AB_ARM=normalized docker compose -f evaluations/cpu-engines/compose.yaml
 ```
 
 Repeat for `neutts` and `kitten`. Reports record both the raw-source hash and
-the exact rendered-input hash. Blind-copy the resulting MP3s into the preview
-cache; do not encode the raw/normalized assignment in the browser labels.
+the exact rendered-input hash. During an unresolved test, blind-copy the
+resulting MP3s into the preview cache and keep the assignment out of the
+browser labels.
+
+**Verdict (2026-08-14):** Peter A, Jo A, Jasper A and Rosie B were the
+normalized arms. Dave selected all four. The original shared numeric failure
+was raw evaluation input, not a demonstrated engine limitation. Peter had no
+reported residual issue; Jo produced “the e order” around “the order”; Jasper
+started slightly scratchy; Rosie gave perhaps the strongest handling.
+
+## Official voice inventory
+
+- Pocket TTS English catalogue: `alba`, `anna`, `azelma`, `bill_boerst`,
+  `caro_davy`, `charles`, `cosette`, `eponine`, `eve`, `fantine`, `george`,
+  `jane`, `jean`, `javert`, `marius`, `mary`, `michael`, `paul`,
+  `peter_yearsley`, `stuart_bell`, `vera`. Other languages: `giovanni` (it),
+  `lola` (es), `juergen` (de), `rafael` (pt), `estelle` (fr). A supplied WAV
+  is also supported, subject to the legitimate model-access gate.
+- NeuTTS references: `dave`, `jo`, `emily`, `paul`, `sophie`, `steven` (en),
+  `mateo` (es), `greta` (de), `juliette` (fr). Custom references use a clean
+  3–15 second mono WAV plus exact transcript.
+- KittenTTS presets: `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`,
+  `Kiki`, `Leo`; no official cloning path is documented.
+
+The exact official source links are in the table at the top of this file.
 
 Copy approved clips to `/data/previews/cpu_*.mp3` only after checking that the
 JSON reports a non-zero, full output. Dave's listening verdict is the quality
