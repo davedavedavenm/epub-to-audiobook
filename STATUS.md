@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-14 Pocket + Kitten app integration — LIVE / CORRECTIVE A/B READY FOR LISTENING
+> ## 2026-08-14 Pocket + Kitten app integration — LIVE / OPT-IN ADMISSION COMPLETE
 >
 > Pocket TTS 2.1 and KittenTTS 0.8.1 now have isolated, non-root, CPU-only
 > OpenAI-compatible services behind explicit Compose/deploy opt-ins. The app
@@ -17,8 +17,8 @@
 > Pocket + 8/8 Kitten** persisted previews, and the app's complete **117/117**
 > configured-ready catalogue. `ffprobe` validated every new MP3: 56–101 seconds
 > and 1.12–2.01 MB, with no empty/cold Play entries. Chatterbox Nano/Beatrice
-> remains the production default; neither candidate is book-approved until its
-> 15–30 minute app-path file is heard. The shared six-core host now reserves
+> remains the production default; Pocket and Kitten are optional CPU-only book
+> choices and never automatic fallbacks. The shared six-core host now reserves
 > capacity for the product by capping each candidate service at four CPU cores.
 >
 > **Long-form verdict:** Peter: **16:27**, 19,742,312
@@ -27,8 +27,8 @@
 > `a47c6ae855c7c5e23b5e852bcff9a97cac0dd157508594fc444dace68cb02972`;
 > both MP3s decode end-to-end. ASR was not used as a voice-quality judge. Dave
 > found Peter's body decent/promising but sometimes lifeless and poorly paced;
-> Rosie's body was not bad and better than Peter for pace/tone. Neither is yet
-> book-approved.
+> Rosie's body was not bad and better than Peter for pace/tone. Both cleared the
+> optional-engine floor; neither displaced the default.
 >
 > **Opening root cause proven:** both captured first requests contain the same
 > flattened Project Gutenberg machine metadata (`Title`, `Author`, dates,
@@ -51,7 +51,31 @@
 > Peter-current attempt was deliberately stopped during setup and left two
 > stale capture records; validation uses the successful final contiguous 15
 > records (exactly 600 words), matching the only MP3 written. Paragraph-aware
-> chunking remains opt-in pending Dave's verdict.
+> **Corrective A/B verdict:** Peter current/clean packing sounded more natural
+> and was preferred; its intonation is still imperfect but the overall audio is
+> decent. Peter's paragraph-aware arm sounded stranger. Rosie sounded decent in
+> both arms with no meaningful difference. Current 15-request sentence packing
+> therefore remains the app behavior for both engines; paragraph-aware packing
+> is rejected as a default because 28 model resets produced no audible gain.
+
+> ## 2026-08-14 Bond King duplicate cleanup — LIVE VERIFIED / RECOVERABLE
+>
+> The earlier decision to retain both generated *Bond King* copies after a
+> failed acquisition search was wrong: no acquired replacement justifies one
+> fallback, not two. A fresh official LazyLibrarian per-book audiobook search
+> completed with zero accepted results. Two Prowlarr routes returned HTTP 429,
+> so this is not proof that no original audiobook exists; the title remains
+> Audiobook Wanted for future torrent-first searches.
+>
+> Canonical job `592af51b` is retained: 21 tracks, 10:09:44, no render retry,
+> and a complete 21-chapter structural report. Later retry `59d36718` had only
+> one QA chapter recorded and was quarantined from ABS at
+> `/home/dave/quarantine/abs-generated-dedup-20260814-1815/`, then removed from
+> app History/local output after its job record was saved at
+> `/home/dave/quarantine/app-generated-dedup-20260814-1818/59d36718-job.json`.
+> ABS accepted the exact database deletion and rescan. Live proof now shows one
+> valid *Bond King* item, 21 tracks, not missing/invalid; the acquisition
+> verifier passes with 17 audiobook folders and no duplicate deliveries.
 
 > ## 2026-08-14 VibeVoice cfg-2 production-path gate — DEFECT FOUND / FIXED / FREE RERUN ACTIVE
 >
@@ -85,16 +109,17 @@
 > China*. *Apple in China* is already a completed qBittorrent download: its
 > standalone 406,415,524-byte M4B matches the completed torrent and the
 > production guard passes it at 812 minutes. It was retained. Fresh targeted
-> audiobook searches found no acceptable result for *The Bond King* (both
-> Kokoro/Fable folders) or *Breakneck*, so all three generated fallbacks were
-> correctly retained and remain Audiobook Wanted. No generated media was
-> removed because no replacement met the removal gate.
+> audiobook searches found no acceptable acquired result for *The Bond King*
+> or *Breakneck*. The unnecessary second generated *Bond King* render was
+> nevertheless quarantined as a duplicate; canonical *Bond King* and
+> *Breakneck* remain Audiobook Wanted.
 >
-> **Proof:** the effect-level acquisition verifier passes all assertions. All
-> three enabled Torznab sources answer; the single rate-limited provider is
-> `Newznab_5` (Usenet), not a torrent source. There are no grabs older than two
-> days, the search sweep is current, the last successful grab is current and ABS
-> has 18 non-duplicate audiobook folders. No cloud or paid GPU work ran.
+> **Proof:** the effect-level acquisition verifier passes all assertions. Five
+> providers answered and two Prowlarr-proxied providers (`Newznab_5` and
+> `Torznab_1`) were rate-limited in the latest check. There are no grabs older
+> than two days, the search sweep is current, the last successful grab is
+> current and ABS has 17 non-duplicate audiobook folders. No cloud or paid GPU
+> work ran.
 
 > ## 2026-08-14 conversion history + ABS provenance audit — DEPLOYED / LIVE VERIFIED
 >
@@ -118,10 +143,11 @@
 > copy render live; the destructive ABS path was deliberately not exercised and
 > no ABS media was deleted during this verification.
 >
-> **Current ABS provenance (live after cleanup, 18 audiobook entries):** three folders are
-> identifiable as app-generated: *The Bond King* `592af51b` (Kokoro/Fable), its
-> duplicate `59d36718` (Kokoro/Fable), and *Breakneck* `a3481358`. The two Bond
-> folders still match current job records; *Breakneck* is a historical render
+> **Current ABS provenance (live after cleanup, 17 audiobook entries):** two folders are
+> identifiable as app-generated: *The Bond King* `592af51b` (Kokoro/Fable) and
+> *Breakneck* `a3481358`. Duplicate retry `59d36718` is quarantined and its app
+> history/output removed. The retained Bond folder matches its current job record;
+> *Breakneck* is a historical render
 > whose job row is no longer present. The other 15 entries are acquired audio,
 > not TTS renders. There is no automatic library-to-
 > conversion cron or timer now; Zorin only has the 15-minute ebook-library rsync,

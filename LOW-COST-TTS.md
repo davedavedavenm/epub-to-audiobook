@@ -55,10 +55,13 @@ good, but sometimes felt lifeless or poorly paced. Rosie's body was not bad and
 arguably better for pace and tone. Both openings ran `Title`, `Author` and other
 fields together because the exact captured input contained Project Gutenberg's
 machine header joined to the first sentence. This is a proven source-path
-defect, not an engine diagnosis. A cleaned, paragraph-aware A/B is required
-before either free CPU engine is admitted for books; Rosie currently leads.
-That controlled 600-word A/B is now rendered locally for both voices and ready
-to hear. It cost GBP0 and used no GPU/cloud fallback.
+defect, not an engine diagnosis. The cleaned 600-word A/B is now heard: current
+packing won for Peter because it sounded more natural, although his intonation
+remains imperfect; paragraph-aware packing sounded stranger. Rosie was decent
+in both arms with no meaningful difference. Pocket and Kitten are therefore
+admitted as free, opt-in CPU book choices using current sentence packing. They
+are not automatic fallbacks and do not replace Beatrice/Nano. The gate cost
+GBP0 and used no GPU/cloud fallback.
 
 ## 2026-07-28 local accent bake-off
 

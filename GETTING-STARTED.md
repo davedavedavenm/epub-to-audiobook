@@ -187,12 +187,14 @@ but when you want the best result:
   the `chatterbox` profile.
 - **Hume TADA** — the most expressive/natural on easy text, but a research
   model with rough edges on dense non-fiction. Enable with the `tada` profile.
-- **Pocket TTS / KittenTTS** — free local CPU candidates. Pocket exposes its
+- **Pocket TTS / KittenTTS** — free local CPU opt-in book engines. Pocket exposes its
   21 official English catalogue voices; Kitten exposes its eight official
   presets. Enable deliberately with the `pocket` or `kitten` profile. Their
   previews and book renders use explicit spoken numbers/currency because that
-  input won the controlled listening test. They remain opt-in candidates until
-  their long-form app-path output is heard; neither replaces Beatrice/Nano.
+  input won the controlled listening test. Their long-form and clean pacing
+  gates passed for optional use; current sentence packing remains because it
+  beat/tied paragraph-aware packing. Neither replaces Beatrice/Nano or becomes
+  an automatic fallback. Every offered preset is cached before it appears.
 - **VibeVoice / Qwen3-TTS finalists** — GPU-only local profiles or explicit
   free-Kaggle render targets. VibeVoice's pinned long-form listening winner is
   `cfg_scale=2.0`; the isolated garble in the winning clip keeps production

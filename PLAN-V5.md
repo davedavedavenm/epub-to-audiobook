@@ -151,7 +151,7 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [x] 11.4 Render and validate a persistent preview for every offered Pocket and
       Kitten voice before that voice is returned by the selectable catalogue.
       Never cold-render on Play. Live cache is 29/29 for these engines.
-- [~] 11.5 Put the best heard voice from each candidate through a 15–30 minute
+- [x] 11.5 Put the best heard voice from each candidate through a 15–30 minute
       app-path render and human listening gate before enabling book conversion.
       Peter and Rosie lead the operational shortlist; Jo's insertion and
       Jasper's scratchy opening remain open defects. Identical 3,600-word
@@ -160,11 +160,12 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       Rosie leads on body pace/tone; Peter is promising but uneven. The shared
       run-on opening was proven to be flattened Gutenberg metadata supplied by
       our path. Corrected 600-word current-vs-paragraph-aware Peter/Rosie pairs
-      are rendered, full-decode validated and ready for Dave's verdict before
-      admission.
-- [ ] 11.6 Enable only engines that pass 11.5 as opt-in choices. Chatterbox
-      Nano/Beatrice remains the default unless another engine beats it by ear;
-      none may enable a paid/cloud fallback.
+      were heard. Current packing won for Peter; Rosie tied. Both candidates
+      passed as optional engines.
+- [x] 11.6 Enable only engines that pass 11.5 as opt-in choices. Pocket and
+      Kitten are live CPU-only choices with every official offered voice cached
+      (21/21 and 8/8; whole catalogue 117/117). Chatterbox Nano/Beatrice remains
+      the default; neither engine is an automatic fallback or paid/cloud path.
 
 ---
 

@@ -25,9 +25,9 @@ accent-engine verdicts are dated in the table.
 | Qwen3-TTS (2026-07-29) | Full chapter **“really good”** and audiobook-listenable. Strongest consistency result; 33:03, RTF 2.056, ASR similarity 0.9848. Current co-finalist. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-13 corrected test) | **cfg 2.0 selected:** “much better ... otherwise perfect, really really good,” with one brief garble after “romantic felicity”. cfg 3.0 rejected as muffled/distant; cfg 1.3 already rejected. App-path root-cause check remains before production promotion. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
-| Pocket TTS / Peter Yearsley (2026-08-14) | Decent/promising body with some emotion, but sometimes lifeless and poorly paced. The run-on title/author opening was proven to be malformed Gutenberg metadata we supplied. Clean current-vs-paragraph-aware A/B is rendered and validated; listening verdict pending, not book-approved. | CPU only (zorin) |
+| Pocket TTS / Peter Yearsley (2026-08-14) | Accepted as an opt-in book choice, not a default. The long-form body was decent/promising but uneven. On clean text, current sentence packing sounded more natural; paragraph-aware packing made intonation stranger. | CPU only (zorin) |
 | NeuTTS Air / Jo (2026-08-14) | Decent/good voice. Dave selected the normalized arm, but heard “the e order” around “the order”; retain this as a separate synthesis defect rather than a number-handling failure. | CPU only (zorin) |
-| KittenTTS / Jasper and Rosie (2026-08-14) | Both decent/good; Jasper's short opening was scratchy. Rosie's long-form body was not bad and better than Peter for pace/tone. Her run-on title/author opening was the same proven bad Gutenberg input. Clean current-vs-paragraph-aware Rosie A/B is rendered and validated; listening verdict pending, not book-approved. | CPU only (zorin) |
+| KittenTTS / Jasper and Rosie (2026-08-14) | Accepted as opt-in book choices, not defaults. Jasper's short opening was scratchy. Rosie's long-form body led for pace/tone; her clean current/paragraph A/B sounded decent in both arms with no meaningful difference, so current packing remains. | CPU only (zorin) |
 
 **Read this as a data point, not a recommendation.** It reflects one listener
 and one hard passage/book; the hardware used is stated per row. TADA's ceiling is genuinely
@@ -52,8 +52,9 @@ then the first book sentence. The app now removes Gutenberg's exact structural
 wrapper. The official [Pocket README](https://github.com/kyutai-labs/pocket-tts/blob/7fc13c7/README.md#unsupported-features)
 says adding silence through text input is unsupported, while Kitten 0.8.1
 documents only `generate(text, voice=...)`; undocumented engine knobs are not
-being invented. Paragraph-boundary preservation is therefore tested in our
-converter and must win by ear before rollout.
+being invented. Paragraph-boundary preservation was tested in our converter.
+It lost for Peter and tied for Rosie, so it is not rolled out: current packing
+uses fewer model resets and was equal or better by ear.
 
 ## Official voice inventory for the screened CPU engines (2026-08-14)
 
@@ -70,8 +71,9 @@ Pocket and Kitten now have isolated opt-in CPU services in this repository.
 Their OpenAI-compatible wrappers call the official APIs above, reject unknown
 voices instead of substituting one, and expose no paid/GPU fallback. Both use
 the listener-selected `explicit` number/currency profile across previews and
-book/recovery paths. This is integration, not production admission: long-form
-completeness and listening remain open.
+book/recovery paths. Both are admitted as opt-in CPU book choices after long-
+form and corrective listening. They remain excluded from automatic fallback
+and do not replace Chatterbox Nano/Beatrice as the default.
 
 The first recorded Vibe GPU-memory measurement comes from a later **short
 accent sample**, not the heard full chapter: on a Kaggle P100, Irish peaked at

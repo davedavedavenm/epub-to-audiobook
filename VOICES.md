@@ -329,14 +329,17 @@ The app now registers all 21 English Pocket presets and all eight Kitten
 presets behind opt-in CPU profiles. It still does not expose a cold Play
 button: each voice becomes audition-ready only after its persisted preview is
 non-trivial. Peter, Jasper and Rosie are the only voices with a human listening
-verdict so far; catalogue presence is not quality approval. Dave heard the
+verdict so far; catalogue presence is not a quality verdict for every voice.
+It does guarantee that every offered voice is cached for immediate playback
+and can be selected with its owning engine. Dave heard the
 same-text long-form Peter (16:27) and Rosie (21:16) files: Rosie led on body
-pace/tone; Peter was decent/promising but uneven. Neither is book-approved.
+pace/tone; Peter was decent/promising but uneven. Both engines are accepted as
+opt-in book choices while Beatrice/Nano remains the default.
 Their shared run-on title/author opening was identical malformed Project
-Gutenberg metadata supplied by our test path, so corrected paragraph-aware
-previews—not the broken opening—decide the next gate. The corrected 600-word
-current-vs-paragraph-aware Peter/Rosie pairs are now structurally validated and
-ready to hear; no new default is set until that verdict.
+Gutenberg metadata supplied by our test path. In the corrected 600-word gate,
+Peter's current packing sounded more natural and the paragraph-aware arm had
+stranger intonation; Rosie showed no meaningful difference. Current sentence
+packing therefore remains for both engines. No new default was set.
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,

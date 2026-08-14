@@ -135,9 +135,12 @@ because a search matched, a grab started or a title merely looks plausible.
 
 **Live baseline (2026-08-14):** *Apple in China* is already a completed
 qBittorrent M4B, not a generated fallback (812 minutes; production guard pass).
-Fresh searches across all enabled torrent sources found no acceptable
-replacement for the two generated *Bond King* entries or generated *Breakneck*;
-those remain on the shelf and remain Audiobook Wanted.
+A fresh official LazyLibrarian `searchBook` run found no acceptable *Bond King*
+audiobook, although two Prowlarr-proxied providers returned 429 and therefore
+make that search incomplete rather than proof that no release exists. One
+generated fallback is enough while the search remains open: retain canonical
+job `592af51b`, quarantine duplicate retry `59d36718`, and keep the title
+Audiobook Wanted. *Breakneck* also remains a generated fallback and Wanted.
 
 ## Narrator and engine are one selection — Active
 
@@ -322,9 +325,9 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 | **Unverified by ear** | Rendered accent clips exist; listen before promoting or rejecting. |
-| Pocket TTS 2.1 Peter Yearsley preset | **Promising; pacing improvement gate open** | In the 3,600-word file, the body was decent with some emotion but sometimes lifeless/poorly paced. The title/author run-on was our malformed Gutenberg metadata input, not an engine verdict. Re-test cleaned, paragraph-aware input before book admission. Cloning remains unproven. |
+| Pocket TTS 2.1 Peter Yearsley preset | **Accepted opt-in; not default** | In the 3,600-word file, the body was decent with some emotion but sometimes lifeless/poorly paced. The clean 600-word A/B sounded more natural with current sentence packing; paragraph-aware packing made intonation stranger. Peter remains imperfect but passed as an optional free CPU narrator. Cloning remains unproven. |
 | NeuTTS Air 1.4.1 Q4 + Jo | **Voice and normalized numeric path pass; residual insertion** | Dave selected normalized A, but heard “the e order” around “the order”. Treat that as a separate synthesis defect. Sentence chunking remains mandatory. |
-| KittenTTS 0.8.1 Jasper/Rosie | **Rosie leads; pacing improvement gate open** | Dave selected normalized A for Jasper (scratchy opening) and B for Rosie. In Rosie's 3,600-word file, the body was not bad and better than Peter for pace/tone. The run-on opening was our malformed Gutenberg metadata input. Re-test cleaned, paragraph-aware input before book admission. Preset-only; no UK-identity claim. |
+| KittenTTS 0.8.1 Jasper/Rosie | **Accepted opt-in; not default** | Dave selected normalized A for Jasper (scratchy opening) and B for Rosie. Rosie's long-form body led for pace/tone. In the clean 600-word A/B both packing modes sounded decent with no meaningful difference, so current sentence packing wins on fewer resets. Preset-only; no UK-identity claim. |
 | Higgs Audio V2 | **Reserve, not finalist** | Usable but seed-dependent seams. Reopen only for a materially improved official release/runtime or a book-specific audition. |
 | OmniVoice current weights/path | **Short-form hold** | Accents were good; CPU RTF ~9 and non-commercial weights block normal books. Reconsider on official performance/licence change or a bounded short use. |
 | EdgeTTS through `edge-tts` | **Conditional hold** | Free direct cost and accents were acceptable, but the interface is unofficial/fragile and proper nouns failed. Re-test only with a pronunciation fix and current service docs. |
@@ -352,13 +355,13 @@ Jasper's scratchy opening remain separate synthesis defects; Rosie gave the
 strongest overall handling. None of these candidates replaces the Chatterbox
 Nano/Beatrice production default until its own long-form gate is passed.
 
-Pocket and Kitten are therefore implemented as **opt-in CPU-only candidates**,
+Pocket and Kitten are therefore implemented as **opt-in CPU-only book choices**,
 never as defaults or automatic fallbacks. Their preview, first-render and
 recovery commands use the named `explicit` text profile: deterministic spoken
 numbers/currency and acronym letter-spacing, without the legacy phonetic
-lexicon. Every official English preset may be registered, but it is not
-audition-ready until its persisted preview exists, and it is not book-approved
-until a 15–30 minute app-path render is heard.
+lexicon. Every offered official preset must have a persisted preview before it
+is selectable. Catalogue presence is not a human quality verdict for every
+voice; it guarantees immediate audition and an engine-bound conversion choice.
 
 The first Peter/Rosie long-form gate is valid evidence about the voices' body
 quality, but **invalid evidence about title/author delivery**. Both engines were
@@ -368,12 +371,14 @@ Gutenberg's generated `pg-header`, not book prose. Exact `pg-header`/`pg-footer`
 containers are now excluded structurally. Paragraph-aware request boundaries
 remain an A/B candidate, not a production default, until heard.
 
-The corrective 600-word gate is rendered and structurally validated at
-revision `cc1b0c6`: current 280-character sentence packing (15 requests) versus
-exact source-paragraph boundaries (28 requests), for both Peter and Rosie.
-No engine parameter changed. The four files are ready for Dave's listening
-verdict; do not promote paragraph-aware chunking merely because it is newer or
-structurally neater—twice as many model resets may sound worse.
+The corrective 600-word gate was rendered and heard at revision `cc1b0c6`:
+current 280-character sentence packing (15 requests) versus exact source-
+paragraph boundaries (28 requests), for both Peter and Rosie. No engine
+parameter changed. Dave preferred current packing for Peter because it sounded
+more natural; the paragraph-aware arm had stranger intonation. Rosie showed no
+meaningful audible difference. Current packing therefore remains production
+behavior for both engines: paragraph preservation does not justify nearly
+twice as many model resets without an audible gain.
 
 ## Book acquisition pipeline docs — moved to infra — Active
 

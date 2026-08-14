@@ -61,11 +61,13 @@ requires a separately authorised environment-gated session.
 - **Chatterbox Turbo** - production narration engine with official pacing
   controls. Enable with explicit `ENABLE_CHATTERBOX_PROFILE=1` compose profile.
 - **Hume TADA** - expressive natural-voice model via TADA-1B. Enable with explicit `ENABLE_TADA_PROFILE=1` compose profile.
-- **Pocket TTS 2.1** - free CPU-only candidate with all 21 officially
-  documented English presets. Opt-in with `ENABLE_POCKET_PROFILE=1`; uses the
-  listener-selected explicit number/currency text profile.
-- **KittenTTS 0.8.1** - free CPU-only developer-preview candidate with all
-  eight official presets. Opt-in with `ENABLE_KITTEN_PROFILE=1`; not a default.
+- **Pocket TTS 2.1** - free CPU-only opt-in book engine with all 21 officially
+  documented English presets cached for immediate audition. It uses the
+  listener-selected explicit number/currency text profile and current sentence
+  packing. Enable with `ENABLE_POCKET_PROFILE=1`; it is not a default/fallback.
+- **KittenTTS 0.8.1** - free CPU-only developer-preview book engine with all
+  eight official presets cached for immediate audition. Opt in with
+  `ENABLE_KITTEN_PROFILE=1`; it is not a default or automatic fallback.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **Piper TTS** - rejected production path; legacy/debug only
   (`ENABLE_PIPER_PROFILE=1`)

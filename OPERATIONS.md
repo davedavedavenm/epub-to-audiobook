@@ -56,8 +56,9 @@ back. This incident did not touch conversion state or generated media.
   TADA stay opt-in (`ENABLE_CHATTERBOX_PROFILE=1` /
   `ENABLE_TADA_PROFILE=1`) because they are heavy.
   Pocket and Kitten are also opt-in (`ENABLE_POCKET_PROFILE=1` /
-  `ENABLE_KITTEN_PROFILE=1`) while their long-form listening gate remains open.
-  They are CPU-only, free/local, and never arm a cloud or paid fallback.
+  `ENABLE_KITTEN_PROFILE=1`) after passing their long-form and corrective
+  listening gates. They are CPU-only, free/local, and never arm a cloud or paid
+  fallback. Every offered voice must already have a persisted preview.
   Their default four-core ceilings (`POCKET_CPUS` / `KITTEN_CPUS`) leave two
   cores for the UI and worker on this six-core host. Matching
   `POCKET_THREADS` / `KITTEN_THREADS` bound model-side CPU parallelism; set
