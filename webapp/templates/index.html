@@ -214,6 +214,32 @@ body{ background:var(--paper); background-image:none; letter-spacing:-0.006em; }
 .btn:hover{ border-color:var(--ink-3); background:var(--surface-2); transform:none; }
 .btn-primary{ background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
 .btn-primary:hover{ background:var(--accent-deep); border-color:var(--accent-deep); color:#fff; box-shadow:none; }
+.history-summary{ display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:24px; padding:4px 2px 20px; border-bottom:1px solid var(--border); margin-bottom:18px; }
+.history-summary h2{ font-family:var(--serif); font-size:clamp(1.45rem,2.5vw,2.1rem); margin:0 0 6px; letter-spacing:-.025em; }
+.history-summary p{ margin:0; color:var(--text-secondary); max-width:62ch; }
+.history-counts{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.history-count{ border:1px solid var(--border); background:var(--surface-2); border-radius:999px; padding:7px 11px; color:var(--text-secondary); font-size:.78rem; font-family:var(--mono); }
+.history-list{ display:grid; gap:12px; }
+.history-row{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:20px; align-items:center; padding:20px 22px; border:1px solid var(--border); border-radius:14px; background:var(--paper-raised); box-shadow:0 5px 20px rgba(29,27,24,.035); }
+.history-main{ min-width:0; }
+.history-kicker{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:7px; }
+.history-kind{ display:inline-flex; align-items:center; border-radius:999px; padding:4px 8px; font-size:.68rem; line-height:1; font-family:var(--mono); font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.history-kind[data-kind="article"]{ color:#176b61; background:#dff5ef; }
+.history-kind[data-kind="book"]{ color:#79520a; background:#f7ecd2; }
+.history-date{ color:var(--text-secondary); font-family:var(--mono); font-size:.72rem; }
+.history-title{ font-size:1.06rem; font-weight:750; line-height:1.3; overflow-wrap:anywhere; }
+.history-meta{ color:var(--text-secondary); font-size:.79rem; margin-top:6px; display:flex; gap:7px 12px; flex-wrap:wrap; }
+.history-meta strong{ color:var(--text-primary); font-weight:650; }
+.history-actions{ display:flex; gap:8px; align-items:center; justify-content:flex-end; flex-wrap:wrap; max-width:460px; }
+.history-actions .btn{ padding:8px 12px; font-size:.8rem; white-space:nowrap; }
+.history-delete{ position:relative; }
+.history-delete summary{ list-style:none; }
+.history-delete summary::-webkit-details-marker{ display:none; }
+.history-delete[open] .history-delete-options{ display:grid; }
+.history-delete-options{ display:none; position:absolute; z-index:20; right:0; top:calc(100% + 6px); min-width:245px; gap:4px; padding:7px; border:1px solid var(--border); border-radius:11px; background:var(--paper-raised); box-shadow:0 18px 44px rgba(20,18,16,.18); }
+.history-delete-options button{ text-align:left; border:0; background:transparent; color:var(--text-primary); border-radius:7px; padding:9px 10px; cursor:pointer; font:inherit; font-size:.79rem; }
+.history-delete-options button:hover{ background:var(--surface-2); }
+.history-delete-options .danger{ color:var(--error); }
 .input-control{ background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:var(--radius-md); font-family:var(--sans); font-size:.94rem; padding:10px 13px; }
 .input-control:focus{ border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent); }
 
@@ -423,6 +449,13 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
   .theme-btn{ min-width:44px; min-height:44px; padding:8px; }
   .library-heading{ align-items:flex-start; flex-direction:column; }
 }
+@media(max-width:760px){
+  .history-summary,.history-row{ grid-template-columns:1fr; }
+  .history-counts,.history-actions{ justify-content:flex-start; max-width:none; }
+  .history-delete-options{ left:0; right:auto; }
+  #studio-audio-player{ width:calc(100vw - 24px)!important; grid-template-columns:auto auto 1fr auto!important; }
+  #studio-audio-player .voice-player-copy{ grid-column:1/-1; grid-row:2; width:100%; }
+}
 </style>
 </head><body>
 <aside class="sidebar" aria-label="Primary navigation">
@@ -437,7 +470,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         <button class="nav-tab" id="tab-btn-convert" role="tab" aria-selected="false" aria-controls="tab-convert" data-tab="convert" onclick="switchTab('convert')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 14v6h14v-6"/></svg></span><span class="nav-copy"><span class="nav-name">Add a book</span><span class="nav-note">Upload EPUB, PDF or text</span></span></button>
         <button class="nav-tab" id="tab-btn-queue" role="tab" aria-selected="false" aria-controls="tab-queue" data-tab="queue" onclick="switchTab('queue')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="nav-copy"><span class="nav-name">Queue</span><span class="nav-note">What is rendering now</span></span><span id="queue-badge" class="hidden" style="background:var(--error); color:#fff; border-radius:10px; padding:2px 8px; font-size:0.7rem; font-weight:900; margin-left:auto;">0</span></button>
         <button class="nav-tab" id="tab-btn-voices" role="tab" aria-selected="false" aria-controls="tab-voices" data-tab="voices" onclick="switchTab('voices')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V6a3 3 0 0 1 6 0v12"/><path d="M5 12a7 7 0 0 0 14 0M12 19v3"/></svg></span><span class="nav-copy"><span class="nav-name">Voices</span><span class="nav-note">Listen before choosing</span></span></button>
-        <button class="nav-tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="tab-history" data-tab="history" onclick="switchTab('history')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v11H4z"/><path d="M4 7V4h6l2 2h5v3"/></svg></span><span class="nav-copy"><span class="nav-name">Finished</span><span class="nav-note">Play and download audio</span></span></button>
+        <button class="nav-tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="tab-history" data-tab="history" onclick="switchTab('history')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v11H4z"/><path d="M4 7V4h6l2 2h5v3"/></svg></span><span class="nav-copy"><span class="nav-name">History</span><span class="nav-note">All completed conversions</span></span></button>
         <button class="nav-tab" id="tab-btn-settings" role="tab" aria-selected="false" aria-controls="tab-settings" data-tab="settings" onclick="switchTab('settings')"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.8-1L14.4 3h-4.8l-.4 3.1a8 8 0 0 0-1.8 1l-2.4-1-2 3.4L5.1 11a7 7 0 0 0 0 2L3 14.5l2 3.4 2.4-1a8 8 0 0 0 1.8 1l.4 3.1h4.8l.4-3.1a8 8 0 0 0 1.8-1l2.4 1 2-3.4-2.1-1.5a7 7 0 0 0 .1-1z"/></svg></span><span class="nav-copy"><span class="nav-name">Settings</span><span class="nav-note">Defaults and connections</span></span></button>
     </nav>
     <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);" title="GPU Status: paid GPUs are manual only; queue length never provisions one.">
@@ -802,10 +835,13 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 </section>
 
 <!-- Studio Web Audio Player -->
-<section id="studio-audio-player" class="voice-player hidden" style="width:min(720px, calc(100vw - 320px)); grid-template-columns: auto 1fr auto auto auto;">
-    <button id="sp-play-btn" class="voice-player-btn" onclick="toggleStudioAudioPlay()">▶</button>
+<section id="studio-audio-player" class="voice-player hidden" style="width:min(840px, calc(100vw - 320px)); grid-template-columns: auto auto auto 1fr auto auto;" aria-label="Conversion audio player">
+    <button id="sp-prev-btn" class="voice-player-btn" onclick="previousStudioTrack()" aria-label="Previous chapter">‹</button>
+    <button id="sp-play-btn" class="voice-player-btn" onclick="toggleStudioAudioPlay()" aria-label="Play or pause">▶</button>
+    <button id="sp-next-btn" class="voice-player-btn" onclick="nextStudioTrack()" aria-label="Next chapter">›</button>
     <div class="voice-player-copy">
         <div id="sp-title" class="voice-player-name">No track playing</div>
+        <div id="sp-track" class="voice-player-state" aria-live="polite"></div>
         <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
             <input id="sp-seek" type="range" class="voice-player-seek" value="0" min="0" max="100" step="0.1" oninput="seekStudioAudio(this.value)">
             <span id="sp-time" class="voice-player-time">00:00 / 00:00</span>
@@ -818,7 +854,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         <option value="1.75">1.75x</option>
         <option value="2.0">2.0x</option>
     </select>
-    <button class="voice-player-dismiss" onclick="closeStudioAudioPlayer()">✖</button>
+    <button class="voice-player-dismiss" onclick="closeStudioAudioPlayer()" aria-label="Stop and close player">✖</button>
 </section>
 <script src="/static/llm_ui.js"></script>
 <script>
@@ -947,7 +983,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             convert: ['Add a book', 'Upload a manuscript and choose how it should sound.'],
             queue: ['Queue', 'See what is rendering, waiting or needs attention.'],
             voices: ['Voices', 'Listen before choosing a narrator.'],
-            history: ['Finished', 'Play or download completed books and articles.'],
+            history: ['History', 'Every completed book and article conversion, newest first.'],
             settings: ['Settings', 'Manage narration defaults and service connections.']
         };
         const heading = headings[tabId] || [tabId, ''];
@@ -1158,17 +1194,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                             ${selectableVoices().map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
                         </select>
                     </label>
-                    <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
-                        Engine:
-                        <select id="lib-batch-engine-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
-                            <option value="keep">Auto Engine</option>
-                            <option value="chatterbox_nano">Chatterbox Nano (Fast)</option>
-                            <option value="kokoro">Kokoro TTS</option>
-                            <option value="edge">Edge TTS</option>
-                            <option value="chatterbox">Chatterbox Turbo</option>
-                            <option value="tada">TADA</option>
-                        </select>
-                    </label>
+                    <span style="font-size:0.78rem; color:var(--text-secondary);">The selected narrator determines the engine.</span>
                     <button class="btn btn-primary" style="font-size:0.85rem; padding:8px 16px;" onclick="batchConvertLibrarySelected()">🎙️ Convert Selected</button>
                 </div>
             </div>`;
@@ -2364,6 +2390,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     let selectedLibraryPaths = new Set();
     let currentStudioAudio = null;
     let currentStudioJobId = null;
+    let currentStudioPlaylist = [];
+    let currentStudioTrackIndex = 0;
+    let currentStudioBookName = '';
+    let historyJobsById = {};
 
     function toggleSelectAllHistory(checked) {
         document.querySelectorAll('.history-job-cb').forEach(cb => {
@@ -2412,7 +2442,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             return;
         }
         const voiceOption = document.getElementById('lib-batch-voice-select')?.value || 'default';
-        const engineOption = document.getElementById('lib-batch-engine-select')?.value || 'keep';
 
         if (!await appConfirm({
             title: `Convert ${paths.length} Selected Book(s)?`,
@@ -2425,8 +2454,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 paths: paths,
-                voice_option: voiceOption,
-                tts_engine_option: engineOption
+                voice_option: voiceOption
             })
         });
         const res = await resp.json();
@@ -2440,8 +2468,62 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
     }
 
-    async function playJobAudio(jobId, bookName) {
+    function readableTrackName(filename) {
+        return String(filename || '').replace(/\.mp3$/i, '').replace(/^\d+[\s._-]*/, '').trim();
+    }
+
+    async function playStudioTrack(index, autoplay = true) {
+        if (!currentStudioPlaylist.length) return;
+        currentStudioTrackIndex = Math.max(0, Math.min(index, currentStudioPlaylist.length - 1));
+        const track = currentStudioPlaylist[currentStudioTrackIndex];
+        if (currentStudioAudio) currentStudioAudio.pause();
+        currentStudioAudio = new Audio(track.url);
+
+        const playBtn = document.getElementById('sp-play-btn');
+        const timeEl = document.getElementById('sp-time');
+        const seekEl = document.getElementById('sp-seek');
+        const speedEl = document.getElementById('sp-speed');
+        const trackEl = document.getElementById('sp-track');
+        const savedSpeed = localStorage.getItem('studio-player-speed') || speedEl?.value || '1.0';
+        if (speedEl) speedEl.value = savedSpeed;
+        currentStudioAudio.playbackRate = parseFloat(savedSpeed);
+        if (seekEl) seekEl.value = 0;
+        if (timeEl) timeEl.textContent = '0:00 / 0:00';
+        if (trackEl) trackEl.textContent = currentStudioPlaylist.length > 1
+            ? `Chapter ${currentStudioTrackIndex + 1} of ${currentStudioPlaylist.length} · ${readableTrackName(track.filename)}`
+            : readableTrackName(track.filename);
+        document.getElementById('sp-prev-btn').disabled = currentStudioTrackIndex === 0;
+        document.getElementById('sp-next-btn').disabled = currentStudioTrackIndex === currentStudioPlaylist.length - 1;
+
+        currentStudioAudio.ontimeupdate = () => {
+            if (!currentStudioAudio) return;
+            const cur = currentStudioAudio.currentTime || 0;
+            const dur = currentStudioAudio.duration || 0;
+            if (seekEl && dur > 0) seekEl.value = (cur / dur) * 100;
+            if (timeEl) timeEl.textContent = `${formatPreviewTime(cur)} / ${formatPreviewTime(dur)}`;
+        };
+        currentStudioAudio.onplay = () => { if (playBtn) playBtn.innerHTML = '⏸'; };
+        currentStudioAudio.onpause = () => { if (playBtn) playBtn.innerHTML = '▶'; };
+        currentStudioAudio.onended = () => {
+            if (currentStudioTrackIndex < currentStudioPlaylist.length - 1) {
+                playStudioTrack(currentStudioTrackIndex + 1, true);
+            } else if (playBtn) {
+                playBtn.innerHTML = '▶';
+            }
+        };
+        currentStudioAudio.onerror = () => appAlert({
+            title: 'Playback Error', message: `Could not play ${track.filename}.`, tone: 'danger', icon: '⚠️'
+        });
+        if (autoplay) await currentStudioAudio.play();
+    }
+
+    async function playJobAudio(jobId) {
         try {
+            if (currentStudioJobId === jobId && currentStudioAudio) {
+                document.getElementById('studio-audio-player')?.classList.remove('hidden');
+                await currentStudioAudio.play();
+                return;
+            }
             const resp = await fetch(`/api/jobs/${jobId}/audio_files`);
             if (!resp.ok) throw new Error('Could not fetch audio files');
             const data = await resp.json();
@@ -2449,40 +2531,15 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 appAlert({ title: 'No audio files', message: 'No MP3 files found for this title.', tone: 'warning', icon: '⚠️' });
                 return;
             }
-            const streamUrl = data.files[0].url;
-
-            if (currentStudioAudio) {
-                currentStudioAudio.pause();
-            }
-            currentStudioAudio = new Audio(streamUrl);
             currentStudioJobId = jobId;
-
+            currentStudioPlaylist = data.files;
+            currentStudioTrackIndex = 0;
+            currentStudioBookName = data.book_name || 'Now Playing';
             const player = document.getElementById('studio-audio-player');
             const titleEl = document.getElementById('sp-title');
-            const playBtn = document.getElementById('sp-play-btn');
-            const timeEl = document.getElementById('sp-time');
-            const seekEl = document.getElementById('sp-seek');
-            const speedEl = document.getElementById('sp-speed');
-
-            if (titleEl) titleEl.textContent = bookName || data.book_name || 'Now Playing';
+            if (titleEl) titleEl.textContent = currentStudioBookName;
             if (player) player.classList.remove('hidden');
-
-            currentStudioAudio.playbackRate = parseFloat(speedEl?.value || '1.0');
-
-            currentStudioAudio.ontimeupdate = () => {
-                if (!currentStudioAudio) return;
-                const cur = currentStudioAudio.currentTime || 0;
-                const dur = currentStudioAudio.duration || 0;
-                if (seekEl && dur > 0) seekEl.value = (cur / dur) * 100;
-                if (timeEl) timeEl.textContent = `${formatPreviewTime(cur)} / ${formatPreviewTime(dur)}`;
-            };
-
-            currentStudioAudio.onended = () => {
-                if (playBtn) playBtn.innerHTML = '▶';
-            };
-
-            await currentStudioAudio.play();
-            if (playBtn) playBtn.innerHTML = '⏸';
+            await playStudioTrack(0, true);
         } catch(e) {
             appAlert({ title: 'Playback Error', message: String(e.message || e), tone: 'danger', icon: '⚠️' });
         }
@@ -2506,8 +2563,19 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     }
 
     function setStudioAudioSpeed(speedStr) {
+        localStorage.setItem('studio-player-speed', speedStr);
         if (currentStudioAudio) {
             currentStudioAudio.playbackRate = parseFloat(speedStr);
+        }
+    }
+
+    function previousStudioTrack() {
+        if (currentStudioTrackIndex > 0) playStudioTrack(currentStudioTrackIndex - 1, true);
+    }
+
+    function nextStudioTrack() {
+        if (currentStudioTrackIndex < currentStudioPlaylist.length - 1) {
+            playStudioTrack(currentStudioTrackIndex + 1, true);
         }
     }
 
@@ -2516,6 +2584,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             currentStudioAudio.pause();
             currentStudioAudio = null;
         }
+        currentStudioJobId = null;
+        currentStudioPlaylist = [];
+        currentStudioTrackIndex = 0;
+        currentStudioBookName = '';
         const player = document.getElementById('studio-audio-player');
         if (player) player.classList.add('hidden');
     }
@@ -2527,6 +2599,78 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }).catch(() => {
             appAlert({ title: 'Podcast RSS Feed URL', message: url, tone: 'info', icon: '🎙️' });
         });
+    }
+
+    function formatHistoryDate(value) {
+        if (!value) return 'Completion time unavailable';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return new Intl.DateTimeFormat(undefined, {
+            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        }).format(date);
+    }
+
+    function conversionHistoryRow(j, compact = false) {
+        const kind = j.source_kind === 'article' ? 'article' : 'book';
+        const typeLabel = kind === 'article' ? 'Article' : 'Book';
+        const narrator = j.voice_name || j.voice || 'Unknown narrator';
+        const engine = String(j.tts_engine || 'unknown').replaceAll('_', ' ');
+        const synced = Boolean(j.synced_to_abs);
+        const mp3Label = Number(j.file_count || 0) === 1 || kind === 'article'
+            ? 'Download MP3' : 'MP3 chapters (.zip)';
+        return `
+            <article class="history-row" data-history-id="${escapeHtml(j.id)}">
+                <div class="history-main">
+                    <div class="history-kicker">
+                        <span class="history-kind" data-kind="${kind}">${typeLabel}</span>
+                        <span class="history-date">${escapeHtml(formatHistoryDate(j.completed_at))}</span>
+                        ${synced ? '<span class="history-date">· In Audiobookshelf</span>' : '<span class="history-date">· Local only</span>'}
+                    </div>
+                    <div class="history-title">${escapeHtml(j.book_name || 'Untitled conversion')}</div>
+                    <div class="history-meta">
+                        <span>Narrator <strong>${escapeHtml(narrator)}</strong></span>
+                        <span>Engine <strong>${escapeHtml(engine)}</strong></span>
+                        ${kind === 'article' && j.source_site ? `<span>Source <strong>${escapeHtml(j.source_site)}</strong></span>` : ''}
+                    </div>
+                </div>
+                <div class="history-actions">
+                    <button class="btn btn-primary" onclick="playJobAudio('${escapeHtml(j.id)}')">▶ Play</button>
+                    <button class="btn" onclick="window.location.href='/api/jobs/${encodeURIComponent(j.id)}/download'">${mp3Label}</button>
+                    ${!compact && kind === 'book' ? `<button class="btn" onclick="window.location.href='/api/jobs/${encodeURIComponent(j.id)}/download_epub'">EPUB</button>` : ''}
+                    <details class="history-delete">
+                        <summary class="btn">Delete</summary>
+                        <div class="history-delete-options">
+                            <button onclick="deleteConversion('${escapeHtml(j.id)}', false)">Delete from this app</button>
+                            ${synced ? `<button class="danger" onclick="deleteConversion('${escapeHtml(j.id)}', true)">Delete here and from Audiobookshelf</button>` : ''}
+                        </div>
+                    </details>
+                </div>
+            </article>`;
+    }
+
+    async function deleteConversion(jobId, removeFromAbs) {
+        const job = historyJobsById[jobId] || {};
+        const everywhere = removeFromAbs && job.synced_to_abs;
+        if (!await appConfirm({
+            title: everywhere ? 'Delete conversion everywhere?' : 'Delete local conversion?',
+            message: everywhere
+                ? 'This permanently removes the generated audio from this app and its exact Audiobookshelf copy. The source ebook or article URL is not deleted.'
+                : 'This permanently removes the generated audio and History entry from this app. Any Audiobookshelf copy will remain.',
+            confirmText: everywhere ? 'Delete everywhere' : 'Delete from app',
+            cancelText: 'Keep it', tone: 'danger', icon: '🗑',
+        })) return;
+        const response = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/delete`, {
+            method: 'DELETE', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({remove_from_abs: everywhere})
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            appAlert({title: 'Delete failed', message: result.error || `HTTP ${response.status}`, tone: 'danger', icon: '⚠️'});
+            return;
+        }
+        if (currentStudioJobId === jobId) closeStudioAudioPlayer();
+        delete historyJobsById[jobId];
+        await Promise.all([loadHistory(), loadArticlesTab(), loadLibrary()]);
     }
 
     async function loadArticlesTab() {
@@ -2541,23 +2685,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const jobs = await resp.json();
             const articles = jobs.filter(j => j.source_kind === 'article' || (j.book_name && j.book_name.toLowerCase().includes('article')));
+            jobs.forEach(j => { historyJobsById[j.id] = j; });
             if (articles.length > 0) {
-                listContent.innerHTML = articles.map(j => `
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:18px 24px;">
-                        <div>
-                            <div style="font-family:var(--sans); font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:10px;">
-                                📰 ${escapeHtml(j.book_name)}
-                            </div>
-                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">
-                                Narrator: <b>${escapeHtml(j.voice_name || j.voice)}</b> (${(j.tts_engine || 'chatterbox_nano').toUpperCase()})
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <button class="btn btn-primary" style="font-size:0.85rem; padding:7px 14px;" onclick="playJobAudio('${j.id}', '${escapeHtml(j.book_name).replace(/'/g, "\\'")}')">▶ Play</button>
-                            <button class="btn" style="font-size:0.85rem; padding:7px 14px;" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 MP3</button>
-                        </div>
-                    </div>
-                `).join('');
+                listContent.innerHTML = `<div class="history-list">${articles.map(j => conversionHistoryRow(j, true)).join('')}</div>`;
             } else {
                 listContent.innerHTML = '<div style="color:var(--text-secondary); padding:20px 0;">No articles ingested yet. Paste a URL above to narrate your first article!</div>';
             }
@@ -2640,65 +2770,30 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 
     async function loadHistory() {
         const content = document.getElementById('history-content');
+        if (!content) return;
         try {
             const resp = await fetch('/api/history');
             if(!resp.ok) throw new Error('HTTP ' + resp.status);
             const jobs = await resp.json();
-
-            const batchHeader = `
-                <div class="card" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:16px 24px; margin-bottom:20px; background:var(--bg-element); border:1px solid var(--border); border-radius:12px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <input type="checkbox" id="history-select-all" onchange="toggleSelectAllHistory(this.checked)" style="width:18px; height:18px; cursor:pointer;" />
-                        <label for="history-select-all" style="font-weight:700; font-size:0.9rem; cursor:pointer;">Select All History</label>
-                        <span id="history-selected-count" style="font-size:0.85rem; color:var(--text-secondary);">(0 selected)</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                        <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
-                            Narrator:
-                            <select id="batch-voice-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
-                                <option value="keep">Keep original narrator</option>
-                                <option value="default">Default (Beatrice Nano)</option>
-                                ${selectableVoices().map(([id, v]) => `<option value="${id}">${v.name} (${v.accent})</option>`).join('')}
-                            </select>
-                        </label>
-                        <label style="font-size:0.82rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
-                            Engine:
-                            <select id="batch-engine-select" style="padding:5px 10px; border-radius:6px; background:var(--surface-1); color:var(--text-primary); border:1px solid var(--border); font-size:0.82rem;">
-                                <option value="keep">Keep original engine</option>
-                                <option value="chatterbox_nano">Chatterbox Nano (Fast)</option>
-                                <option value="kokoro">Kokoro TTS</option>
-                                <option value="edge">Edge TTS</option>
-                                <option value="chatterbox">Chatterbox Turbo</option>
-                                <option value="tada">TADA</option>
-                            </select>
-                        </label>
-                        <button class="btn btn-primary" style="font-size:0.85rem; padding:8px 16px;" onclick="batchReconvertSelected()">🎙️ Re-convert Selected</button>
-                    </div>
-                </div>`;
-
+            historyJobsById = Object.fromEntries(jobs.map(j => [j.id, j]));
+            const books = jobs.filter(j => j.source_kind !== 'article').length;
+            const articles = jobs.length - books;
             if (jobs.length > 0) {
-                content.innerHTML = batchHeader + jobs.map(j => `
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:18px 24px;">
-                        <div style="display:flex; align-items:center; gap:14px;">
-                            <input type="checkbox" class="history-job-cb" data-id="${j.id}" ${selectedHistoryIds.has(j.id) ? 'checked' : ''} onchange="toggleHistoryItemCb('${j.id}', this.checked)" style="width:18px; height:18px; cursor:pointer;" />
-                            <div>
-                                <div style="font-family:var(--sans); font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:10px;">
-                                    ✅ ${escapeHtml(j.book_name)} ${preBadge(j)}
-                                </div>
-                                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">Narrator: <b>${escapeHtml(j.voice_name || j.voice)}</b> (${(j.tts_engine || 'kokoro').toUpperCase()})</div>
-                            </div>
+                content.innerHTML = `
+                    <div class="history-summary">
+                        <div>
+                            <h2>Conversion record</h2>
+                            <p>Books and articles together, newest first. The engine and narrator shown are what actually produced each file.</p>
                         </div>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <button class="btn btn-primary" style="font-size:0.85rem; padding:7px 14px;" onclick="playJobAudio('${j.id}', '${escapeHtml(j.book_name).replace(/'/g, "\\'")}')">▶ Play</button>
-                            <button class="btn" style="font-size:0.85rem; padding:7px 14px;" onclick="window.location.href='/api/jobs/${j.id}/download'">🎧 MP3s</button>
-                            <button class="btn" style="font-size:0.85rem; padding:7px 14px;" onclick="window.location.href='/api/jobs/${j.id}/download_epub'">📖 EPUB</button>
+                        <div class="history-counts">
+                            <span class="history-count">${books} book${books === 1 ? '' : 's'}</span>
+                            <span class="history-count">${articles} article${articles === 1 ? '' : 's'}</span>
                         </div>
                     </div>
-                `).join('');
+                    <div class="history-list">${jobs.map(j => conversionHistoryRow(j)).join('')}</div>`;
             } else {
-                content.innerHTML = '<div class="card">History is empty.</div>';
+                content.innerHTML = '<div class="card">No completed conversions yet.</div>';
             }
-            updateHistorySelectionCount();
         } catch(e) {
             if(content) content.innerHTML = '<div class="card" style="text-align:center; color:var(--error); border-color:var(--error); font-weight:600;">⚠️ Could not reach the studio API — check the server is running, then refresh.</div>';
         }

@@ -111,4 +111,11 @@ def test_library_batch_convert(client):
     assert data['status'] == 'ok'
     assert data['enqueued_count'] == 0
 
+    r_mismatched = client.post('/api/library/batch-convert', json={
+        'paths': ['non_existent_book.epub'],
+        'voice_option': 'default',
+        'tts_engine_option': 'kokoro'
+    })
+    assert r_mismatched.status_code == 400
+    assert 'Choose a narrator' in r_mismatched.get_json()['error']
 

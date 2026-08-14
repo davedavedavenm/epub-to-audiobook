@@ -81,6 +81,82 @@ def test_rss_enclosure_is_a_served_article_audio_route(tmp_path, monkeypatch):
             conn.commit()
 
 
+def _completed_job_fixture(tmp_path, monkeypatch, *, job_id='history-test', kind='book', files=1):
+    upload = tmp_path / 'uploads'
+    output = tmp_path / 'output'
+    for path in (upload, output):
+        path.mkdir(exist_ok=True)
+    monkeypatch.setattr(appmod, 'DB_PATH', tmp_path / 'jobs.db')
+    monkeypatch.setattr(appmod, 'UPLOAD_DIR', upload)
+    monkeypatch.setattr(appmod, 'OUTPUT_DIR', output)
+    monkeypatch.setattr(appmod, 'LOG_DIR', tmp_path / 'logs')
+    init_db()
+    outdir = output / f'Example_{job_id}'
+    outdir.mkdir()
+    for index in range(1, files + 1):
+        (outdir / f'{index:02d}.mp3').write_bytes(b'ID3' + bytes([index]) * 2048)
+    input_name = f'{job_id}_Example.epub'
+    (upload / input_name).write_bytes(b'epub')
+    save_job({
+        'id': job_id, 'book_name': 'Example', 'voice': 'voice',
+        'voice_name': 'Narrator', 'tts_engine': 'chatterbox_nano',
+        'status': 'completed', 'created_at': '2026-08-14T10:00:00',
+        'completed_at': '2026-08-14T11:00:00', 'input_filename': input_name,
+        'output_dirname': outdir.name, 'file_count': files, 'source_kind': kind,
+    })
+    return outdir
+
+
+def test_single_mp3_download_is_not_wrapped_in_zip(tmp_path, monkeypatch):
+    _completed_job_fixture(tmp_path, monkeypatch, kind='article', files=1)
+    with app.test_client() as client:
+        response = client.get('/api/jobs/history-test/download')
+    assert response.status_code == 200
+    assert response.mimetype == 'audio/mpeg'
+    assert response.headers['Content-Disposition'].endswith('filename=Example.mp3')
+
+
+def test_multi_chapter_mp3_download_remains_one_zip(tmp_path, monkeypatch):
+    _completed_job_fixture(tmp_path, monkeypatch, files=2)
+    with app.test_client() as client:
+        response = client.get('/api/jobs/history-test/download')
+    assert response.status_code == 200
+    assert response.mimetype == 'application/zip'
+    archive = tmp_path / 'download.zip'
+    archive.write_bytes(response.data)
+    with ZipFile(archive) as zipped:
+        assert zipped.namelist() == ['01.mp3', '02.mp3']
+
+
+def test_delete_conversion_removes_owned_local_files_only(tmp_path, monkeypatch):
+    outdir = _completed_job_fixture(tmp_path, monkeypatch)
+    upload_root = appmod.UPLOAD_DIR
+    with app.test_client() as client:
+        response = client.delete('/api/jobs/history-test/delete', json={'remove_from_abs': False})
+    assert response.status_code == 200
+    assert not outdir.exists()
+    assert upload_root.exists(), 'an empty filename must never resolve to and remove the upload root'
+    assert get_job('history-test') is None
+
+
+def test_delete_everywhere_stops_when_exact_abs_removal_fails(tmp_path, monkeypatch):
+    outdir = _completed_job_fixture(tmp_path, monkeypatch)
+    appmod.update_job('history-test', synced_to_abs=True)
+    monkeypatch.setattr(appmod, '_delete_synced_copy', lambda _job: (False, 'unsafe path'))
+    with app.test_client() as client:
+        response = client.delete('/api/jobs/history-test/delete', json={'remove_from_abs': True})
+    assert response.status_code == 409
+    assert response.get_json()['error'] == 'unsafe path'
+    assert outdir.exists()
+    assert get_job('history-test') is not None
+
+
+def test_new_article_episode_filename_is_unique_to_job():
+    name = appmod._episode_filename(
+        {'id': 'abc12345', 'source_date': '2026-08-14'}, 'Same title')
+    assert name == '2026-08-14 - Same title [abc12345].mp3'
+
+
 def _article_capture_fixture(tmp_path, monkeypatch):
     upload = tmp_path / 'uploads'
     output = tmp_path / 'output'

@@ -78,7 +78,7 @@ Compose without `--profile chatterbox-nano`.
 
 ## Step 3 — Make your first audiobook (3 clicks)
 
-1. **Add a book.** Click **Upload** in the sidebar and drop in an `.epub` file
+1. **Add a book.** Click **Add a book** in the sidebar and drop in an `.epub` file
    (or `.pdf`, `.mobi`). It appears in your Library.
 2. **Pick a voice.** Find the book in the Library, click **Narrate**, and choose
    a narrator. Open **Voices** first and listen: a Play button always reads an
@@ -90,6 +90,13 @@ Compose without `--profile chatterbox-nano`.
 When it's done, your audiobook lands in the `data/audiobooks/` folder inside the
 app, one MP3 per chapter. Copy them to your phone, or connect
 [Audiobookshelf](#optional-listen-anywhere) to stream them anywhere.
+
+Open **History** to see every completed conversion—books and articles together,
+newest first. **Play** keeps running while you move between app tabs and advances
+through book chapters. A single-track download is a direct MP3; a multi-chapter
+book is one ZIP containing the chapter MP3s. **Delete → Delete from this app**
+keeps any synced ABS copy; **Delete here and from Audiobookshelf** removes both.
+Neither option deletes the source ebook.
 
 That is the minimum working path. Everything below is optional.
 
@@ -173,7 +180,8 @@ but when you want the best result:
 
 - **Chatterbox Nano** — the default. A fast local CPU engine using the Beatrice
   human-cloned British narrator.
-- **Kokoro** — fast, clear and useful for comparison, but no longer the default.
+- **Kokoro** — compatibility/debug only. Its tested voices are retired from
+  normal quality selection.
 - **Chatterbox Turbo** — voice-cloned British narrators (Arthur, Edmund,
   Harriet, Beatrice). Excellent for long books; runs on CPU or GPU. Enable with
   the `chatterbox` profile.

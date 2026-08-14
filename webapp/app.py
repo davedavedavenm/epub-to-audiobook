@@ -3236,7 +3236,22 @@ def _podcast_folder_name(site: str) -> str:
 
 
 def _episode_filename(job: dict, book_name: str) -> str:
-    """`YYYY-MM-DD - Title.mp3` — an episode name that sorts by date."""
+    """Stable, job-specific episode name that sorts by publication date.
+
+    The job id is intentionally part of the filename.  Podcast episodes from a
+    site share one ABS folder, so title/date alone cannot identify which file a
+    later "delete everywhere" action owns when an article was converted twice.
+    """
+    date = (job.get('source_date') or '')[:10]
+    title = sanitize_filename(book_name or 'Article').strip() or 'Article'
+    stem = f"{date} - {title}" if date else title
+    job_id = sanitize_filename(str(job.get('id') or '')).strip()
+    suffix = f" [{job_id}]" if job_id else ''
+    return f"{stem[:max(1, 120 - len(suffix))]}{suffix}.mp3"
+
+
+def _legacy_episode_filename(job: dict, book_name: str) -> str:
+    """Pre-2026-08-14 article name, used only to remove older exact files."""
     date = (job.get('source_date') or '')[:10]
     title = sanitize_filename(book_name or 'Article').strip() or 'Article'
     stem = f"{date} - {title}" if date else title
@@ -3458,7 +3473,9 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             return False
 
         if job_id:
-            update_job(job_id, sync_status='ok', sync_timestamp=datetime.now().isoformat())
+            delivered_audio = len([p for p in source_dir.glob('*.mp3') if p.is_file()])
+            update_job(job_id, sync_status='ok', sync_file_count=delivered_audio,
+                       sync_timestamp=datetime.now().isoformat())
             append_job_log(job_id, "Sync ok")
 
             # Automatically trigger library scan in ABS
@@ -4548,6 +4565,14 @@ def _queue_article(meta: dict, options: dict | None = None) -> tuple[dict, int]:
             'title', 'author', 'site', 'word_count', 'estimated_minutes')}
         body['destination'] = 'podcast'
         body['podcast_folder'] = _podcast_folder_name(meta.get('site', ''))
+        # convert_from_library() has copied the generated EPUB into UPLOAD_DIR.
+        # The capture copy is staging, not a second archive; retaining it leaked
+        # one otherwise-unreachable directory per pasted article.
+        try:
+            epub_path.unlink(missing_ok=True)
+            epub_path.parent.rmdir()
+        except OSError:
+            pass
     return body, status
 
 
@@ -5269,7 +5294,7 @@ def resume_job(job_id):
 
 @app.route('/api/history')
 def get_history():
-    """Get conversion history (completed books)."""
+    """Get completed book and article conversions, newest first."""
     with get_db() as conn:
         rows = conn.execute('''
             SELECT * FROM jobs
@@ -6036,6 +6061,9 @@ def batch_reconvert():
 
     if not isinstance(job_ids, list) or not job_ids:
         return jsonify({'error': 'job_ids must be a non-empty list'}), 400
+    if engine_option != 'keep':
+        return jsonify({'error': 'Choose a narrator, not a separate engine. '
+                        'Voice and engine cannot be overridden independently.'}), 400
 
     enqueued = []
     for jid in job_ids:
@@ -6044,9 +6072,12 @@ def batch_reconvert():
             continue
 
         voice = job['voice'] if voice_option == 'keep' else (
-            get_setting('default_voice', 'accent_australian_female_nano') if voice_option == 'default' else voice_option
+            get_setting('default_voice', DEFAULT_VOICE) if voice_option == 'default' else voice_option
         )
-        engine = job.get('tts_engine', 'kokoro') if engine_option == 'keep' else engine_option
+        voice_info = all_voices().get(voice)
+        if not voice_info:
+            continue
+        engine = voice_info.get('engine', 'chatterbox_nano')
 
         new_job_id = uuid.uuid4().hex
         safe_name = sanitize_filename(job.get('book_name', 'book'))
@@ -6058,6 +6089,7 @@ def batch_reconvert():
             'input_filename': job.get('input_filename', ''),
             'output_dirname': output_dirname,
             'voice': voice,
+            'voice_name': voice_info.get('name', voice),
             'tts_engine': engine,
             'status': 'queued',
             'created_at': datetime.now().isoformat(),
@@ -6201,7 +6233,7 @@ def retry_job(job_id: str):
 
 @app.route('/api/jobs/<job_id>/download')
 def download_job(job_id: str):
-    """Download completed audiobook as ZIP."""
+    """Download one MP3 directly, or a ZIP when a book has many chapters."""
     job = get_job(job_id)
     if not job:
         return jsonify({'error': 'Job not found'}), 404
@@ -6213,11 +6245,22 @@ def download_job(job_id: str):
     if not output_dir.exists():
         return jsonify({'error': 'Output files not found'}), 404
 
-    # Create ZIP file
+    mp3s = sorted(p for p in output_dir.glob('*.mp3') if p.is_file())
+    if not mp3s:
+        return jsonify({'error': 'No MP3 files found'}), 404
+
+    # A single-file article (or single-track book) does not need an archive.
+    if len(mp3s) == 1:
+        return send_file(
+            mp3s[0], mimetype='audio/mpeg', as_attachment=True,
+            download_name=f"{sanitize_filename(job['book_name']) or 'audio'}.mp3",
+        )
+
+    # Multi-chapter MP3 books need one transfer; preserve each chapter file.
     zip_path = UPLOAD_DIR / f"{job['output_dirname']}.zip"
 
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for mp3_file in sorted(output_dir.glob('*.mp3')):
+        for mp3_file in mp3s:
             zf.write(mp3_file, mp3_file.name)
 
     return send_file(
@@ -6255,7 +6298,11 @@ def stream_job_audio(job_id: str, filename: str):
     if not job or not job.get('output_dirname'):
         return jsonify({'error': 'Job not found'}), 404
     out_dir = OUTPUT_DIR / job['output_dirname']
-    target_file = out_dir / filename
+    target_file = (out_dir / filename).resolve()
+    try:
+        target_file.relative_to(out_dir.resolve())
+    except ValueError:
+        return jsonify({'error': 'Invalid audio path'}), 400
     if not target_file.exists() or not target_file.is_file():
         return jsonify({'error': 'Audio file not found'}), 404
     return send_file(target_file, mimetype='audio/mpeg')
@@ -6322,7 +6369,7 @@ def sync_job(job_id: str):
 
 @app.route('/api/jobs/<job_id>/delete', methods=['DELETE'])
 def delete_job(job_id: str):
-    """Delete a job and its files."""
+    """Delete local conversion files; optionally remove the exact ABS copy."""
     job = get_job(job_id)
     if not job:
         return jsonify({'error': 'Job not found'}), 404
@@ -6330,21 +6377,140 @@ def delete_job(job_id: str):
     if job['status'] in ('converting', 'converting PDF', 'converting to audio'):
         return jsonify({'error': 'Cannot delete running job'}), 400
 
-    # Delete files
-    input_path = UPLOAD_DIR / job['input_filename']
-    if input_path.exists():
+    data = request.get_json(silent=True) or {}
+    remove_from_abs = bool(data.get('remove_from_abs'))
+
+    if remove_from_abs and job.get('synced_to_abs'):
+        ok, message = _delete_synced_copy(job)
+        if not ok:
+            return jsonify({'error': message}), 409
+
+    def owned_path(root: Path, name: str) -> Path | None:
+        if not name or Path(name).name != name:
+            return None
+        candidate = (root / name).resolve()
+        try:
+            candidate.relative_to(root.resolve())
+        except ValueError:
+            return None
+        return candidate
+
+    input_path = owned_path(UPLOAD_DIR, job.get('input_filename') or '')
+    if input_path and input_path.is_file():
         input_path.unlink()
 
-    output_dir = OUTPUT_DIR / job['output_dirname']
-    if output_dir.exists():
+    output_dir = owned_path(OUTPUT_DIR, job.get('output_dirname') or '')
+    if output_dir and output_dir.is_dir():
         shutil.rmtree(output_dir)
+
+    zip_path = owned_path(UPLOAD_DIR, f"{job.get('output_dirname')}.zip" if job.get('output_dirname') else '')
+    if zip_path and zip_path.is_file():
+        zip_path.unlink()
 
     # Delete from database
     with get_db() as conn:
         conn.execute('DELETE FROM jobs WHERE id = ?', (job_id,))
         conn.commit()
 
-    return jsonify({'status': 'deleted'})
+    return jsonify({'status': 'deleted', 'removed_from_abs': remove_from_abs})
+
+
+def _delete_synced_copy(job: dict) -> tuple[bool, str]:
+    """Remove only files owned by this conversion from the remote ABS host.
+
+    ABS's official DELETE endpoint removes database state but explicitly does
+    not delete media files.  Our media was delivered with rsync, so it must be
+    removed over the same SSH trust path before ABS is rescanned.
+    """
+    target = (job.get('sync_target_path') or '').rstrip('/')
+    kind = job.get('source_kind') or 'book'
+    book_root = (AUDIOBOOKSHELF_DIR or '').rstrip('/')
+    podcast_root = (AUDIOBOOKSHELF_PODCAST_DIR or '').rstrip('/')
+    if not target:
+        return False, 'This conversion has no recorded Audiobookshelf path.'
+
+    paths: list[str] = []
+    remove_directory = False
+    if kind == 'article':
+        if not podcast_root or not target.startswith(podcast_root + '/'):
+            return False, 'Refusing to delete an article outside the configured podcast library.'
+        count = max(1, int(job.get('sync_file_count') or 1))
+        filenames = [_episode_filename(job, job.get('book_name') or 'Article')]
+        # Before job ids were added to episode filenames, the title/date pair
+        # was the only available exact address. Never try that legacy filename
+        # for a newer job: it could belong to an older duplicate conversion.
+        if (job.get('completed_at') or '') < '2026-08-14':
+            filenames.append(_legacy_episode_filename(job, job.get('book_name') or 'Article'))
+        for filename in dict.fromkeys(filenames):
+            stem = filename[:-4]
+            if count == 1:
+                paths.append(f"{target}/{filename}")
+            else:
+                paths.extend(f"{target}/{stem} ({i:02d}).mp3" for i in range(1, count + 1))
+    else:
+        expected_suffix = f"_{job.get('id')}"
+        if (not book_root or not target.startswith(book_root + '/')
+                or not target.endswith(expected_suffix)):
+            return False, 'Refusing to delete an ABS folder not uniquely owned by this conversion.'
+        paths = [target]
+        remove_directory = True
+
+    ssh_key_src = os.environ.get('SSH_KEY_PATH', '/root/.ssh/id_ed25519')
+    ssh_key_tmp = '/tmp/id_ed25519_tmp'
+    if not os.path.exists(ssh_key_src):
+        return False, 'Audiobookshelf SSH key is unavailable.'
+    try:
+        shutil.copy2(ssh_key_src, ssh_key_tmp)
+        os.chmod(ssh_key_tmp, 0o600)
+        ssh_args = ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null',
+                    '-F', '/dev/null', '-i', ssh_key_tmp]
+        if AUDIOBOOKSHELF_PORT:
+            ssh_args += ['-p', str(AUDIOBOOKSHELF_PORT)]
+        target_host = f"{AUDIOBOOKSHELF_USER}@{AUDIOBOOKSHELF_HOST}"
+        flag = '-rf' if remove_directory else '-f'
+        command = ' '.join(['rm', flag, '--', *[shlex.quote(p) for p in paths]])
+        result = subprocess.run(['ssh', *ssh_args, target_host, command],
+                                capture_output=True, text=True, timeout=60)
+        if result.returncode != 0:
+            return False, (result.stderr or result.stdout or 'remote delete failed').strip()
+    except Exception as exc:
+        return False, str(exc)
+
+    # A scan removes the vanished podcast episode.  For a book, also remove the
+    # exact database item because ABS documents that its DELETE is DB-only.
+    _trigger_abs_rescan(job.get('id'))
+    if remove_directory:
+        _delete_abs_item_for_path(target, job.get('id'))
+    return True, 'removed'
+
+
+def _delete_abs_item_for_path(target: str, job_id: str | None = None) -> bool:
+    """Delete the ABS database row whose relPath exactly matches target."""
+    url, token = _abs_credentials()
+    if not token or not AUDIOBOOKSHELF_DIR:
+        return False
+    rel = target[len(AUDIOBOOKSHELF_DIR.rstrip('/') + '/'):]
+    headers = {'Authorization': f'Bearer {token}'}
+    try:
+        libs = requests.get(f'{url}/api/libraries', headers=headers, timeout=15)
+        if libs.status_code != 200:
+            return False
+        for lib in libs.json().get('libraries', []):
+            if lib.get('mediaType') != 'book':
+                continue
+            items = requests.get(f"{url}/api/libraries/{lib['id']}/items",
+                                 headers=headers, params={'limit': 0, 'minified': 0}, timeout=30)
+            if items.status_code != 200:
+                continue
+            for item in items.json().get('results', []):
+                if item.get('relPath') == rel:
+                    deleted = requests.delete(f"{url}/api/items/{item['id']}",
+                                              headers=headers, timeout=15)
+                    return deleted.status_code in (200, 204)
+    except Exception as exc:
+        if job_id:
+            append_job_log(job_id, f'ABS database cleanup failed after media delete: {exc}')
+    return False
 
 
 # ============ Library Routes ============
@@ -7146,6 +7312,13 @@ def batch_convert_library():
 
     if not isinstance(paths, list) or not paths:
         return jsonify({'error': 'paths must be a non-empty list'}), 400
+    if engine_option != 'keep':
+        return jsonify({'error': 'Choose a narrator, not a separate engine. '
+                        'Each narrator is bound to the engine that produced its cached preview.'}), 400
+    resolved_voice = (get_setting('default_voice', DEFAULT_VOICE)
+                      if voice_option in ('default', 'keep') else voice_option)
+    if resolved_voice not in all_voices():
+        return jsonify({'error': 'Unknown narrator'}), 400
 
     enqueued = []
     for p_str in paths:
@@ -7153,9 +7326,7 @@ def batch_convert_library():
         if not p.exists():
             continue
 
-        voice = get_setting('default_voice', DEFAULT_VOICE) if voice_option == 'default' else (
-            DEFAULT_VOICE if voice_option == 'keep' else voice_option
-        )
+        voice = resolved_voice
 
         job_id = str(uuid.uuid4())[:8]
         book_name = p.stem
@@ -7184,9 +7355,6 @@ def batch_convert_library():
             'source_kind': 'book',
             'queue_rank': next_queue_rank(),
         }
-        if engine_option != 'keep':
-            job['tts_engine'] = engine_option
-
         save_job(job)
         enqueued.append(job_id)
 

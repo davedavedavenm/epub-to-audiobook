@@ -119,7 +119,7 @@ class TestEpisodeStaging:
             out, {'id': 'j1', 'source_date': '2026-07-27'}, 'Some Article')
         assert staged is not None
         files = sorted(p.name for p in staged.iterdir())
-        assert files == ['2026-07-27 - Some Article.mp3']
+        assert files == ['2026-07-27 - Some Article [j1].mp3']
 
     def test_episode_name_leads_with_the_date(self, app_mod, monkeypatch):
         monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
@@ -135,7 +135,7 @@ class TestEpisodeStaging:
         monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
         staged = app_mod._stage_episode(out, {'id': 'j2'}, 'Long Read')
         assert sorted(p.name for p in staged.iterdir()) == \
-            ['Long Read (01).mp3', 'Long Read (02).mp3']
+            ['Long Read [j2] (01).mp3', 'Long Read [j2] (02).mp3']
 
     def test_album_tag_becomes_the_site_not_the_headline(self, app_mod, tmp_path,
                                                          monkeypatch):
@@ -176,7 +176,7 @@ class TestEpisodeStaging:
         monkeypatch.setattr(app_mod, 'sanitize_filename', lambda s: s, raising=False)
         out = self._render(tmp_path, ['0001 - A.mp3'])
         staged = app_mod._stage_episode(out, {'id': 'j10'}, 'A Title')
-        assert [p.name for p in staged.iterdir()] == ['A Title.mp3']
+        assert [p.name for p in staged.iterdir()] == ['A Title [j10].mp3']
 
     def test_no_audio_returns_none_so_the_caller_can_fall_back(self, app_mod, tmp_path):
         out = tmp_path / 'empty'

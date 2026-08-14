@@ -90,3 +90,25 @@ def test_player_exposes_accessible_synchronised_states():
     for event in ("play", "pause", "ended", "timeupdate", "loadedmetadata"):
         assert f"addEventListener('{event}'" in bind
 
+
+def test_conversion_player_lives_outside_tabs_and_survives_navigation():
+    soup = BeautifulSoup(HTML, 'html.parser')
+    player = soup.find(id='studio-audio-player')
+    assert player is not None and player.find_parent(class_='tab-panel') is None
+    switch_tab = _function_source('switchTab')
+    assert 'currentStudioAudio' not in switch_tab
+    assert 'closeStudioAudioPlayer' not in switch_tab
+
+
+def test_conversion_player_advances_chapters_and_retains_speed():
+    play_track = _function_source('playStudioTrack')
+    set_speed = _function_source('setStudioAudioSpeed')
+    assert 'currentStudioTrackIndex + 1' in play_track
+    assert 'playStudioTrack(currentStudioTrackIndex + 1, true)' in play_track
+    assert "localStorage.getItem('studio-player-speed')" in play_track
+    assert "localStorage.setItem('studio-player-speed', speedStr)" in set_speed
+
+
+def test_batch_ui_cannot_pair_a_voice_with_a_different_engine():
+    assert 'lib-batch-engine-select' not in HTML
+    assert 'The selected narrator determines the engine.' in HTML

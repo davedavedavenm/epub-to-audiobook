@@ -112,6 +112,29 @@ back. This incident did not touch conversion state or generated media.
 `PUBLIC_BASE_URL` is required behind a reverse proxy so RSS links and enclosure
 URLs use the public HTTPS origin. It must not include a trailing slash.
 
+## History, downloads and deletion
+
+- **History is conversion provenance, not the full ABS library.** It lists only
+  completed jobs created by this app—books and articles together, newest first.
+  Acquired audiobooks delivered by LazyLibrarian do not appear there.
+- **Player state is global to the one-page app.** It lives outside tab panels,
+  advances through chapter MP3s and must not be paused/reset by `switchTab`.
+- **One MP3 downloads directly.** A multi-chapter book remains a ZIP because a
+  browser download has to transfer all of its separate, ordered chapter files
+  as one object. The ZIP is a transport wrapper, not the playback format.
+- **Delete from this app** removes the job's upload copy, output folder, cached
+  download ZIP and database row. It deliberately leaves a synced ABS copy.
+- **Delete here and from Audiobookshelf** first validates that the recorded
+  remote path is beneath the configured ABS root and uniquely app-owned. Books
+  must end in `_<job-id>`; article episode filenames include `[job-id]` inside
+  their shared podcast folder. The source ebook/library file is never deleted.
+
+The [official Audiobookshelf API](https://api.audiobookshelf.org/) says deleting
+a library item removes only its database row, not media files. Therefore the app
+removes the exact rsynced media over its existing SSH path, requests an ABS
+rescan, and removes the exact book database item. Never broaden these path
+checks to make a deletion succeed.
+
 ## Proving the delivery chain
 
 `bash scripts/e2e_proof.sh` renders one public-domain chapter on every free

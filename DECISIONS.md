@@ -116,6 +116,33 @@ so OAuth shelf sync is not a valid new-account setup. The feed URL may contain
 a private token and must never be committed. Operational ownership remains in
 the sibling `infra` repo.
 
+## Narrator and engine are one selection — Active
+
+Every selectable narrator is bound to the engine that produced its cached
+preview. Batch and re-convert APIs must reject an independent engine override;
+the UI asks for a narrator only. A voice preview from one engine must never be
+silently rendered by another engine.
+
+**Date/reason:** 2026-08-14. Two duplicate *Bond King* conversions in the live
+history used the retired Kokoro/Fable path even though the system default is
+Beatrice/Nano. The older batch API allowed engine and voice to diverge. The
+exact caller cannot be reconstructed, so the unsafe state is removed rather
+than attributed to the user.
+
+## Conversion deletion is explicit about Audiobookshelf — Active
+
+History combines completed book and article conversions newest-first. Deleting
+"from this app" removes only the app's input copy, output and history row;
+deleting "here and from Audiobookshelf" additionally removes only the exact
+app-owned ABS folder or podcast episode. Source ebooks are never deleted.
+Article episode filenames include the job id because episodes share a podcast
+folder and title/date alone is not unique. A single MP3 downloads directly;
+multiple chapter MP3s remain a ZIP.
+
+The [official Audiobookshelf API](https://api.audiobookshelf.org/) documents that
+`DELETE /api/items/<id>` removes database state but no media files, so app-owned
+media is removed over the same SSH/rsync trust path and ABS is then rescanned.
+
 ## VibeVoice generation settings — Active
 
 `ddpm_inference_steps = 10` for VibeVoice. Do not raise it. Measured 2026-08-12:

@@ -56,9 +56,8 @@ requires a separately authorised environment-gated session.
 
 ### TTS Engines
 - **Chatterbox Nano** - default local engine with **Beatrice (Nano)** (`uk_female_samuel_nano`) as system default narrator. Fast CPU inference (~0.87x RTF, faster than realtime), voice-cloned British narrators (Beatrice, Arthur, Harriet, Edmund). The bootstrap helper and deployment wrapper enable its Compose profile automatically.
-- **Kokoro TTS** - neural local engine; very low runtime cost, CPU or Vast.ai GPU
-  - British, American, European, and multilingual voice packs
-  - Voice mixing support (blend two voices)
+- **Kokoro TTS** - retained for compatibility/debug comparisons only. Its tested
+  voices are retired from quality contention and it is never a paid-GPU target.
 - **Chatterbox Turbo** - production narration engine with official pacing
   controls. Enable with explicit `ENABLE_CHATTERBOX_PROFILE=1` compose profile.
 - **Hume TADA** - expressive natural-voice model via TADA-1B. Enable with explicit `ENABLE_TADA_PROFILE=1` compose profile.
@@ -71,8 +70,14 @@ requires a separately authorised environment-gated session.
 - **Dedicated Articles Tab (`📰 Articles`)** - paste any article URL for instant narration, with fast QA bypass (sub-minute synthesis)
 - **Podcast RSS 2.0 Feed (`/api/articles/rss`)** - automatic podcast feed for streaming articles directly in Pocket Casts, Overcast, Apple Podcasts, or Audiobookshelf
 - **Owner-only Telegram capture** - send the bot an article URL and it enters the same local/default-voice article queue as the Articles tab
-- **Library Batch Management** - select all library ebooks, pick narrators and engines, and batch convert in one click
-- **Studio Web Audio Player** - sticky glassmorphic bottom bar for listening to audiobooks, articles, and voice auditions across tabs with playback speed controls (1.0x–2.0x)
+- **Library Batch Management** - select library ebooks and one cached narrator;
+  that narrator determines the engine, so a preview can never be paired with a
+  different synthesis backend.
+- **Combined History** - completed books and articles in one newest-first record,
+  with the actual narrator, engine, timestamp, ABS state, playback and explicit
+  local/everywhere deletion.
+- **Persistent Studio Player** - keeps playing across app tabs, advances through
+  book chapters, and retains seek/playback-speed controls (1.0x–2.0x).
 
 ### Text Preprocessing (mandatory, engine-independent)
 
@@ -108,12 +113,11 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
 - **"Studio Console" design** - cool ink neutrals, one signal-coral accent,
   mono for data, on-air motif, real book covers; light + dark. (Legacy note:
   the earlier warm "Narration Press" theme was replaced 2026-07-10.)
-- **Tabs** - Library, Upload, Queue, Voices, History, Settings
+- **Tabs** - Home, Articles, Add a book, Queue, Voices, History, Settings
 - **Queue controls** - pause/resume, cancel, retry-all-failed, live log viewer
 - **Preprocessing badge** - per-job "PRE ✓" with a summary of what was cleaned
-- **Per-book render target** - choose **This machine / Kaggle GPU (free) /
-  Vast GPU** right in the Narrate card; Kaggle renders run on a free cloud GPU
-  and appear in the Queue
+- **Per-book render target** - choose **This machine** or explicit **Kaggle GPU
+  (free)**. Ordinary jobs cannot select or provision a paid Vast GPU.
 - **Real book covers** - epub cover art in the library, sorted most-recent-first
 - **Guided, secure setup** - Settings has step-by-step Kaggle/LLM/ABS config
   with Test-Connection buttons; secrets persist on the `/data` volume, masked
@@ -121,6 +125,8 @@ corrupts decimals and alphanumerics (defect analysis in PREPROCESSING.md).
 ### Integration
 - **Audiobookshelf Sync** - Auto-sync completed books to ABS (each in its own
   folder; never overwrites existing audiobooks)
+- **Predictable downloads** - one MP3 downloads directly; multi-chapter MP3
+  books download as a ZIP so all chapter files arrive together.
 - **EPUB3 Read-Along Packaging** - EPUB output with Media Overlay/SMIL
 - **Telegram / WhatsApp Notifications** - optional completion alerts
 - **Smart chapter guard** - the convert panel lists chapters by real title and
