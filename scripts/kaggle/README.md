@@ -31,6 +31,36 @@ kaggle kernels output  davedavedavedavenm/apple-china-tada-ch1-2 -p ./out
 Outputs are `NNN.mp3` per chapter in the kernel output. `run.py` refuses to
 proceed if the GPU isn't actually visible (`cuda_available` gate).
 
+## VibeVoice same-speaker-turn listening gate
+
+`build_vibe_turn_reset_kernel.py` stages two independent private kernels under
+`scratch/vibe_turn_reset/kernel_A` and `kernel_B`. This evaluates the exact
+community runtime's documented remedy for speech that becomes too fast:
+multiple newline-delimited `Speaker 1:` turns inside one model generation. It
+is not ordinary converter chunking and does not alter `vibevoice/server.py` or
+production defaults.
+
+```bash
+python scripts/kaggle/build_vibe_turn_reset_kernel.py
+python -m kaggle kernels push -p scratch/vibe_turn_reset/kernel_A
+# Push B only after A proves the environment and completes.
+python -m kaggle kernels push -p scratch/vibe_turn_reset/kernel_B
+```
+
+The builder pins source/reference/script hashes, official weights, community
+runtime commit, cfg 2.0, DDPM 10, seed, FP16 and SDPA. Each job gets a fresh
+model process. It reconstructs all 1,998 source words from the labelled turns,
+decodes the generated MP3 and runs ASR only as a completeness guard. Voice
+quality and pacing remain a human listening decision.
+
+Kaggle's 2026-08 global Python image can contain mutually incompatible NumPy
+files. The working gate follows the existing CosyVoice isolation pattern:
+`uv`-managed Python 3.10, seeded venv, inherited `PYTHONPATH` and user-site
+packages disabled, plus `numpy==1.26.4`, `scipy==1.12.0` and
+`scikit-learn==1.4.2`. The SciPy 1.12 pin follows the
+[official compatibility table](https://docs.scipy.org/doc/scipy-1.13.0/dev/toolchain.html),
+not trial-and-error version selection.
+
 ## CosyVoice 3 (`run_cosyvoice3.py`)
 
 Zero-shot English narration cloned from a UK reference clip, on Kaggle's free

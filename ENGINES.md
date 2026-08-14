@@ -23,7 +23,7 @@ accent-engine verdicts are dated in the table.
 | EdgeTTS accented English voices (2026-07-28) | Accents “not bad”, but all tested Chinese company names were pronounced badly; not approved for Chinese-business nonfiction without a pronunciation A/B/fix | Microsoft cloud service |
 | MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
 | Qwen3-TTS (2026-08-14 final ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
-| VibeVoice 1.5B (2026-08-14 corrected app-path test) | **cfg 2.0 is the best tested Vibe setting, but the single-pass path is rejected for audiobook production.** The opening was very good; after ~3 minutes it progressively accelerated, ran on, lost intent and worsened. The older direct arm's `felicity - but` insertion was absent in the preferred app path. A separate garble after “draught” sits beside malformed shared input `draught , and`, so its cause remains open. cfg 3.0 and 1.3 are rejected. | Kaggle P100 |
+| VibeVoice 1.5B (2026-08-14 corrected app-path + documented-turn gate) | **cfg 2.0 is the best tested setting; the flattened single-turn path remains rejected.** The opening was very good, then progressively accelerated after ~3 minutes. The community-documented repeated-same-speaker remedy has now rendered in two independent 1,998-word arms (four turns 7:16; seven turns 6:59), both structurally complete; human quality/pacing verdict is open. The corrected `draught, and` source removes that prior input defect from this gate. cfg 3.0 and 1.3 remain rejected. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
 | Pocket TTS / Peter Yearsley (2026-08-14) | Accepted as an opt-in book choice, not a default. The long-form body was decent/promising but uneven. On clean text, current sentence packing sounded more natural; paragraph-aware packing made intonation stranger. | CPU only (zorin) |
 | NeuTTS Air / Jo (2026-08-14) | Decent/good voice. Dave selected the normalized arm, but heard “the e order” around “the order”; retain this as a separate synthesis defect rather than a number-handling failure. | CPU only (zorin) |
@@ -142,6 +142,13 @@ long-form delivery. The local CUDA images remain optional and unpromoted:
   production-approved. The community runtime
   also warns that only FlashAttention was fully tested and SDPA may reduce
   quality, so this backend boundary must remain visible in any verdict.
+  The same pinned community README explicitly recommends repeated turns with
+  the same speaker label when output becomes too fast. A dedicated blind gate
+  now tests four versus seven such turns over one 1,998-word generation per
+  arm. Both files are complete and playable; neither is production-approved
+  until Dave grades pacing and long-form comfort. This evaluation does not pass
+  through the current HTTP adapter, which intentionally accepts ordinary text
+  and serializes it as one `Speaker 1:` turn.
 - `qwen3-tts` uses the official Apache-2.0 `QwenLM/Qwen3-TTS` package pinned at
   `022e286b98fbec7e1e916cb940cdf532cd9f488e` and the official
   `Qwen/Qwen3-TTS-12Hz-1.7B-Base` weights. Production keeps the accepted

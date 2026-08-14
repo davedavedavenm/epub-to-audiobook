@@ -1,5 +1,44 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-14 VibeVoice documented turn-reset gate — RENDERED / HUMAN VERDICT OPEN
+>
+> The earlier negative verdict remains scoped to one flattened `Speaker 1:`
+> chapter. The exact pinned community runtime documents a materially different
+> remedy for speech that becomes too fast: repeat the same speaker label at
+> text boundaries while retaining one model generation. The production HTTP
+> adapter cannot represent that format because it collapses whitespace and
+> prepends one label, so this evaluation uses a dedicated direct-runtime
+> harness and does not change production code or defaults.
+>
+> Two independent private free-Kaggle jobs now cover the same corrected first
+> 78 complete paragraphs of *The Yellow Wallpaper*: **1,998 words**, source
+> SHA-256 `3b8808c4295c11cae751a33067a502452e3ebe4a10c7aaea5cadfe108625f0f4`.
+> The known malformed `draught , and` input was corrected to `draught, and` in
+> every arm; `romantic felicity - but` was deliberately retained. Both Vibe
+> jobs used official `microsoft/VibeVoice-1.5B` weights, community runtime
+> `07cb79feadd2d3fd7f47530d4c964a12857936a0`, exact Arthur reference SHA
+> `8774082c3acf6c215dc9307a4a9cce5fd50d4242fc9263534ed420675873e252`,
+> cfg 2.0, DDPM 10, seed 12345, FP16 and SDPA. Each used a fresh process.
+>
+> Blind A uses four internal turns and rendered **7:16.533** / 8,732,205 bytes
+> (ASR word ratio 1.001, structural similarity 0.9865). Blind B uses seven
+> internal turns and rendered **6:59.200** / 8,385,645 bytes (ratio 1.0005,
+> similarity 0.9862). Their short durations are preserved as pacing evidence,
+> not padded or trimmed. Blind C is the same source/reference through the
+> already-supported local Chatterbox Turbo path: **10:50.800** / 13,017,164
+> bytes. All three MP3s decode end-to-end and their downloaded hashes match the
+> render manifests. ASR is used only for Vibe content-completeness; it does not
+> rank voice quality. The A/B/C engine/schedule mapping remains blind pending
+> Dave's listening verdict. Nano/Beatrice remains default and no paid compute
+> or automatic cloud path was enabled.
+>
+> Kaggle's 2026-08 image exposed global NumPy package contamination. The final
+> successful harness follows the repo's proven `uv` isolation pattern: managed
+> Python 3.10, seeded venv, no inherited `PYTHONPATH`/user site, NumPy 1.26.4,
+> SciPy 1.12.0 and scikit-learn 1.4.2. SciPy's official compatibility matrix
+> documents 1.12 as supporting Python 3.9–3.12 with NumPy 1.22.4–<2.0. Failed
+> setup attempts are environment failures, not Vibe listening results.
+
 > ## 2026-08-14 Pocket + Kitten app integration — LIVE / OPT-IN ADMISSION COMPLETE
 >
 > Pocket TTS 2.1 and KittenTTS 0.8.1 now have isolated, non-root, CPU-only

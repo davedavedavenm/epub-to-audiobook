@@ -214,6 +214,12 @@ seed or undocumented speed control. Reconsider only with current upstream
 evidence for a materially different long-form path and a new controlled human
 listening gate. Date corrected: 2026-08-14.
 
+The pinned community runtime's documented repeated-same-speaker-turn remedy is
+such a materially different path. Two complete 1,998-word arms (four turns and
+seven turns) plus a same-text Chatterbox Turbo reference are rendered and
+structurally validated as of 2026-08-14. Their human listening verdict is open;
+this does **not** reverse the single-turn rejection or change any default.
+
 ## Audition-passage validity per engine — Open, NOT settled
 
 The canonical `voice_sample.SAMPLE_TEXT` measurably handicaps VibeVoice:

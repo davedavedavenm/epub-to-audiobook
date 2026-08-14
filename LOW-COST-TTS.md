@@ -130,6 +130,15 @@ the production narrator. Qwen outranks it for this role but remains an explicit
 GPU choice, not an automatic/default route. Ordinary queueing has no paid Vast
 route.
 
+The pinned community runtime separately documents repeated turns carrying the
+same speaker label as its remedy when output speaks too fast. A 2026-08-14
+free-Kaggle gate has now rendered two complete same-text Arthur arms inside one
+generation each: four turns produced 7:16 and seven turns 6:59 for 1,998 words;
+a same-text local Chatterbox Turbo reference produced 10:50. All decode and the
+Vibe completeness gates pass, but the human pacing/quality verdict is still
+open. Until Dave hears them, this evidence does not reverse the single-turn
+rejection or change Qwen/default ordering.
+
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage
 RTFs. A 12.4-hour book consumes nearly the whole nominal weekly Kaggle allowance
