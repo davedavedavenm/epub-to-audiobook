@@ -116,6 +116,20 @@ so OAuth shelf sync is not a valid new-account setup. The feed URL may contain
 a private token and must never be committed. Operational ownership remains in
 the sibling `infra` repo.
 
+An app-generated audiobook remains a replaceable fallback, not the preferred
+permanent copy. Keep its LazyLibrarian `AudioStatus` at **Wanted** so scheduled
+torrent-first searches continue. Retire the generated ABS copy only after the
+acquired audiobook has completed, passed the production import-integrity guard,
+reached Audiobookshelf and been structurally verified. Move the generated copy
+to recoverable quarantine before an ABS rescan; do not delete it speculatively
+because a search matched, a grab started or a title merely looks plausible.
+
+**Live baseline (2026-08-14):** *Apple in China* is already a completed
+qBittorrent M4B, not a generated fallback (812 minutes; production guard pass).
+Fresh searches across all enabled torrent sources found no acceptable
+replacement for the two generated *Bond King* entries or generated *Breakneck*;
+those remain on the shelf and remain Audiobook Wanted.
+
 ## Narrator and engine are one selection — Active
 
 Every selectable narrator is bound to the engine that produced its cached

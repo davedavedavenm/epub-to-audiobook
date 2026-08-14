@@ -1,5 +1,29 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-14 generated-audiobook replacement sweep — LIVE VERIFIED
+>
+> Existing audio is now explicitly preferred not only before generation but
+> after it: generated ABS entries are replaceable fallbacks. LazyLibrarian keeps
+> them Audiobook Wanted and searches torrent-first; a generated copy may be
+> retired only after a replacement completes, passes the production import
+> guard, reaches ABS and is structurally verified. Retirement is recoverable
+> quarantine plus rescan, never deletion on a search result or partial grab.
+>
+> The live sweep covered every current generated ABS title plus *Apple in
+> China*. *Apple in China* is already a completed qBittorrent download: its
+> standalone 406,415,524-byte M4B matches the completed torrent and the
+> production guard passes it at 812 minutes. It was retained. Fresh targeted
+> audiobook searches found no acceptable result for *The Bond King* (both
+> Kokoro/Fable folders) or *Breakneck*, so all three generated fallbacks were
+> correctly retained and remain Audiobook Wanted. No generated media was
+> removed because no replacement met the removal gate.
+>
+> **Proof:** the effect-level acquisition verifier passes all assertions. All
+> three enabled Torznab sources answer; the single rate-limited provider is
+> `Newznab_5` (Usenet), not a torrent source. There are no grabs older than two
+> days, the search sweep is current, the last successful grab is current and ABS
+> has 18 non-duplicate audiobook folders. No cloud or paid GPU work ran.
+
 > ## 2026-08-14 conversion history + ABS provenance audit — DEPLOYED / LIVE VERIFIED
 >
 > History now presents completed **books and articles together**, newest first,
