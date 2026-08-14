@@ -58,7 +58,7 @@
 > therefore remains the app behavior for both engines; paragraph-aware packing
 > is rejected as a default because 28 model resets produced no audible gain.
 
-> ## 2026-08-14 Bond King duplicate cleanup — LIVE VERIFIED / RECOVERABLE
+> ## 2026-08-14 Bond King generated copies withdrawn — LIVE VERIFIED / ZERO ON SHELF
 >
 > The earlier decision to retain both generated *Bond King* copies after a
 > failed acquisition search was wrong: no acquired replacement justifies one
@@ -67,15 +67,19 @@
 > so this is not proof that no original audiobook exists; the title remains
 > Audiobook Wanted for future torrent-first searches.
 >
-> Canonical job `592af51b` is retained: 21 tracks, 10:09:44, no render retry,
-> and a complete 21-chapter structural report. Later retry `59d36718` had only
-> one QA chapter recorded and was quarantined from ABS at
+> Later retry `59d36718` had only one QA chapter recorded and was quarantined
+> from ABS at
 > `/home/dave/quarantine/abs-generated-dedup-20260814-1815/`, then removed from
 > app History/local output after its job record was saved at
 > `/home/dave/quarantine/app-generated-dedup-20260814-1818/59d36718-job.json`.
-> ABS accepted the exact database deletion and rescan. Live proof now shows one
-> valid *Bond King* item, 21 tracks, not missing/invalid; the acquisition
-> verifier passes with 17 audiobook folders and no duplicate deliveries.
+> Dave then rejected the remaining Kokoro/Fable render `592af51b`. It was moved
+> out of ABS to `/home/dave/quarantine/abs-generated-withdrawn-20260814-1835/`,
+> its exact ABS row removed, and its app output/history removed after saving the
+> job record under `/home/dave/quarantine/app-generated-withdrawn-20260814-1835/`.
+> Live proof now shows **zero** *Bond King* folders/jobs and 16 ABS audiobook
+> folders with no duplicates. LazyLibrarian remains Audiobook Wanted with no
+> AudioFile/AudioLibrary. No TTS retry will happen until Dave explicitly chooses
+> the engine-bound narrator.
 
 > ## 2026-08-14 VibeVoice cfg-2 production-path gate — DEFECT FOUND / FIXED / FREE RERUN ACTIVE
 >
@@ -100,10 +104,11 @@
 >
 > Existing audio is now explicitly preferred not only before generation but
 > after it: generated ABS entries are replaceable fallbacks. LazyLibrarian keeps
-> them Audiobook Wanted and searches torrent-first; a generated copy may be
-> retired only after a replacement completes, passes the production import
-> guard, reaches ABS and is structurally verified. Retirement is recoverable
-> quarantine plus rescan, never deletion on a search result or partial grab.
+> them Audiobook Wanted and searches torrent-first. Automatic replacement-based
+> retirement waits until acquired audio completes, passes the production import
+> guard, reaches ABS and is structurally verified. Dave may separately withdraw
+> an unwanted render at any time. Retirement is recoverable quarantine plus
+> rescan, never deletion merely because a search matched or a grab started.
 >
 > The live sweep covered every current generated ABS title plus *Apple in
 > China*. *Apple in China* is already a completed qBittorrent download: its
@@ -111,14 +116,15 @@
 > production guard passes it at 812 minutes. It was retained. Fresh targeted
 > audiobook searches found no acceptable acquired result for *The Bond King*
 > or *Breakneck*. The unnecessary second generated *Bond King* render was
-> nevertheless quarantined as a duplicate; canonical *Bond King* and
-> *Breakneck* remain Audiobook Wanted.
+> nevertheless quarantined as a duplicate; Dave subsequently withdrew the
+> remaining generated *Bond King*. *Bond King* and *Breakneck* remain Audiobook
+> Wanted, but only *Breakneck* currently has a generated shelf fallback.
 >
 > **Proof:** the effect-level acquisition verifier passes all assertions. Five
 > providers answered and two Prowlarr-proxied providers (`Newznab_5` and
 > `Torznab_1`) were rate-limited in the latest check. There are no grabs older
 > than two days, the search sweep is current, the last successful grab is
-> current and ABS has 17 non-duplicate audiobook folders. No cloud or paid GPU
+> current and ABS has 16 non-duplicate audiobook folders. No cloud or paid GPU
 > work ran.
 
 > ## 2026-08-14 conversion history + ABS provenance audit — DEPLOYED / LIVE VERIFIED
@@ -143,10 +149,9 @@
 > copy render live; the destructive ABS path was deliberately not exercised and
 > no ABS media was deleted during this verification.
 >
-> **Current ABS provenance (live after cleanup, 17 audiobook entries):** two folders are
-> identifiable as app-generated: *The Bond King* `592af51b` (Kokoro/Fable) and
-> *Breakneck* `a3481358`. Duplicate retry `59d36718` is quarantined and its app
-> history/output removed. The retained Bond folder matches its current job record;
+> **Current ABS provenance (live after cleanup, 16 audiobook entries):** one folder is
+> identifiable as app-generated: *Breakneck* `a3481358`. Both *Bond King*
+> Kokoro/Fable jobs (`592af51b`, `59d36718`) are absent from ABS and app state;
 > *Breakneck* is a historical render
 > whose job row is no longer present. The other 15 entries are acquired audio,
 > not TTS renders. There is no automatic library-to-

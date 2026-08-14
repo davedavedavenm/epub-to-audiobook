@@ -84,6 +84,10 @@ back. This incident did not touch conversion state or generated media.
   spoken numbers/currency plus safe acronym spacing, without legacy phonetic
   respellings. This is a measured listening decision, not a generic model
   assumption; first render and recovery commands must both carry it.
+- A failed existing-audiobook search never authorises automatic TTS. It leaves
+  the title Wanted and waits for Dave to choose an engine-bound narrator. If
+  Dave rejects a generated render, remove it from app/ABS even when no acquired
+  replacement exists; replacement safety does not force unwanted audio to stay.
 - GPU engines are now a **quality ceiling, not a throughput answer**: reach for
   CosyVoice 3 (Kaggle/Vast GPU) or TADA for their specific character, not for
   speed.

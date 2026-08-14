@@ -127,20 +127,23 @@ the sibling `infra` repo.
 
 An app-generated audiobook remains a replaceable fallback, not the preferred
 permanent copy. Keep its LazyLibrarian `AudioStatus` at **Wanted** so scheduled
-torrent-first searches continue. Retire the generated ABS copy only after the
-acquired audiobook has completed, passed the production import-integrity guard,
-reached Audiobookshelf and been structurally verified. Move the generated copy
-to recoverable quarantine before an ABS rescan; do not delete it speculatively
-because a search matched, a grab started or a title merely looks plausible.
+torrent-first searches continue. Retire a generated copy automatically only
+after acquired audio completes, passes the production import-integrity guard,
+reaches Audiobookshelf and is structurally verified. Separately, Dave may reject
+or withdraw a generated render at any time; search failure is not a reason to
+keep an unwanted engine/voice on the shelf. Move withdrawn media to recoverable
+quarantine before an ABS rescan. A future TTS attempt starts only after Dave
+explicitly selects the engine-bound narrator; never regenerate automatically.
 
 **Live baseline (2026-08-14):** *Apple in China* is already a completed
 qBittorrent M4B, not a generated fallback (812 minutes; production guard pass).
 A fresh official LazyLibrarian `searchBook` run found no acceptable *Bond King*
 audiobook, although two Prowlarr-proxied providers returned 429 and therefore
-make that search incomplete rather than proof that no release exists. One
-generated fallback is enough while the search remains open: retain canonical
-job `592af51b`, quarantine duplicate retry `59d36718`, and keep the title
-Audiobook Wanted. *Breakneck* also remains a generated fallback and Wanted.
+make that search incomplete rather than proof that no release exists. Dave
+rejected both Kokoro/Fable renders: jobs `592af51b` and `59d36718` are absent
+from the app and live ABS shelf. *Bond King* remains Audiobook Wanted; if no
+acquired version appears, Dave will explicitly choose the next engine/voice.
+*Breakneck* remains a generated fallback and Wanted.
 
 ## Narrator and engine are one selection — Active
 
