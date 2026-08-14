@@ -25,7 +25,8 @@ detects and corrects itself over one that exposes another knob.
 **Tracked as GitHub issues** — the issues are the live backlog, this file is the
 narrative: **#41** (auto re-render) · **#42** (article RSS + Telegram) ·
 **#43** (Chatterbox V3, `cfg_weight`, native warm-up) · **#21** (TADA quality,
-incl. the `_trim_leadin` bug) · **#40** (duplicate-book naming).
+incl. the `_trim_leadin` bug) · **#40** (duplicate-book naming) · **#44**
+(VibeVoice selected app path) · **#46** (cached selectable CPU candidates).
 
 ---
 
@@ -113,7 +114,7 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [~] 8.4 Keep the live production cache at 100% of configured/offered voices
       and verify each missing optional-engine artifact after deployment.
 
-## 9. VibeVoice selected setting through the production path
+## 9. VibeVoice selected setting through the production path — #44
 
 - [x] 9.1 Blind cfg 2.0 versus 3.0 on identical long-form text. cfg 2.0 won;
       cfg 3.0 was muffled/distant.
@@ -131,7 +132,7 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       Goodreads/LazyLibrarian integration without committing private topology
       or feed tokens.
 
-## 11. Admit the new CPU engines without offering cold voices
+## 11. Admit the new CPU engines without offering cold voices — #46
 
 - [x] 11.1 Pin the official Pocket TTS, NeuTTS Air and KittenTTS versions,
       record their official voice inventories, and isolate them from the

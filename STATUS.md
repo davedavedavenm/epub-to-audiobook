@@ -15,13 +15,19 @@
 > installs the matched `torch==2.6.0` / `torchaudio==2.6.0` CUDA 12.6 pair using
 > PyTorch's official v2.6 wheel index. Regression tests prevent `webapp/**` or
 > `scripts/convert_book.py` from being added back to the all-engine trigger.
+> Commit `2bc8c73` also moved every workflow from the deprecated Node-20 action
+> majors to the maintainers' current Node-24 majors: Checkout/Setup Python v7,
+> Docker Login v4, Docker Build/Push v7 and Upload Artifact v7.
 >
-> **Proof:** local suite **255 passed** (253 existing plus two workflow guards).
+> **Proof:** local suite **256 passed** (253 existing plus three workflow guards).
 > GitHub run `31780315340` passed lint, tests and Compose validation; run
 > `31780315404` built/pushed the isolated webapp image; run `31780315342`
 > independently built/pushed **Chatterbox, TADA, VibeVoice and Qwen**, all
-> successful. No deployment, engine default, GPU or paid-compute setting was
-> changed.
+> successful. A following docs-only push launched only CI (`31781112194`) and
+> no image builds, proving the negative path. The current-major proof then
+> passed CI (`31781244635`), webapp publication (`31781244701`) and all four
+> independent engine builds (`31781244595`) without the Node-20 annotations.
+> No deployment, engine default, GPU or paid-compute setting was changed.
 
 > ## 2026-08-14 CPU numbers/currency root-cause A/B — HEARD / CAUSE CLOSED
 >
