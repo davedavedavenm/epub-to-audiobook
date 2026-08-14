@@ -1,5 +1,29 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-14 CPU numbers/currency root-cause A/B — VALIDATED / LISTENING PENDING
+>
+> The original Peter, Jo, Jasper and Rosie auditions used each pinned engine's
+> official API with raw `voice_sample` text. They were playable in the app but
+> bypassed `normalize_text_for_tts`; prior “app-path clip” wording was wrong.
+> The heard failure therefore does not yet establish engine fault.
+>
+> A controlled blind test now holds model, version, voice, seed/settings and
+> source semantics fixed. Raw arms use source SHA-256 `84f91361...a5b0` (330
+> characters); normalized arms use input SHA-256 `2a38087e...5179` (651
+> characters) and explicitly speak years, prices, currencies, ranges,
+> ordinals, percentages and large numbers. All eight MP3s are non-trivial and
+> `ffprobe`-valid: Peter 27.024/34.944 s, Jo 37.344/45.888 s, Jasper
+> 38.736/40.104 s and Rosie 43.080/44.904 s. NeuTTS completed all six sentence
+> chunks in both arms.
+>
+> The first Pocket normalized attempt was rejected before handoff because its
+> evaluation image lacked `num2words` and silently retained digits. That output
+> was deleted; every image now pins the app's `num2words==0.5.14`, and the
+> harness fails closed if it is absent. The corrected Pocket arm has the same
+> normalized-input hash as every other engine. Blind assignments are retained
+> only in the ignored evaluation manifest. No production engine/default or GPU
+> setting changed; Dave's A/B verdict is the next gate.
+
 > ## 2026-08-13 cross-host map and automatic-queue audit — VERIFIED / REPAIRED
 >
 > The sibling `infra` repo now contains the canonical visual and

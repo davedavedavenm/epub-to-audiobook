@@ -98,7 +98,11 @@ def test_candidate_sample_accepts_extensionless_and_mp3_urls():
     with appmod.app.test_client() as client:
         for name in ('me_british', 'vctk_irish_m_p364_native',
                      'cv3_southafrican_male', 'vibe_blind_A',
-                     'vibe_blind_B'):
+                     'vibe_blind_B', 'cpu_numeric_pocket_peter_a',
+                     'cpu_numeric_pocket_peter_b', 'cpu_numeric_neutts_jo_a',
+                     'cpu_numeric_neutts_jo_b', 'cpu_numeric_kitten_jasper_a',
+                     'cpu_numeric_kitten_jasper_b', 'cpu_numeric_kitten_rosie_a',
+                     'cpu_numeric_kitten_rosie_b'):
             sample = appmod.PREVIEWS_DIR / f'{name}.mp3'
             sample.write_bytes(b'ID3candidate-audio')
             for path in (f'/api/sample/{name}', f'/api/sample/{name}.mp3'):

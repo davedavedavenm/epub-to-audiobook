@@ -25,9 +25,9 @@ accent-engine verdicts are dated in the table.
 | Qwen3-TTS (2026-07-29) | Full chapter **“really good”** and audiobook-listenable. Strongest consistency result; 33:03, RTF 2.056, ASR similarity 0.9848. Current co-finalist. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-13 corrected test) | **cfg 2.0 selected:** “much better ... otherwise perfect, really really good,” with one brief garble after “romantic felicity”. cfg 3.0 rejected as muffled/distant; cfg 1.3 already rejected. App-path root-cause check remains before production promotion. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
-| Pocket TTS / Peter Yearsley (2026-08-13) | Voice is decent/good, but numbers and dollar/currency amounts are materially poor in the heard app-path clip. Cause open; candidate retained. | CPU only (zorin) |
-| NeuTTS Air / Jo (2026-08-13) | Voice is decent/good, but numbers and dollar/currency amounts are materially poor in the heard app-path clip. Cause open; candidate retained. | CPU only (zorin) |
-| KittenTTS / Jasper and Rosie (2026-08-13) | Both voices are decent/good, but both handle numbers and dollar/currency amounts materially poorly in the heard app-path clips. Cause open; candidates retained. | CPU only (zorin) |
+| Pocket TTS / Peter Yearsley (2026-08-13) | Voice is decent/good, but numbers and dollar/currency amounts are materially poor in the heard raw-input evaluation clip. A validated raw-versus-normalized blind pair now awaits listening. | CPU only (zorin) |
+| NeuTTS Air / Jo (2026-08-13) | Voice is decent/good, but numbers and dollar/currency amounts are materially poor in the heard raw-input evaluation clip. A validated sentence-chunked raw-versus-normalized blind pair now awaits listening. | CPU only (zorin) |
+| KittenTTS / Jasper and Rosie (2026-08-13) | Both voices are decent/good, but both handle numbers and dollar/currency amounts materially poorly in the heard raw-input evaluation clips. Validated raw-versus-normalized blind pairs now await listening. | CPU only (zorin) |
 
 **Read this as a data point, not a recommendation.** It reflects one listener
 and one hard passage/book; the hardware used is stated per row. TADA's ceiling is genuinely
@@ -39,9 +39,10 @@ with fiction/dialogue, TADA may well win — and if Hume ships long-form support
 it likely becomes the default (see issue #21). Both engines stay first-class;
 pick by ear on your own hardware.
 
-The Pocket/NeuTTS/Kitten rows record only what Dave heard. They do not identify
-the model as the cause: shared preprocessing, wrapper behaviour and native
-upstream synthesis have not yet been isolated with an identical blind A/B.
+The Pocket/NeuTTS/Kitten rows record only what Dave heard. The original scripts
+used the official APIs but bypassed app normalization. The 2026-08-14 blind
+pairs now isolate raw versus explicit spoken wording with model, voice and
+settings fixed; the cause remains open until Dave hears them.
 
 The first recorded Vibe GPU-memory measurement comes from a later **short
 accent sample**, not the heard full chapter: on a Kaggle P100, Irish peaked at

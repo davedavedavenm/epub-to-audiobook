@@ -150,7 +150,9 @@ Regex/num2words rules applied to text segments:
   alphanumerics (see `tests/test_tts_preprocess.py`).
 - Numbers: `1,000,000` → "one million"; years (`1987` → "nineteen
   eighty-seven"); decades; ordinals; percentages.
-- Currency incl. scale words: `$33 billion` → "thirty-three billion dollars".
+- Currency incl. scale words and decimal prices: `$1.2 billion` → "one point
+  two billion dollars"; `$33.50` → "thirty-three dollars and fifty cents";
+  `£57.25` → "fifty-seven pounds and twenty-five pence".
 - Abbreviations (`Dr.`, `Sen.`, `i.e.`, `U.S.` …).
 - Pacing: em-dashes → commas, ellipsis normalization.
 
@@ -236,6 +238,13 @@ modern=…)` is the single function that decides this, and it is called by **bot
 `scripts/convert_book.py` (real renders) and `webapp/voice_sample.py` (voice
 auditions) — so **what you audition is what the book gets**. That is the whole
 point; do not let them drift.
+
+The isolated Pocket/NeuTTS/Kitten evaluation scripts violated that principle
+on 2026-08-13: they imported raw `SAMPLE_TEXT` directly and their cached files
+were later served in the app. They did not exercise this pipeline. The
+2026-08-14 pinned raw-versus-normalized A/B corrects the evidence without yet
+classifying those engines as modern or legacy. Its normalized arm fails closed
+unless the app-pinned `num2words==0.5.14` dependency is present.
 
 | Transform | modern (chatterbox / tada) | legacy (kokoro / piper / edge / polly) |
 | --- | --- | --- |

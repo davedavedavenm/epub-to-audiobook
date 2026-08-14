@@ -29,7 +29,8 @@ conversion used for historical screening: USD1 ~= GBP0.75.
 
 The four new free, CPU-only auditions all clear the basic voice-quality floor,
 but none is ready to replace the default because all four mishandled numbers
-and dollar/currency amounts in the heard app-path clips.
+and dollar/currency amounts in the heard raw-input evaluation clips. Those
+clips were served in the app but did not pass through its text normalizer.
 
 | Engine / voice | Human verdict | Open quality issue |
 |---|---|---|
@@ -39,11 +40,12 @@ and dollar/currency amounts in the heard app-path clips.
 | KittenTTS / Rosie | Decent/good voice | Numbers and dollar/currency amounts |
 
 This is a listening result, not a diagnosis. The engines remain candidates,
-not defaults or rejections. Before changing shared preprocessing or adding
-engine-specific normalisation, render one pinned corpus of years, decimals,
-percentages, ranges, pound amounts and dollar amounts through both the direct
-official upstream path and the app path, then grade the clips blind. The free
-local Chatterbox Nano/Beatrice baseline remains unchanged.
+not defaults or rejections. The 2026-08-14 follow-up has now rendered a pinned
+corpus of years, decimals, percentages, ranges, pound amounts and dollar
+amounts both raw and explicitly normalized, while holding every engine setting
+fixed. All eight clips passed source-hash, duration and size validation and now
+await Dave's blind verdict. The free local Chatterbox Nano/Beatrice baseline
+remains unchanged.
 
 ## 2026-07-28 local accent bake-off
 
