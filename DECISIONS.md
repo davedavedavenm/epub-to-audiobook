@@ -68,10 +68,14 @@ as A=`3.0`, B=`2.0`. Dave selected B: *"much better ... otherwise perfect.
 really really good."* A was rejected as muffled and distant despite an
 acceptable/emotional voice. The default in Compose is therefore 2.0.
 
-This selects the generation setting, not the production narrator. B contained
-one brief garble after “romantic felicity”; VibeVoice remains provisional until
-that exact defect is checked through direct-upstream versus app-path rendering.
-Chatterbox Nano/Beatrice remains the system default meanwhile.
+This selects the generation setting, not the production narrator. The original
+direct-runtime cfg-2 arm contained a brief “byah”-like insertion at the
+`felicity - but` boundary while still speaking all source words. The corrected
+production HTTP path was preferred and cleared that insertion. Both paths sent
+the model the same byte-for-byte prompt, including the hyphen, so there is no
+evidence for a global hyphen-removal rule. VibeVoice remains provisional until
+the corrected full app-path file passes the long-form listening gate and is
+re-ranked against Qwen. Chatterbox Nano/Beatrice remains the system default.
 
 **Why:** the pinned community runtime exposes `cfg_scale`; Microsoft's official
 TTS documentation does not define it as a supported tuning contract. Its role

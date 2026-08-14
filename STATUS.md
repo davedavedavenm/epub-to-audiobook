@@ -93,8 +93,16 @@
 > 22:52.056 / 27,441,645 bytes. Both decode fully and share the pinned 6,166-word
 > source hash, runtime commit, Arthur reference hash, cfg 2.0, DDPM 10 and seed.
 > A 45-second blind focus pair around “romantic felicity” plus both full files
-> are ready under ignored local listening artifacts. The production/root-cause
-> verdict remains open until Dave hears that pair. No paid compute was started.
+> were heard. Dave selected **B**, the corrected production HTTP path. A, the
+> older direct-runtime cfg-2 arm, did speak “but that would be asking too much
+> of fate” but inserted a brief “byah”-like sound at the preceding hyphen.
+> Exact prompt reconstruction proves both model inputs were byte-identical,
+> including `felicity - but`; the hyphen is therefore the failure location, not
+> a proven preprocessing cause. A was generated after cfg 3 in a shared loaded
+> process, while B used a fresh app server/model process, so the remaining cause
+> is generation-context instability rather than an app text-path defect. The
+> corrected app path clears the reported defect. Full-file comfort and the Qwen
+> re-rank remain open; the default does not change. No paid compute was started.
 > The generated kernel metadata also now uses the actual Kaggle owner slug;
 > the earlier two-`dave` slug caused a false permission error while monitoring.
 

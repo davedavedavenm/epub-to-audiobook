@@ -121,12 +121,14 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [x] 9.1 Blind cfg 2.0 versus 3.0 on identical long-form text. cfg 2.0 won;
       cfg 3.0 was muffled/distant.
 - [x] 9.2 Set the VibeVoice default to cfg 2.0.
-- [~] 9.3 Reproduce or clear the brief garble after “romantic felicity” with a
+- [x] 9.3 Reproduce or clear the brief garble after “romantic felicity” with a
       direct-upstream versus app-path A/B before promoting VibeVoice. The first
       app-path run exposed a separate 34%-length whitespace/EOS defect; fixed
       in the corrected free-Kaggle rerun. Both pinned 6,166-word arms now pass
-      full decode and duration checks; a blind 45-second focus pair and both
-      22-minute files are ready. Human A/B remains open.
+      full decode and duration checks. Dave selected the corrected app-path B;
+      direct A inserted a brief sound at `felicity - but` while retaining the
+      words. The prompts, including the hyphen, were byte-identical, so no
+      punctuation rewrite is justified. The production path clears the defect.
 - [ ] 9.4 Re-rank the corrected Vibe path against Qwen on the same text.
 
 ## 10. Public onboarding and support
