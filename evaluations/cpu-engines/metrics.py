@@ -1,3 +1,4 @@
+import hashlib
 import json
 import resource
 import subprocess
@@ -6,7 +7,8 @@ from pathlib import Path
 import soundfile as sf
 
 
-def finish(engine, version, started, wav_path, mp3_path, extra=None):
+def finish(engine, version, started, wav_path, mp3_path, extra=None,
+           input_text=None, input_name='webapp.voice_sample.SAMPLE_TEXT'):
     wav_path, mp3_path = Path(wav_path), Path(mp3_path)
     subprocess.run([
         'ffmpeg', '-y', '-v', 'error', '-i', str(wav_path),
@@ -15,11 +17,13 @@ def finish(engine, version, started, wav_path, mp3_path, extra=None):
     audio, rate = sf.read(wav_path)
     duration = len(audio) / rate
     wall = __import__('time').perf_counter() - started
+    measured_input = _sample_text() if input_text is None else input_text
     report = {
         'engine': engine,
         'version': version,
-        'input': 'webapp.voice_sample.SAMPLE_TEXT',
-        'input_characters': len(_sample_text()),
+        'input': input_name,
+        'input_characters': len(measured_input),
+        'input_sha256': hashlib.sha256(measured_input.encode('utf-8')).hexdigest(),
         'duration_seconds': round(duration, 3),
         'wall_seconds': round(wall, 3),
         'rtf': round(wall / duration, 3),

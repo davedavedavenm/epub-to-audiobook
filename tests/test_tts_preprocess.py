@@ -68,6 +68,27 @@ def test_currency_plain():
     assert 'fifty dollars' in out
 
 
+def test_currency_decimal_scale_is_fully_spoken():
+    out = tp.normalize_text_for_tts('Revenue was $1.2 billion and £24.6 million.')
+    assert 'one point two billion dollars' in out
+    assert 'twenty-four point six million pounds' in out
+    assert '$' not in out and '£' not in out
+
+
+def test_currency_decimal_price_uses_major_and_minor_units():
+    out = tp.normalize_text_for_tts('It cost $33.50, £57.25 and €1,250.75.')
+    assert 'thirty-three dollars and fifty cents' in out
+    assert 'fifty-seven pounds and twenty-five pence' in out
+    assert 'one thousand two hundred and fifty euros and seventy-five cents' in out
+
+
+def test_currency_singular_units():
+    out = tp.normalize_text_for_tts('It cost $1.01, £1.01 and €1.01.')
+    assert 'one dollar and one cent' in out
+    assert 'one pound and one penny' in out
+    assert 'one euro and one cent' in out
+
+
 # --- Stage 1: structural sanitizer ---
 
 SAMPLE_HTML = '''<html><body>

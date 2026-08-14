@@ -7,11 +7,11 @@ memory limits, no GPU devices and no paid/cloud fallback.
 
 Official upstreams pinned for the 2026-08-13 screen:
 
-| Engine | Pin | Licence / boundary |
+| Engine | Pin and official instructions checked 2026-08-14 | Licence / boundary |
 |---|---|---|
-| Pocket TTS | PyPI `2.1.0`; upstream HEAD `7fc13c7` recorded | MIT code; official `peter_yearsley` preset. Voice cloning weights require accepting Kyutai's Hugging Face model terms and authenticated download; never bypass that gate. |
-| NeuTTS Air | PyPI `1.4.1`; upstream HEAD `ac69851` recorded; official CPU wheels `torch==2.8.0`, `torchaudio==2.8.0`, `torchao==0.12.0` | Apache-2.0 Air Q4 GGUF; official `jo.pt` + exact `jo.txt`, because Arthur's exact reference transcript is not in this repo |
-| KittenTTS | official v0.8.1 wheel; upstream HEAD `9f3e0d8` recorded | Apache-2.0 developer preview; preset voices only |
+| Pocket TTS | PyPI `2.1.0`; [official README at `7fc13c7`](https://github.com/kyutai-labs/pocket-tts/blob/7fc13c7/README.md) uses `TTSModel.load_model()`, `get_state_for_audio_prompt()` and `generate_audio()` | MIT code; official `peter_yearsley` preset. Voice cloning weights require accepting Kyutai's Hugging Face model terms and authenticated download; never bypass that gate. |
+| NeuTTS Air | PyPI `1.4.1`; [official README at `ac69851`](https://github.com/neuphonic/neutts/blob/ac69851f28fc63a487917e7c2e27f0d75c759cba/README.md) uses `NeuTTS(...).infer(input_text, ref_codes, ref_text)`; official CPU wheels `torch==2.8.0`, `torchaudio==2.8.0`, `torchao==0.12.0` | Apache-2.0 Air Q4 GGUF; official `jo.pt` + exact `jo.txt`, because Arthur's exact reference transcript is not in this repo |
+| KittenTTS | [official v0.8.1 README](https://github.com/KittenML/KittenTTS/blob/0.8.1/README.md) uses `KittenTTS(...).generate(text, voice=...)`; release wheel and upstream HEAD `9f3e0d8` recorded | Apache-2.0 developer preview; preset voices only |
 
 All engines receive the byte-identical canonical text from
 `webapp/voice_sample.py`. Outputs and JSON measurements go to `output/`, which
@@ -39,6 +39,30 @@ docker compose -f evaluations/cpu-engines/compose.yaml run --rm pocket
 docker compose -f evaluations/cpu-engines/compose.yaml run --rm neutts
 docker compose -f evaluations/cpu-engines/compose.yaml run --rm kitten
 ```
+
+## Pinned numbers-and-currency A/B
+
+Dave judged Peter, Jo, Jasper and Rosie decent/good, but heard poor number and
+currency handling in all four original clips. Those clips used the official
+APIs above but, contrary to the earlier “app-path” description, passed raw text
+straight to the models. `numeric_ab.py` now pins a focused corpus and its source
+hash. It provides two controlled inputs while keeping model, voice and settings
+fixed:
+
+- `raw`: byte-identical symbols/digits sent through the official API.
+- `normalized`: the repo's deterministic unclassified-engine preprocessing,
+  including spoken years, ordinals, percentages, large numbers and currencies.
+
+Run one engine and one arm at a time so the product remains responsive:
+
+```bash
+NUMERIC_AB_ARM=raw docker compose -f evaluations/cpu-engines/compose.yaml run --rm pocket
+NUMERIC_AB_ARM=normalized docker compose -f evaluations/cpu-engines/compose.yaml run --rm pocket
+```
+
+Repeat for `neutts` and `kitten`. Reports record both the raw-source hash and
+the exact rendered-input hash. Blind-copy the resulting MP3s into the preview
+cache; do not encode the raw/normalized assignment in the browser labels.
 
 Copy approved clips to `/data/previews/cpu_*.mp3` only after checking that the
 JSON reports a non-zero, full output. Dave's listening verdict is the quality

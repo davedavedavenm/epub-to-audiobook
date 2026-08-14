@@ -501,22 +501,46 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     def replace_currency(m):
         symbol = m.group(1)
         amount_str = m.group(2).replace(',', '')
+        scale = (m.group(3) or '').strip()
         try:
-            amount = float(amount_str)
-            if amount == int(amount):
-                amount = int(amount)
-            words = _number_to_words(amount) if isinstance(amount, int) else str(amount)
+            whole_text, dot, fraction_text = amount_str.partition('.')
+            whole = int(whole_text)
         except ValueError:
             return m.group(0)
 
-        currencies = {'$': 'dollars', '£': 'pounds', '€': 'euros'}
-        unit = currencies.get(symbol, symbol)
+        units = {
+            '$': ('dollar', 'dollars', 'cent', 'cents'),
+            '£': ('pound', 'pounds', 'penny', 'pence'),
+            '€': ('euro', 'euros', 'cent', 'cents'),
+        }
+        major_one, major_many, minor_one, minor_many = units[symbol]
+
         # "$33 billion" must become "thirty-three billion dollars",
         # not "thirty-three dollars billion"
-        scale = (m.group(3) or '').strip()
         if scale:
-            return f"{words} {scale} {unit}"
-        return f"{words} {unit}"
+            words = _decimal_to_words(amount_str) if dot else _number_to_words(whole)
+            return f"{words} {scale} {major_many}"
+
+        # Ordinary two-decimal prices are spoken as major + minor currency,
+        # not as a bare decimal followed by a unit: "$33.50" becomes
+        # "thirty-three dollars and fifty cents". A one-digit fraction is a
+        # conventional price shorthand ("$33.5" == "$33.50"). Longer
+        # fractions are measurements rather than normal prices and retain
+        # explicit point-by-point speech.
+        if dot and 1 <= len(fraction_text) <= 2:
+            minor = int(fraction_text.ljust(2, '0'))
+            parts = []
+            if whole or not minor:
+                major_unit = major_one if whole == 1 else major_many
+                parts.append(f"{_number_to_words(whole)} {major_unit}")
+            if minor:
+                minor_unit = minor_one if minor == 1 else minor_many
+                parts.append(f"{_number_to_words(minor)} {minor_unit}")
+            return ' and '.join(parts)
+
+        words = _decimal_to_words(amount_str) if dot else _number_to_words(whole)
+        major_unit = major_one if not dot and whole == 1 else major_many
+        return f"{words} {major_unit}"
 
     # Modern engines read "$50" / "£33 billion" natively; skip (MODERN CONTRACT).
     if not modern:
