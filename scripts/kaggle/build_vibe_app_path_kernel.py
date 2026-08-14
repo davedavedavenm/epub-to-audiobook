@@ -156,7 +156,7 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "run_vibe_app_path.py").write_text(source, encoding="utf-8", newline="\n")
     metadata = {
-        "id": "davedavedavenm/vibevoice-cfg2-app-path-v2",
+        "id": "davedavedavedavenm/vibevoice-cfg2-app-path-v2",
         "title": "vibevoice-cfg2-app-path-v2",
         "code_file": "run_vibe_app_path.py",
         "language": "python", "kernel_type": "script", "is_private": True,

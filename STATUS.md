@@ -81,15 +81,22 @@
 > AudioFile/AudioLibrary. No TTS retry will happen until Dave explicitly chooses
 > the engine-bound narrator.
 
-> ## 2026-08-14 VibeVoice cfg-2 production-path gate — DEFECT FOUND / FIXED / FREE RERUN ACTIVE
+> ## 2026-08-14 VibeVoice cfg-2 production-path gate — RERUN VALIDATED / BLIND LISTENING READY
 >
 > The first exact 6,166-word free-Kaggle app-path run hit EOS at generation step
 > **155/460 (34%)**. Official Kaggle output showed HTTP 200, so transport did not
 > fail; the adapter produced a truncated but valid WAV. The proven direct path
 > collapses whitespace before adding `Speaker 1:` while `vibevoice/server.py`
 > preserved EPUB paragraph newlines. The adapter now applies that same whitespace
-> contract, with a regression guard. A corrected free-Kaggle run at the pinned
-> cfg 2.0/runtime/source hash is active. No paid compute was started.
+> contract, with a regression guard. The corrected free-Kaggle run completed:
+> the app-path MP3 is 22:38.736 / 27,175,245 bytes and the direct-runtime arm is
+> 22:52.056 / 27,441,645 bytes. Both decode fully and share the pinned 6,166-word
+> source hash, runtime commit, Arthur reference hash, cfg 2.0, DDPM 10 and seed.
+> A 45-second blind focus pair around “romantic felicity” plus both full files
+> are ready under ignored local listening artifacts. The production/root-cause
+> verdict remains open until Dave hears that pair. No paid compute was started.
+> The generated kernel metadata also now uses the actual Kaggle owner slug;
+> the earlier two-`dave` slug caused a false permission error while monitoring.
 
 > ## 2026-08-14 Goodreads audiobook-only wishlist — LIVE VERIFIED
 >

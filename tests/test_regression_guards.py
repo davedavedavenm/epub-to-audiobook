@@ -265,6 +265,7 @@ def test_vibe_app_path_gate_is_pinned_to_heard_blind_source():
     assert '"VIBEVOICE_CFG_SCALE": "2.0"' in builder
     assert 'http://127.0.0.1:8010/v1/audio/speech' in builder
     assert 'assert 1200 <= duration <= 1600' in builder
+    assert '"id": "davedavedavedavenm/vibevoice-cfg2-app-path-v2"' in builder
     vibe_server = (ROOT / 'vibevoice' / 'server.py').read_text(encoding='utf-8')
     assert 're.sub(r"\\s+", " ", req.input or "")' in vibe_server
 

@@ -124,7 +124,9 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [~] 9.3 Reproduce or clear the brief garble after “romantic felicity” with a
       direct-upstream versus app-path A/B before promoting VibeVoice. The first
       app-path run exposed a separate 34%-length whitespace/EOS defect; fixed
-      with a corrected free-Kaggle run active. Human A/B remains open.
+      in the corrected free-Kaggle rerun. Both pinned 6,166-word arms now pass
+      full decode and duration checks; a blind 45-second focus pair and both
+      22-minute files are ready. Human A/B remains open.
 - [ ] 9.4 Re-rank the corrected Vibe path against Qwen on the same text.
 
 ## 10. Public onboarding and support
@@ -137,6 +139,9 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       or feed tokens.
 
 ## 11. Admit the new CPU engines without offering cold voices — #46
+
+Issue #46 is closed: Pocket and Kitten passed their admission gates and are
+live opt-in choices. NeuTTS remains intentionally deferred, not half-enabled.
 
 - [x] 11.1 Pin the official Pocket TTS, NeuTTS Air and KittenTTS versions,
       record their official voice inventories, and isolate them from the
