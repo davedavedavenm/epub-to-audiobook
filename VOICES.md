@@ -88,7 +88,7 @@ English:
 | **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speaker labels | yes | **rejected by ear** for this project; old/current runtime and encoding A/B all failed badly |
 | **MeloTTS** | US, UK, Indian, **Australian**, default | yes | installed and **rejected by ear**; no Irish |
 | **OmniVoice** | US, UK, AU, CA, IN + five non-native-English accents | yes | accents good; slow on CPU; **no Irish/ZA** in fixed upstream vocabulary |
-| **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Irish + ZA clips rendered; listening pending |
+| **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Australian + Irish + ZA clips rendered at `cfg_weight=0`; listening pending |
 | **XTTS-v2** | clones from a reference; reported to carry accent | yes | tested and rejected — see below |
 | **Chatterbox** Nano/Turbo | none. English-only, American phonetics | yes | proven twice not to hold an accent |
 | **Edge** | IE, AU, NZ, GB, ZA, IN, CA, HK, KE, NG, PH, SG, TZ, US | **no** | accents “not bad”, but Chinese company names were all poor; needs internet |

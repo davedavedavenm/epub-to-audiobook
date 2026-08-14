@@ -10,6 +10,12 @@
 >
 > Chatterbox Multilingual V3 at `cfg_weight=0` is the one materially different
 > Chatterbox path still open; Australian joins the existing Irish/ZA audition.
+> The Australian hard sample rendered locally in 310.45 s: 77.736 s,
+> 1,243,820-byte, 24 kHz mono MP3 at 128 kbps, SHA-256
+> `434e8bfee2fd483292961779ca4667987ca2f132ca599fe0b75d2b83be29111a`.
+> It fully decodes and its live sample endpoint returns the exact 1,243,820
+> bytes as `audio/mpeg`. Accent/voice quality remains **unverified by ear**.
+>
 > Official Chatterbox docs provide neither an Australian/Irish dedicated English
 > pack nor a supported public fine-tuning workflow. If V3 fails by ear, the next
 > honest comparison is Azure's native regional voices with its documented SSML

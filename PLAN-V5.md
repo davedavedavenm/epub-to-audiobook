@@ -62,7 +62,8 @@ come across something". Telegram already works from phone and desktop.
 ## 4. Chatterbox Multilingual V3 for accents — #43
 
 - [x] 4.1 Install V3 (500M) and render Irish/South-African auditions.
-- [ ] 4.1a Render and grade the Australian V3 audition at `cfg_weight=0`.
+- [x] 4.1a Render the Australian V3 audition at `cfg_weight=0`.
+- [ ] 4.1b Grade Australian, Irish and South-African V3 by ear.
 - [ ] 4.2 If it wins, make it the accented-narrator engine.
 - [ ] 4.3 Expose `cfg_weight` per voice — accented narrators default `0`,
       ordinary narrators stay `0.5`.
