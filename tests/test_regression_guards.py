@@ -236,6 +236,9 @@ def test_cpu_candidates_are_opt_in_cpu_only_and_cached_before_play():
         assert service in COMPOSE
         assert f'- {profile}' in COMPOSE
     assert COMPOSE.count('CUDA_VISIBLE_DEVICES=') >= 2
+    assert 'cpus: ${POCKET_CPUS:-4.0}' in COMPOSE
+    assert 'cpus: ${KITTEN_CPUS:-4.0}' in COMPOSE
+    assert 'KITTEN_THREADS=${KITTEN_THREADS:-4}' in COMPOSE
     assert 'ENABLE_POCKET_PROFILE' in DEPLOY
     assert 'ENABLE_KITTEN_PROFILE' in DEPLOY
     assert "'pocket', 'kitten'" in APP
@@ -252,6 +255,18 @@ def test_standalone_sampler_cannot_bypass_cpu_candidate_text_profile():
     sampler = (ROOT / 'scripts' / 'sample.sh').read_text(encoding='utf-8')
     assert 'pocket_*|kitten_*) TEXT_PROFILE="explicit"' in sampler
     assert '--text-profile "$TEXT_PROFILE"' in sampler
+
+
+def test_vibe_app_path_gate_is_pinned_to_heard_blind_source():
+    builder = (ROOT / 'scripts' / 'kaggle' /
+               'build_vibe_app_path_kernel.py').read_text(encoding='utf-8')
+    assert '405cb7ff75f75bfa21c9845f08ba16d17306d56d3af129926b2b23381933ce31' in builder
+    assert '07cb79feadd2d3fd7f47530d4c964a12857936a0' in builder
+    assert '"VIBEVOICE_CFG_SCALE": "2.0"' in builder
+    assert 'http://127.0.0.1:8010/v1/audio/speech' in builder
+    assert 'assert 1200 <= duration <= 1600' in builder
+    vibe_server = (ROOT / 'vibevoice' / 'server.py').read_text(encoding='utf-8')
+    assert 're.sub(r"\\s+", " ", req.input or "")' in vibe_server
 
 
 def test_play_button_never_starts_cold_voice_synthesis():

@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-14 Pocket + Kitten app integration — IMPLEMENTED / LIVE PROOF PENDING
+> ## 2026-08-14 Pocket + Kitten app integration — LIVE / PREVIEWS VERIFIED / LONG-FORM VERDICT OPEN
 >
 > Pocket TTS 2.1 and KittenTTS 0.8.1 now have isolated, non-root, CPU-only
 > OpenAI-compatible services behind explicit Compose/deploy opt-ins. The app
@@ -13,11 +13,13 @@
 > for these engines: numbers/currency are spoken deterministically while
 > legacy phonetic respellings are excluded. This matches the arm Dave selected
 > for Peter, Jasper and Rosie and corrects the raw-input evaluation mistake.
-> Chatterbox Nano/Beatrice remains the production default; neither candidate
-> is admitted for books until container output and a 15–30 minute app-path
-> listening gate pass. Local verification: **271 tests**, Ruff, Python compile,
-> Compose config and diff checks pass. Docker Desktop was unavailable on the
-> Windows workstation, so real image/runtime proof must be performed on Zorin.
+> Live Zorin proof now covers both healthy CPU-only containers, all **21/21
+> Pocket + 8/8 Kitten** persisted previews, and the app's complete **117/117**
+> configured-ready catalogue. `ffprobe` validated every new MP3: 56–101 seconds
+> and 1.12–2.01 MB, with no empty/cold Play entries. Chatterbox Nano/Beatrice
+> remains the production default; neither candidate is book-approved until its
+> 15–30 minute app-path file is heard. The shared six-core host now reserves
+> capacity for the product by capping each candidate service at four CPU cores.
 
 > ## 2026-08-14 Goodreads audiobook-only wishlist — LIVE VERIFIED
 >

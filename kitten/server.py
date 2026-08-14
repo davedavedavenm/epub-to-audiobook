@@ -4,10 +4,12 @@ Uses the official ``KittenTTS(...).generate(text, voice=...)`` interface and
 exposes exactly the eight presets documented for the 0.8.1 release.
 """
 import io
+import os
 import subprocess
 import threading
 
 import soundfile as sf
+import torch
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 
@@ -40,6 +42,10 @@ def _get_model():
     global _model
     if _model is None:
         from kittentts import KittenTTS
+        # PyTorch requires this before eager/JIT/autograd work. Bounding
+        # intra-op threads avoids oversubscribing the shared product host:
+        # https://docs.pytorch.org/docs/stable/generated/torch.set_num_threads.html
+        torch.set_num_threads(int(os.environ.get("KITTEN_THREADS", "4")))
         _model = KittenTTS(MODEL_ID)
     return _model
 
@@ -88,4 +94,3 @@ def speech(req: SpeechRequest):
         audio = _get_model().generate(text, voice=name)
         payload, media_type = _encode(_wav_bytes(audio), req.response_format)
     return Response(payload, media_type=media_type)
-

@@ -58,6 +58,13 @@ back. This incident did not touch conversion state or generated media.
   Pocket and Kitten are also opt-in (`ENABLE_POCKET_PROFILE=1` /
   `ENABLE_KITTEN_PROFILE=1`) while their long-form listening gate remains open.
   They are CPU-only, free/local, and never arm a cloud or paid fallback.
+  Their default four-core ceilings (`POCKET_CPUS` / `KITTEN_CPUS`) leave two
+  cores for the UI and worker on this six-core host. Matching
+  `POCKET_THREADS` / `KITTEN_THREADS` bound model-side CPU parallelism; set
+  these before model load as required by the official PyTorch
+  [`set_num_threads`](https://docs.pytorch.org/docs/stable/generated/torch.set_num_threads.html)
+  guidance. Increase them only after measuring `/`, `/api/voices` and
+  `/api/jobs` latency during a real long render.
   **That describes a fresh deploy, not necessarily the running box.** A live
   check on 2026-07-25 found Turbo *and* kokoro up alongside nano and piper
   (opt-ins from earlier sessions, never brought down). Harmless on 31 GB, but

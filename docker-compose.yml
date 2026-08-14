@@ -362,6 +362,9 @@ services:
     ports:
       - "8012:8012"
     restart: unless-stopped
+    # Keep two cores free on the six-core production host so a long render
+    # cannot starve the UI/worker. Override deliberately on a different host.
+    cpus: ${POCKET_CPUS:-4.0}
     mem_limit: 4g
     memswap_limit: 4g
     environment:
@@ -389,10 +392,14 @@ services:
     ports:
       - "8013:8013"
     restart: unless-stopped
+    cpus: ${KITTEN_CPUS:-4.0}
     mem_limit: 4g
     memswap_limit: 4g
     environment:
       - CUDA_VISIBLE_DEVICES=
+      - OMP_NUM_THREADS=${KITTEN_THREADS:-4}
+      - MKL_NUM_THREADS=${KITTEN_THREADS:-4}
+      - KITTEN_THREADS=${KITTEN_THREADS:-4}
     volumes:
       - kitten-cache:/data/hf
     profiles:

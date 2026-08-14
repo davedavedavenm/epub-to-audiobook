@@ -83,7 +83,11 @@ def build_lexicon(epub_path):
         lex.update(generate_lexicon(Path(epub_path)) or {})
         if prof.get('form'):
             print(f"book form: {prof['form']} (domain: {prof.get('domain')})", flush=True)
-        print(f"pronunciation rules: {len(lex)} ({'LLM+seed' if prof.get('rules') else 'seed only — set LLM_API_KEY for adaptive'})", flush=True)
+        seed_only = any(str(note).startswith('seed-only')
+                        for note in prof.get('notes', []))
+        source = ('seed only — configure a free/local LLM for adaptive rules'
+                  if seed_only or not prof.get('rules') else 'LLM+seed')
+        print(f"pronunciation rules: {len(lex)} ({source})", flush=True)
     except Exception as e:
         print(f"pronunciation: seed dict only ({e})", flush=True)
     return lex

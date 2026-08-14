@@ -34,6 +34,15 @@ headline rates or hypothetical hardware speedups presented as facts.
 reverses, the existing quality-priority decision: bad free audio is still not a
 successful audiobook, but cost decides between options that are genuinely good.
 
+## Shared-host CPU candidates reserve capacity for the product — Active
+
+Pocket and Kitten remain CPU-only, but each service is capped at **four CPU
+cores by default** on the six-core production host. More dedicated CPU can
+reduce render time; it does not establish better voice quality. UI and queue
+capacity take priority over maximum background throughput. PyTorch's official
+guidance is the basis for bounding intra-op threads before inference:
+<https://docs.pytorch.org/docs/stable/generated/torch.set_num_threads.html>.
+
 ## Official documentation before experimentation — Active
 
 Before changing or evaluating any external engine, model, API, SDK, container,

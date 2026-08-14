@@ -111,8 +111,10 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [x] 8.2 Expose configured ready/total counts and hide unready auditions.
 - [x] 8.3 Warm healthy free local engines with load throttling, skip-existing
       behavior and an off-switch; never auto-call paid/network engines.
-- [~] 8.4 Keep the live production cache at 100% of configured/offered voices
+- [x] 8.4 Keep the live production cache at 100% of configured/offered voices
       and verify each missing optional-engine artifact after deployment.
+      Live proof on 2026-08-14: 117/117 ready; all 29 new Pocket/Kitten MP3s
+      pass `ffprobe` and are 56–101 seconds long.
 
 ## 9. VibeVoice selected setting through the production path — #44
 
@@ -139,17 +141,19 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       production queue while auditioning.
 - [x] 11.2 Prove the shared number/currency failure was raw evaluation input;
       deterministic normalization won 4/4 controlled listening comparisons.
-- [~] 11.3 Give each candidate an opt-in, health-checked CPU service and route
+- [x] 11.3 Give each admitted candidate an opt-in, health-checked CPU service and route
       the same normalized text through preview, worker, recovery and finalise
-      paths. Pocket and Kitten are implemented and locally regression-tested;
-      live container proof is pending. NeuTTS remains deferred and must retain
-      sentence chunking for its documented context if admitted.
-- [ ] 11.4 Render and validate a persistent preview for every voice before that
-      voice is returned by the selectable catalogue. Never cold-render on Play.
-- [ ] 11.5 Put the best heard voice from each candidate through a 15–30 minute
+      paths. Pocket and Kitten are implemented and live-verified. NeuTTS remains
+      deferred and must retain sentence chunking for its documented context if
+      separately admitted.
+- [x] 11.4 Render and validate a persistent preview for every offered Pocket and
+      Kitten voice before that voice is returned by the selectable catalogue.
+      Never cold-render on Play. Live cache is 29/29 for these engines.
+- [~] 11.5 Put the best heard voice from each candidate through a 15–30 minute
       app-path render and human listening gate before enabling book conversion.
       Peter and Rosie lead the operational shortlist; Jo's insertion and
-      Jasper's scratchy opening remain open defects.
+      Jasper's scratchy opening remain open defects. Identical 3,600-word
+      Peter/Rosie files are being rendered; human verdict remains open.
 - [ ] 11.6 Enable only engines that pass 11.5 as opt-in choices. Chatterbox
       Nano/Beatrice remains the default unless another engine beats it by ear;
       none may enable a paid/cloud fallback.

@@ -11,6 +11,7 @@ import glob
 import io
 import logging
 import os
+import re
 import threading
 
 import numpy as np
@@ -104,7 +105,10 @@ def voices():
 
 @app.post("/v1/audio/speech")
 def speech(req: SpeechReq):
-    text = (req.input or "").strip()
+    # Match the pinned direct-upstream path exactly. The cfg-2 app-path gate
+    # proved that preserving EPUB paragraph newlines made generation hit EOS at
+    # step 155/460, while the direct path's one-line script completed the book.
+    text = re.sub(r"\s+", " ", req.input or "").strip()
     if not text:
         return JSONResponse({"error": "input is empty"}, status_code=400)
     if len(text) > MAX_CHARS:
