@@ -23,6 +23,17 @@
 > normalized-input hash as every other engine. Blind assignments are retained
 > only in the ignored evaluation manifest. No production engine/default or GPU
 > setting changed; Dave's A/B verdict is the next gate.
+>
+> **Live handoff:** full-stack deployment `425de55` completed with matching
+> healthy webapp/worker revision. The Voices page puts the diagnostic card
+> first and labels only A/B; a real browser at 780×493 loaded all eight players
+> at `readyState=4` with their expected durations and no media errors. Every
+> internal sample URL returned `200` with the validated byte count. A fresh
+> request to `https://audio.magnusfamily.co.uk` correctly redirected to
+> Pangolin SSO; authenticated users reach this same deployed app. The source
+> clips and private assignment manifest remain in the ignored evaluation
+> output, while only the eight lowercase allowlisted handoff files remain in
+> the preview cache.
 
 > ## 2026-08-13 cross-host map and automatic-queue audit — VERIFIED / REPAIRED
 >
