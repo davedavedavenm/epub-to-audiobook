@@ -20,7 +20,8 @@ fi
 
 text_file="$(mktemp)"
 payload_file="$(mktemp)"
-trap 'rm -f "${text_file}" "${payload_file}"' EXIT
+audio_file="$(mktemp --suffix=.mp3)"
+trap 'rm -f "${text_file}" "${payload_file}" "${audio_file}"' EXIT
 PYTHONPATH="${STACK_PATH}/webapp" python3 - > "${text_file}" <<'PY'
 from voice_sample import sample_text_for
 print(sample_text_for("chatterbox"))
@@ -48,7 +49,13 @@ PY
   echo "Rendering Chatterbox V3/${voice} -> ${output}.mp3"
   /usr/bin/time -f 'wall_seconds=%e' curl --fail --silent --show-error \
     -H 'Content-Type: application/json' --data-binary "@${payload_file}" \
-    http://127.0.0.1:8009/v1/audio/speech -o "${OUT_DIR}/${output}.mp3"
+    http://127.0.0.1:8009/v1/audio/speech -o "${audio_file}"
+  # The bind-mounted previews directory is container-owned. Stage on the host,
+  # then write and atomically publish through the webapp container; a direct
+  # host-side curl spent a full synthesis before failing with exit 23.
+  docker exec -i epub-to-audiobook-ui sh -c \
+    "cat > /data/previews/.${output}.tmp && mv /data/previews/.${output}.tmp /data/previews/${output}.mp3" \
+    < "${audio_file}"
   stat --format='size=%s' "${OUT_DIR}/${output}.mp3"
   docker exec epub-to-audiobook-ui ffprobe -v error \
     -show_entries format=duration -of default=noprint_wrappers=1 \

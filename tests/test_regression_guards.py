@@ -548,3 +548,18 @@ def test_single_completion_path():
     assert len(callers) == 1, (
         "the completion sequence has been duplicated again — presync_quality_gate "
         "should only be called by _gate_and_sync, found:\n  " + "\n  ".join(callers))
+
+
+def test_v3_audition_publishes_through_volume_owner():
+    """The host user cannot create files in the container-owned preview volume.
+
+    A complete five-minute V3 synthesis was discarded when curl tried to write
+    there directly (2026-08-14). Require host staging plus a container-side,
+    atomic publish so an expensive evaluation is not lost at the last byte.
+    """
+    script = (ROOT / 'scripts' / 'render_chatterbox_v3_candidates.sh').read_text(
+        encoding='utf-8')
+    assert '-o "${audio_file}"' in script
+    assert 'docker exec -i epub-to-audiobook-ui' in script
+    assert 'mv /data/previews/.${output}.tmp' in script
+    assert '-o "${OUT_DIR}/${output}.mp3"' not in script
