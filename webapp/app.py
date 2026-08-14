@@ -6518,6 +6518,15 @@ def delete_job(job_id: str):
     input_path = owned_path(UPLOAD_DIR, job.get('input_filename') or '')
     if input_path and input_path.is_file():
         input_path.unlink()
+    # Conversion preprocesses an EPUB into a sibling ``*_tts.epub`` and runs
+    # the worker against that copy. It is owned by the same job and must leave
+    # with the original; otherwise every History deletion leaks one source-sized
+    # file in the uploads volume.
+    if input_path and input_path.suffix.lower() == '.epub':
+        tts_path = owned_path(
+            UPLOAD_DIR, f"{input_path.stem}_tts{input_path.suffix}")
+        if tts_path and tts_path.is_file():
+            tts_path.unlink()
 
     output_dir = owned_path(OUTPUT_DIR, job.get('output_dirname') or '')
     if output_dir and output_dir.is_dir():

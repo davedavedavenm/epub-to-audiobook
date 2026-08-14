@@ -1,5 +1,38 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-14 regional-accent direction — LISTENING VERDICT RECORDED
+>
+> Edge is the only option heard so far that comes close for genuine regional
+> accents. The other surfaced Australian/Irish/etc. labels are rejected by ear;
+> metadata is not a quality result. Arthur establishes Chatterbox Turbo as an
+> excellent general narrator, not as an accent-preserving engine. Nano/Turbo
+> accent cloning therefore remains closed.
+>
+> Chatterbox Multilingual V3 at `cfg_weight=0` is the one materially different
+> Chatterbox path still open; Australian joins the existing Irish/ZA audition.
+> Official Chatterbox docs provide neither an Australian/Irish dedicated English
+> pack nor a supported public fine-tuning workflow. If V3 fails by ear, the next
+> honest comparison is Azure's native regional voices with its documented SSML
+> phoneme/custom-lexicon controls. Azure F0 advertises 0.5 million Standard
+> Neural characters/month; no paid use is enabled or implied.
+
+> ## 2026-08-14 real Telegram multi-article E2E — PASSED / TEST DATA REMOVED
+>
+> Dave's actual Telegram account sent one message containing two public article
+> URLs to `@grabthebook_bot`. The production webhook replied `2 queued, 0
+> failed`; jobs `8f470892` and `13e7a958` used local Chatterbox Nano/Beatrice,
+> completed as 50.016 s / 1,000,634-byte and 109.056 s / 2,181,436-byte MP3s,
+> decoded end-to-end, synced to the ABS Articles library, appeared in public RSS
+> and both enclosure URLs returned HTTP 206 byte ranges. Telegram delivered both
+> completion notifications. The two test conversions were then deleted from
+> the app and their exact ABS copies; their DB rows, outputs, uploads and RSS
+> entries are absent.
+>
+> The cleanup exposed one real bug: History deletion removed the original EPUB
+> but leaked its generated sibling `_tts.epub`. The two exact test remnants were
+> removed and the delete path now removes both owned files with regression
+> coverage. No user article or audiobook was deleted.
+
 > ## 2026-08-14 VibeVoice documented turn-reset gate — HEARD / BOTH VIBE ARMS REJECTED
 >
 > The earlier negative verdict remains scoped to one flattened `Speaker 1:`

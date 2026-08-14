@@ -55,5 +55,6 @@ PY
     "/data/previews/${output}.mp3"
 }
 
+render accent_australian_female cv3_australian_female
 render accent_irish_male cv3_irish_male
 render accent_southafrican_male cv3_southafrican_male

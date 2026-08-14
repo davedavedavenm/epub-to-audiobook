@@ -131,10 +131,13 @@ def test_multi_chapter_mp3_download_remains_one_zip(tmp_path, monkeypatch):
 def test_delete_conversion_removes_owned_local_files_only(tmp_path, monkeypatch):
     outdir = _completed_job_fixture(tmp_path, monkeypatch)
     upload_root = appmod.UPLOAD_DIR
+    tts_copy = upload_root / 'history-test_Example_tts.epub'
+    tts_copy.write_bytes(b'preprocessed epub')
     with app.test_client() as client:
         response = client.delete('/api/jobs/history-test/delete', json={'remove_from_abs': False})
     assert response.status_code == 200
     assert not outdir.exists()
+    assert not tts_copy.exists()
     assert upload_root.exists(), 'an empty filename must never resolve to and remove the upload root'
     assert get_job('history-test') is None
 

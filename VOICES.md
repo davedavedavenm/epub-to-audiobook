@@ -11,6 +11,11 @@ pronunciation of ordinary words/proper nouns/numbers, pacing and long-form
 listenability are the first gate. Locality, cost, memory and speed matter only
 after an engine passes that listening gate.
 
+**Latest regional-accent verdict (Dave, 2026-08-14):** Edge is the only
+currently heard option that comes close. The other surfaced voices labelled
+Australian, Irish and so on are rejected; a locale label is not evidence that
+the generated accent is authentic or pleasant.
+
 **The tested Piper path is rejected for production audiobooks (Dave,
 2026-07-28).** Most existing voices sounded bad and inauthentic. A controlled
 audit then compared deployed Piper 1.2 at both encodings with current Piper 1.6
@@ -98,6 +103,27 @@ audiobook-quality failure for Chinese-business nonfiction even though the accent
 passes. Do not assume the existing seed respellings solve it. The audition and
 book share preprocessing, but the exact Edge payload still needs a raw-vs-current
 A/B before assigning the cause to Edge or changing the lexicon.
+
+Arthur/Turbo's excellent general-narration result does **not** reopen Turbo as
+an accent engine. Turbo and Nano are English-only models, and both already
+Americanised or weakened regional references in listening. Multilingual V3 is
+the one materially different Chatterbox path still open: upstream claims better
+accent preservation, but publishes no dedicated Australian- or Irish-English
+language pack and no supported public fine-tuning workflow. It must pass by ear
+at `cfg_weight=0`; another well-named reference is not a new hypothesis.
+
+The practical online path worth testing next is Microsoft's supported Azure
+Speech API rather than the unofficial `edge-tts` interface. Azure's official
+catalogue includes native `en-AU` voices and `en-IE-ConnorNeural` /
+`en-IE-EmilyNeural`; its supported SSML phonemes and custom lexicon address the
+proper-name failure directly. The F0 tier includes 0.5 million Standard Neural
+characters per month. This is a candidate, not an approval or authority to
+spend: measure book characters and obtain Dave's listening verdict first.
+
+Official references: [Chatterbox](https://github.com/resemble-ai/chatterbox),
+[Azure language/voice catalogue](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support),
+[Azure pronunciation controls](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation),
+[Azure Speech pricing](https://azure.microsoft.com/en-gb/pricing/details/speech/).
 
 OmniVoice's upstream voice-design list is closed, not free-form: American,
 British, Australian, Canadian, Indian, Chinese, Korean, Japanese, Portuguese
@@ -307,7 +333,7 @@ recorded speech if any is available.
 |---|---|
 | Irish or South African, local | **No approved production voice yet.** Chatterbox Multilingual V3 clips exist but remain ungraded. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
-| Irish, South African or Australian, online | Edge remains an acceptable **accent** baseline, but is not approved for Chinese-business nonfiction because company-name pronunciation failed. It is not local. |
+| Irish, South African or Australian, online | Edge is the **only current near-pass by ear**, but is not approved for Chinese-business nonfiction because company-name pronunciation failed. Test official Azure native regional voices plus its supported lexicon/phoneme controls next. |
 | Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
 | British/general narration, local | **Beatrice (Nano)** (`uk_female_samuel_nano` via Chatterbox Nano) is the system default narrator. Fast CPU inference (~0.87x RTF) with human-cloned British voice. |
 
@@ -499,9 +525,9 @@ current. Use `scripts/deploy.sh`. See OPERATIONS.md.
 
 ## Next, in order
 
-1. **Grade Chatterbox Multilingual V3** Irish and South African against the Edge
-   references and the audiobook quality gate. It is installed and measured;
-   listening is the remaining gate.
+1. **Grade Chatterbox Multilingual V3** Australian, Irish and South African
+   against Edge and the audiobook quality gate. If these fail, close
+   Chatterbox for regional accents; do not iterate on more reference labels.
 2. **Expose `cfg_weight` per voice**, so accented narrators default to `0` and
    ordinary ones stay at `0.5`.
 3. **Piper VCTK is closed.** Its controlled synthesis-path A/B failed at every

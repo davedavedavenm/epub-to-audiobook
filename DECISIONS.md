@@ -34,6 +34,22 @@ headline rates or hypothetical hardware speedups presented as facts.
 reverses, the existing quality-priority decision: bad free audio is still not a
 successful audiobook, but cost decides between options that are genuinely good.
 
+## Regional accent labels are not quality evidence — Active
+
+Edge is the only currently heard Australian/Irish/etc. option that comes close
+to Dave's quality floor. The other surfaced regional labels are rejected by ear.
+Chatterbox Turbo/Arthur remains an excellent general narrator, but Turbo and
+Nano accent cloning is closed: a good base voice does not make those models
+preserve regional phonetics. Chatterbox Multilingual V3 at `cfg_weight=0` is the
+only materially different off-the-shelf Chatterbox accent path still open; it
+gets one explicit Australian/Irish/South-African listening gate. If that fails,
+do not manufacture more labels or references and call them accents.
+
+The next supported online comparison is Azure Speech's native regional voices
+with its documented SSML phoneme/custom-lexicon controls. Its free allowance
+may cover bounded use, but no paid use is automatic: measure characters and
+obtain Dave's listening approval first. See `VOICES.md` for official sources.
+
 ## Shared-host CPU candidates reserve capacity for the product — Active
 
 Pocket and Kitten remain CPU-only, but each service is capped at **four CPU

@@ -62,12 +62,17 @@ come across something". Telegram already works from phone and desktop.
 ## 4. Chatterbox Multilingual V3 for accents — #43
 
 - [x] 4.1 Install V3 (500M) and render Irish/South-African auditions.
+- [ ] 4.1a Render and grade the Australian V3 audition at `cfg_weight=0`.
 - [ ] 4.2 If it wins, make it the accented-narrator engine.
 - [ ] 4.3 Expose `cfg_weight` per voice — accented narrators default `0`,
       ordinary narrators stay `0.5`.
 
 V3 is the only model in the Chatterbox family that claims **accent
-preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
+preservation**. Nano and Turbo are English-only agent models and their accent
+cloning path is closed even though Arthur/Turbo is excellent general narration.
+If V3 fails the AU/IE/ZA listening gate, close Chatterbox for regional accents
+and compare the supported Azure regional voices plus pronunciation controls.
+See VOICES.md.
 
 ## 5. Fix `_trim_leadin()` properly — #21
 
