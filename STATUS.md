@@ -20,6 +20,24 @@
 > remains the production default; neither candidate is book-approved until its
 > 15–30 minute app-path file is heard. The shared six-core host now reserves
 > capacity for the product by capping each candidate service at four CPU cores.
+>
+> **Long-form files are ready for Dave's verdict.** Peter: **16:27**, 19,742,312
+> bytes, 80/80 chunks. Rosie: **21:16**, 25,520,552 bytes, 80/80 chunks. Both
+> captured inputs are exactly 3,600 words with excerpt SHA-256
+> `a47c6ae855c7c5e23b5e852bcff9a97cac0dd157508594fc444dace68cb02972`;
+> both MP3s decode end-to-end. ASR was not used as a voice-quality judge.
+> Human listening, and therefore book admission, remains open. Full local
+> verification at the corrected revision: **277 tests**, Ruff and Compose pass.
+
+> ## 2026-08-14 VibeVoice cfg-2 production-path gate — DEFECT FOUND / FIXED / FREE RERUN ACTIVE
+>
+> The first exact 6,166-word free-Kaggle app-path run hit EOS at generation step
+> **155/460 (34%)**. Official Kaggle output showed HTTP 200, so transport did not
+> fail; the adapter produced a truncated but valid WAV. The proven direct path
+> collapses whitespace before adding `Speaker 1:` while `vibevoice/server.py`
+> preserved EPUB paragraph newlines. The adapter now applies that same whitespace
+> contract, with a regression guard. A corrected free-Kaggle run at the pinned
+> cfg 2.0/runtime/source hash is active. No paid compute was started.
 
 > ## 2026-08-14 Goodreads audiobook-only wishlist — LIVE VERIFIED
 >

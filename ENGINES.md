@@ -25,9 +25,9 @@ accent-engine verdicts are dated in the table.
 | Qwen3-TTS (2026-07-29) | Full chapter **“really good”** and audiobook-listenable. Strongest consistency result; 33:03, RTF 2.056, ASR similarity 0.9848. Current co-finalist. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-13 corrected test) | **cfg 2.0 selected:** “much better ... otherwise perfect, really really good,” with one brief garble after “romantic felicity”. cfg 3.0 rejected as muffled/distant; cfg 1.3 already rejected. App-path root-cause check remains before production promotion. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
-| Pocket TTS / Peter Yearsley (2026-08-14) | Decent/good voice. Dave selected the normalized arm; numbers/currency passed with no residual defect reported. The raw evaluation path, not the engine, caused the earlier shared numeric failure. | CPU only (zorin) |
+| Pocket TTS / Peter Yearsley (2026-08-14) | Decent/good voice. Dave selected the normalized arm; numbers/currency passed. A same-text 3,600-word app-path file is structurally complete at 16:27; human long-form verdict open. | CPU only (zorin) |
 | NeuTTS Air / Jo (2026-08-14) | Decent/good voice. Dave selected the normalized arm, but heard “the e order” around “the order”; retain this as a separate synthesis defect rather than a number-handling failure. | CPU only (zorin) |
-| KittenTTS / Jasper and Rosie (2026-08-14) | Both decent/good. Dave selected the normalized arm for both. Jasper's opening was slightly scratchy; Rosie gave perhaps the best handling of the content. | CPU only (zorin) |
+| KittenTTS / Jasper and Rosie (2026-08-14) | Both decent/good. Dave selected the normalized arm for both. Jasper's opening was slightly scratchy; Rosie gave perhaps the best handling. Rosie's same-text 3,600-word app-path file is structurally complete at 21:16; human long-form verdict open. | CPU only (zorin) |
 
 **Read this as a data point, not a recommendation.** It reflects one listener
 and one hard passage/book; the hardware used is stated per row. TADA's ceiling is genuinely

@@ -329,7 +329,9 @@ The app now registers all 21 English Pocket presets and all eight Kitten
 presets behind opt-in CPU profiles. It still does not expose a cold Play
 button: each voice becomes audition-ready only after its persisted preview is
 non-trivial. Peter, Jasper and Rosie are the only voices with a human listening
-verdict so far; catalogue presence is not quality approval.
+verdict so far; catalogue presence is not quality approval. Same-text long-form
+files are now ready for Peter (16:27) and Rosie (21:16), but neither becomes
+book-approved until Dave has heard those files.
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,

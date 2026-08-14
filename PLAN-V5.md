@@ -121,8 +121,10 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
 - [x] 9.1 Blind cfg 2.0 versus 3.0 on identical long-form text. cfg 2.0 won;
       cfg 3.0 was muffled/distant.
 - [x] 9.2 Set the VibeVoice default to cfg 2.0.
-- [ ] 9.3 Reproduce or clear the brief garble after “romantic felicity” with a
-      direct-upstream versus app-path A/B before promoting VibeVoice.
+- [~] 9.3 Reproduce or clear the brief garble after “romantic felicity” with a
+      direct-upstream versus app-path A/B before promoting VibeVoice. The first
+      app-path run exposed a separate 34%-length whitespace/EOS defect; fixed
+      with a corrected free-Kaggle run active. Human A/B remains open.
 - [ ] 9.4 Re-rank the corrected Vibe path against Qwen on the same text.
 
 ## 10. Public onboarding and support
@@ -153,7 +155,9 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       app-path render and human listening gate before enabling book conversion.
       Peter and Rosie lead the operational shortlist; Jo's insertion and
       Jasper's scratchy opening remain open defects. Identical 3,600-word
-      Peter/Rosie files are being rendered; human verdict remains open.
+      Peter/Rosie files are ready: 16:27 and 21:16 respectively, 80/80 chunks,
+      identical 3,600-word input hash and clean full decode. Human verdict
+      remains open.
 - [ ] 11.6 Enable only engines that pass 11.5 as opt-in choices. Chatterbox
       Nano/Beatrice remains the default unless another engine beats it by ear;
       none may enable a paid/cloud fallback.
