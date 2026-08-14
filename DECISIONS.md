@@ -68,14 +68,22 @@ as A=`3.0`, B=`2.0`. Dave selected B: *"much better ... otherwise perfect.
 really really good."* A was rejected as muffled and distant despite an
 acceptable/emotional voice. The default in Compose is therefore 2.0.
 
-This selects the generation setting, not the production narrator. The original
+This selects the best tested Vibe setting, not the production narrator. The original
 direct-runtime cfg-2 arm contained a brief “byah”-like insertion at the
 `felicity - but` boundary while still speaking all source words. The corrected
 production HTTP path was preferred and cleared that insertion. Both paths sent
 the model the same byte-for-byte prompt, including the hyphen, so there is no
-evidence for a global hyphen-removal rule. VibeVoice remains provisional until
-the corrected full app-path file passes the long-form listening gate and is
-re-ranked against Qwen. Chatterbox Nano/Beatrice remains the system default.
+evidence for a global hyphen-removal rule.
+
+The corrected full app-path file then **failed the long-form listening gate**.
+Its opening was very good, but after roughly three minutes the delivery became
+increasingly emotional, fast and run-on, lost narrative intent, and continued
+to worsen. A local garble after “draught” is not assigned to the engine: the
+exact shared source says `draught , and`, with a malformed space before the
+comma. The progressive pace drift is the production blocker. The tested
+single-pass Vibe path is therefore rejected for audiobook production; Qwen
+ranks above it for long-form stability. Chatterbox Nano/Beatrice remains the
+system default.
 
 **Why:** the pinned community runtime exposes `cfg_scale`; Microsoft's official
 TTS documentation does not define it as a supported tuning contract. Its role
@@ -95,9 +103,10 @@ that costs Vibe roughly 0.13 ASR. This includes the 2026-07-29 full-chapter
 finalist gate and the "Vibe provisional quality leader / Qwen consistency
 leader" ranking.
 
-**Do not cite those verdicts as current.** The corrected cfg 2/3 comparison has
-now selected 2.0, but Vibe versus Qwen and Vibe's production/default status
-remain open until the selected setting passes the exact app path.
+**Do not cite those verdicts as current.** The corrected cfg 2/3 comparison
+selected 2.0, and the exact app-path file was subsequently heard. It failed on
+progressive long-form pace/prosody drift, so Qwen now ranks above this Vibe path
+for audiobook consistency. Neither replaces the Nano/Beatrice default.
 
 ## Voice auditions are persisted before they are offered — Active
 
@@ -186,19 +195,24 @@ Peak VRAM is 5.31 GiB regardless of steps or input length.
 **Why:** this looks like an obvious quality knob and it is not — it is inverted.
 See STATUS.md 2026-08-12 for the six-arm sweep.
 
-## VibeVoice long-form capability — Active
+## VibeVoice long-form capability proven; production quality rejected — Active
 
 VibeVoice completed 13,666 source words in one generation, producing about 77
 minutes of audio on a free Kaggle P100 (13,597 ASR words, WER 0.0887). This
 reproduces the practical substance of Microsoft's "up to 90 minutes" claim and
-answers issue #44's capability question. The issue is still open only because
-its GitHub state is stale. A separate 916-word / 4m19s run showed stable pitch
-and measured 5.31 GiB peak VRAM.
+answers issue #44's capability question. Capability is not suitability: the
+corrected 6,166-word production-path file became progressively faster and more
+run-on after roughly three minutes and failed human listening. Issue #44 is
+closed with that negative promotion verdict. A separate 916-word / 4m19s run
+showed stable pitch and measured 5.31 GiB peak VRAM.
 
 **Boundary:** the 77-minute run's VRAM probe was attached to the parent while
 generation ran in a subprocess and therefore reported zero. Long-duration VRAM
-remains unmeasured; do not extrapolate the 4-minute 5.31 GiB result. Long-form
-quality still requires human listening. Date corrected: 2026-08-13.
+remains unmeasured; do not extrapolate the 4-minute 5.31 GiB result. The exact
+single-pass fp16/SDPA/community-runtime path must not be reopened with another
+seed or undocumented speed control. Reconsider only with current upstream
+evidence for a materially different long-form path and a new controlled human
+listening gate. Date corrected: 2026-08-14.
 
 ## Audition-passage validity per engine — Open, NOT settled
 
@@ -207,12 +221,13 @@ The canonical `voice_sample.SAMPLE_TEXT` measurably handicaps VibeVoice:
 `voice_sample.MODERN_ENGINES` is `("chatterbox", "tada")` — VibeVoice and Qwen
 are in neither branch by consideration, only by omission.
 
-Two things follow, both **unresolved**:
+One input-policy question remains unresolved; the ranking consequence is now
+settled:
 1. Whether Vibe needs the legacy number treatment (`modern=False`) is untested.
    Run that arm before changing `MODERN_ENGINES`.
 2. The 2026-07-29 "Vibe provisional quality leader / Qwen consistency leader"
-   ranking was formed on auditions using this passage. It has not been re-run
-   fairly. Do not cite that ranking as settled until it has.
+   ranking was formed on invalid Vibe settings and is superseded. The corrected
+   same-book comparison now puts Qwen ahead for long-form consistency.
 
 **Why this is an entry at all:** the failure is silent. The audition renders,
 passes structural QA, and sounds like an engine problem rather than an input
@@ -302,13 +317,12 @@ listenability outrank locality, cost, memory or speed when picking an engine.
 
 ## Long-form engine shortlist — Evolving
 
-VibeVoice and Qwen remain the finalists on the full-chapter listening gate.
-The 2026-07-29 ranking of Vibe as provisional quality leader and Qwen as
-consistency leader is **not current**: all Vibe clips in that comparison used
-the now-rejected `cfg_scale=1.3` and the audition passage separately shown to
-handicap Vibe. Re-run a pinned full-chapter comparison at cfg 2.0 and 3.0 before
-ranking them. MOSS remains eliminated; Higgs remains usable but not dependable
-enough to lead.
+Qwen is the current full-precision long-form leader: its 6,166-word Yellow
+Wallpaper chapter was “really good” and remained audiobook-listenable through
+the full 33:03. The corrected Vibe cfg-2 production path used the same source
+token sequence but failed from progressive pace/prosody drift after roughly
+three minutes. Vibe's strong opening does not pass the audiobook gate. MOSS
+remains eliminated; Higgs remains usable but not dependable enough to lead.
 
 **Why:** see STATUS.md for the underlying RTF/ASR measurements and listening
 notes — this entry only tracks the current standing, not the evidence trail.
@@ -327,8 +341,8 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 |---|---|---|
 | Chatterbox Nano + Beatrice | **Accepted default** | Free local baseline. A replacement must first beat it by ear. |
 | Chatterbox Turbo + Arthur | **Accepted quality reference** | Free local but slower; retain for books where it wins the audition. |
-| VibeVoice full precision | **Finalist; ranking withheld** | Old cfg 1.3 comparisons are invalid. Grade the pinned cfg 2/3 long-form blind test, then prove the winning setting through the app path. |
-| Qwen3-TTS full precision | **Finalist** | Full chapter passed; compare against corrected Vibe under equivalent text and listening conditions. |
+| VibeVoice full precision, community fp16/SDPA single-pass path | **Rejected for audiobook production** | cfg 2.0 has a very good opening but progressively accelerates/runs on and loses intent after ~3 minutes. Reopen only for a materially different officially supported long-form path, not another seed or undocumented knob. |
+| Qwen3-TTS full precision | **Current long-form leader; not default** | Full 6,166-word chapter passed human listening and beat the corrected Vibe path for consistency. It still requires explicit free-Kaggle/local-GPU selection and book-specific auditioning. |
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 | **Unverified by ear** | Rendered accent clips exist; listen before promoting or rejecting. |

@@ -87,13 +87,16 @@ See STATUS.md for exact wall times, durations, memory and clip paths.
 The identical Arthur hard passage was rendered on a free Kaggle P100 (Higgs's
 valid full clip used three separately generated paragraphs after its single
 full-text call truncated at the first blank line). That short test advanced all
-four engines to longer listening tests. **VibeVoice and Qwen passed that gate**;
+four engines to longer listening tests. **VibeVoice and Qwen initially passed
+that gate**;
 Higgs was listenable but seed-dependent; MOSS was not a finalist. However, the
 Vibe run used the now-rejected `cfg_scale=1.3` and a passage known to handicap
 Vibe. Its old relative ranking against Qwen is therefore superseded. The
-corrected blind comparison later selected cfg 2.0 over cfg 3.0; Qwen's heard
-result remains valid, but the two have not yet been re-ranked through the same
-production path.
+corrected blind comparison later selected cfg 2.0 over cfg 3.0. The full cfg-2
+app-path file was then heard: its opening was very good, but after roughly three
+minutes it progressively accelerated, ran on and lost intent. Qwen's complete
+33:03 result remained “really good,” so Qwen now ranks above this Vibe path for
+long-form consistency.
 
 MOSS received the most corrective testing. Its first chapter used 105
 independent chunks plus 104 x 0.35 s joins, so that result was not treated as an
@@ -106,9 +109,9 @@ better for audiobooks.
 | Candidate | Chapter P100 RTF | P100 GPU hours / 12.4h book | Nominal 30h Kaggle week | Full listening result |
 |---|---:|---:|---:|---|
 | MOSS-TTS Local Transformer v1.5 | **1.245** | **15.44h** | 51.5% | Complete low-seam render, but joins/pacing/expression keep it below finalists |
-| VibeVoice 1.5B, old cfg 1.3 timing run | **2.266** | **28.10h** | 93.7% | Timing retained; quality ranking superseded. Corrected cfg 2.0 won by ear; its production HTTP path cleared the older direct arm's brief insertion. Full-file comfort and the Qwen re-rank remain open. |
+| VibeVoice 1.5B, old cfg 1.3 timing run | **2.266** | **28.10h** | 93.7% | Timing retained only. Corrected cfg 2.0 opened very well but failed audiobook listening through progressive speed/run-on drift after ~3 minutes. |
 | Higgs Audio | **1.558** | **19.32h** | 64.4% | Listenable, but one of two seeds still clipped/joined in places |
-| Qwen3-TTS | **2.056** | **25.49h** | 85.0% | **Co-finalist:** really good; strongest consistency signal |
+| Qwen3-TTS | **2.056** | **25.49h** | 85.0% | **Current full-precision long-form leader:** really good throughout; strongest consistency result |
 
 Production scaffolding mirrors the render structures: Vibe is one generation
 per chapter (six-hour HTTP ceiling); Qwen uses
@@ -122,9 +125,10 @@ copy. The Vibe app default is now the listening-selected cfg 2.0. In a pinned
 direct-versus-app focus A/B, Dave selected the corrected production path and
 the older direct arm alone inserted a brief sound at `felicity - but`; both
 prompts contained the same hyphen, so no global punctuation rewrite follows.
-Vibe is not the production narrator until the full corrected file passes the
-long-form comfort gate and is re-ranked against Qwen. Ordinary queueing has no
-paid Vast route.
+The full corrected Vibe file failed the long-form comfort gate, so Vibe is not
+the production narrator. Qwen outranks it for this role but remains an explicit
+GPU choice, not an automatic/default route. Ordinary queueing has no paid Vast
+route.
 
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage

@@ -22,8 +22,8 @@ accent-engine verdicts are dated in the table.
 | OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 | EdgeTTS accented English voices (2026-07-28) | Accents “not bad”, but all tested Chinese company names were pronounced badly; not approved for Chinese-business nonfiction without a pronunciation A/B/fix | Microsoft cloud service |
 | MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
-| Qwen3-TTS (2026-07-29) | Full chapter **“really good”** and audiobook-listenable. Strongest consistency result; 33:03, RTF 2.056, ASR similarity 0.9848. Current co-finalist. | Kaggle P100 |
-| VibeVoice 1.5B (2026-08-14 corrected app-path test) | **cfg 2.0 selected.** Dave preferred the corrected production HTTP path; the older direct cfg-2 arm inserted a brief “byah”-like sound at `felicity - but` while retaining all words. Both prompts included the same hyphen, so this is not evidence for stripping hyphens. Full-file comfort and Qwen re-ranking remain before production promotion. cfg 3.0 and 1.3 are rejected. | Kaggle P100 |
+| Qwen3-TTS (2026-08-14 final ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
+| VibeVoice 1.5B (2026-08-14 corrected app-path test) | **cfg 2.0 is the best tested Vibe setting, but the single-pass path is rejected for audiobook production.** The opening was very good; after ~3 minutes it progressively accelerated, ran on, lost intent and worsened. The older direct arm's `felicity - but` insertion was absent in the preferred app path. A separate garble after “draught” sits beside malformed shared input `draught , and`, so its cause remains open. cfg 3.0 and 1.3 are rejected. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
 | Pocket TTS / Peter Yearsley (2026-08-14) | Accepted as an opt-in book choice, not a default. The long-form body was decent/promising but uneven. On clean text, current sentence packing sounded more natural; paragraph-aware packing made intonation stranger. | CPU only (zorin) |
 | NeuTTS Air / Jo (2026-08-14) | Decent/good voice. Dave selected the normalized arm, but heard “the e order” around “the order”; retain this as a separate synthesis defect rather than a number-handling failure. | CPU only (zorin) |
@@ -123,9 +123,10 @@ full-precision Kaggle renders; long-form Q8 remains unproven.
 
 ### Full-precision production adapter boundary (2026-07-29)
 
-Both finalists are now wired as first-class engines. The shared delivery path
-is deployed and Vibe has one retained production E2E proof; the local CUDA
-images themselves still need an exact-image GPU smoke:
+Both candidates are wired as first-class explicit engines. The shared delivery
+path is deployed and Vibe has one retained structural production E2E proof.
+That proof does not override the later human rejection of Vibe's single-pass
+long-form delivery. The local CUDA images remain optional and unpromoted:
 
 - `vibevoice-tts` uses the official `microsoft/VibeVoice-1.5B` weights through
   `vibevoice-community/VibeVoice` pinned at
@@ -135,9 +136,10 @@ images themselves still need an exact-image GPU smoke:
   model card frames the release for research/R&D and warns against real-world
   use without further testing. One request is one chapter (fp16 + SDPA, DDPM
   10, deterministic seed). The selected adapter default is **CFG 2.0**. The
-  blind comparison rejected 3.0 as muffled/distant and found one brief garble
-  at 2.0, so do not call it production-approved until 2.0 passes an app-path
-  E2E and direct-upstream comparison. The community runtime
+  blind comparison rejected 3.0 as muffled/distant; the corrected cfg-2 app
+  path cleared the direct arm's local insertion but failed full-file listening
+  because pace/prosody progressively accelerated after ~3 minutes. It is not
+  production-approved. The community runtime
   also warns that only FlashAttention was fully tested and SDPA may reduce
   quality, so this backend boundary must remain visible in any verdict.
 - `qwen3-tts` uses the official Apache-2.0 `QwenLM/Qwen3-TTS` package pinned at
@@ -166,11 +168,12 @@ The retained Raven `output_format=m4b` E2E passed on 2026-07-29 as job
 Audiobookshelf copy. Generation took 440 seconds (RTF 1.218); end-to-end Kaggle
 session/poll handoff was about 15.8 minutes. Full-chapter VRAM was not logged.
 Exact-revision GHCR builds for Vibe and Qwen passed in Actions run
-`30431465911`. A later 13,666-word / ~77-minute single-pass P100 render
-reproduced the long-form capability behind #44; the GitHub issue is stale. The
-integration remains provisional pending the cfg 2.0 app-path E2E/defect check
-and an exact-image CUDA smoke. The
-accepted Yellow Wallpaper chapter RTF extrapolates to **28.10 free Kaggle GPU-h
+`30431465911`. A later 13,666-word / ~77-minute single-pass P100 render proved
+the long-form capability behind #44, but the corrected 6,166-word app-path file
+failed human listening through progressive speed/prosody drift. Issue #44 is
+therefore closed with a negative promotion verdict; an exact-image CUDA smoke
+would not change that quality decision. The Yellow Wallpaper timing run
+extrapolates to **28.10 free Kaggle GPU-h
 for Vibe** and **25.49 h for Qwen** per 12.4-hour book—93.7% and 85.0% of a
 nominal 30 h weekly allowance. LOW-COST-TTS.md's Vast figures ($2.99/$2.72) are
 scenario estimates, not billed measurements; this integration creates no paid

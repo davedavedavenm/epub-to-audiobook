@@ -101,8 +101,17 @@
 > a proven preprocessing cause. A was generated after cfg 3 in a shared loaded
 > process, while B used a fresh app server/model process, so the remaining cause
 > is generation-context instability rather than an app text-path defect. The
-> corrected app path clears the reported defect. Full-file comfort and the Qwen
-> re-rank remain open; the default does not change. No paid compute was started.
+> corrected app path clears the reported defect. Dave then heard the full B:
+> its opening was very good, but there was a local garble after “draught” and,
+> from roughly three minutes onward, the delivery became progressively faster,
+> more emotional/run-on and less intentional until it was far too fast. The
+> exact shared source contains malformed `draught , and`, so that isolated
+> glitch is not assigned to the engine without a controlled correction A/B.
+> The progressive drift rejects this exact single-pass Vibe path for audiobook
+> production. Qwen's retained 33:03 render uses the same 6,166-word/token source
+> in 105 bounded passes and was already judged “really good” throughout; Qwen
+> wins the long-form consistency re-rank. Nano/Beatrice remains default. No paid
+> compute was started.
 > The generated kernel metadata also now uses the actual Kaggle owner slug;
 > the earlier two-`dave` slug caused a false permission error while monitoring.
 
@@ -309,9 +318,11 @@
 > Both browser players reached `readyState=4`. Dave selected **B = cfg 2.0** as
 > much better and otherwise excellent, with one brief garble after “romantic
 > felicity”. **A = cfg 3.0** is rejected as muffled/distant; cfg 1.3 was already
-> rejected. Compose now defaults Vibe to 2.0. Production promotion remains open
-> only for a direct-upstream versus app-path check of B's isolated defect; the
-> completed blind-handoff monitor was removed.
+> rejected. Compose now defaults Vibe to 2.0. **Superseded by the completed
+> gate at the top of this file:** the app-path check cleared that isolated
+> insertion, but full-file listening then rejected the single-pass path for
+> progressive speed/prosody drift. The completed blind-handoff monitor was
+> removed.
 >
 > **Preview cache:** `/api/voices` now reports **88/88 configured voices ready**.
 > Four exact TADA previews were generated on the local CPU; the validated Qwen
@@ -576,8 +587,10 @@
 >    — measured in-process, so this figure is sound up to ~4 minutes of audio.
 >    See the correction below: the equivalent measurement at 77 minutes failed,
 >    so do not extrapolate this to full-length single-pass renders.
-> 6. **VibeVoice is fit for books.** Continuous real prose at 4+ minutes shows
->    essentially no drift. Nothing here argues against rendering full chapters.
+> 6. **Superseded 2026-08-14:** the 4-minute acoustic result did not predict
+>    audiobook comfort. The corrected 22:39 app-path file became progressively
+>    fast and run-on after roughly three minutes and was rejected by ear. This
+>    exact single-pass path is not fit for books.
 >
 > **Suspected mechanism, NOT yet confirmed:** the audition render forced
 > `modern=True`, which leaves bare digit strings in the text (`3400`, `230000`,
@@ -662,9 +675,10 @@
 > short-sample Vibe peaks remain 5.166–5.299 GiB allocated / 5.604–5.607 GiB
 > reserved. Exact-revision GHCR builds passed for both finalist images (Actions
 > run `30431465911`). The later 77-minute single-pass run answered #44's
-> capability question; promotion still requires the corrected cfg 2/3 verdict,
-> an app-path E2E at the winning setting, and an exact-image CUDA smoke test.
-> Default rendering remains local/free Chatterbox Nano. Vast cost numbers remain
+> capability question. **Current correction:** cfg 2.0 won the setting test and
+> passed the app path structurally, but the full output failed human listening
+> through progressive pace/prosody drift; no exact-image smoke can promote that
+> quality result. Default rendering remains local/free Chatterbox Nano. Vast cost numbers remain
 > estimates; no Vast instance was created and no integration code rents one.
 
 > ## Local Q8 listening verdict (2026-07-29) — BOTH SHORT CLIPS PASS
@@ -694,8 +708,9 @@
 
 > ## MOSS / Qwen / VibeVoice / Higgs audiobook verdict (2026-07-29)
 >
-> **Historical snapshot:** the Vibe-vs-Qwen ranking below is superseded by the
-> cfg 1.3 discovery above; the individual listening quotes remain evidence.
+> **Historical snapshot:** the Vibe-vs-Qwen ranking below is superseded first by
+> the cfg 1.3 discovery and finally by the corrected cfg-2 app-path rejection at
+> the top of this file; the individual listening quotes remain evidence.
 >
 > **VibeVoice and Qwen pass the full-chapter listening gate.** Qwen was “really
 > good”; Vibe was equally good and possibly better because it was more
@@ -1152,7 +1167,7 @@ can drive, and self-service configuration.
 
 | Issue | Kind | What | State |
 |---|---|---|---|
-| [#44](../../issues/44) | enhancement | Evaluate VibeVoice 90-minute single-pass rendering | Open / Kernel Verified |
+| [#44](../../issues/44) | enhancement | Evaluate VibeVoice 90-minute single-pass rendering | Closed / capability proved, audiobook promotion rejected by ear |
 | [#45](../../issues/45) | enhancement | Persistent voice-sample play/pause across tabs and menus | Closed |
 | [#41](../../issues/41) | enhancement | Automatically re-render chunks that fail ASR | Closed |
 | [#42](../../issues/42) | enhancement | Article RSS and Telegram link capture | Closed |

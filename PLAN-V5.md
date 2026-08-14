@@ -129,7 +129,13 @@ preservation**. Nano and Turbo are English-only agent models. See VOICES.md.
       direct A inserted a brief sound at `felicity - but` while retaining the
       words. The prompts, including the hyphen, were byte-identical, so no
       punctuation rewrite is justified. The production path clears the defect.
-- [ ] 9.4 Re-rank the corrected Vibe path against Qwen on the same text.
+- [x] 9.4 Re-rank the corrected Vibe path against Qwen on the same text. The
+      full cfg-2 app-path file opened very well, but after roughly three minutes
+      became progressively faster, more run-on and less intentional. Qwen's
+      retained 33:03 render of the same 6,166-word source remained “really
+      good” and audiobook-listenable. Qwen wins the long-form consistency gate;
+      Vibe single-pass is not promoted. The isolated garble after “draught” is
+      kept separate because both inputs contain malformed `draught , and` text.
 
 ## 10. Public onboarding and support
 

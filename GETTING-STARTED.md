@@ -195,12 +195,13 @@ but when you want the best result:
   gates passed for optional use; current sentence packing remains because it
   beat/tied paragraph-aware packing. Neither replaces Beatrice/Nano or becomes
   an automatic fallback. Every offered preset is cached before it appears.
-- **VibeVoice / Qwen3-TTS finalists** — GPU-only local profiles or explicit
-  free-Kaggle render targets. VibeVoice's pinned long-form listening winner is
-  `cfg_scale=2.0`; the isolated garble in the winning clip keeps production
-  promotion open until the exact app path is checked. Starting a Compose
-  profile assumes a GPU is already attached; it never rents one. See
-  [ENGINES.md](ENGINES.md) for runtime/licence and measured-hour boundaries.
+- **Qwen3-TTS / VibeVoice GPU candidates** — GPU-only local profiles or
+  explicit free-Kaggle render targets. Qwen is the current full-precision
+  long-form leader. The tested VibeVoice cfg-2 single-pass path opened very
+  well but progressively accelerated after about three minutes and is not
+  approved for books. Starting either Compose profile assumes a GPU is already
+  attached; it never rents one. See [ENGINES.md](ENGINES.md) for the exact
+  rejection boundary, runtime/licence and measured-hour limits.
 
 Which sounds best depends on the book. Trust your ears. Automated transcription
 can detect missing or repeated speech, but it cannot tell you whether a voice
