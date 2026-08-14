@@ -248,6 +248,12 @@ def test_every_converter_command_carries_engine_text_profile():
     assert "_TEXT_PROFILE == 'legacy'" in converter
 
 
+def test_standalone_sampler_cannot_bypass_cpu_candidate_text_profile():
+    sampler = (ROOT / 'scripts' / 'sample.sh').read_text(encoding='utf-8')
+    assert 'pocket_*|kitten_*) TEXT_PROFILE="explicit"' in sampler
+    assert '--text-profile "$TEXT_PROFILE"' in sampler
+
+
 def test_play_button_never_starts_cold_voice_synthesis():
     """Auditions are an immediate persisted-cache read, never a hidden render."""
     route = APP[APP.index("@app.route('/api/preview/<voice_id>')"):
