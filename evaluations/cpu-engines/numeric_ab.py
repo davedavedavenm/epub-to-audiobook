@@ -30,10 +30,14 @@ def selected_text():
         text = RAW_TEXT
     else:
         sys.path.insert(0, str(REPO_ROOT / 'webapp'))
-        from tts_preprocess import normalize_text_for_tts
+        import tts_preprocess
+        if not tts_preprocess.HAS_NUM2WORDS:
+            raise RuntimeError(
+                'normalized A/B arm requires the app-pinned num2words dependency'
+            )
         # These candidates are not yet admitted as modern engines. This is the
         # exact deterministic path an unclassified engine receives in the app.
-        text = normalize_text_for_tts(RAW_TEXT, modern=False)
+        text = tts_preprocess.normalize_text_for_tts(RAW_TEXT, modern=False)
     return text, f'evaluations.cpu-engines.numeric_ab.{arm}', arm
 
 

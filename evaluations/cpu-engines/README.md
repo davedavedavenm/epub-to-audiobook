@@ -52,6 +52,8 @@ fixed:
 - `raw`: byte-identical symbols/digits sent through the official API.
 - `normalized`: the repo's deterministic unclassified-engine preprocessing,
   including spoken years, ordinals, percentages, large numbers and currencies.
+  Every image pins the app's `num2words==0.5.14`; the harness fails rather than
+  silently returning digits if that dependency is missing.
 
 Run one engine and one arm at a time so the product remains responsive:
 
