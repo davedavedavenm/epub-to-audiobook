@@ -24,10 +24,12 @@
 > only in the ignored evaluation manifest. No production engine/default or GPU
 > setting changed.
 >
-> **Live handoff:** full-stack deployment `425de55` completed with matching
-> healthy webapp/worker revision. The Voices page puts the diagnostic card
-> first and labels only A/B; a real browser at 780×493 loaded all eight players
-> at `readyState=4` with their expected durations and no media errors. Every
+> **Live handoff:** full-stack deployment `f04cbd5` completed with matching
+> healthy webapp/worker revision. The Voices page puts the completed diagnostic
+> first, identifies the selected normalized arms and surfaces the official
+> inventory without offering uncached Play buttons. A real browser at 780×493
+> loaded all eight evidence players at `readyState=4` with their expected
+> durations and no media errors. Every
 > internal sample URL returned `200` with the validated byte count. A fresh
 > request to `https://audio.magnusfamily.co.uk` correctly redirected to
 > Pangolin SSO; authenticated users reach this same deployed app. The source
