@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-14 conversion history + ABS provenance audit — CODE VERIFIED; LIVE DEPLOY PENDING
+> ## 2026-08-14 conversion history + ABS provenance audit — DEPLOYED / LIVE VERIFIED
 >
 > History now presents completed **books and articles together**, newest first,
 > with actual narrator/engine, completion time and ABS state. Completed articles
@@ -11,30 +11,39 @@
 > speed while navigating. Batch APIs reject independent engine overrides:
 > selecting a cached narrator selects its engine.
 >
-> **Proof so far:** Python/JS parse, Ruff and the full local suite pass: **264
+> **Proof:** Python/JS parse, Ruff and the full local suite pass: **264
 > tests**, including direct-vs-ZIP delivery, safe deletion failure, article
 > episode ownership, voice/engine binding, persistent navigation and chapter
-> advancement. Live browser/deletion-path verification is still pending; no ABS
-> media was deleted during this audit.
+> advancement. Full-stack deploy `865aff4` reports webapp and worker healthy at
+> the exact same revision. In the live browser an article advanced from 0:14 to
+> 0:25 while navigating History → Home, and then closed normally. Live response
+> headers prove a one-track article downloads as `audio/mpeg` while the 21-track
+> Bond render downloads as `application/zip`. The delete controls and confirmation
+> copy render live; the destructive ABS path was deliberately not exercised and
+> no ABS media was deleted during this verification.
 >
-> **Current ABS provenance (live, 19 audiobook entries):** three folders are
+> **Current ABS provenance (live after cleanup, 18 audiobook entries):** three folders are
 > identifiable as app-generated: *The Bond King* `592af51b` (Kokoro/Fable), its
 > duplicate `59d36718` (Kokoro/Fable), and *Breakneck* `a3481358`. The two Bond
 > folders still match current job records; *Breakneck* is a historical render
-> whose job row is no longer present. The other 16 entries are acquired audio,
+> whose job row is no longer present. The other 15 entries are acquired audio,
 > not TTS renders. There is no automatic library-to-
 > conversion cron or timer now; Zorin only has the 15-minute ebook-library rsync,
 > `GPU_RENDER_ENABLED=0`, and autoscaling is disabled. The two Bond jobs were
 > created separately on 11 August; evidence cannot identify the caller, so they
 > must not be attributed to Dave.
 >
-> **Acquisition defect:** LazyLibrarian accepted raw release `10-27-weingarten`
+> **Acquisition defect — corrected 2026-08-14:** LazyLibrarian accepted raw release `10-27-weingarten`
 > as Gene Weingarten's *One Day*. The delivered MP3 is 51:07, while Penguin
 > Random House documents the unabridged audiobook as **11h 51m**. It is a wrong
-> discussion/interview release, not an app conversion. Separately, *A Little
-> History of the World* contains an unrelated *Apple in China* M4B beside its
-> correct audio. Both remain live pending controlled acquisition cleanup and a
-> pre-import guard in the sibling `infra` repo.
+> discussion/interview release, not an app conversion. The sibling `infra` repo
+> now deploys a documented LazyLibrarian pre-import guard; the exact bad file was
+> held with exit 42 in production, its native history row is Failed, and the ABS
+> folder is in recoverable quarantine. *One Day* is AudioBook Wanted after a fresh
+> search found no credible replacement. The unrelated duplicate *Apple in China*
+> M4B was also removed from the Gombrich folder to quarantine while its correct
+> standalone ABS item remains. Final acquisition health and effect-level checks
+> pass every assertion.
 
 > ## 2026-08-14 GitHub Actions image-build failures — REPAIRED / VERIFIED GREEN
 >
