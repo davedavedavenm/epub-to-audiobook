@@ -1,6 +1,6 @@
 # Voices and accents
 
-**Last updated: 2026-08-14.** What works, what does not, and the wrong turns —
+**Last updated: 2026-08-15.** What works, what does not, and the wrong turns —
 recorded so nobody walks back down them. Every claim here was heard or measured,
 not reasoned about; where something is untested it says so.
 
@@ -111,9 +111,10 @@ sound the same with a different accent. They are different models and inference
 paths: Turbo is a 350M English model with `inference_turbo`; V3 is a 500M
 multilingual model with a language-aware tokenizer and CFG sampling. The gate
 also replaced Arthur's clean human reference with synthetic references: Irish
-from the subsequently rejected Piper path, Australian and South African from
-Edge. It therefore changed model, speaker/reference quality and settings at
-once—not merely accent.
+was generated through the subsequently rejected Piper path; South African is
+verified as decoded Edge output; Australian is synthetic but the retained
+evidence cannot prove whether Edge or Piper produced it. It therefore changed
+model, speaker/reference quality and settings at once—not merely accent.
 
 The exact V3 gate is rejected, but assigning every defect to V3 would overstate
 the evidence. The harness forced `cfg_weight=0`; official V3 defaults to `0.5`
@@ -122,13 +123,22 @@ target-language mismatch. Every reference here was English and the requested
 language was `en`. Only a same-text, same-human-reference Turbo/V3 A/B at
 official defaults can isolate model quality; accent transfer is a separate gate.
 
+The reference audit found two honest free/local follow-ups that the rejected
+gate never tried: human Irish narrator `tadhg_hynes.wav` (18 s, LibriVox) and
+human Australian VCTK speaker p374 (18 s, official VCTK 0.92, CC BY 4.0).
+Neither has passed V3 by ear. There is **no human South African reference** in
+the repo, live stack or retained Git history; do not recycle the Edge clip.
+
 The practical online path worth testing next is Microsoft's supported Azure
 Speech API rather than the unofficial `edge-tts` interface. Azure's official
-catalogue includes native `en-AU` voices and `en-IE-ConnorNeural` /
-`en-IE-EmilyNeural`; its supported SSML phonemes and custom lexicon address the
-proper-name failure directly. The F0 tier includes 0.5 million Standard Neural
-characters per month. This is a candidate, not an approval or authority to
-spend: measure book characters and obtain Dave's listening verdict first.
+catalogue currently includes 15 GA `en-AU` voices, `en-IE-ConnorNeural` /
+`en-IE-EmilyNeural`, and `en-ZA-LeahNeural` / `en-ZA-LukeNeural`. Its supported
+SSML `<say-as>`, IPA phonemes, substitutions and custom lexicons directly
+address the number, currency and proper-name failures. The F0 tier includes
+0.5 million Neural characters per month, no batch API and a 20-transaction/min
+limit. The checked UK South S0 rate is about GBP11.36/million characters (about
+GBP6.82 for 600k), above this repo's normal target. Azure therefore remains an
+optional F0 listening candidate, not an approval or authority to spend.
 
 Official references: [Chatterbox](https://github.com/resemble-ai/chatterbox),
 [Azure language/voice catalogue](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support),

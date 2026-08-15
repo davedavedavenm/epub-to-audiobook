@@ -49,7 +49,9 @@ average pronunciation and badly failed numbers. Do not expose these voices.
 
 That verdict does **not** establish that V3 itself caused every defect. The gate
 changed model family, reference and inference settings at once: V3 instead of
-Turbo; synthetic Piper/Edge references instead of Arthur's human narration;
+Turbo; synthetic references instead of Arthur's human narration (Irish was
+Piper-generated, South African was verified Edge-derived, and Australian's
+exact synthetic vendor is unverified);
 and `cfg_weight=0` instead of V3's official same-language default `0.5`. The
 repo's earlier claim that zero CFG generally lets a same-language reference
 accent through was an unsupported inversion of upstream's cross-language

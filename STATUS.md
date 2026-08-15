@@ -11,7 +11,9 @@
 > 350M English Turbo architecture and a clean human narration reference. These
 > clips used the separate 500M Multilingual V3 model, a language-aware tokenizer
 > and CFG generation. Irish was conditioned on speech synthesized by the later-
-> rejected Piper path; Australian and South African used Edge-generated speech.
+> rejected Piper path; South African is verified Edge-derived; Australian is
+> synthetic but its exact generating vendor cannot be proved from retained
+> evidence.
 > The harness also forced `cfg_weight=0` while V3's official same-language
 > default is `0.5`. Official zero-CFG advice is for a reference-language versus
 > target-language mismatch; every reference here and `language_id` were English.
@@ -22,6 +24,12 @@
 > `exaggeration=0.5`; `cfg_weight=0`. The exact tested path is rejected. Cause
 > remains divided among model, synthetic reference quality and the unjustified
 > setting until a same-text/same-human-reference official-default A/B is heard.
+>
+> A subsequent reference audit found genuine human candidates that this gate
+> never used: Irish narrator `tadhg_hynes.wav` and Australian VCTK p374. No
+> human South African reference exists locally or in retained history. The
+> reproducible Arthur baseline and those two accent follow-ups are open; the
+> rejected synthetic-reference outputs remain closed.
 
 > ## 2026-08-14 regional-accent direction — LISTENING VERDICT RECORDED
 >

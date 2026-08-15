@@ -11,7 +11,14 @@ COPY requirements.txt .
 # Melo imports its Japanese cleaner even for English. Its setup hook is
 # skipped when pip builds a wheel, so reproduce the vendor Dockerfile's
 # explicit dictionary install or MeCab fails before the English model loads.
+# PyTorch's official old-version command deliberately replaces PyPI with its
+# CPU wheel index.  Install this ordinary PyPI dependency first so a newly
+# published typing-extensions release on the PyTorch index cannot make an old,
+# otherwise reproducible image fail while resolving unrelated build tooling.
 RUN pip install --no-cache-dir \
+      --index-url https://pypi.org/simple \
+      typing-extensions==4.12.2 \
+    && pip install --no-cache-dir \
       torch==2.1.2 torchaudio==2.1.2 \
       --index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt \

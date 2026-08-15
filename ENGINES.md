@@ -235,19 +235,22 @@ Sources: [HumeAI/tada GitHub](https://github.com/HumeAI/tada) ·
 
 Source: [resemble-ai/chatterbox GitHub](https://github.com/resemble-ai/chatterbox) (MIT)
 
-- **Official pacing/expressiveness controls** (the ONLY supported ones):
+- **Official pacing/expressiveness controls for original Chatterbox and
+  Multilingual V3** (the ONLY supported ones on those families):
   - `cfg_weight` — default **0.5** ("works well for most prompts");
     **lower (~0.3) improves pacing**, suits expressive/dramatic delivery.
   - `exaggeration` — default **0.5**; higher (~0.7+) **speeds speech up**;
     pair higher exaggeration with lower cfg_weight for slower, more
     deliberate delivery.
-  - Wired in `chatterbox/server.py` via `CHATTERBOX_EXAGGERATION` /
+  - Forwarded by `chatterbox/server.py` via `CHATTERBOX_EXAGGERATION` /
     `CHATTERBOX_CFG_WEIGHT` env + per-request overrides (2026-07-09).
   - The OpenAI-style `speed` field is NOT a Chatterbox parameter — our
     servers ignore it (see issue tracker).
 - **Turbo (350M, English-only)**: "lower compute and VRAM", built for
   low-latency agents but "excels at narration"; supports paralinguistic tags
-  `[cough]`, `[laugh]`, `[chuckle]`.
+  `[cough]`, `[laugh]`, `[chuckle]`. In the exact pinned Turbo source,
+  `generate()` warns that CFG and exaggeration are unsupported and ignored;
+  do not present V3's CFG lever as a Turbo tuning control.
 - **Reference clip**: examples use a ~10s clip; no official length/quality
   spec beyond that.
 - **No documented text-length limit or long-form mode.** Chunking is ours.

@@ -9,6 +9,7 @@ name: Build engine images
 #   ghcr.io/davedavedavenm/epub-to-audiobook-tada:latest
 #   ghcr.io/davedavedavenm/epub-to-audiobook-vibevoice:latest
 #   ghcr.io/davedavedavenm/epub-to-audiobook-qwen3:latest
+#   ghcr.io/davedavedavenm/epub-to-audiobook-melotts:latest
 
 on:
   push:
@@ -18,6 +19,7 @@ on:
       - 'tada/**'
       - 'vibevoice/**'
       - 'qwen3/**'
+      - 'melotts/**'
       - '.github/workflows/build-engines.yml'
   workflow_dispatch: {}
 
@@ -78,6 +80,9 @@ jobs:
           fi
           if grep -Eq '^(qwen3/|chatterbox/voices/|\.github/workflows/build-engines\.yml$)' <<<"$changed_files"; then
             add_engine qwen3 . ./qwen3/Dockerfile
+          fi
+          if grep -Eq '^(melotts/|\.github/workflows/build-engines\.yml$)' <<<"$changed_files"; then
+            add_engine melotts ./melotts ./melotts/Dockerfile
           fi
 
           echo "matrix=$(jq -cn --argjson include "$include" '{include: $include}')" >> "$GITHUB_OUTPUT"

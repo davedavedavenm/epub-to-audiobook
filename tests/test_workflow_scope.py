@@ -23,6 +23,17 @@ def test_chatterbox_installs_the_official_matched_cuda_pair():
     assert "https://download.pytorch.org/whl/cu124" not in dockerfile
 
 
+def test_melotts_build_is_reproducible_and_ci_covered():
+    dockerfile = (ROOT / "melotts/Dockerfile").read_text()
+    workflow = (ROOT / ".github/workflows/build-engines.yml").read_text()
+
+    assert "typing-extensions==4.12.2" in dockerfile
+    assert "torch==2.1.2 torchaudio==2.1.2" in dockerfile
+    assert "--index-url https://download.pytorch.org/whl/cpu" in dockerfile
+    assert "- 'melotts/**'" in workflow
+    assert "add_engine melotts ./melotts ./melotts/Dockerfile" in workflow
+
+
 def test_workflows_do_not_use_deprecated_node20_action_majors():
     workflows = "\n".join(
         path.read_text() for path in (ROOT / ".github/workflows").glob("*.yml")
