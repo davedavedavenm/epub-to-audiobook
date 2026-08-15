@@ -1,5 +1,26 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-15 controlled Chatterbox gate — VERIFIED / AWAITING DAVE
+>
+> Five same-text, seeded CPU renders now exist under the ignored evidence bundle
+> `scratch/chatterbox-control/20260815T073048Z`. The source is the exact deployed
+> 182-word hard passage (1,015 UTF-8 bytes; SHA-256 `9a4b6bd1f48b6f745f53ceb284306b3d57488fe565af9736b9f4d47e3fffe083`).
+> Every MP3 has one 24 kHz mono stream, passed full `ffmpeg` decode, and its
+> downloaded local copy matches the recorded hash:
+>
+> | Arm | Duration | Bytes | SHA-256 |
+> |---|---:|---:|---|
+> | Arthur / Turbo | 76.344 s | 1,221,548 | `39de9fd7fed84b959f1a2637700117b1518da5c493c565e943837f1f45030585` |
+> | Arthur / V3 / CFG 0 | 79.896 s | 1,278,380 | `be231c65f24f03725daeff930bda04a0e6c29b197686affbdb30d289d2adc4f7` |
+> | Arthur / V3 / CFG 0.5 | 69.984 s | 1,119,788 | `6e8fc2dbde97f3c192964d25f82f496a79745c762ca1371b50871bea47dbd049` |
+> | Human Irish Tadhg / V3 / CFG 0.5 | 59.688 s | 955,052 | `5c747db407e5058bb1e90bcab39801399c19b90ef6c62edab91ddb5977a442ac` |
+> | Human Australian VCTK p374 / V3 / CFG 0.5 | 71.064 s | 1,137,068 | `a4c568ae3331aab080c579a503454ae25b186fb411dd1d4c55f8fa445c4396b9` |
+>
+> The product-health monitor recorded zero errors and no health request slower
+> than 0.05 s while synthesis ran. These are **not production-approved** until
+> Dave hears them. The temporary p374 runtime copy was removed after validation;
+> its immutable retained Git LFS object remains available.
+
 > ## 2026-08-15 Chatterbox V3 regional gate — HEARD / EXACT PATH REJECTED
 >
 > Dave heard all three: Australian accent was okay, Irish was totally off, and

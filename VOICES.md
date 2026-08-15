@@ -126,7 +126,9 @@ official defaults can isolate model quality; accent transfer is a separate gate.
 The reference audit found two honest free/local follow-ups that the rejected
 gate never tried: human Irish narrator `tadhg_hynes.wav` (18 s, LibriVox) and
 human Australian VCTK speaker p374 (18 s, official VCTK 0.92, CC BY 4.0).
-Neither has passed V3 by ear. There is **no human South African reference** in
+Both were rendered through seeded V3 at the official same-language default on
+2026-08-15 and passed structural validation, but neither has passed V3 by ear.
+There is **no human South African reference** in
 the repo, live stack or retained Git history; do not recycle the Edge clip.
 
 The practical online path worth testing next is Microsoft's supported Azure

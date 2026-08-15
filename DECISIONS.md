@@ -55,9 +55,11 @@ exact synthetic vendor is unverified);
 and `cfg_weight=0` instead of V3's official same-language default `0.5`. The
 repo's earlier claim that zero CFG generally lets a same-language reference
 accent through was an unsupported inversion of upstream's cross-language
-mismatch advice. Reopen V3 only for a controlled same-text, same-human-reference
-Turbo-vs-V3 comparison at official defaults, followed by a separately controlled
-accent/reference test. Do not manufacture more labels and call them accents.
+mismatch advice. The required same-text seeded Arthur Turbo/V3 controls and
+separate human Irish and Australian reference arms were rendered and
+structurally verified on 2026-08-15. They remain **open pending Dave's listening
+verdict**; rendering is not approval. Do not expose them or manufacture more
+labels and call them accents.
 
 The next supported online comparison is Azure Speech's native regional voices
 with its documented SSML phoneme/custom-lexicon controls. Its free allowance

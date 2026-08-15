@@ -5,7 +5,7 @@ and the honest record of incidents found during hardening. **This file is the
 runbook; current forward work belongs in PLAN-V5.md and current evidence in
 STATUS.md.**
 
-## Current live baseline — 2026-08-13
+## Current live baseline — 2026-08-15
 
 - `epub-to-audiobook-worker` is **running and healthy**, with `OOMKilled=false`
   and exit code 0. The earlier “down after exit 137 on 3 August” report is
@@ -18,6 +18,14 @@ STATUS.md.**
   labels and direct output/file checks; do not infer it from this dated note.
 - Preview readiness is measured through `/api/voices`. `configured_ready` must
   equal `configured_total` before claiming every offered voice is cached.
+- The 2026-08-15 deploy exposed a MeloTTS rebuild failure when the official
+  PyTorch CPU index supplied a new ancillary `typing-extensions` package whose
+  source build dependency was unavailable on that index. The Dockerfile now
+  installs a pinned PyPI copy before the official PyTorch 2.1.2 CPU command,
+  and changed Melo images are built in CI. CI and the live Melo rebuild passed.
+  Web, worker and enabled CPU engines were then recreated; `/api/health`
+  reported overall `ok` at app revision
+  `9dcff344cdd935089887e56db76f88b7238603a0`.
 
 ## 2026-07-26 — Revoked Evolution notification key repaired
 
