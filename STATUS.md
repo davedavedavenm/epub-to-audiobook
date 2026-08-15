@@ -43,6 +43,21 @@
 > pins `HttpRetryOptions(attempts=1)`. The next spend-controlled gate is one
 > resumable **8–10 minute** passage, only after Dave hears the exact cached
 > preview. Free quota feasibility remains unknown until that bounded run.
+>
+> Dave approved the exact cached preview as “very good”. The first bounded
+> long-form attempt used a 1,644-word, complete-paragraph public-domain excerpt
+> from *The Yellow Wallpaper* (source SHA-256
+> `99675d31a06db51ee0cba5eab7e3b9f7199ac01ec98023c8ca95a3f551ba800e`,
+> excerpt SHA-256
+> `b8e27d17adcaab3c68f19ce5e66ed3c8a9699ecd0afe55f416295be6e1652a86`).
+> The production 2,200-character paragraph pack produced five planned requests.
+> Request one returned upstream HTTP 503 `service_unavailable`; Google’s live
+> metrics record one Free Tier request and **zero output tokens**. No passage was
+> cached, no second request was sent, and the app remained responsive. Google’s
+> official error reference defines 503 as temporary overload/down and recommends
+> waiting before retrying. The listening gate therefore remains **open**, not
+> failed and not passed; resume must be a later explicit action, never an
+> automatic retry.
 
 > ## 2026-08-15 Azure Speech access — F0 LIVE / SYNTHESIS PAUSED
 >

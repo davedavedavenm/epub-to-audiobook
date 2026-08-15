@@ -54,6 +54,13 @@ STATUS.md.**
   full decode passed, preview endpoint bytes matched, and voice cache was
   `118/118`. Do not regenerate it: the explicit Settings action is now a cache
   hit.
+- First long-form gate attempt (2026-08-15): the first of five planned passages
+  returned upstream HTTP 503 after one attempt. Cloud Monitoring showed one
+  Free Tier request and zero output tokens. There was no cache file and no
+  follow-on request. Per Google’s official API error contract, treat 503 as
+  temporary service overload/down: leave the job stopped and resume manually
+  later. Do not convert this into an automatic retry loop, because every failed
+  attempt consumes the project’s ten-request daily allowance.
 
 ## 2026-07-26 — Revoked Evolution notification key repaired
 
