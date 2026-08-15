@@ -21,8 +21,20 @@
 > supplies one to three exact live GA IDs. Its default total character ceiling
 > is 1,000, it refuses duplicate voices and an output directory already holding
 > MP3s, and it never promotes the resource off F0. Unit/regression coverage pins
-> those limits. **No more Azure synthesis is authorised until the exact short
-> text and shortlist are agreed first.**
+> those limits.
+>
+> Dave then explicitly approved one voice per accent. The focused gate used one
+> 300-character normalized passage and exactly three requests (900 characters,
+> 0.18% of F0): Australian `en-AU-DarrenNeural` 16.344 s / 326,880 bytes /
+> SHA-256 `ecc56c462a95c92f317f084f5b0427fa46670e3333fd5338e0c3bcbb9718d4cf`;
+> Irish `en-IE-ConnorNeural` 17.856 s / 357,120 bytes /
+> `943ea74de4511ac696f880c44a511c543010e941425a0fe51abbaa327a475d00`;
+> and South African `en-ZA-LukeNeural` 16.176 s / 323,520 bytes /
+> `62f1be8f84f11aacb66af93a9fd1a985efe53cdcefc51c2cf059dae2d62fb17a`.
+> All three are 24 kHz mono MP3s, fully decoded locally and match their manifest
+> hashes. Estimated cumulative F0 synthesis text is now 8,894 characters
+> (1.7788%); subscription-credit use remains $0. They await Dave's listening
+> verdict. No additional Azure synthesis is authorised by this gate.
 
 > ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
 >

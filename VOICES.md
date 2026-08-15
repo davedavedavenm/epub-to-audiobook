@@ -155,6 +155,14 @@ character ceiling, and refuses an output directory containing an MP3. Do not
 make another Azure synthesis request without agreeing the exact shortlist and
 text first.
 
+Dave then approved a 300-character, three-request gate using the same normalized
+text for `en-AU-DarrenNeural`, `en-IE-ConnorNeural` and `en-ZA-LukeNeural`.
+All three clips decode completely and match their evidence hashes; they await
+his listening verdict. That approved run used an estimated 900 additional F0
+characters, bringing estimated cumulative synthesis text to 8,894 characters
+(1.7788% of the monthly allowance) and did not authorise any further request or
+an app integration.
+
 Official references: [Chatterbox](https://github.com/resemble-ai/chatterbox),
 [Azure language/voice catalogue](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support),
 [Azure pronunciation controls](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation),
