@@ -17,7 +17,9 @@ import re
 import glob
 import logging
 import gc
+import random
 import threading
+from contextlib import contextmanager
 
 import numpy as np
 import soundfile as sf
@@ -98,6 +100,37 @@ def _chunk(text: str):
     return chunks or [text]
 
 
+@contextmanager
+def _request_rng(seed: int | None):
+    """Temporarily pin RNGs for a reproducible evaluation request.
+
+    PyTorch 2.6's reproducibility guide requires seeding PyTorch, Python and
+    NumPy when libraries may draw from each.  Preserve every prior state so a
+    diagnostic request never changes the randomness of later production work.
+    Determinism is only claimed for the same runtime/device, as PyTorch's guide
+    explicitly does not guarantee it across releases or platforms.
+    """
+    if seed is None:
+        yield
+        return
+
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    torch_state = torch.get_rng_state()
+    cuda_states = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+    try:
+        random.seed(seed)
+        np.random.seed(seed % (2**32))
+        torch.manual_seed(seed)
+        yield
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        torch.set_rng_state(torch_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
+
+
 # Official Chatterbox generation controls (resemble-ai/chatterbox README):
 #   exaggeration (default 0.5) — expressiveness; higher (~0.7+) speeds speech up.
 #   cfg_weight   (default 0.5) — "lower values (~0.3) improve pacing"; pair
@@ -116,6 +149,8 @@ class SpeechReq(BaseModel):
     # optional per-request overrides of the official controls
     exaggeration: float | None = None
     cfg_weight: float | None = None
+    # Evaluation/debug only. The app does not send this for production jobs.
+    seed: int | None = None
 
 
 @app.on_event("startup")
@@ -131,6 +166,7 @@ def health():
             "cuda_available": torch.cuda.is_available(),
             "torch": torch.__version__,
             "torch_cuda": getattr(torch.version, "cuda", None),
+            "chunk_chars": CHUNK_CHARS,
             "voices": list(_voice_paths)}
 
 
@@ -165,7 +201,7 @@ def speech(req: SpeechReq):
     model = _get_model()
     pieces = []
     with _GEN_LOCK:
-        with torch.inference_mode():
+        with _request_rng(req.seed), torch.inference_mode():
             exag = req.exaggeration if req.exaggeration is not None else EXAGGERATION
             cfgw = req.cfg_weight if req.cfg_weight is not None else CFG_WEIGHT
             for chunk in _chunk(req.input):

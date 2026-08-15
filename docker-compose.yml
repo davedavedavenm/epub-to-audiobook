@@ -174,8 +174,9 @@ services:
     environment:
       - CHATTERBOX_MULTILINGUAL_V3=1
       - CHATTERBOX_CHUNK_CHARS=${CHATTERBOX_CHUNK_CHARS:-280}
-      # Low CFG gives the reference accent the strongest chance to survive.
-      - CHATTERBOX_CFG_WEIGHT=${CHATTERBOX_V3_CFG_WEIGHT:-0}
+      # Official same-language default. cfg=0 is upstream's mitigation for a
+      # reference/target LANGUAGE mismatch, not a general accent-strength knob.
+      - CHATTERBOX_CFG_WEIGHT=${CHATTERBOX_V3_CFG_WEIGHT:-0.5}
       - NUMBA_CACHE_DIR=/tmp/numba
     volumes:
       - chatterbox-cache:/data/hf
