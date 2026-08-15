@@ -54,10 +54,13 @@
 > It is 71.064 s / 1,137,068 bytes / 24 kHz mono MP3, passed full decode, and
 > the downloaded handoff copy matches SHA-256
 > `6446f882879b68f24ddb01d65e7d2b9c61dd33389b5219d21eb9551e459f1ddb`.
-> The exact source and manifest accompany the clip. This is structural proof,
-> not a quality result: Dave has not heard it yet, and production preprocessing
-> remains unchanged pending his separate verdict on numbers, Huawei, ordinary
-> words, and Arthur likeness.
+> The exact source and manifest accompany the clip. Dave's first listening
+> verdict is that this voice is **much improved**. Because the engine, Arthur
+> reference and hard passage were retained while the numeric forms were
+> expanded, this establishes text preparation as a material cause of the first
+> arm's failure. It does not by itself approve the remaining Huawei/ordinary-word
+> pronunciation or make Turbo the production default. Production preprocessing
+> remains unchanged until that narrower acceptance decision is made.
 
 > The corrected repo commit `8f2e6fd266c8424c0ccb699840235267d5cb77f8` is live on
 > both webapp and worker; `/api/health` reports overall `ok`, the queue is
