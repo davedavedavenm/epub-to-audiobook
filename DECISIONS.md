@@ -56,10 +56,20 @@ and `cfg_weight=0` instead of V3's official same-language default `0.5`. The
 repo's earlier claim that zero CFG generally lets a same-language reference
 accent through was an unsupported inversion of upstream's cross-language
 mismatch advice. The required same-text seeded Arthur Turbo/V3 controls and
-separate human Irish and Australian reference arms were rendered and
-structurally verified on 2026-08-15. They remain **open pending Dave's listening
-verdict**; rendering is not approval. Do not expose them or manufacture more
-labels and call them accents.
+separate human Irish and Australian reference arms were rendered, structurally
+verified and heard on 2026-08-15. **All five were rejected.** Turbo/Arthur did
+not reliably reproduce the previously liked Arthur character and stumbled on
+ordinary words, proper nouns and numbers. Both Arthur/V3 settings were poor;
+the human Irish and Australian references did not rescue accent or
+pronunciation. Close this local V3 accent route and do not expose the candidates.
+
+The hard passage also exposed an independent input failure: the modern-engine
+contract passed currency, percentages and large integers as raw symbols/digits.
+The verdict rejects the outputs; it does not prove how much of the numeric
+failure belongs to Chatterbox versus that payload. A numeric-only normalized
+Arthur control is the one justified diagnostic. It must be heard before
+changing production preprocessing or restoring Arthur as an unconditional
+quality reference.
 
 The next supported online comparison is Azure Speech's native regional voices
 with its documented SSML phoneme/custom-lexicon controls. Its free allowance
@@ -92,6 +102,26 @@ quality still requires Dave's listening verdict.
 **Why:** repeated sessions spent time rediscovering documented behaviour or
 tuning the wrong default because agents experimented before reading the manual.
 Mandated directly by Dave on 2026-08-13.
+
+## Local Ollama is primary; cloud LLMs are optional — Active
+
+The production stack uses the shared local Ollama `qwen2.5:7b` endpoint for the
+LLM-assisted paths that remain enabled. No Groq key, base URL or model override
+is currently stored in the live settings database, and the running containers
+have an empty cloud `LLM_API_KEY`. Groq dashboard activity is therefore
+historical, not evidence of current traffic.
+
+Cloud LLMs remain optional and may never be required for conversion. The app
+must fail open to deterministic metadata/chapter rules, and generated
+pronunciation respellings stay disabled by default. If Groq is configured later,
+choose a current production model from its official catalogue. As checked
+2026-08-15, `llama-3.3-70b-versatile` shuts down on 2026-08-16; this repo now
+documents `openai/gpt-oss-120b` as the replacement. On Groq's dated Developer
+pricing it is cheaper than the retiring model and it is also listed on the Free
+plan limits page. Never infer the account tier from an activity screenshot.
+Official evidence: [deprecations](https://console.groq.com/docs/deprecations),
+[models/pricing](https://console.groq.com/docs/models), and
+[rate limits](https://console.groq.com/docs/rate-limits), checked 2026-08-15.
 
 ## VibeVoice `cfg_scale` — 2.0 selected; 1.3 and 3.0 rejected — Active
 
@@ -253,9 +283,10 @@ structurally validated as of 2026-08-14. Dave rejected both Vibe arms as
 unacceptable. The same-text Chatterbox Turbo + Arthur control was "almost
 perfect" with stable pacing; its only heard defect was reading `co-heirs` as
 `coheirs`. The documented turn-reset remedy therefore does **not** reverse the
-Vibe production rejection. Chatterbox Turbo + Arthur remains an accepted free
-local full-book choice, but this comparison alone does not change the system
-default.
+Vibe production rejection. That long-form Arthur control remains positive
+evidence, but the later 2026-08-15 seeded hard sample failed and makes
+Turbo/Arthur a per-book audition rather than an unconditional quality reference.
+The system default is unchanged.
 
 ## Audition-passage validity per engine — Open, NOT settled
 
@@ -383,12 +414,12 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | Candidate/path | Settled status | Boundary / condition for reconsideration |
 |---|---|---|
 | Chatterbox Nano + Beatrice | **Accepted default** | Free local baseline. A replacement must first beat it by ear. |
-| Chatterbox Turbo + Arthur | **Accepted quality reference** | Free local but slower; retain for books where it wins the audition. |
+| Chatterbox Turbo + Arthur | **Conditional / per-book audition** | Earlier long-form controls were excellent, but the 2026-08-15 seeded hard sample did not reliably sound like Arthur and failed words, proper nouns and numbers. Do not auto-select it for number-dense nonfiction until the normalized control is heard. |
 | VibeVoice full precision, community fp16/SDPA single-pass path | **Rejected for audiobook production** | cfg 2.0 has a very good opening but progressively accelerates/runs on and loses intent after ~3 minutes. Reopen only for a materially different officially supported long-form path, not another seed or undocumented knob. |
 | Qwen3-TTS full precision | **Current long-form leader; not default** | Full 6,166-word chapter passed human listening and beat the corrected Vibe path for consistency. It still requires explicit free-Kaggle/local-GPU selection and book-specific auditioning. |
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
-| Chatterbox Multilingual V3 regional voices, synthetic references, `cfg_weight=0` | **Rejected** | All three failed the audiobook gate. This exact path stays closed. Reconsider only with the controlled official-default isolation described in the regional-accent decision above. |
+| Chatterbox Multilingual V3 regional voices | **Rejected** | Synthetic-reference CFG-zero arms, seeded Arthur CFG 0/0.5 controls and genuine human Irish/Australian CFG 0.5 arms all failed by ear. The local accent route is closed. |
 | Pocket TTS 2.1 Peter Yearsley preset | **Accepted opt-in; not default** | In the 3,600-word file, the body was decent with some emotion but sometimes lifeless/poorly paced. The clean 600-word A/B sounded more natural with current sentence packing; paragraph-aware packing made intonation stranger. Peter remains imperfect but passed as an optional free CPU narrator. Cloning remains unproven. |
 | NeuTTS Air 1.4.1 Q4 + Jo | **Voice and normalized numeric path pass; residual insertion** | Dave selected normalized A, but heard “the e order” around “the order”. Treat that as a separate synthesis defect. Sentence chunking remains mandatory. |
 | KittenTTS 0.8.1 Jasper/Rosie | **Accepted opt-in; not default** | Dave selected normalized A for Jasper (scratchy opening) and B for Rosie. Rosie's long-form body led for pace/tone. In the clean 600-word A/B both packing modes sounded decent with no meaningful difference, so current sentence packing wins on fewer resets. Preset-only; no UK-identity claim. |

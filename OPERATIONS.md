@@ -615,12 +615,13 @@ The lesson (now a standing rule): **prove fixes through the real worker path.**
 - **Free Kaggle TADA broke on a Kaggle-image clash**: `transformers` (via
   hume-tada) eagerly imported Kaggle's preinstalled TensorFlow, whose protobuf
   was mismatched. Fixed: `USE_TF=0` + uninstall tensorflow in the kernel.
-- **LLM configured 2026-07-08**: initially there was no LLM key on zorin so
-  `generate_narration_profile` fell back to seed rules. Now Groq
-  (`llama-3.3-70b-versatile`, OpenAI-compatible at api.groq.com/openai/v1) is
-  stored in app_settings and verified live — production conversions get full
-  adaptive pronunciation + fiction/non-fiction. The seed floor remains the
-  offline fallback.
+- **Historical LLM state, 2026-07-08**: Groq
+  (`llama-3.3-70b-versatile`) was briefly stored in `app_settings` and verified.
+  This is not current state. Live audit on 2026-08-15 found no cloud LLM values
+  in `app_settings`, empty container `LLM_API_KEY` values, and a reachable shared
+  Ollama `qwen2.5:7b` model. Groq retires that historical model on 2026-08-16;
+  the UI/docs now list official replacements. Generated pronunciation rules are
+  off by default, so the old “full adaptive pronunciation” claim was also stale.
 
 ## Standing rules for claims
 

@@ -277,7 +277,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `KITTEN_URL` | KittenTTS endpoint (default: `http://kitten-tts:8013/v1`; opt-in CPU profile) |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
-| `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | OpenAI-compatible LLM for the smart chapter guard, metadata + adaptive pronunciation. Optional (heuristic fallback). Free: Groq or Gemini — see `.env.example` |
+| `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | Optional OpenAI-compatible LLM for metadata and chapter classification (deterministic fallback; generated pronunciation rules are off by default). Groq users must choose a current ID from its official model/deprecation pages; see `.env.example`. |
 | `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` / `AUDIOBOOKSHELF_USER` / `AUDIOBOOKSHELF_PORT` | Audiobookshelf rsync sync target |
 | `LIBRARY_DIR` | Folder of ebooks to browse (default: `/mnt/openbooks`) |
 | `APP_TRUSTED_HOSTS` | Comma-separated Flask host allowlist (LAN addresses and any Pangolin/reverse-proxy hostname; no ports) |

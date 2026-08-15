@@ -162,10 +162,17 @@ a few hours. That's normal. A couple of ways to speed it up:
 
 ## Optional: smarter pronunciation
 
-If you connect an AI provider (for example Groq or Google Gemini), the app will
-read each book first and figure out how to say tricky names and places correctly
-— all automatically. It's not required; the app works fine without it. See the
-**Settings** tab to add a key if you want this.
+If you connect an AI provider (for example Groq or Google Gemini), the app can
+generate metadata and help classify chapter boundaries. It is optional; the app
+falls back to deterministic rules without it. LLM-generated pronunciation
+respellings are disabled by default because a plausible-looking bad guess can
+silently damage an audiobook. See **Settings** to add a provider key.
+
+Groq model IDs change over time. The in-app list and `.env.example` follow
+Groq's official [supported-model](https://console.groq.com/docs/models) and
+[deprecation](https://console.groq.com/docs/deprecations) pages; do not copy an
+old model ID from a tutorial. `llama-3.3-70b-versatile` shuts down on
+2026-08-16 and is not a supported setup choice.
 
 ## Optional: listen anywhere
 

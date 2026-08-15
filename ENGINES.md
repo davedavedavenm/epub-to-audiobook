@@ -15,8 +15,8 @@ accent-engine verdicts are dated in the table.
 
 | Engine | Verdict | Hardware |
 |---|---|---|
-| Chatterbox Turbo (`uk_male_minter` / "Arthur") | "really really good" — accepted for full-book use | CPU only (Ryzen 9 8945HS, 16 threads) |
-| Chatterbox Multilingual V3 regional gate (2026-08-15) | **Exact tested path rejected:** Australian accent okay, Irish wrong, South African best but still not great; all three had mediocre pacing/tone, average pronunciation and badly failed numbers. This was V3 with synthetic Piper/Edge references and `cfg_weight=0`, not Arthur/Turbo with an accent change. Root-cause attribution remains open pending a controlled official-default, same-reference A/B. | CPU only (zorin) |
+| Chatterbox Turbo (`uk_male_minter` / "Arthur") | **Mixed / per-book audition:** earlier long-form controls were “really really good”; the 2026-08-15 seeded hard sample sounded distilled/not reliably like Arthur and failed ordinary words, Huawei and numbers. Its raw-numeric payload was also bad input, so a normalized control remains warranted. | CPU only (zorin) |
+| Chatterbox Multilingual V3 regional gate (2026-08-15) | **Rejected:** the original synthetic-reference CFG-zero voices failed, then seeded Arthur CFG 0/0.5 plus genuine human Irish and Australian CFG 0.5 controls also failed. Accents, pronunciation and numbers remained unacceptable. Do not expose these voices. | CPU only (zorin) |
 | TADA-1B (v8, cloned voice, after transcript+pacing fixes) | Better than earlier cuts, but residual pacing drift + proper-noun misreads | Kaggle T4 |
 | Piper regional/VCTK path (2026-07-28) | **Rejected for production:** deployed 64 kbps, higher-bitrate same-WAV, and current Piper 1.6 direct clips were all “absolute shit”; almost every word wrong and poor sound | CPU only (zorin) |
 | MeloTTS (2026-07-28) | **Rejected:** bad overall TTS, poor pronunciation and poor number handling | CPU only (zorin) |

@@ -39,6 +39,7 @@ SEED = 12_345
 OFFICIAL_URL = "https://github.com/resemble-ai/chatterbox"
 PYTORCH_REPRO_URL = "https://docs.pytorch.org/docs/2.6/notes/randomness.html"
 EXPECTED_INPUT_SHA256 = "9a4b6bd1f48b6f745f53ceb284306b3d57488fe565af9736b9f4d47e3fffe083"
+EXPECTED_EXPLICIT_NUMERIC_SHA256 = "8ccd447f2890e5f7cb7b9f8d41bb77cf4fe08a5cb40de2320a76559715afac1e"
 EXPECTED_NORMALIZED_SHA256 = "896a1789614a103df34f29eca27353d3ebe7d969c2880abd43a340dff63c2824"
 EXPECTED_CHUNK_SHA256 = (
     "4c8d82e0f8a3150b33216b3486d8dc8c20a52cf23e3b527b774e89e2d0b61872",
@@ -194,15 +195,24 @@ def _docker_image_id(container: str) -> str:
     ).strip()
 
 
-def _production_sample_text() -> str:
+def _production_sample_text(expand_numbers: bool = False) -> str:
     """Read the exact deployed sample after the production dependency path."""
+    numeric_arg = ", expand_numbers=True" if expand_numbers else ""
+    script = (
+        "import base64; from voice_sample import sample_text_for; "
+        + (
+            "from voice_sample import SAMPLE_TEXT, SAMPLE_LEXICON; "
+            "from tts_preprocess import normalize_text_for_tts; "
+            f"text = normalize_text_for_tts(SAMPLE_TEXT, lexicon=SAMPLE_LEXICON, modern=True{numeric_arg}); "
+            if expand_numbers else "text = sample_text_for('chatterbox'); "
+        )
+        + "print(base64.b64encode(text.encode('utf-8')).decode('ascii'))"
+    )
     encoded = _docker_text(
         "epub-to-audiobook-ui",
         "python",
         "-c",
-        "import base64; from voice_sample import sample_text_for; "
-        "text = sample_text_for('chatterbox'); "
-        "print(base64.b64encode(text.encode('utf-8')).decode('ascii'))",
+        script,
     )
     return base64.b64decode(encoded, validate=True).decode("utf-8")
 
@@ -263,7 +273,7 @@ def _active_jobs() -> list[dict]:
     ]
 
 
-def _chunk_evidence(text: str) -> dict:
+def _chunk_evidence(text: str, strict_production: bool = True) -> dict:
     normalized = re.sub(r"\s+", " ", text).strip()
     sentences = re.split(r"(?<=[.!?”])\s+", normalized)
     chunks: list[str] = []
@@ -290,7 +300,10 @@ def _chunk_evidence(text: str) -> dict:
         ],
     }
     hashes = tuple(item["sha256"] for item in evidence["chunks"])
-    if evidence["normalized_sha256"] != EXPECTED_NORMALIZED_SHA256 or hashes != EXPECTED_CHUNK_SHA256:
+    if strict_production and (
+        evidence["normalized_sha256"] != EXPECTED_NORMALIZED_SHA256
+        or hashes != EXPECTED_CHUNK_SHA256
+    ):
         raise RuntimeError(f"server chunk contract drifted: {evidence}")
     return evidence
 
@@ -395,6 +408,11 @@ def main() -> int:
         "--arms", nargs="*", choices=[arm["id"] for arm in ARMS],
         help="Optional subset; default renders all three arms",
     )
+    parser.add_argument(
+        "--explicit-numbers", action="store_true",
+        help=("Render one Arthur/Turbo diagnostic with the modern voice path "
+              "but explicit spoken numbers; production defaults are unchanged"),
+    )
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parents[1]
@@ -403,20 +421,36 @@ def main() -> int:
     if queue.get("queued_count") or active:
         raise RuntimeError(f"product queue is not idle: queue={queue}, active={active}")
 
-    chosen = [arm for arm in ARMS if not args.arms or arm["id"] in args.arms]
+    if args.explicit_numbers and args.arms:
+        raise RuntimeError("--explicit-numbers selects the single Arthur/Turbo arm")
+    chosen = (
+        [next(arm for arm in ARMS if arm["id"] == "arthur-turbo")]
+        if args.explicit_numbers
+        else [arm for arm in ARMS if not args.arms or arm["id"] in args.arms]
+    )
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     output_dir = (repo / args.output_root / stamp).resolve()
     output_dir.mkdir(parents=True, exist_ok=False)
 
-    source = _production_sample_text()
+    source = _production_sample_text(expand_numbers=args.explicit_numbers)
     source_path = output_dir / "source.txt"
     source_path.write_text(source, encoding="utf-8", newline="\n")
     source_sha = _sha256(source_path)
-    if source_sha != EXPECTED_INPUT_SHA256:
+    expected_source_sha = (
+        EXPECTED_EXPLICIT_NUMERIC_SHA256
+        if args.explicit_numbers else EXPECTED_INPUT_SHA256
+    )
+    if source_sha != expected_source_sha:
         raise RuntimeError(
             f"production-normalized hard passage drifted: {source_sha}"
         )
-    chunk_evidence = _chunk_evidence(source)
+    if args.explicit_numbers and (
+        any(character.isdigit() for character in source)
+        or any(symbol in source for symbol in "$£€%")
+    ):
+        raise RuntimeError("explicit numeric control leaked digits or symbols")
+    chunk_evidence = _chunk_evidence(
+        source, strict_production=not args.explicit_numbers)
     common = {
         "created_utc": stamp,
         "repo_commit": subprocess.check_output(
@@ -431,6 +465,11 @@ def main() -> int:
         "source_sha256": source_sha,
         "source_chars": len(source),
         "source_words": len(source.split()),
+        "source_profile": (
+            "modern-explicit-numbers-evaluation"
+            if args.explicit_numbers else "deployed-modern-production"
+        ),
+        "production_defaults_changed": False,
         "server_text_contract": chunk_evidence,
         "queue_preflight": queue,
     }

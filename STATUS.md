@@ -1,6 +1,22 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-15 controlled Chatterbox gate — VERIFIED / AWAITING DAVE
+> ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
+>
+> Groq was used historically, which explains the account activity screenshot and
+> the old `epub`-key request count. It is not the live provider now: neither
+> running app container has a cloud `LLM_API_KEY`; `app_settings` contains no
+> LLM/Groq override; and both containers point to the shared local Ollama
+> `qwen2.5:7b`, whose official OpenAI-compatible models endpoint returned 200 and
+> listed that exact model. No secret values were printed during the audit.
+>
+> Groq's official deprecation page confirms `llama-3.3-70b-versatile` shuts down
+> on 2026-08-16 for Free/Developer usage. The stale setup example and Settings
+> selector have been corrected to current official IDs, led by
+> `openai/gpt-oss-120b`; a regression guard forbids the three retired Groq IDs
+> from returning to the selector. This is a repo/setup migration, not a live
+> credential migration, and it incurs no cloud use or charge.
+
+> ## 2026-08-15 controlled Chatterbox gate — HEARD / ALL FIVE REJECTED
 >
 > Five same-text, seeded CPU renders now exist under the ignored evidence bundle
 > `scratch/chatterbox-control/20260815T073048Z`. The source is the exact deployed
@@ -17,9 +33,20 @@
 > | Human Australian VCTK p374 / V3 / CFG 0.5 | 71.064 s | 1,137,068 | `a4c568ae3331aab080c579a503454ae25b186fb411dd1d4c55f8fa445c4396b9` |
 >
 > The product-health monitor recorded zero errors and no health request slower
-> than 0.05 s while synthesis ran. These are **not production-approved** until
-> Dave hears them. The temporary p374 runtime copy was removed after validation;
-> its immutable retained Git LFS object remains available.
+> than 0.05 s while synthesis ran. Dave then rejected every arm. Arthur/Turbo
+> repeated or broke “engineer”, mangled the large-number phrase after “over”,
+> pronounced Huawei badly, and sounded more distilled than the Arthur he had
+> liked. Both Arthur/V3 arms were poor. The human Irish and Australian V3 arms
+> were also poor, with bad accent/pronunciation. All five handled numbers badly.
+> None is production-approved. The temporary p374 runtime copy was removed after
+> validation; its immutable retained Git LFS object remains available.
+>
+> The numeric failure is partly an input-path failure, not a clean engine result:
+> the exact production payload retained raw `$1.2 billion`, `3,400`, `230,000`,
+> `1.5`, `52%`, `£24.6 billion` and `7,000`. That disproves the repo's prior
+> “modern engines cope with raw numbers” assumption. It does not establish that
+> spelling those values fixes the other voice, pronunciation or accent failures.
+> The next bounded test is one Arthur/Turbo numeric-only normalized control.
 
 > ## 2026-08-15 Chatterbox V3 regional gate — HEARD / EXACT PATH REJECTED
 >
@@ -44,13 +71,13 @@
 > `5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18`; CPU; 280-character chunks;
 > `exaggeration=0.5`; `cfg_weight=0`. The exact tested path is rejected. Cause
 > remains divided among model, synthetic reference quality and the unjustified
-> setting until a same-text/same-human-reference official-default A/B is heard.
+> setting. The later controlled arms have now been heard and rejected.
 >
 > A subsequent reference audit found genuine human candidates that this gate
-> never used: Irish narrator `tadhg_hynes.wav` and Australian VCTK p374. No
-> human South African reference exists locally or in retained history. The
-> reproducible Arthur baseline and those two accent follow-ups are open; the
-> rejected synthetic-reference outputs remain closed.
+> never used: Irish narrator `tadhg_hynes.wav` and Australian VCTK p374. Both
+> were then tested at official CFG 0.5 and rejected by ear. No human South
+> African reference exists locally or in retained history. The local V3 accent
+> route is closed; the rejected outputs remain evidence only.
 
 > ## 2026-08-14 regional-accent direction — LISTENING VERDICT RECORDED
 >
@@ -125,7 +152,8 @@
 > Chatterbox Turbo + Arthur arm C was "almost perfect" with no progressive fast
 > speech; the one heard defect was `co-heirs` sounding like `coheirs`. This
 > closes the documented-turn remedy without reversing Vibe's production
-> rejection. Turbo + Arthur remains an accepted free local book option.
+> rejection. A later seeded hard sample failed, so Turbo + Arthur is now a
+> per-book audition rather than an unconditional quality reference.
 > Nano/Beatrice remains default and no paid compute or automatic cloud path was
 > enabled.
 >
@@ -1123,7 +1151,7 @@ as the priority order.
 | Covers + metadata land in ABS, chapters navigable | ✅ | Full ID3 tagging implemented for both rendering paths. |
 | **All voices cached**, instant, judged on hard text | ✅ | 69/69 usable voices, ~30ms serve, ~135-word sample with years/currency/acronyms/names, production-accurate preprocessing per engine. |
 | Clear visually which voice is speaking | ✅ | Speaking card: accent glow, equaliser, stop toggle, single-voice rule. |
-| LLM guard: check/sort/act, local or free | ✅ | Chapter classifier live (Groq free, <1.5s, fail-open); gate phrasing on shared khpi5 Ollama. |
+| LLM guard: check/sort/act, local or free | ✅ | Shared khpi5 Ollama `qwen2.5:7b` is live and reachable; no Groq cloud key/model is currently configured. All LLM-assisted paths fail open to deterministic rules. |
 | Anyone can clone + deploy and get all this | ✅ | Unified local renderer routes all jobs cleanly through `convert_book.py`. |
 | "I shouldn't have to find every bug" | ⚠️ | Watchdog, recovery locks, and renderer mismatches fixed. |
 

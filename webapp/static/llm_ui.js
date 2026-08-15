@@ -9,7 +9,10 @@ const LLM_PROVIDERS = {
     },
     'groq': {
         url: 'https://api.groq.com/openai/v1',
-        models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768']
+        // Groq production/replacement catalogue checked against the official
+        // model and deprecation pages on 2026-08-15. Do not restore retired
+        // Llama 3.3/3.1 or Mixtral IDs from memory or old screenshots.
+        models: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b']
     },
     'xai': {
         url: 'https://api.x.ai/v1',

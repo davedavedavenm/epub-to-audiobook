@@ -348,6 +348,17 @@ def test_preprocessing_llm_provider_chain():
     assert 'SEED_RULES' in lm and '_seed_profile' in lm, "seed-rule floor removed (#6)"
 
 
+def test_groq_catalog_contains_only_current_replacements():
+    """The Settings UI must not steer users onto Groq IDs already retired or
+    scheduled to shut down. Official Groq deprecation list checked 2026-08-15."""
+    ui = (ROOT / 'webapp' / 'static' / 'llm_ui.js').read_text(encoding='utf-8')
+    groq = ui.split("'groq':", 1)[1].split("'xai':", 1)[0]
+    assert 'openai/gpt-oss-120b' in groq and 'qwen/qwen3.6-27b' in groq
+    for retired in ('llama-3.3-70b-versatile', 'llama-3.1-8b-instant',
+                    'mixtral-8x7b-32768'):
+        assert retired not in groq, f'retired Groq model returned to UI: {retired}'
+
+
 def test_recovery_frees_slot_when_container_missing():
     """#14: a 'converting' job whose container is gone after a restart must be
     failed (freeing the single MAX_CONCURRENT slot), not left stuck holding the

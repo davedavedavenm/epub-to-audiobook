@@ -223,7 +223,23 @@ def test_years_are_spelled_for_modern_engines_too():
 
 
 def test_modern_still_keeps_raw_currency_and_percent():
-    # NOT judged by ear yet — must stay raw until A/B'd (#26).
+    # The raw arm failed by ear on 2026-08-15, but production stays unchanged
+    # until Dave hears the explicit numeric control below.
     from tts_preprocess import normalize_text_for_tts
     out = normalize_text_for_tts("roughly 52% of $1.2 billion", modern=True)
     assert '52%' in out and '$1.2' in out, out
+
+
+def test_modern_explicit_numeric_control_spells_hard_sample_cases():
+    from tts_preprocess import normalize_text_for_tts
+    out = normalize_text_for_tts(
+        "Revenue was 71 percent of $1.2 billion; headcount hit 230,000 and "
+        "the site drew 1.5 gigawatts.",
+        modern=True,
+        expand_numbers=True,
+    )
+    assert 'seventy one percent' in out
+    assert 'one point two billion dollars' in out
+    assert 'two hundred and thirty thousand' in out
+    assert 'one point five gigawatts' in out
+    assert not any(ch.isdigit() for ch in out)

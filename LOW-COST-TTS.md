@@ -140,9 +140,10 @@ a same-text local Chatterbox Turbo reference produced 10:50. All decode and the
 Vibe completeness gates pass. Dave rejected both Vibe arms as unacceptable;
 the documented reset remedy therefore does not reverse the single-turn
 rejection. The Turbo + Arthur control was almost perfect and maintained stable
-pacing, with `co-heirs` → `coheirs` the only heard defect. This reinforces
-Turbo + Arthur as the accepted free local quality path without automatically changing
-the system default.
+pacing, with `co-heirs` → `coheirs` the only heard defect. A later seeded hard
+sample did not reliably sound like Arthur and failed words, proper nouns and raw
+numbers, so Turbo + Arthur now requires a per-book audition and is not an
+unconditional quality reference. The system default is unchanged.
 
 Formula: `finished audio hours × RTF`; startup, ASR and retries are additional.
 The table now uses the completed chapter runs, not the earlier short-passage
@@ -234,7 +235,7 @@ This means most mainstream premium APIs are too expensive for full-book default 
 | Engine | Status | Expected cost/book | Notes |
 |--------|--------|--------------------|-------|
 | Chatterbox Nano + Beatrice | Implemented; **default** | GBP0 incremental | Accepted free/local baseline; measured full-book RTF ~0.83–0.87. |
-| Chatterbox Turbo + Arthur | Implemented; opt-in | GBP0 incremental | Accepted quality reference; slower local CPU path. |
+| Chatterbox Turbo + Arthur | Implemented; opt-in | GBP0 incremental | Mixed evidence; per-book audition required. The 2026-08-15 hard sample failed while earlier long-form controls were excellent. |
 | Kokoro CPU | Implemented; compatibility/debug | GBP0 incremental | Retired from quality contention; speed does not clear the listening floor. |
 | Kokoro on Vast.ai GPU | Legacy manual path | Paid marketplace rate | Never automatic and not recommended: paying to accelerate rejected-quality output violates the project objective. |
 | Piper | Implemented | GBP0 incremental | Legacy/debug only; **rejected for production by ear**. Deployed 64 kbps, same-WAV higher-bitrate, and current Piper 1.6 direct A/Bs all failed badly. Not an automatic fallback. |
@@ -501,8 +502,8 @@ Default path:
 
 1. Audition the target book's hardest passage first. Reject any engine that fails
    naturalness, pronunciation, accent authenticity or long-form comfort.
-2. Start with free/local Chatterbox Nano + Beatrice; keep accepted Chatterbox
-   Turbo + Arthur as the quality reference and audition alternative.
+2. Start with free/local Chatterbox Nano + Beatrice; keep Chatterbox Turbo +
+   Arthur as a per-book audition alternative, not an automatic quality reference.
 3. Use free Kaggle for a better-sounding GPU finalist when it wins the audition;
    corrected Vibe cfg 2/3 and Qwen are the current long-form comparison.
 4. Re-evaluate listenable CosyVoice on free Kaggle, keep OmniVoice as a

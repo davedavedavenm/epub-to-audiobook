@@ -360,8 +360,18 @@ def _is_letter_spacing(word: str, repl: str) -> bool:
     return bool(w) and w == r and ' ' in repl.strip()
 
 
-def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False) -> str:
-    """Apply all TTS normalization rules to a text string."""
+def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False,
+                           expand_numbers: bool | None = None) -> str:
+    """Apply all TTS normalization rules to a text string.
+
+    ``expand_numbers`` is an evaluation/transition switch. ``None`` preserves
+    the deployed contract (legacy expands, modern keeps most numeric tokens).
+    Explicit ``True`` lets a modern engine receive spoken numeric forms without
+    also enabling the legacy pronunciation lexicon or abbreviation rules.
+    """
+    force_all_numbers = expand_numbers is True
+    if expand_numbers is None:
+        expand_numbers = not modern
 
     # === Unicode cleanup (before anything else looks at the text) ===
     text = normalize_unicode_for_tts(text)
@@ -478,7 +488,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     # an ear test — and a regression guard enforces exactly that. I changed it
     # on inference and the guard caught me; it was right and I was wrong.
     text = re.sub(r"\b(\d{4})'s\b", lambda m: _decade_to_words(m.group(1)), text)
-    if not modern:
+    if expand_numbers:
         text = re.sub(r'\b(\d{4})s\b', lambda m: _decade_to_words(m.group(1)), text)
 
     # === "50k" -> "fifty thousand" (Dave, 2026-07-27) ===
@@ -558,7 +568,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
         return f"{words} {major_unit}"
 
     # Modern engines read "$50" / "£33 billion" natively; skip (MODERN CONTRACT).
-    if not modern:
+    if expand_numbers:
         text = re.sub(r'([$£€])(\d[\d,]*\.?\d*)(\s+(?:thousand|million|billion|trillion)\b)?',
                       replace_currency, text)
 
@@ -575,8 +585,13 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
         except ValueError:
             return m.group(0)
 
-    if not modern:  # modern reads "50%" natively (MODERN CONTRACT)
+    if expand_numbers:
         text = re.sub(r'(\d[\d,]*\.?\d*)%', replace_percent, text)
+        text = re.sub(
+            r'\b(\d[\d,]*\.?\d*)\s+percent\b',
+            lambda m: f"{_decimal_to_words(m.group(1).replace(',', ''))} percent",
+            text,
+        )
 
     # === Ordinals: 1st, 2nd, 3rd, 4th, 21st, etc. ===
     def replace_ordinal(m):
@@ -585,7 +600,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             return m.group(0)  # Don't convert huge ordinals
         return _ordinal_to_words(n)
 
-    if not modern:  # modern reads "1st"/"21st" natively (MODERN CONTRACT)
+    if expand_numbers:
         text = re.sub(r'\b(\d+)(?:st|nd|rd|th)\b', replace_ordinal, text)
 
 
@@ -597,7 +612,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
             return m.group(0)
         return f"{label} {_number_to_words(n).title()}"
 
-    if not modern:  # modern reads "Chapter 3" natively (MODERN CONTRACT)
+    if expand_numbers:
         text = re.sub(
             r'\b(Chapter|CHAPTER|Part|PART|Book|BOOK|Volume|VOLUME|Section|SECTION|Act|ACT|Scene|SCENE)\s+(\d+)\b',
             replace_heading_number, text)
@@ -617,7 +632,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
     # Numbers with comma separators (at least one comma).
     # Modern engines read "2,905" natively; spelling it "two thousand, nine
     # hundred and five" adds comma-pauses that sound wrong. Skip for modern.
-    if not modern:
+    if expand_numbers:
         text = re.sub(r'\b\d{1,3}(?:,\d{3})+\b', replace_comma_number, text)
 
     # === Standalone large numbers without commas (4+ digits) ===
@@ -633,8 +648,18 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
         except ValueError:
             return m.group(0)
 
-    if not modern:
+    if expand_numbers:
         text = re.sub(r'\b\d{4,}\b', replace_large_number, text)
+
+    # An explicit modern numeric control also covers bare decimal measurements
+    # ("1.5 gigawatts"). This is deliberately opt-in so existing production
+    # output does not change before the result is heard.
+    if force_all_numbers:
+        text = re.sub(
+            r'\b\d+\.\d+\b',
+            lambda m: _decimal_to_words(m.group(0)),
+            text,
+        )
 
     # === Ellipsis normalization ===
     # Multiple dots that aren't proper ellipsis

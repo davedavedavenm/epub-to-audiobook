@@ -12,11 +12,12 @@ listenability are the first gate. Locality, cost, memory and speed matter only
 after an engine passes that listening gate.
 
 **Latest regional-accent verdict (Dave, 2026-08-15):** Edge is the only
-currently heard option that comes close. All three Multilingual V3 auditions
-failed overall: Australian accent was okay, Irish was wrong, South African was
-best but still not great; pacing/tone were mediocre, pronunciation average and
-numbers badly wrong. A locale label is not evidence that generated speech is an
-authentic or pleasant audiobook voice.
+currently heard option that comes close. The original three Multilingual V3
+auditions failed, and the controlled follow-up failed too: Arthur at CFG 0 and
+0.5, genuine human Irish Tadhg at CFG 0.5, and genuine human Australian VCTK
+p374 at CFG 0.5 were all rejected. Accents, pronunciation and numbers remained
+unacceptable. A locale label or human reference is not evidence that generated
+speech is an authentic or pleasant audiobook voice.
 
 **The tested Piper path is rejected for production audiobooks (Dave,
 2026-07-28).** Most existing voices sounded bad and inauthentic. A controlled
@@ -90,7 +91,7 @@ English:
 | **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speaker labels | yes | **rejected by ear** for this project; old/current runtime and encoding A/B all failed badly |
 | **MeloTTS** | US, UK, Indian, **Australian**, default | yes | installed and **rejected by ear**; no Irish |
 | **OmniVoice** | US, UK, AU, CA, IN + five non-native-English accents | yes | accents good; slow on CPU; **no Irish/ZA** in fixed upstream vocabulary |
-| **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Exact Australian + Irish + ZA `cfg_weight=0` path **rejected by ear**; root-cause isolation still open |
+| **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | **Rejected by ear:** synthetic CFG-zero arms plus seeded Arthur and genuine human Irish/Australian official-default controls all failed |
 | **XTTS-v2** | clones from a reference; reported to carry accent | yes | tested and rejected — see below |
 | **Chatterbox** Nano/Turbo | none. English-only, American phonetics | yes | proven twice not to hold an accent |
 | **Edge** | IE, AU, NZ, GB, ZA, IN, CA, HK, KE, NG, PH, SG, TZ, US | **no** | accents “not bad”, but Chinese company names were all poor; needs internet |
@@ -116,18 +117,18 @@ verified as decoded Edge output; Australian is synthetic but the retained
 evidence cannot prove whether Edge or Piper produced it. It therefore changed
 model, speaker/reference quality and settings at once—not merely accent.
 
-The exact V3 gate is rejected, but assigning every defect to V3 would overstate
-the evidence. The harness forced `cfg_weight=0`; official V3 defaults to `0.5`
-for normal use, and its zero-CFG advice addresses a reference-language versus
-target-language mismatch. Every reference here was English and the requested
-language was `en`. Only a same-text, same-human-reference Turbo/V3 A/B at
-official defaults can isolate model quality; accent transfer is a separate gate.
+The initial V3 gate was confounded, so the follow-up isolated it: seeded Arthur
+through Turbo and V3 at CFG 0/0.5, then genuine human Irish and Australian
+references through V3 at official CFG 0.5. Dave rejected all five outputs.
+That closes V3 as a local accent route here. The raw-number payload remains a
+separate input defect, but it does not explain the rejected accent, ordinary-word
+or voice-character results.
 
 The reference audit found two honest free/local follow-ups that the rejected
 gate never tried: human Irish narrator `tadhg_hynes.wav` (18 s, LibriVox) and
 human Australian VCTK speaker p374 (18 s, official VCTK 0.92, CC BY 4.0).
 Both were rendered through seeded V3 at the official same-language default on
-2026-08-15 and passed structural validation, but neither has passed V3 by ear.
+2026-08-15, passed structural validation, and were rejected by ear.
 There is **no human South African reference** in
 the repo, live stack or retained Git history; do not recycle the Edge clip.
 

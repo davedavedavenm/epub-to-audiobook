@@ -6,7 +6,7 @@ worst listening problems were text defects, not voice defects.
 
 ---
 
-## ✅ SETTLED BY EAR 2026-07-27 — modern engines get RAW text
+## ✅ Proper nouns stay raw; ⚠️ raw numeric symbols failed (2026-08-15)
 
 > **Edge exception found by ear, 2026-07-28:** the accent was *"not bad"*, but
 > all Chinese firms' names were pronounced badly in the Edge audition. Edge uses
@@ -28,8 +28,8 @@ C  The shaow-mee factory in shun-jen produces components for hwah-way.
 **Verdict: "A better by far."** Raw wins decisively. Both respelling styles are
 worse.
 
-So the modern-engine lexicon filter in `normalize_text_for_tts` is **correct and
-must stay**:
+So the modern-engine **proper-noun lexicon filter** in
+`normalize_text_for_tts` is correct and must stay:
 
 ```python
 active = lexicon if not modern else {
@@ -42,7 +42,15 @@ with the comma bug below, where a similar-looking ban turned out to be a
 misdiagnosis. That analogy did not hold. A natural lowercase respelling lost
 too. Chatterbox does not want pronunciation help; it wants the text.
 
-**What follows from it:** the LLM per-book lexicon and the QA loop's
+This result never proved that raw currency, percentages or large integers were
+safe. The 2026-08-15 seeded Chatterbox controls retained raw `$1.2 billion`,
+`3,400`, `230,000`, `1.5`, `52%`, `£24.6 billion` and `7,000`; Dave judged
+numbers in all five outputs awful. The raw-numeric half of the modern contract
+is therefore rejected. A numeric-only normalized Arthur control must be heard
+before production changes, because the same clips also had independent voice,
+accent and ordinary-word failures.
+
+**What follows from the proper-noun result:** the LLM per-book lexicon and the QA loop's
 pronunciation suggestions earn nothing on Chatterbox — their output is
 correctly discarded. The QA layer's value on modern engines is catching
 **dropped, truncated or garbled** audio, not fixing pronunciation.
@@ -271,9 +279,10 @@ are separate synthesis artifacts, not reasons to undo the normalization.
 | **Phonetic respellings** (`Xiaomi` → `SHOW-mee`) | ❌ **dropped — see #27** | ✅ |
 | Word abbreviations (`Dr.` → `Doctor`) | ❌ raw | ✅ |
 
-**Untested by ear (do not change without an A/B):** currency, percent, large ints
-and ordinals for modern engines. Those are the numbers that dominate real
-non-fiction, so they are the obvious next A/B after #27.
+**Failed raw arm; normalized arm pending:** currency, percent and large integers
+for modern engines. The production hard sample failed by ear on 2026-08-15.
+Do not keep claiming raw numbers work, and do not deploy the inverse until the
+numeric-only normalized Arthur control has been heard.
 
 ## The rule this project keeps re-learning
 
