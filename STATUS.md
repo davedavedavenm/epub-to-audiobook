@@ -54,15 +54,15 @@
 > A dedicated unbilled project (`dave-audio-free-20260815`) and API-restricted key
 > are live; the key remains only in the host `.env`. Whole-stack revision
 > `17e45937b17128f15d37ba2fe7c2da740a077cb4` is healthy in both web and worker,
-> and `gemini-tts` is healthy. The later deployed whole-stack revision is
-> `c33442e356e908cdee49cb08d89c25c8f9f5dcec`; web and worker report the same
-> SHA. Exactly one final SDK preview request produced the
+> and `gemini-tts` is healthy. The current deployed whole-stack revision is
+> `d8ca10d812a71e6d1c7672a28297509bb3dee102`; the checkout, web and worker
+> report the same SHA. Exactly one final SDK preview request produced the
 > persisted app-path file: 81.576 s, 1,631,564 bytes, MP3/24 kHz/mono, SHA-256
 > `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`.
 > It fully decoded, `/api/preview/gemini_achernar` returned the identical bytes,
 > and `/api/voices` reported `118/118` configured previews ready.
-> Post-change verification now passes 305 host tests plus all nine adapter tests
-> in its pinned SDK environment (314 total).
+> Post-change verification now passes 307 host tests plus all nine adapter tests
+> in its pinned SDK environment (316 total).
 >
 > The original raw-REST bring-up made two generation calls whose audio could not
 > be decoded from the undocumented wire shape; one intervening request was

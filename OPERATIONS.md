@@ -48,7 +48,7 @@ STATUS.md.**
 - Monitor the active limit in AI Studio. Do not infer quota from another account
   or convert a Free project to Paid to finish a book. Free Tier content may be
   used by Google to improve products.
-- Live proof now deployed at whole-stack revision `c33442e`: official
+- Live proof now deployed at whole-stack revision `d8ca10d`: official
   `google-genai==2.18.1`, healthy
   adapter, one 81.576 s Achernar preview cached at 1,631,564 bytes, SHA-256
   `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`,
