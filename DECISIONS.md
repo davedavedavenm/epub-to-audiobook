@@ -89,6 +89,14 @@ so one same-voice 48 kHz control is the only encoding/model-tier diagnostic
 still justified. Do not claim SSML rate/pitch tuning can repair the underlying
 voice, and do not integrate or spend beyond F0 without a new listening verdict.
 
+The app's preferred Edge Australian preview and the rejected Azure Australian
+clip were not the same speaker (William versus Darren), so they did not isolate
+the service path. Dave approved one 300-character endpoint control. Exact
+`en-AU-WilliamNeural`, text, neutral prosody and 24 kHz/48 kbps output are now
+matched across Edge Read Aloud and Azure F0, structurally verified and awaiting
+his listening verdict. Make no further Azure request until that verdict; the
+test does not reopen any rejected Darren/Connor/Luke production decision.
+
 ## Shared-host CPU candidates reserve capacity for the product — Active
 
 Pocket and Kitten remain CPU-only, but each service is capped at **four CPU

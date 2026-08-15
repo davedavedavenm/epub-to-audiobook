@@ -47,6 +47,22 @@
 > speaking styles, while SSML prosody changes rate/pitch/range/volume rather than
 > the underlying voice. Australian preview offers materially different MAI and
 > Dragon HD Omni models, but the live UK South catalogue did not expose them.
+>
+> Dave then approved one endpoint-isolation control after noting that the app's
+> existing Edge voices sounded better. The earlier comparison had not used the
+> same speaker: Edge exposed Australian William/Natasha, while the Azure gate
+> used Darren. On the exact same pinned 300-character text, neutral prosody and
+> `en-AU-WilliamNeural`, one Edge Read Aloud request and one Azure F0 request
+> produced structurally matched 16.032-second, 24 kHz mono, 48 kbps MP3s. Edge:
+> 96,192 bytes, SHA-256
+> `ab2fb5c430fd8b4c423b72dddb4c953a70e073154428a8c78c1b5e63f9fb9cc5`;
+> Azure: 96,192 bytes,
+> `c03485700f9e7e54097d326bd994c0becfc98f0872ed7d32b7f3f04376569e62`.
+> Both fully decode. This consumed exactly 300 more estimated F0 characters,
+> bringing cumulative estimated synthesis text to 9,194 (1.8388%); subscription
+> credit use remains $0. The endpoint cause remains **open pending Dave's
+> same-voice listening verdict**. No production default changed and no further
+> Azure request is authorised by this control.
 
 > ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
 >

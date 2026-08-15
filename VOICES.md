@@ -163,6 +163,17 @@ This is an accent pass and overall quality failure, not an app-integration
 approval. That run used an estimated 900 additional F0 characters, bringing
 estimated cumulative synthesis text to 8,894 characters (1.7788%).
 
+That gate was not an Edge-versus-Azure endpoint comparison: the app's heard
+Australian Edge options are William and Natasha, while the rejected Azure arm
+used Darren, and the preview passages/preprocessing also differed. Dave approved
+one tightly controlled follow-up. Exact `en-AU-WilliamNeural`, the same pinned
+300-character text, neutral prosody and the same 24 kHz/48 kbps MP3 format were
+rendered once through `edge-tts==7.2.8` and once through Azure Speech F0. Both
+are 16.032 seconds / 96,192 bytes and fully decode; their hashes differ. Azure
+estimated cumulative synthesis text is now 9,194 characters (1.8388%), still
+with $0 subscription-credit use. Await Dave's same-voice verdict before drawing
+an endpoint-quality conclusion or making another Azure request.
+
 The files were 24 kHz / 160 kbps mono MP3. Microsoft documents that selecting a
 48 kHz format invokes a separate high-fidelity standard model and supports
 lossless `riff-48khz-16bit-mono-pcm`, so one same-voice 48 kHz control is a valid
@@ -177,7 +188,8 @@ Official references: [Chatterbox](https://github.com/resemble-ai/chatterbox),
 [Azure language/voice catalogue](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support),
 [Azure pronunciation controls](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation),
 [Azure REST audio formats](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs),
-[Azure Speech pricing](https://azure.microsoft.com/en-gb/pricing/details/speech/).
+[Azure Speech pricing](https://azure.microsoft.com/en-gb/pricing/details/speech/),
+[`edge-tts` 7.2.8 release](https://github.com/rany2/edge-tts/releases/tag/7.2.8).
 
 OmniVoice's upstream voice-design list is closed, not free-form: American,
 British, Australian, Canadian, Indian, Chinese, Korean, Japanese, Portuguese
