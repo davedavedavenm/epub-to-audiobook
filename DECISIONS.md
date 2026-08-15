@@ -40,10 +40,22 @@ Edge is the only currently heard Australian/Irish/etc. option that comes close
 to Dave's quality floor. The other surfaced regional labels are rejected by ear.
 Chatterbox Turbo/Arthur remains an excellent general narrator, but Turbo and
 Nano accent cloning is closed: a good base voice does not make those models
-preserve regional phonetics. Chatterbox Multilingual V3 at `cfg_weight=0` is the
-only materially different off-the-shelf Chatterbox accent path still open; it
-gets one explicit Australian/Irish/South-African listening gate. If that fails,
-do not manufacture more labels or references and call them accents.
+preserve regional phonetics.
+
+The exact Chatterbox Multilingual V3 regional path tested on 2026-08-15 is also
+**rejected**: Australian was only okay, Irish was wrong, South African was the
+best of the three but still not good, and all three had mediocre pacing/tone,
+average pronunciation and badly failed numbers. Do not expose these voices.
+
+That verdict does **not** establish that V3 itself caused every defect. The gate
+changed model family, reference and inference settings at once: V3 instead of
+Turbo; synthetic Piper/Edge references instead of Arthur's human narration;
+and `cfg_weight=0` instead of V3's official same-language default `0.5`. The
+repo's earlier claim that zero CFG generally lets a same-language reference
+accent through was an unsupported inversion of upstream's cross-language
+mismatch advice. Reopen V3 only for a controlled same-text, same-human-reference
+Turbo-vs-V3 comparison at official defaults, followed by a separately controlled
+accent/reference test. Do not manufacture more labels and call them accents.
 
 The next supported online comparison is Azure Speech's native regional voices
 with its documented SSML phoneme/custom-lexicon controls. Its free allowance
@@ -372,7 +384,7 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | Qwen3-TTS full precision | **Current long-form leader; not default** | Full 6,166-word chapter passed human listening and beat the corrected Vibe path for consistency. It still requires explicit free-Kaggle/local-GPU selection and book-specific auditioning. |
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
-| Chatterbox Multilingual V3 | **Unverified by ear** | Rendered accent clips exist; listen before promoting or rejecting. |
+| Chatterbox Multilingual V3 regional voices, synthetic references, `cfg_weight=0` | **Rejected** | All three failed the audiobook gate. This exact path stays closed. Reconsider only with the controlled official-default isolation described in the regional-accent decision above. |
 | Pocket TTS 2.1 Peter Yearsley preset | **Accepted opt-in; not default** | In the 3,600-word file, the body was decent with some emotion but sometimes lifeless/poorly paced. The clean 600-word A/B sounded more natural with current sentence packing; paragraph-aware packing made intonation stranger. Peter remains imperfect but passed as an optional free CPU narrator. Cloning remains unproven. |
 | NeuTTS Air 1.4.1 Q4 + Jo | **Voice and normalized numeric path pass; residual insertion** | Dave selected normalized A, but heard “the e order” around “the order”. Treat that as a separate synthesis defect. Sentence chunking remains mandatory. |
 | KittenTTS 0.8.1 Jasper/Rosie | **Accepted opt-in; not default** | Dave selected normalized A for Jasper (scratchy opening) and B for Rosie. Rosie's long-form body led for pace/tone. In the clean 600-word A/B both packing modes sounded decent with no meaningful difference, so current sentence packing wins on fewer resets. Preset-only; no UK-identity claim. |

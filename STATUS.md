@@ -1,5 +1,28 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-15 Chatterbox V3 regional gate — HEARD / EXACT PATH REJECTED
+>
+> Dave heard all three: Australian accent was okay, Irish was totally off, and
+> South African was the best but still not great. All had mediocre pacing/tone,
+> average pronunciation and badly failed numbers. None is production-approved
+> or exposed as a selectable narrator.
+>
+> This was **not Arthur with only an accent changed**. Arthur uses the official
+> 350M English Turbo architecture and a clean human narration reference. These
+> clips used the separate 500M Multilingual V3 model, a language-aware tokenizer
+> and CFG generation. Irish was conditioned on speech synthesized by the later-
+> rejected Piper path; Australian and South African used Edge-generated speech.
+> The harness also forced `cfg_weight=0` while V3's official same-language
+> default is `0.5`. Official zero-CFG advice is for a reference-language versus
+> target-language mismatch; every reference here and `language_id` were English.
+>
+> Live audit: source `resemble-ai/chatterbox@5de7a54aa4e5e2baadb0182dde554908b48b85c2`;
+> official Hugging Face weights snapshot
+> `5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18`; CPU; 280-character chunks;
+> `exaggeration=0.5`; `cfg_weight=0`. The exact tested path is rejected. Cause
+> remains divided among model, synthetic reference quality and the unjustified
+> setting until a same-text/same-human-reference official-default A/B is heard.
+
 > ## 2026-08-14 regional-accent direction — LISTENING VERDICT RECORDED
 >
 > Edge is the only option heard so far that comes close for genuine regional
@@ -8,13 +31,15 @@
 > excellent general narrator, not as an accent-preserving engine. Nano/Turbo
 > accent cloning therefore remains closed.
 >
-> Chatterbox Multilingual V3 at `cfg_weight=0` is the one materially different
-> Chatterbox path still open; Australian joins the existing Irish/ZA audition.
+> At that point Chatterbox Multilingual V3 at `cfg_weight=0` was the one
+> materially different Chatterbox path still open; Australian joined the
+> existing Irish/ZA audition. The 2026-08-15 verdict above closes that exact path.
 > The Australian hard sample rendered locally in 310.45 s: 77.736 s,
 > 1,243,820-byte, 24 kHz mono MP3 at 128 kbps, SHA-256
 > `434e8bfee2fd483292961779ca4667987ca2f132ca599fe0b75d2b83be29111a`.
 > It fully decodes and its live sample endpoint returns the exact 1,243,820
-> bytes as `audio/mpeg`. Accent/voice quality remains **unverified by ear**.
+> bytes as `audio/mpeg`. The 2026-08-15 verdict above supersedes this then-open
+> listening status.
 >
 > Official Chatterbox docs provide neither an Australian/Irish dedicated English
 > pack nor a supported public fine-tuning workflow. If V3 fails by ear, the next
@@ -907,12 +932,12 @@
 > | TADA | Runs locally on CPU for the first time — fp32→bf16, peak 15.99 GiB → 10.00 GiB, RTF 1.68 (#23 closed) |
 > | Accents | Piper VCTK rejected after old/current runtime + encoding A/B all failed; twelve bad Chatterbox clones removed; Edge Australian voices labelled |
 >
-> **The finding that matters most:** an accent lives in the **model**, not the
-> reference clip. Cloning carries timbre and not phonetics. Chatterbox's
-> `cfg_weight` is the one lever that moves this — default `0.5` fights the
-> accent, `0` lets it through — and every clip rendered today until the very end
-> used the default. Nano at `cfg_weight=0` was the best Chatterbox result in that
-> comparison, but neither it nor Piper meets the current production quality bar.
+> **Historical interpretation, corrected 2026-08-15:** an accent label or
+> reference clip does not establish authentic generated phonetics. Nano at
+> `cfg_weight=0` was the best arm in that listening comparison, but the claimed
+> mechanism—"0 lets the accent through"—was not stated by upstream and is now
+> retracted. Official zero-CFG guidance concerns a reference/target-language
+> mismatch. Neither Nano zero-CFG nor the later V3 path passed the quality bar.
 >
 > **Failures worth knowing about**, in full in VOICES.md: never read the
 > Chatterbox docs; re-researched three things the repo already contained;

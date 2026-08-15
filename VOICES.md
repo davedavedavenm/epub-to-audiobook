@@ -11,10 +11,12 @@ pronunciation of ordinary words/proper nouns/numbers, pacing and long-form
 listenability are the first gate. Locality, cost, memory and speed matter only
 after an engine passes that listening gate.
 
-**Latest regional-accent verdict (Dave, 2026-08-14):** Edge is the only
-currently heard option that comes close. The other surfaced voices labelled
-Australian, Irish and so on are rejected; a locale label is not evidence that
-the generated accent is authentic or pleasant.
+**Latest regional-accent verdict (Dave, 2026-08-15):** Edge is the only
+currently heard option that comes close. All three Multilingual V3 auditions
+failed overall: Australian accent was okay, Irish was wrong, South African was
+best but still not great; pacing/tone were mediocre, pronunciation average and
+numbers badly wrong. A locale label is not evidence that generated speech is an
+authentic or pleasant audiobook voice.
 
 **The tested Piper path is rejected for production audiobooks (Dave,
 2026-07-28).** Most existing voices sounded bad and inauthentic. A controlled
@@ -88,7 +90,7 @@ English:
 | **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speaker labels | yes | **rejected by ear** for this project; old/current runtime and encoding A/B all failed badly |
 | **MeloTTS** | US, UK, Indian, **Australian**, default | yes | installed and **rejected by ear**; no Irish |
 | **OmniVoice** | US, UK, AU, CA, IN + five non-native-English accents | yes | accents good; slow on CPU; **no Irish/ZA** in fixed upstream vocabulary |
-| **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Australian + Irish + ZA clips rendered at `cfg_weight=0`; listening pending |
+| **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | Exact Australian + Irish + ZA `cfg_weight=0` path **rejected by ear**; root-cause isolation still open |
 | **XTTS-v2** | clones from a reference; reported to carry accent | yes | tested and rejected — see below |
 | **Chatterbox** Nano/Turbo | none. English-only, American phonetics | yes | proven twice not to hold an accent |
 | **Edge** | IE, AU, NZ, GB, ZA, IN, CA, HK, KE, NG, PH, SG, TZ, US | **no** | accents “not bad”, but Chinese company names were all poor; needs internet |
@@ -104,13 +106,21 @@ passes. Do not assume the existing seed respellings solve it. The audition and
 book share preprocessing, but the exact Edge payload still needs a raw-vs-current
 A/B before assigning the cause to Edge or changing the lexicon.
 
-Arthur/Turbo's excellent general-narration result does **not** reopen Turbo as
-an accent engine. Turbo and Nano are English-only models, and both already
-Americanised or weakened regional references in listening. Multilingual V3 is
-the one materially different Chatterbox path still open: upstream claims better
-accent preservation, but publishes no dedicated Australian- or Irish-English
-language pack and no supported public fine-tuning workflow. It must pass by ear
-at `cfg_weight=0`; another well-named reference is not a new hypothesis.
+Arthur/Turbo's excellent general-narration result does **not** mean V3 should
+sound the same with a different accent. They are different models and inference
+paths: Turbo is a 350M English model with `inference_turbo`; V3 is a 500M
+multilingual model with a language-aware tokenizer and CFG sampling. The gate
+also replaced Arthur's clean human reference with synthetic references: Irish
+from the subsequently rejected Piper path, Australian and South African from
+Edge. It therefore changed model, speaker/reference quality and settings at
+once—not merely accent.
+
+The exact V3 gate is rejected, but assigning every defect to V3 would overstate
+the evidence. The harness forced `cfg_weight=0`; official V3 defaults to `0.5`
+for normal use, and its zero-CFG advice addresses a reference-language versus
+target-language mismatch. Every reference here was English and the requested
+language was `en`. Only a same-text, same-human-reference Turbo/V3 A/B at
+official defaults can isolate model quality; accent transfer is a separate gate.
 
 The practical online path worth testing next is Microsoft's supported Azure
 Speech API rather than the unofficial `edge-tts` interface. Azure's official
@@ -331,7 +341,7 @@ recorded speech if any is available.
 
 | Need | Current answer |
 |---|---|
-| Irish or South African, local | **No approved production voice yet.** Chatterbox Multilingual V3 clips exist but remain ungraded. |
+| Irish or South African, local | **No approved production voice.** The exact Chatterbox Multilingual V3 regional gate failed by ear. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
 | Irish, South African or Australian, online | Edge is the **only current near-pass by ear**, but is not approved for Chinese-business nonfiction because company-name pronunciation failed. Test official Azure native regional voices plus its supported lexicon/phoneme controls next. |
 | Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
@@ -388,25 +398,28 @@ accent. Tested: feeding them English produced Welsh gibberish (ASR heard
 
 ---
 
-## `cfg_weight` — the accent lever, and the thing I missed all day
+## `cfg_weight` — supported control, previously misinterpreted
 
 `chatterbox/server.py` accepts `cfg_weight` and `exaggeration` per request and
 has done since it was written. **Default is 0.5.** Every clip rendered on
 2026-07-27 used that default until the very end.
 
-From Resemble's own README, describing the inverse problem:
+From Resemble's README:
 
 > *"language transfer outputs may inherit the accent of the reference clip's
 > language. To mitigate this, set `cfg_weight` to `0`."*
 
-Read the other way round: **low `cfg_weight` lets the reference's accent through;
-high `cfg_weight` lets the model's own American phonetics dominate.** The
-default was actively destroying the thing being attempted.
+The earlier repo read that sentence backwards and promoted `0` as a general
+same-language accent-preservation setting. Upstream does not say that. It says
+the default `0.5` works for most prompts, recommends about `0.3` for a fast
+reference/pacing problem, and reserves `0` for mitigating unwanted accent when
+the reference clip and requested language differ. Our V3 references and
+`language_id="en"` matched, so forcing zero was not justified by that guidance.
 
-**Measured by ear (Dave, 2026-07-27):** Nano at `cfg_weight=0` was the best
-Chatterbox accent-cloning result in that comparison — *"nano cfg 0 is best, but
-could be better"*. Neither that result nor Piper passes the current production
-quality bar.
+**Measured by ear (Dave, 2026-07-27):** Nano at `cfg_weight=0` was the best arm
+in that particular comparison — *"nano cfg 0 is best, but could be better"*.
+That is a listening result, not proof of the discarded mechanism. Neither that
+result nor the V3 zero-CFG gate passes the production quality bar.
 
 Other documented settings, untested here:
 
@@ -421,7 +434,7 @@ Other documented settings, untested here:
 |---|---|---|---|
 | Chatterbox-Nano | 110M | **English only** | On-device/CPU, 3× realtime on 8 cores. What we render books with. |
 | Chatterbox-Turbo | 350M | **English only** | Built for low-latency voice agents. |
-| **Chatterbox-Multilingual V3** | **500M** | 23+ | Headline feature: *"improves voice identity and **accent preservation**"*. Installed as isolated `chatterbox-v3`; Irish/ZA listening pending. |
+| **Chatterbox-Multilingual V3** | **500M** | 23+ | Headline feature: *"improves voice identity and **accent preservation**"*. Installed as isolated `chatterbox-v3`; exact regional zero-CFG gate rejected. |
 | Chatterbox (original) | 500M | English | CFG & exaggeration tuning. |
 
 Nano and Turbo are English-only agent models that make **no claim about accent
@@ -525,11 +538,11 @@ current. Use `scripts/deploy.sh`. See OPERATIONS.md.
 
 ## Next, in order
 
-1. **Grade Chatterbox Multilingual V3** Australian, Irish and South African
-   against Edge and the audiobook quality gate. If these fail, close
-   Chatterbox for regional accents; do not iterate on more reference labels.
-2. **Expose `cfg_weight` per voice**, so accented narrators default to `0` and
-   ordinary ones stay at `0.5`.
+1. **Keep the heard V3 regional path closed.** Do not expose its three labels.
+2. If V3 is revisited, first isolate it with the identical human Arthur
+   reference/text against Turbo at official defaults. Only then test a genuine,
+   clean human regional reference separately; do not infer quality from a
+   Piper/Edge-generated prompt.
 3. **Piper VCTK is closed.** Its controlled synthesis-path A/B failed at every
    layer. Do not polish or repackage this model; only reopen Piper for a
    materially different model with independently good samples.

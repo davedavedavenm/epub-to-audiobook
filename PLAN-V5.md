@@ -63,16 +63,21 @@ come across something". Telegram already works from phone and desktop.
 
 - [x] 4.1 Install V3 (500M) and render Irish/South-African auditions.
 - [x] 4.1a Render the Australian V3 audition at `cfg_weight=0`.
-- [ ] 4.1b Grade Australian, Irish and South-African V3 by ear.
-- [ ] 4.2 If it wins, make it the accented-narrator engine.
-- [ ] 4.3 Expose `cfg_weight` per voice — accented narrators default `0`,
-      ordinary narrators stay `0.5`.
+- [x] 4.1b Grade Australian, Irish and South-African V3 by ear — all fail the
+      audiobook gate.
+- [x] 4.2 Do not integrate or expose these three V3 voices.
+- [x] 4.3 Retract `cfg_weight=0` as a general accent control. Upstream documents
+      `0.5` as the normal default and zero for a reference/target-language
+      mismatch, which this English-to-English gate was not.
 
 V3 is the only model in the Chatterbox family that claims **accent
 preservation**. Nano and Turbo are English-only agent models and their accent
 cloning path is closed even though Arthur/Turbo is excellent general narration.
-If V3 fails the AU/IE/ZA listening gate, close Chatterbox for regional accents
-and compare the supported Azure regional voices plus pronunciation controls.
+The exact V3/synthetic-reference/CFG-zero path failed and is closed. This was
+not a fair "Arthur plus accent" comparison: it changed model, prompt source and
+settings together. Only a same-text, same-human-reference Turbo-vs-V3 test at
+official defaults can isolate the model. For practical regional voices, compare
+the supported Azure voices plus pronunciation controls.
 See VOICES.md.
 
 ## 5. Fix `_trim_leadin()` properly — #21

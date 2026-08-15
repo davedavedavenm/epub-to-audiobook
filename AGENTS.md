@@ -54,7 +54,7 @@ Read these before changing anything TTS- or text-related:
 | [LOW-COST-TTS.md](LOW-COST-TTS.md) | Engine bake-off, listening verdicts, cost model, UK reference voices. |
 | [TTS-LANDSCAPE-2026-07.md](TTS-LANDSCAPE-2026-07.md) | Mid-2026 state-of-the-art review: new engines, cost updates, what to evaluate next. |
 | [ENGINES.md](ENGINES.md) | Official engine facts + listening outcomes — the baseline for all engine claims. |
-| [VOICES.md](VOICES.md) | **Read before ANY voice or accent work.** Which voice to use for which accent, why cloning cannot carry an accent, the `cfg_weight` lever, and a list of wrong turns already taken. |
+| [VOICES.md](VOICES.md) | **Read before ANY voice or accent work.** Listening verdicts, exact rejection boundaries, the corrected `cfg_weight` interpretation, and wrong turns already taken. |
 | [PLAN-V5.md](PLAN-V5.md) | **Current forward plan** (2026-07-27): automatic re-render, article RSS + Telegram capture, Chatterbox V3. |
 | [PLAN.md](PLAN.md) | Superseded. Historical forward plan. |
 | [GPU-SAFETY.md](GPU-SAFETY.md) | **READ FIRST for any GPU work.** Default-local rules; how to not drain the Vast balance. |
@@ -104,9 +104,12 @@ playbook but skips these is a net negative.
    anything.**
    *Violations, all on 2026-07-27:* the VCTK accent voices, the Edge Australian
    voices and TADA's `LEADIN` cold-start fix were each "discovered" by research
-   while already present in the codebase; and a full day of accent work ran at
-   Chatterbox's default `cfg_weight=0.5` — the exact setting Resemble's README
-   tells you to change for that problem — because the README was never opened.
+   while already present in the codebase; and a full day of accent work ran
+   without first reading Chatterbox's documented controls. A later agent made
+   the opposite error and promoted `cfg_weight=0` for same-language accent
+   preservation, although upstream documents zero for a reference/target-
+   language mismatch and `0.5` as the normal default. Both failures came from
+   interpreting a parameter before reading its exact documented boundary.
    Check `VOICES` in `app.py`, `git log`, and the upstream README first.
 10. **Never hand over a URL, path or clip you have not opened yourself.**
     *Violation: `/api/sample/ab_tada_cpu` was given to the user and 404'd —

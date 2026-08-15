@@ -16,6 +16,7 @@ accent-engine verdicts are dated in the table.
 | Engine | Verdict | Hardware |
 |---|---|---|
 | Chatterbox Turbo (`uk_male_minter` / "Arthur") | "really really good" — accepted for full-book use | CPU only (Ryzen 9 8945HS, 16 threads) |
+| Chatterbox Multilingual V3 regional gate (2026-08-15) | **Exact tested path rejected:** Australian accent okay, Irish wrong, South African best but still not great; all three had mediocre pacing/tone, average pronunciation and badly failed numbers. This was V3 with synthetic Piper/Edge references and `cfg_weight=0`, not Arthur/Turbo with an accent change. Root-cause attribution remains open pending a controlled official-default, same-reference A/B. | CPU only (zorin) |
 | TADA-1B (v8, cloned voice, after transcript+pacing fixes) | Better than earlier cuts, but residual pacing drift + proper-noun misreads | Kaggle T4 |
 | Piper regional/VCTK path (2026-07-28) | **Rejected for production:** deployed 64 kbps, higher-bitrate same-WAV, and current Piper 1.6 direct clips were all “absolute shit”; almost every word wrong and poor sound | CPU only (zorin) |
 | MeloTTS (2026-07-28) | **Rejected:** bad overall TTS, poor pronunciation and poor number handling | CPU only (zorin) |
@@ -258,8 +259,10 @@ Source: [resemble-ai/chatterbox GitHub](https://github.com/resemble-ai/chatterbo
 - **Multilingual V3 (500M, 23+ languages):** upstream says it improves speaker
   identity and accent preservation across languages. Local CPU evaluation is
   isolated as `chatterbox-v3`; successful hard-sample RTF was 4.15 Irish and
-  4.81 South African with `cfg_weight=0`. Accent quality remains **[unverified]**
-  until heard.
+  4.81 South African with `cfg_weight=0`. The exact regional gate is **rejected
+  by ear**. The model source is pinned to official commit `5de7a54`, while the
+  live official weights resolve to Hugging Face snapshot `5bb1f6ee`; upstream
+  defaults V3 to `cfg_weight=0.5`. See `VOICES.md` for the confounded-path audit.
 
 ## OmniVoice
 

@@ -20,8 +20,8 @@ cost per finished book.
 > engines, but the default answer is now "render it locally and pay nothing".
 > See STATUS.md for the measurement.
 
-Last reviewed: 2026-08-13 (project optimisation order, rejection boundaries,
-Vibe comparison validity and paid-GPU safety). Re-check every commercial price
+Last reviewed: 2026-08-15 (project optimisation order, rejection boundaries,
+Vibe/V3 comparison validity and paid-GPU safety). Re-check every commercial price
 in the provider's current official documentation before using it. Rough
 conversion used for historical screening: USD1 ~= GBP0.75.
 
@@ -73,13 +73,15 @@ opt-in evaluation services until the clips are graded by ear.
 |---|---:|---:|---:|---:|---|
 | [MeloTTS](https://github.com/myshell-ai/MeloTTS) | **0.34** | **0.33** | 3.86 GiB | **~4.0 h** | **Rejected by ear:** bad TTS, pronunciation and number handling. Speed does not rescue it. |
 | [OmniVoice](https://github.com/k2-fsa/OmniVoice) | **9.10** | **9.06** | 1.59 GiB | **~4.5 days** | **Best accent quality of this pair**, but default CPU throughput disqualifies full books. Huawei/Xiaomi need its supported inline CMU overrides. Non-commercial weights. |
-| Chatterbox Multilingual V3 | **4.15 Irish** | **4.81 South African** | 5.74 GiB | **~2.1–2.4 days** | Successfully rendered; quality/accent awaiting listening. MIT, local CPU, isolated opt-in service. |
+| Chatterbox Multilingual V3 | **4.15 Irish** | **4.81 South African** | 5.74 GiB | **~2.1–2.4 days** | **Exact path rejected by ear:** mediocre pacing/tone, average pronunciation, bad numbers; Australian okay, Irish wrong, ZA best but still not good. Synthetic references + unjustified CFG zero confound engine-level cause. |
 
 Whisper `base` sequence ratios were 0.769/0.802 for Melo and 0.826/0.823
 for OmniVoice. V3 scored 0.848 Irish / 0.844 ZA, but its ASR transcripts show
 material number errors, so the slightly higher aggregate score is not a clean
 win. These checks prove the files contain mostly matching English; they do
-**not** grade accents or naturalness. Dave's listening verdict is recorded above.
+**not** grade accents or naturalness. Dave's failed listening verdict is the
+quality decision; a same-human-reference official-default A/B would be needed
+before blaming every defect on V3 itself.
 See STATUS.md for exact wall times, durations, memory and clip paths.
 
 ## 2026-07-28 next-generation audiobook shortlist
