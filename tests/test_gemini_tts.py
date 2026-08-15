@@ -71,14 +71,8 @@ def test_one_request_returns_valid_24khz_mono_wav(monkeypatch):
     assert len(calls) == 1
     assert calls[0][0][0] == gemini.UPSTREAM_URL
     assert calls[0][1]['headers']['x-goog-api-key'] == 'free-project-key'
-    assert calls[0][1]['headers']['Api-Revision'] == '2026-05-20'
     assert calls[0][1]['json']['model'] == 'gemini-3.1-flash-tts-preview'
-    assert calls[0][1]['json']['response_format'] == {
-        'type': 'audio',
-        'mime_type': 'audio/l16',
-        'sample_rate': 24000,
-        'delivery': 'inline',
-    }
+    assert calls[0][1]['json']['response_format'] == {'type': 'audio'}
     assert calls[0][1]['json']['generation_config']['speech_config'] == [
         {'voice': 'Achernar'}
     ]

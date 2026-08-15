@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 import os
 import wave
 
@@ -37,6 +38,7 @@ DEFAULT_STYLE = (
 )
 
 app = FastAPI()
+logger = logging.getLogger("gemini_tts")
 
 
 class SpeechRequest(BaseModel):
@@ -155,12 +157,10 @@ def _synth(text: str, voice_name: str) -> bytes:
     payload = {
         "model": MODEL_ID,
         "input": prompt,
-        "response_format": {
-            "type": "audio",
-            "mime_type": "audio/l16",
-            "sample_rate": 24_000,
-            "delivery": "inline",
-        },
+        # Keep this exactly aligned with the TTS-specific official REST
+        # example. The generic Interactions schema advertises additional audio
+        # format controls, but this TTS model rejects them with HTTP 400.
+        "response_format": {"type": "audio"},
         "generation_config": {
             "speech_config": [{"voice": voice_name}],
         },
@@ -170,18 +170,17 @@ def _synth(text: str, voice_name: str) -> bytes:
     try:
         upstream = requests.post(
             UPSTREAM_URL,
-            headers={
-                "x-goog-api-key": _api_key(),
-                "Content-Type": "application/json",
-                "Api-Revision": "2026-05-20",
-            },
+            headers={"x-goog-api-key": _api_key(), "Content-Type": "application/json"},
             json=payload,
             timeout=(15, int(os.environ.get("GEMINI_REQUEST_TIMEOUT", "300"))),
         )
     except (requests.ConnectionError, requests.Timeout) as exc:
         raise HTTPException(status_code=503, detail=f"Gemini request failed: {exc}") from exc
     if upstream.status_code != 200:
-        raise HTTPException(status_code=upstream.status_code, detail=_error_detail(upstream))
+        detail = _error_detail(upstream)
+        logger.warning("Gemini upstream rejected request: status=%s detail=%s",
+                       upstream.status_code, detail)
+        raise HTTPException(status_code=upstream.status_code, detail=detail)
     return _wav_from_pcm(_pcm_from_interaction(upstream.json()))
 
 
