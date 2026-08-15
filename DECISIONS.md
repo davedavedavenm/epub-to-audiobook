@@ -46,6 +46,10 @@ paid model or paid-tier fallback. Do not attach Cloud Billing to that project.
 Because inference responses do not expose billing tier, the adapter additionally
 requires `GEMINI_FREE_PROJECT_CONFIRMED=1` after the operator checks AI Studio;
 the dedicated unbilled project, not that flag, is the real no-charge boundary.
+Keep the existing dedicated project and its current owner; do not transfer it
+to, or couple it with, a Google AI consumer subscription. Google documents no
+consumer-subscription uplift for Developer API quotas, so that would add
+account complexity without improving the audiobook path.
 
 Google warns that this preview model can drift on outputs longer than a few
 minutes. The app therefore uses the measured `explicit` number/currency text
