@@ -80,6 +80,15 @@ strictly budgeted: one to three explicitly named voices, a default ceiling of
 existing output directory, and Dave's approval before another synthesis run.
 Never create or switch to S0 automatically. See `VOICES.md` for official sources.
 
+The first native-voice gate is now heard: Australian Darren, Irish Connor and
+South African Luke had spot-on accents but robotic/degraded voices. Record this
+as an accent pass and an overall quality failure. The exact 24 kHz/160 kbps MP3
+path is closed for production. Microsoft's official REST documentation states
+that 48 kHz selects its high-fidelity standard model and supports lossless PCM,
+so one same-voice 48 kHz control is the only encoding/model-tier diagnostic
+still justified. Do not claim SSML rate/pitch tuning can repair the underlying
+voice, and do not integrate or spend beyond F0 without a new listening verdict.
+
 ## Shared-host CPU candidates reserve capacity for the product — Active
 
 Pocket and Kitten remain CPU-only, but each service is capped at **four CPU

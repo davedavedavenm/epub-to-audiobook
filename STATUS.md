@@ -33,8 +33,20 @@
 > `62f1be8f84f11aacb66af93a9fd1a985efe53cdcefc51c2cf059dae2d62fb17a`.
 > All three are 24 kHz mono MP3s, fully decoded locally and match their manifest
 > hashes. Estimated cumulative F0 synthesis text is now 8,894 characters
-> (1.7788%); subscription-credit use remains $0. They await Dave's listening
-> verdict. No additional Azure synthesis is authorised by this gate.
+> (1.7788%); subscription-credit use remains $0. Dave's verdict: **all three
+> accents are spot on, but all three voices sound robotic and degraded**. This
+> is an accent pass and overall audiobook-quality failure; none is approved or
+> exposed in the app. No additional Azure synthesis is authorised by this gate.
+>
+> The delivered files used 24 kHz / 160 kbps mono MP3. That is not a low bitrate,
+> but Microsoft's current REST documentation says requesting 48 kHz invokes a
+> separate high-fidelity standard-voice model and supports lossless
+> `riff-48khz-16bit-mono-pcm`. One same-voice lossless 48 kHz control can
+> therefore isolate the “degraded” complaint. It cannot be assumed to cure the
+> robotic timbre: Connor and Luke are officially Standard voices with no listed
+> speaking styles, while SSML prosody changes rate/pitch/range/volume rather than
+> the underlying voice. Australian preview offers materially different MAI and
+> Dragon HD Omni models, but the live UK South catalogue did not expose them.
 
 > ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
 >

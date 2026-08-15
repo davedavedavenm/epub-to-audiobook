@@ -157,15 +157,26 @@ text first.
 
 Dave then approved a 300-character, three-request gate using the same normalized
 text for `en-AU-DarrenNeural`, `en-IE-ConnorNeural` and `en-ZA-LukeNeural`.
-All three clips decode completely and match their evidence hashes; they await
-his listening verdict. That approved run used an estimated 900 additional F0
-characters, bringing estimated cumulative synthesis text to 8,894 characters
-(1.7788% of the monthly allowance) and did not authorise any further request or
-an app integration.
+All three clips decode completely and match their evidence hashes. His verdict:
+the three accents are **spot on**, but the voices sound **robotic and degraded**.
+This is an accent pass and overall quality failure, not an app-integration
+approval. That run used an estimated 900 additional F0 characters, bringing
+estimated cumulative synthesis text to 8,894 characters (1.7788%).
+
+The files were 24 kHz / 160 kbps mono MP3. Microsoft documents that selecting a
+48 kHz format invokes a separate high-fidelity standard model and supports
+lossless `riff-48khz-16bit-mono-pcm`, so one same-voice 48 kHz control is a valid
+diagnostic for “degraded”. Do not describe it as a fix for “robotic”: Irish
+Connor and South African Luke are Standard voices with no official style list,
+and prosody only adjusts delivery parameters. Australia's preview MAI-Voice-2
+and Dragon HD Omni options are materially different model paths, but they were
+not returned by the live UK South catalogue and must not be conflated with the
+three heard Standard voices.
 
 Official references: [Chatterbox](https://github.com/resemble-ai/chatterbox),
 [Azure language/voice catalogue](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support),
 [Azure pronunciation controls](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation),
+[Azure REST audio formats](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs),
 [Azure Speech pricing](https://azure.microsoft.com/en-gb/pricing/details/speech/).
 
 OmniVoice's upstream voice-design list is closed, not free-form: American,
@@ -376,7 +387,7 @@ recorded speech if any is available.
 |---|---|
 | Irish or South African, local | **No approved production voice.** The exact Chatterbox Multilingual V3 regional gate failed by ear. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
-| Irish, South African or Australian, online | Edge is the **only current near-pass by ear**, but is not approved for Chinese-business nonfiction because company-name pronunciation failed. Test official Azure native regional voices plus its supported lexicon/phoneme controls next. |
+| Irish, South African or Australian, online | Azure Standard native voices passed accent authenticity but failed overall for robotic/degraded sound. Edge remains the only near-pass by ear, but its company-name pronunciation failed. One Azure 48 kHz lossless control may isolate degradation; it cannot prove better timbre. |
 | Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
 | British/general narration, local | **Beatrice (Nano)** (`uk_female_samuel_nano` via Chatterbox Nano) is the system default narrator. Fast CPU inference (~0.87x RTF) with human-cloned British voice. |
 
