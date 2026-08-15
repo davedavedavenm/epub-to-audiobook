@@ -9,7 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY server.py .
 
 RUN useradd -r -m -s /bin/false appuser \
-    && chown -R appuser:appuser /app /home/appuser
+    && mkdir -p /data/gemini_usage \
+    && chown -R appuser:appuser /app /home/appuser /data/gemini_usage
 USER appuser
 
 EXPOSE 8014

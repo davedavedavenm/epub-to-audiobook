@@ -428,6 +428,11 @@ services:
       - GEMINI_FREE_PROJECT_CONFIRMED=${GEMINI_FREE_PROJECT_CONFIRMED:-0}
       - GEMINI_REQUEST_TIMEOUT=${GEMINI_REQUEST_TIMEOUT:-300}
       - GEMINI_TTS_STYLE=${GEMINI_TTS_STYLE:-}
+      - GEMINI_USAGE_DIR=/data/gemini_usage
+      - GEMINI_USAGE_BOOTSTRAP_PACIFIC_DATE=${GEMINI_USAGE_BOOTSTRAP_PACIFIC_DATE:-}
+      - GEMINI_USAGE_BOOTSTRAP_COUNT=${GEMINI_USAGE_BOOTSTRAP_COUNT:-0}
+    volumes:
+      - gemini-usage:/data/gemini_usage
     profiles:
       - gemini
     expose:
@@ -734,3 +739,4 @@ volumes:
   qwen3-cache:
   pocket-cache:
   kitten-cache:
+  gemini-usage:

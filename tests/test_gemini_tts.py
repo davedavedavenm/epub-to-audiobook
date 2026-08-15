@@ -16,6 +16,14 @@ gemini = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gemini)
 
 
+@pytest.fixture(autouse=True)
+def isolated_usage_ledger(tmp_path, monkeypatch):
+    monkeypatch.setenv('GEMINI_USAGE_DIR', str(tmp_path / 'usage'))
+    monkeypatch.delenv('GEMINI_USAGE_BOOTSTRAP_PACIFIC_DATE', raising=False)
+    monkeypatch.delenv('GEMINI_USAGE_BOOTSTRAP_COUNT', raising=False)
+    monkeypatch.setattr(gemini, '_pacific_day', lambda: '2026-08-15')
+
+
 class FakeInteractions:
     def __init__(self, result=None, error=None):
         self.result = result
@@ -47,6 +55,17 @@ def test_adapter_is_pinned_to_developer_api_free_path():
     assert gemini.MODEL_ID == 'gemini-3.1-flash-tts-preview'
     requirements = (ROOT / 'gemini' / 'requirements.txt').read_text(encoding='utf-8')
     assert 'google-genai==2.18.1' in requirements
+
+
+def test_official_catalogue_is_exactly_the_30_documented_presets():
+    assert list(gemini.VOICE_MAP.values()) == [
+        'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus',
+        'Aoede', 'Callirrhoe', 'Autonoe', 'Enceladus', 'Iapetus', 'Umbriel',
+        'Algieba', 'Despina', 'Erinome', 'Algenib', 'Rasalgethi',
+        'Laomedeia', 'Achernar', 'Alnilam', 'Schedar', 'Gacrux',
+        'Pulcherrima', 'Achird', 'Zubenelgenubi', 'Vindemiatrix',
+        'Sadachbia', 'Sadaltager', 'Sulafat',
+    ]
 
 
 def test_key_without_explicit_free_project_confirmation_is_refused(monkeypatch):
@@ -125,6 +144,17 @@ def test_quota_failure_is_returned_without_retry(monkeypatch):
     assert 'Free quota exhausted' in error.value.detail
     assert len(client.interactions.calls) == 1
     assert client.closed is True
+
+
+def test_local_ledger_refuses_an_eleventh_request_before_upstream():
+    for index in range(10):
+        gemini._reserve_request('Achernar', f'text {index}')
+    with pytest.raises(HTTPException) as error:
+        gemini._reserve_request('Achernar', 'eleventh')
+    assert error.value.status_code == 429
+    assert gemini._usage_status() == {
+        'pacific_date': '2026-08-15', 'used': 10, 'cap': 10, 'remaining': 0,
+    }
 
 
 def test_service_unavailable_machine_code_is_preserved(monkeypatch):

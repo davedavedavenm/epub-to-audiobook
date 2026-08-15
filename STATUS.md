@@ -1,5 +1,38 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-15 Index join diagnosis + Gemini full-catalogue work
+>
+> Dave heard garbling at approximately 28 and 58 seconds in both IndexTTS-2.5
+> arms. This is now measured, not inferred: the source WAVs contain Index's
+> exact 200 ms inserted joins at 30.151/57.983 s (native) and 27.632/59.620 s
+> (prepared). The official 120-token splitter cut the prepared arm after “six
+> days a week,” and after “the E U,”; the native arm also ended its second
+> segment on a comma. The MP3s fully decode, so this is a synthesis-boundary
+> failure rather than MP3 damage. The prepared arm separately passed raw `1.5`
+> with Index normalization disabled, explaining “one five gigawatts”: our
+> explicit input/configuration was wrong.
+>
+> One replacement private free-T4 job,
+> `davedavedavedavenm/indextts25-arthur-boundary-fix`, completed. It generated
+> exactly one corrected output as nine complete-sentence calls, proves the
+> official splitter cannot subdivide them, writes “one point five gigawatts”,
+> joins PCM with documented 200 ms sentence gaps and uses no paid compute or
+> ASR. The corrected output is 85.529 s, MP3 SHA-256
+> `dc1dbfba54cf3d4c4fa10d41f246b002f14776bfe78d2509d40d6a43c11cbd94`.
+> All nine source/segment hashes, the eight exact 200 ms joins, WAV structure
+> and full MP3 decode passed independent local validation. Listening remains
+> open; do not integrate Index before Dave hears it.
+>
+> Gemini's complete official 30-preset catalogue is now registered. Uncached
+> presets remain unselectable; Achernar remains the only long-form-approved
+> voice. The adapter has gained a persistent Pacific-day usage ledger which
+> counts failures and refuses request eleven before upstream. The catalogue
+> will be warmed across Free quota days, one attempt per preset, without
+> attaching billing. New-user setup is consolidated in `GEMINI-SETUP.md`.
+> Preview, web-worker and standalone explicit-number paths now all use
+> `modern=True, expand_numbers=True`, fixing the bare-decimal gap in every
+> parallel path.
+
 > ## 2026-08-15 IndexTTS-2.5 — FREE-T4 CAPACITY PASSED / LISTENING OPEN
 >
 > Dave authorised the next free/open-weight candidate after selecting Gemini.
@@ -33,8 +66,9 @@
 > sample “very good” and asked for a free or near-free route. The repo now has a
 > dedicated non-root OpenAI-compatible adapter using Google's official
 > `google-genai==2.18.1` SDK and current Gemini Developer API **Interactions**
-> endpoint. It is pinned to that one model and
-> Achernar; it cannot call Vertex, Batch, another paid model or a configurable
+> endpoint. It is pinned to that one model and the 30 official presets; only
+> cached presets are selectable and only Achernar is long-form approved. It
+> cannot call Vertex, Batch, another paid model or a configurable
 > upstream. Only a key belonging to an unbilled AI Studio project whose plan is
 > Free is permitted. It fails closed without the separate operator assertion
 > `GEMINI_FREE_PROJECT_CONFIRMED=1`; the docs explicitly state that the inference
@@ -61,8 +95,8 @@
 > `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`.
 > It fully decoded, `/api/preview/gemini_achernar` returned the identical bytes,
 > and `/api/voices` reported `118/118` configured previews ready.
-> Post-change verification now passes 307 host tests plus all nine adapter tests
-> in its pinned SDK environment (316 total).
+> Post-change verification now passes 308 host tests plus all eleven adapter
+> tests in its pinned SDK environment (319 total).
 >
 > The original raw-REST bring-up made two generation calls whose audio could not
 > be decoded from the undocumented wire shape; one intervening request was

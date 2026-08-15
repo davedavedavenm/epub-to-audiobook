@@ -97,12 +97,22 @@ def test_cpu_candidate_catalogues_match_official_lists():
             'kitten_rosie', 'kitten_hugo', 'kitten_kiki', 'kitten_leo'} == set(kitten)
 
 
+def test_gemini_catalogue_contains_all_30_official_presets():
+    gemini = [key for key, value in appmod.VOICES.items() if value['engine'] == 'gemini']
+    assert len(gemini) == 30
+    assert gemini[0] == 'gemini_zephyr'
+    assert 'gemini_achernar' in gemini
+    assert gemini[-1] == 'gemini_sulafat'
+    assert all(appmod.VOICES[key]['gender'] == 'Unspecified' for key in gemini)
+
+
 def test_explicit_candidate_previews_use_explicit_numeric_profile():
     for engine in ('pocket', 'kitten', 'gemini'):
         out = appmod._preview_text_for(engine)
         assert '$1.2' not in out
         assert 'one point two billion dollars' in out
-        assert 'fifty-two percent' in out
+        assert 'fifty two percent' in out
+        assert 'one point five gigawatts' in out
 
 
 def test_gemini_failure_never_enters_automatic_retry(monkeypatch):

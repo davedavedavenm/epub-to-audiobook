@@ -16,9 +16,15 @@ https://ai.google.dev/gemini-api/docs/billing
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
+import json
 import os
+import threading
 import wave
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import JSONResponse
@@ -30,7 +36,25 @@ from pydantic import BaseModel
 
 MODEL_ID = "gemini-3.1-flash-tts-preview"
 UPSTREAM_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
-VOICE_MAP = {"gemini_achernar": "Achernar"}
+VOICE_MAP = {
+    "gemini_zephyr": "Zephyr", "gemini_puck": "Puck",
+    "gemini_charon": "Charon", "gemini_kore": "Kore",
+    "gemini_fenrir": "Fenrir", "gemini_leda": "Leda",
+    "gemini_orus": "Orus", "gemini_aoede": "Aoede",
+    "gemini_callirrhoe": "Callirrhoe", "gemini_autonoe": "Autonoe",
+    "gemini_enceladus": "Enceladus", "gemini_iapetus": "Iapetus",
+    "gemini_umbriel": "Umbriel", "gemini_algieba": "Algieba",
+    "gemini_despina": "Despina", "gemini_erinome": "Erinome",
+    "gemini_algenib": "Algenib", "gemini_rasalgethi": "Rasalgethi",
+    "gemini_laomedeia": "Laomedeia", "gemini_achernar": "Achernar",
+    "gemini_alnilam": "Alnilam", "gemini_schedar": "Schedar",
+    "gemini_gacrux": "Gacrux", "gemini_pulcherrima": "Pulcherrima",
+    "gemini_achird": "Achird", "gemini_zubenelgenubi": "Zubenelgenubi",
+    "gemini_vindemiatrix": "Vindemiatrix", "gemini_sadachbia": "Sadachbia",
+    "gemini_sadaltager": "Sadaltager", "gemini_sulafat": "Sulafat",
+}
+DAILY_REQUEST_CAP = 10
+_USAGE_LOCK = threading.Lock()
 MAX_INPUT_CHARS = 3_200
 DEFAULT_STYLE = (
     "Read aloud in a warm, natural, engaging audiobook style. Use British "
@@ -105,6 +129,91 @@ def _client() -> genai.Client:
     )
 
 
+def _pacific_day() -> str:
+    """Gemini RPD resets at midnight Pacific, per Google's rate-limit docs."""
+    return datetime.now(ZoneInfo("America/Los_Angeles")).date().isoformat()
+
+
+def _usage_path() -> Path:
+    return Path(os.environ.get("GEMINI_USAGE_DIR", "/data/gemini_usage")) / "requests.json"
+
+
+def _fresh_usage(day: str) -> dict:
+    bootstrap_day = os.environ.get("GEMINI_USAGE_BOOTSTRAP_PACIFIC_DATE", "").strip()
+    bootstrap = int(os.environ.get("GEMINI_USAGE_BOOTSTRAP_COUNT", "0")) if day == bootstrap_day else 0
+    if not 0 <= bootstrap <= DAILY_REQUEST_CAP:
+        raise HTTPException(status_code=503, detail="Invalid Gemini usage bootstrap count")
+    return {
+        "pacific_date": day,
+        "cap": DAILY_REQUEST_CAP,
+        "attempts": [
+            {"source": "pre-ledger bootstrap", "outcome": "counted"}
+            for _ in range(bootstrap)
+        ],
+    }
+
+
+def _read_usage() -> dict:
+    day = _pacific_day()
+    path = _usage_path()
+    try:
+        usage = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        usage = _fresh_usage(day)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail=f"Gemini usage ledger unreadable: {exc}") from exc
+    if usage.get("pacific_date") != day:
+        usage = _fresh_usage(day)
+    usage["cap"] = DAILY_REQUEST_CAP
+    usage.setdefault("attempts", [])
+    return usage
+
+
+def _write_usage(usage: dict) -> None:
+    path = _usage_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".json.part")
+    temporary.write_text(json.dumps(usage, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def _reserve_request(voice_name: str, text: str) -> tuple[str, int]:
+    """Reserve one upstream attempt before sending it; never exceed 10 RPD."""
+    with _USAGE_LOCK:
+        usage = _read_usage()
+        attempts = usage["attempts"]
+        if len(attempts) >= DAILY_REQUEST_CAP:
+            raise HTTPException(
+                status_code=429,
+                detail=("Local free-tier guard: all 10 Gemini requests for the current "
+                        "Pacific quota day are already accounted for"),
+            )
+        attempts.append({
+            "time": datetime.now(ZoneInfo("America/Los_Angeles")).isoformat(),
+            "voice": voice_name,
+            "input_sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "outcome": "reserved",
+        })
+        _write_usage(usage)
+        return usage["pacific_date"], len(attempts) - 1
+
+
+def _record_outcome(day: str, index: int, outcome: str) -> None:
+    with _USAGE_LOCK:
+        usage = _read_usage()
+        if usage.get("pacific_date") == day and index < len(usage["attempts"]):
+            usage["attempts"][index]["outcome"] = outcome
+            _write_usage(usage)
+
+
+def _usage_status() -> dict:
+    with _USAGE_LOCK:
+        usage = _read_usage()
+    used = len(usage["attempts"])
+    return {"pacific_date": usage["pacific_date"], "used": used,
+            "cap": DAILY_REQUEST_CAP, "remaining": DAILY_REQUEST_CAP - used}
+
+
 def _api_error_detail(exc: genai_errors.APIError) -> str:
     """Keep Google's documented machine code alongside its safe message."""
     error = exc.details.get("error", {}) if isinstance(exc.details, dict) else {}
@@ -125,6 +234,7 @@ def _synth(text: str, voice_name: str) -> bytes:
     # SDK convenience property, not a raw REST field; using it avoids coupling
     # this adapter to the Interactions API's changing wire representation.
     client = _client()
+    usage_day, usage_index = _reserve_request(voice_name, text)
     try:
         interaction = client.interactions.create(
             model=MODEL_ID,
@@ -133,11 +243,13 @@ def _synth(text: str, voice_name: str) -> bytes:
             generation_config={"speech_config": [{"voice": voice_name}]},
         )
     except genai_errors.APIError as exc:
+        _record_outcome(usage_day, usage_index, f"api_error:{exc.code or 'unknown'}")
         raise HTTPException(
             status_code=exc.code or 502,
             detail=_api_error_detail(exc),
         ) from exc
     except Exception as exc:
+        _record_outcome(usage_day, usage_index, "client_error")
         raise HTTPException(status_code=503, detail=f"Gemini request failed: {exc}") from exc
     finally:
         client.close()
@@ -145,10 +257,13 @@ def _synth(text: str, voice_name: str) -> bytes:
         encoded = interaction.output_audio.data
         pcm = base64.b64decode(encoded, validate=True)
     except Exception as exc:
+        _record_outcome(usage_day, usage_index, "invalid_output")
         raise HTTPException(
             status_code=502, detail="Gemini SDK response contained no valid output_audio"
         ) from exc
-    return _wav_from_pcm(pcm)
+    result = _wav_from_pcm(pcm)
+    _record_outcome(usage_day, usage_index, "success")
+    return result
 
 
 @app.get("/health")
@@ -174,6 +289,7 @@ def health():
         "voices": list(VOICE_MAP),
         "max_input_chars": MAX_INPUT_CHARS,
         "automatic_retries": 0,
+        "free_usage": _usage_status(),
     }
     return JSONResponse(
         body,

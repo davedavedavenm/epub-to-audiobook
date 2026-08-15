@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Stage the bounded IndexTTS-2.5 free-Kaggle T4 audition gate.
+"""Stage the sentence-safe IndexTTS-2.5 free-Kaggle T4 follow-up gate.
 
 The generated private kernel follows the exact upstream release and model
-snapshot.  It loads the model once and renders only two short, same-reference
-arms: Index's native normalizer and the repo's explicit number/currency text.
-No ASR is used and no production defaults are changed.
+snapshot. It loads the model once and renders one corrected arm: production
+number/currency text with decimal units expanded, generated as complete
+sentences so Index's token splitter cannot cut a phrase mid-sentence. No ASR is
+used and no production defaults are changed before Dave hears the result.
 """
 from __future__ import annotations
 
@@ -16,14 +17,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "scratch" / "indextts25_gate" / "kernel"
-APP_COMMIT = "c33442e356e908cdee49cb08d89c25c8f9f5dcec"
+OUT = ROOT / "scratch" / "indextts25_boundary_fix" / "kernel"
+APP_COMMIT = "d8ca10d812a71e6d1c7672a28297509bb3dee102"
 INDEX_COMMIT = "39207d91c30899cad1e7c1b9eb678c241f678e55"
 MODEL_REVISION = "c39ce5ba981572cb187443877ff559dfb246ce63"
 ARTHUR_SHA256 = "8774082c3acf6c215dc9307a4a9cce5fd50d4242fc9263534ed420675873e252"
 ARTHUR_BYTES = 864_182
 RAW_SHA256 = "f6294d0b3a9257277f26cf505f6814933500da641f826d3e6ca3cc1e28c45a0f"
-PREPARED_SHA256 = "57b51dd4df3795dda2e1dab04c68d25c7eea97f5b160dfd8b65537bd5ee2389c"
+PREPARED_SHA256 = "8ccd447f2890e5f7cb7b9f8d41bb77cf4fe08a5cb40de2320a76559715afac1e"
 SEED = 20_260_815
 
 # Byte-pinned output of the deployed explicit number/currency profile.  Keep it
@@ -31,19 +32,19 @@ SEED = 20_260_815
 # environment can silently take its documented fallback path and stage the
 # wrong comparison text.
 PREPARED_TEXT = (
-    "In the spring of nineteen ninety-seven, Apple was nine weeks from bankruptcy. Its C E O had "
-    "been ousted, Steve Jobs had returned, the share price had fallen seventy-one percent, and the "
+    "In the spring of nineteen ninety seven, Apple was nine weeks from bankruptcy. Its C E O had "
+    "been ousted, Steve Jobs had returned, the share price had fallen seventy one percent, and the "
     "company was burning through one point two billion dollars a year. Few analysts at Goldman Sachs "
     "believed it would survive to see the year two thousand.\n\n"
     "What changed was not one decision, but a thousand small ones. Scott Forstall, Jony Ive, and a "
-    "young engineer named Nguyen worked eighteen-hour days, six days a week, for months on end. "
+    "young engineer named Nguyen worked eighteen hour days, six days a week, for months on end. "
     "Between two thousand one and two thousand seven, Apple's partners in Shenzhen and Zhengzhou "
     "scaled from three thousand four hundred workers to over two hundred and thirty thousand; a "
-    "single Foxconn campus drew 1.5 gigawatts.\n\n"
-    "Today the iPhone accounts for roughly fifty-two percent of revenue, and the App Store for some "
-    "twenty-four point six billion pounds a year. Rivals — Huawei, Xiaomi, Samsung — circle constantly. "
+    "single Foxconn campus drew one point five gigawatts.\n\n"
+    "Today the iPhone accounts for roughly fifty two percent of revenue, and the App Store for some "
+    "twenty four point six billion pounds a year. Rivals — Huawei, Xiaomi, Samsung — circle constantly. "
     "Whether that dependence is a triumph or a trap, for the W T O, for the E U, and for a supply "
-    "chain seven thousand miles long, is the question Doctor Wang has spent a decade trying to answer."
+    "chain seven thousand miles long, is the question Dr. Wang has spent a decade trying to answer."
 )
 
 
@@ -52,6 +53,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -207,29 +209,36 @@ def normalized_text(text, enabled):
     return tts.text_process.normalize(value) if enabled else value
 
 
-arms = [
-    ("native", RAW_TEXT, True),
-    ("prepared", PREPARED_TEXT, False),
-]
-manifest_arms = []
-for label, text, text_normalization in arms:
-    random.seed(SEED)
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed_all(SEED)
-    torch.cuda.reset_peak_memory_stats()
-    output_wav = os.path.join(OUT, label + ".wav")
-    started = time.monotonic()
+text = PREPARED_TEXT
+collapsed = re.sub(r"\s+", " ", text).strip()
+segments = [part for part in re.split(r"(?<=[.!?])\s+", collapsed) if part]
+assert len(segments) == 9, segments
+assert " ".join(segments) == collapsed
+lang_prefix = "<|en|> "
+for segment in segments:
+    # Prove the official 120-token splitter will not cut these calls again.
+    assert tts.split_text_by_tokens(segment, 120, lang_prefix) == [segment]
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.cuda.reset_peak_memory_stats()
+started = time.monotonic()
+segment_evidence = []
+segment_frames = []
+for index, segment in enumerate(segments, 1):
+    segment_wav = os.path.join(OUT, f"sentence_{index:02d}.wav")
     result = tts.infer(
         spk_audio_prompt=REFERENCE,
-        text=text,
-        output_path=output_wav,
+        text=segment,
+        output_path=segment_wav,
         lang="EN",
         use_random=False,
-        interval_silence=200,
+        interval_silence=0,
         max_text_tokens_per_segment=120,
         duration_factor=1.0,
-        text_normalization=text_normalization,
+        text_normalization=False,
         verbose=True,
         top_p=0.8,
         top_k=30,
@@ -238,40 +247,65 @@ for label, text, text_normalization in arms:
         repetition_penalty=10.0,
         max_mel_tokens=1500,
     )
-    synth_seconds = time.monotonic() - started
-    assert result == output_wav and os.path.getsize(output_wav) > 250_000
-    with wave.open(output_wav, "rb") as audio:
+    assert result == segment_wav and os.path.getsize(segment_wav) > 20_000
+    with wave.open(segment_wav, "rb") as audio:
         assert audio.getnchannels() == 1
+        assert audio.getsampwidth() == 2
         assert audio.getframerate() == 22050
-        duration = audio.getnframes() / audio.getframerate()
-    assert 25.0 <= duration <= 150.0, (label, duration)
-    sh(["ffmpeg", "-v", "error", "-i", output_wav, "-f", "null", "-"])
-    output_mp3 = os.path.join(OUT, label + ".mp3")
-    sh(["ffmpeg", "-y", "-v", "error", "-i", output_wav,
-        "-codec:a", "libmp3lame", "-b:a", "192k", output_mp3])
-    sh(["ffmpeg", "-v", "error", "-i", output_mp3, "-f", "null", "-"])
-    normalized = normalized_text(text, text_normalization)
-    open(os.path.join(OUT, label + "_source.txt"), "w", encoding="utf-8").write(text + "\n")
-    open(os.path.join(OUT, label + "_normalized.txt"), "w", encoding="utf-8").write(normalized + "\n")
-    manifest_arms.append({
-        "label": label,
-        "input_sha256": hashlib.sha256(text.encode()).hexdigest(),
-        "input_chars": len(text),
-        "input_words": len(text.split()),
-        "text_normalization": text_normalization,
-        "normalized_sha256": hashlib.sha256(normalized.encode()).hexdigest(),
-        "normalized_text": normalized,
-        "duration_seconds": round(duration, 3),
-        "synthesis_seconds": round(synth_seconds, 3),
-        "rtf": round(synth_seconds / duration, 3),
-        "wav_bytes": os.path.getsize(output_wav),
-        "wav_sha256": sha256(output_wav),
-        "mp3_bytes": os.path.getsize(output_mp3),
-        "mp3_sha256": sha256(output_mp3),
-        "cuda_peak_allocated_gib": round(torch.cuda.max_memory_allocated() / 2**30, 3),
-        "cuda_peak_reserved_gib": round(torch.cuda.max_memory_reserved() / 2**30, 3),
-        "full_decode": "passed",
+        frames = audio.readframes(audio.getnframes())
+        segment_duration = audio.getnframes() / audio.getframerate()
+    segment_frames.append(frames)
+    segment_evidence.append({
+        "index": index,
+        "text": segment,
+        "text_sha256": hashlib.sha256(segment.encode()).hexdigest(),
+        "duration_seconds": round(segment_duration, 3),
+        "wav_sha256": sha256(segment_wav),
     })
+
+synth_seconds = time.monotonic() - started
+output_wav = os.path.join(OUT, "sentence_safe.wav")
+silence = b"\0" * (int(22050 * 0.2) * 2)
+with wave.open(output_wav, "wb") as audio:
+    audio.setnchannels(1)
+    audio.setsampwidth(2)
+    audio.setframerate(22050)
+    for index, frames in enumerate(segment_frames):
+        audio.writeframes(frames)
+        if index < len(segment_frames) - 1:
+            audio.writeframes(silence)
+with wave.open(output_wav, "rb") as audio:
+    duration = audio.getnframes() / audio.getframerate()
+assert 25.0 <= duration <= 150.0, duration
+sh(["ffmpeg", "-v", "error", "-i", output_wav, "-f", "null", "-"])
+output_mp3 = os.path.join(OUT, "sentence_safe.mp3")
+sh(["ffmpeg", "-y", "-v", "error", "-i", output_wav,
+    "-codec:a", "libmp3lame", "-b:a", "192k", output_mp3])
+sh(["ffmpeg", "-v", "error", "-i", output_mp3, "-f", "null", "-"])
+open(os.path.join(OUT, "sentence_safe_source.txt"), "w", encoding="utf-8").write(text + "\n")
+open(os.path.join(OUT, "sentence_safe_segments.json"), "w", encoding="utf-8").write(
+    json.dumps(segment_evidence, indent=2, ensure_ascii=False) + "\n"
+)
+manifest_arms = [{
+    "label": "sentence_safe",
+    "input_sha256": hashlib.sha256(text.encode()).hexdigest(),
+    "input_chars": len(text),
+    "input_words": len(text.split()),
+    "text_normalization": False,
+    "segment_policy": "complete sentences; one infer call per sentence",
+    "segment_count": len(segments),
+    "segments": segment_evidence,
+    "duration_seconds": round(duration, 3),
+    "synthesis_seconds": round(synth_seconds, 3),
+    "rtf": round(synth_seconds / duration, 3),
+    "wav_bytes": os.path.getsize(output_wav),
+    "wav_sha256": sha256(output_wav),
+    "mp3_bytes": os.path.getsize(output_mp3),
+    "mp3_sha256": sha256(output_mp3),
+    "cuda_peak_allocated_gib": round(torch.cuda.max_memory_allocated() / 2**30, 3),
+    "cuda_peak_reserved_gib": round(torch.cuda.max_memory_reserved() / 2**30, 3),
+    "full_decode": "passed",
+}]
 
 manifest = {
     "status": "complete",
@@ -296,6 +330,14 @@ manifest = {
         "num_beams": 3, "repetition_penalty": 10.0,
         "max_mel_tokens": 1500, "max_text_tokens_per_segment": 120,
         "interval_silence_ms": 200, "duration_factor": 1.0,
+    },
+    "diagnosis": {
+        "rejected_120_token_join_seconds": {
+            "native": [30.151, 57.983],
+            "prepared": [27.632, 59.620],
+        },
+        "decimal_fix": "1.5 gigawatts -> one point five gigawatts",
+        "sentence_boundary_fix": True,
     },
     "arms": manifest_arms,
     "asr_used": False,
@@ -337,8 +379,8 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "run_indextts25_gate.py").write_text(source, encoding="utf-8", newline="\n")
     metadata = {
-        "id": "davedavedavedavenm/indextts25-arthur-focused-gate",
-        "title": "indextts25-arthur-focused-gate",
+        "id": "davedavedavedavenm/indextts25-arthur-boundary-fix",
+        "title": "indextts25-arthur-boundary-fix",
         "code_file": "run_indextts25_gate.py",
         "language": "python",
         "kernel_type": "script",

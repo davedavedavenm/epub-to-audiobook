@@ -270,11 +270,13 @@ Achernar (Soft), Alnilam (Firm), Schedar (Even), Gacrux (Mature), Pulcherrima
 (Forward), Achird (Friendly), Zubenelgenubi (Casual), Vindemiatrix (Gentle),
 Sadachbia (Lively), Sadaltager (Knowledgeable), and Sulafat (Warm).
 
-Only `gemini_achernar` is currently offered by the app. Its exact preview is
-cached and its 10:10 production-path file passed Dave's listening gate as “one
-of the best”. Catalogue presence is not a voice verdict: the other 29 must each
-get a persisted preview before a Play/selection option can be exposed. Do not
-spend the ten-request daily allowance generating an unaudited catalogue sweep.
+All 30 IDs are registered, but the UI exposes each one only after its exact
+app-path preview is cached. `gemini_achernar` is cached and its 10:10
+production-path file passed Dave's listening gate as “one of the best”.
+Catalogue presence is not a voice verdict: the other 29 remain auditions.
+Dave explicitly requested the full catalogue on 2026-08-15; warm it across
+Free quota days with the persistent ten-RPD local guard and no automatic retry.
+See [GEMINI-SETUP.md](GEMINI-SETUP.md).
 Official source: [Gemini TTS voice options](https://ai.google.dev/gemini-api/docs/speech-generation#voice-options).
 
 ### Candidate models, evaluated 2026-07-27

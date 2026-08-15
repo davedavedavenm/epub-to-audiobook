@@ -225,6 +225,10 @@ is natural, clear or pleasant. More detail: [ENGINES.md](ENGINES.md) and
 
 ### Enable the accepted free-only Gemini narrator
 
+The complete newcomer walkthrough—including current auth-key requirements,
+Free-plan verification, all 30 voices, quota ledger, preview warming and book
+resume—is [GEMINI-SETUP.md](GEMINI-SETUP.md). The concise path is:
+
 1. In [Google AI Studio API keys](https://aistudio.google.com/apikey), create a
    dedicated project/key and confirm its **Plan/Billing Tier says Free**. Do not
    click **Set up billing** for this project. Google says Cloud welcome credits
@@ -234,8 +238,9 @@ is natural, clear or pleasant. More detail: [ENGINES.md](ENGINES.md) and
    `GEMINI_FREE_PROJECT_CONFIRMED=1` and
    `ENABLE_GEMINI_PROFILE=1`. The confirmation is a fail-closed operator guard;
    Google's inference response does not itself report the key's billing tier.
-3. Run `./scripts/deploy.sh`, then open Settings and press **Prepare Achernar
-   preview once**. Open the exact preview in Voices before selecting it.
+3. Run `./scripts/deploy.sh`, then open Settings and press **Prepare next missing
+   Gemini preview**. Open each exact cached preview in Voices before selecting
+   it. Uncached presets are never selectable and Play never synthesizes.
 4. The app sends paragraph-aware 2–3 minute passages once each and caches
    successful WAVs. If Free quota ends, the job stops; use Resume later to reuse
    the cache. Expect about 273 requests (roughly 28 quota-days) for a

@@ -550,11 +550,40 @@ VOICES = {
     'en-AU-NatashaNeural': {'name': 'Australian female — Natasha (Edge)', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
     'en-AU-WilliamNeural': {'name': 'Australian male — William (Edge)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
 
-    # Gemini Developer API. Achernar's cached preview and exact 10:10 app-path
-    # file passed Dave's listening gate. Google's other 29 presets remain
-    # unregistered until their exact previews are cached and heard.
-    'gemini_achernar': {'name': 'Achernar (Gemini 3.1 — approved)', 'accent': 'British',
-                        'gender': 'Female', 'engine': 'gemini'},
+    # Gemini Developer API. Google documents style labels, not regional accent
+    # or gender labels. The fixed audiobook prompt requests British English.
+    # Achernar passed Dave's long-form gate; the other presets remain auditions
+    # until their exact app-path previews are cached and heard.
+    'gemini_zephyr': {'name': 'Zephyr — bright (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_puck': {'name': 'Puck — upbeat (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_charon': {'name': 'Charon — informative (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_kore': {'name': 'Kore — firm (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_fenrir': {'name': 'Fenrir — excitable (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_leda': {'name': 'Leda — youthful (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_orus': {'name': 'Orus — firm (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_aoede': {'name': 'Aoede — breezy (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_callirrhoe': {'name': 'Callirrhoe — easy-going (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_autonoe': {'name': 'Autonoe — bright (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_enceladus': {'name': 'Enceladus — breathy (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_iapetus': {'name': 'Iapetus — clear (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_umbriel': {'name': 'Umbriel — easy-going (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_algieba': {'name': 'Algieba — smooth (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_despina': {'name': 'Despina — smooth (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_erinome': {'name': 'Erinome — clear (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_algenib': {'name': 'Algenib — gravelly (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_rasalgethi': {'name': 'Rasalgethi — informative (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_laomedeia': {'name': 'Laomedeia — upbeat (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_achernar': {'name': 'Achernar — soft (Gemini, approved)', 'accent': 'British (prompted)', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_alnilam': {'name': 'Alnilam — firm (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_schedar': {'name': 'Schedar — even (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_gacrux': {'name': 'Gacrux — mature (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_pulcherrima': {'name': 'Pulcherrima — forward (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_achird': {'name': 'Achird — friendly (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_zubenelgenubi': {'name': 'Zubenelgenubi — casual (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_vindemiatrix': {'name': 'Vindemiatrix — gentle (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_sadachbia': {'name': 'Sadachbia — lively (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_sadaltager': {'name': 'Sadaltager — knowledgeable (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
+    'gemini_sulafat': {'name': 'Sulafat — warm (Gemini)', 'accent': 'Prompt-controlled', 'gender': 'Unspecified', 'engine': 'gemini'},
 
     # ============ AWS POLLY LONG-FORM VOICES ============
     'polly_ruth': {'name': 'Ruth', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
@@ -4163,7 +4192,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             _pjob = get_job(job_id)
             _pengine = (_pjob.get('tts_engine') if _pjob else None) or 'kokoro'
             _text_profile = text_profile_for_engine(_pengine)
-            _modern = _text_profile == 'modern'
+            _modern = _text_profile in ('modern', 'explicit')
+            _expand_numbers = True if _text_profile == 'explicit' else None
             # Explicit numbers/currency won 4/4 controlled CPU A/Bs. Keep only
             # acronym letter-spacing from the lexicon for that profile so a
             # Pocket/Kitten book cannot acquire legacy phonetic respellings.
@@ -4176,7 +4206,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 }
             _, files_changed = preprocess_epub(
                 epub_path, preprocessed_path,
-                lexicon=_preprocess_lexicon, modern=_modern)
+                lexicon=_preprocess_lexicon, modern=_modern,
+                expand_numbers=_expand_numbers)
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
             epub_path = preprocessed_path
@@ -5162,14 +5193,33 @@ def test_kaggle_connection():
 
 @app.route('/api/settings/prepare_gemini_preview', methods=['POST'])
 def prepare_gemini_preview():
-    """Make at most one Gemini request and persist Achernar's exact preview.
+    """Explicitly cache one or more missing Gemini catalogue previews.
 
-    Repeated button presses are cache hits. This is deliberately an explicit
-    operator action: startup maintenance must never consume network quota.
+    The default remains one request. A caller may explicitly set ``limit`` up
+    to ten, matching the separately guarded free-tier daily ceiling. Existing
+    files are cache hits and failures stop the loop immediately: no retry.
     """
-    voice_id = 'gemini_achernar'
-    if _preview_is_cached(voice_id):
-        return jsonify({'status': 'cached', 'message': 'Achernar preview is already ready.'})
+    data = request.get_json(silent=True) or {}
+    try:
+        limit = int(data.get('limit', 1))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'limit must be an integer from 1 to 10'}), 400
+    if not 1 <= limit <= 10:
+        return jsonify({'error': 'limit must be from 1 to 10'}), 400
+    gemini_ids = [voice_id for voice_id, info in all_voices().items()
+                  if info.get('engine') == 'gemini']
+    requested = str(data.get('voice_id') or '').strip()
+    if requested:
+        if requested not in gemini_ids:
+            return jsonify({'error': f'Unknown Gemini voice: {requested}'}), 400
+        candidates = [requested]
+    else:
+        candidates = gemini_ids
+    missing = [voice_id for voice_id in candidates if not _preview_is_cached(voice_id)]
+    if not missing:
+        ready = sum(_preview_is_cached(voice_id) for voice_id in gemini_ids)
+        return jsonify({'status': 'cached', 'message': 'Requested Gemini previews are ready.',
+                        'ready': ready, 'total': len(gemini_ids), 'generated': []})
     if not os.environ.get('GEMINI_API_KEY', '').strip():
         return jsonify({'error': 'GEMINI_API_KEY is not configured. Add the key from an '
                         'unbilled AI Studio Free Tier project to .env and redeploy.'}), 400
@@ -5177,12 +5227,20 @@ def prepare_gemini_preview():
     if health.get('gemini') is not True:
         return jsonify({'error': 'The Gemini free-only adapter is not running. Enable '
                         'ENABLE_GEMINI_PROFILE=1 and redeploy.'}), 409
-    preview = get_voice_preview(voice_id)
-    if not preview or not _preview_is_cached(voice_id):
-        return jsonify({'error': 'Gemini did not produce a valid preview. No retry was made; '
-                        'check the adapter log for the quota/API response.'}), 502
-    return jsonify({'status': 'generated', 'message': 'Achernar preview generated once and cached.',
-                    'url': f'/api/preview/{voice_id}'})
+    generated = []
+    for voice_id in missing[:limit]:
+        preview = get_voice_preview(voice_id)
+        if not preview or not _preview_is_cached(voice_id):
+            ready = sum(_preview_is_cached(item) for item in gemini_ids)
+            return jsonify({'error': f'{voice_id} did not produce a valid preview. No retry '
+                            'was made; check the adapter log for the quota/API response.',
+                            'generated': generated, 'ready': ready,
+                            'total': len(gemini_ids)}), 502
+        generated.append(voice_id)
+    ready = sum(_preview_is_cached(voice_id) for voice_id in gemini_ids)
+    return jsonify({'status': 'generated', 'message': f'Cached {len(generated)} Gemini preview(s).',
+                    'generated': generated, 'ready': ready, 'total': len(gemini_ids),
+                    'urls': [f'/api/preview/{voice_id}' for voice_id in generated]})
 
 
 @app.route('/api/settings/test_abs', methods=['POST'])

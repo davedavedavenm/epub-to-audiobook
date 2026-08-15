@@ -711,7 +711,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top:0; font-family:var(--serif);">Gemini 3.1 Audiobook Voice — Free Tier Only</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px; line-height:1.55;">
-                            Achernar is the short sample Dave approved. The app uses only the
+                            Achernar passed the long-form listening gate. The app supports all
+                            30 official Gemini preset voices, but exposes a Play-ready audition
+                            only after that exact preset has been generated and cached. It uses only the
                             <strong>Gemini Developer API Free Tier</strong>: no Vertex endpoint,
                             no batch billing, no automatic retry and no paid fallback. Create a
                             dedicated AI Studio project whose Plan says <strong>Free</strong>, do
@@ -723,7 +725,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                             from disk.
                         </p>
                         <button class="btn" style="height:48px;" onclick="prepareGeminiPreview(this)">
-                            Prepare Achernar preview once
+                            Prepare next missing Gemini preview
                         </button>
                         <span id="gemini-preview-status" style="margin-left:12px; color:var(--text-secondary);"></span>
                     </div>
@@ -1067,7 +1069,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             const data = await resp.json();
             if(!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
             btn.textContent = data.status === 'cached' ? 'Already cached' : 'Preview ready';
-            if(status) status.textContent = 'Open Voices to play Achernar';
+            if(status) status.textContent = `${data.ready}/${data.total} Gemini previews cached`;
         } catch(e) {
             btn.textContent = 'Not prepared';
             if(status) status.textContent = String(e.message || e);

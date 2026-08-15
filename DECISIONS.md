@@ -41,7 +41,10 @@ Dave heard the exact 10:10 app-path `gemini-3.1-flash-tts-preview` / Achernar
 file and called it **“one of the best”**; he explicitly selected it for use.
 Achernar therefore passes the long-form human quality gate as an opt-in book
 narrator. This verdict does not approve every Gemini voice: Google exposes 30
-preset names, but only Achernar has a cached app preview and a heard long gate.
+preset names, all are registered for audition, but only Achernar currently has
+a cached app preview and a heard long gate. Uncached presets stay unselectable.
+Dave explicitly requested every preset be cached; complete that across Free
+quota days with one attempt per voice, never by attaching billing.
 The app uses the current Gemini Developer API Interactions route with a key from
 a project whose AI Studio plan is **Free**. It has no Vertex route, Batch API,
 paid model or paid-tier fallback. Do not attach Cloud Billing to that project.
@@ -72,6 +75,20 @@ requests—approximately 28 quota-days if no requests fail. Successful passages
 resume from cache across days. Never send private/confidential books without
 accepting the Free Tier data-use term, and never attach billing or fall through
 to paid service.
+
+The adapter now keeps a persistent conservative request ledger keyed to the
+Pacific quota day and refuses an eleventh request locally. Google states RPD is
+per project, not per key, and resets at midnight Pacific. Failed upstream calls
+remain counted; external AI Studio calls are not visible locally, so operators
+must still check the official Usage dashboard before a catalogue batch.
+
+The full-catalogue request also exposed a real explicit-profile bug: that path
+was using the legacy default rather than `modern=True, expand_numbers=True`, so
+bare decimal measurements such as `1.5 gigawatts` survived. Dave heard Index
+say “one five”. Explicit engines now receive the actually explicit profile in
+preview, web-worker and standalone-converter paths. This reverses the narrower
+old assumption that only currency/percent needed expansion for these engines;
+it does not change the minimal-number contract for Chatterbox/TADA.
 Official sources checked 2026-08-15:
 [TTS guide](https://ai.google.dev/gemini-api/docs/speech-generation),
 [model card](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview),

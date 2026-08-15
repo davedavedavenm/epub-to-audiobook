@@ -88,7 +88,7 @@ turning an experiment into production.
 | **Kokoro** | 82M | Apache 2.0 | No (preset voices) | Chunked | Yes (fast) | Cheap bulk, fallback | Production fallback |
 | **Fish Speech 1.5** | 1.5B | Apache 2.0 | Yes | Chunked | GPU needed | Fast generation, multilingual | Not integrated |
 | **Fish Audio S2 Pro beta** | 4B + 400M | Fish Audio Research License | Yes | External chunking required | Official minimum 24 GB VRAM; ordinary free T4 does not fit | Expressive multilingual narration | **WATCH — not viable on current free/local hardware** |
-| **IndexTTS-2.5** | official weights | Bilibili Model Use License | Yes | 120-token segments / 200 ms joins | FP32 fits free T4: 10.982 GiB peak reserved | Voice cloning, pace and English pronunciation control | **SHORT ARTHUR CLIPS READY; LISTENING OPEN** |
+| **IndexTTS-2.5** | official weights | Bilibili Model Use License | Yes | 120-token segments / 200 ms joins | FP32 fits free T4: 10.982 GiB peak reserved | Voice cloning, pace and English pronunciation control | **ORIGINAL JOIN PATH REJECTED; SENTENCE-SAFE CLIP READY** |
 | **Gemini 3.1 Flash TTS** | hosted preview | Google API terms | 30 presets | Split after a few minutes | hosted | Controllable audiobook narration | **FREE-ONLY ACHERNAR ACCEPTED BY EAR; SLOW MULTI-DAY BOOK PATH** |
 | **F5-TTS** | ~330M | MIT | Yes (ref) | Chunked | GPU preferred | Research, good quality | Not integrated |
 | **XTTS v2** (Coqui) | ~1.8B | MPL 2.0 | Yes | Chunked | GPU needed | Was the standard; Coqui defunct | Not integrated |

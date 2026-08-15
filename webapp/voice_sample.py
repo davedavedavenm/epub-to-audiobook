@@ -55,7 +55,11 @@ def sample_text_for(engine: str) -> str:
                 key: value for key, value in SAMPLE_LEXICON.items()
                 if _is_letter_spacing(key, value)
             }
+        explicit = engine in EXPLICIT_ENGINES
         return normalize_text_for_tts(
-            SAMPLE_TEXT, lexicon=lexicon, modern=engine in MODERN_ENGINES)
+            SAMPLE_TEXT, lexicon=lexicon,
+            modern=engine in MODERN_ENGINES or explicit,
+            expand_numbers=True if explicit else None,
+        )
     except Exception:
         return SAMPLE_TEXT

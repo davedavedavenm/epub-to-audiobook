@@ -53,30 +53,32 @@ model process. It reconstructs all 1,998 source words from the labelled turns,
 decodes the generated MP3 and runs ASR only as a completeness guard. Voice
 quality and pacing remain a human listening decision.
 
-## IndexTTS-2.5 focused Arthur gate
+## IndexTTS-2.5 sentence-boundary Arthur follow-up
 
 `build_indextts25_gate.py` stages one private, explicitly free-T4 job under
-`scratch/indextts25_gate/kernel`. It pins official release commit
+`scratch/indextts25_boundary_fix/kernel`. It pins official release commit
 `39207d91c30899cad1e7c1b9eb678c241f678e55`, model revision
 `c39ce5ba981572cb187443877ff559dfb246ce63`, FP32 and Arthur's exact reference
 hash. It refuses P100, CPU fallback and non-T4 GPUs.
 
 ```bash
 python scripts/kaggle/build_indextts25_gate.py
-python -m kaggle kernels push -p scratch/indextts25_gate/kernel
-python -m kaggle kernels status davedavedavedavenm/indextts25-arthur-focused-gate
-python -m kaggle kernels output davedavedavedavenm/indextts25-arthur-focused-gate \
-  -p scratch/indextts25_gate/output
+python -m kaggle kernels push -p scratch/indextts25_boundary_fix/kernel
+python -m kaggle kernels status davedavedavedavenm/indextts25-arthur-boundary-fix
+python -m kaggle kernels output davedavedavedavenm/indextts25-arthur-boundary-fix \
+  -p scratch/indextts25_boundary_fix/output
 ```
 
-The one model load produces only two short, same-seed clips: `native` lets
-Index run its official normalizer over the raw number-heavy sample; `prepared`
-receives the byte-pinned production-expanded text with Index normalization
-disabled. This distinguishes engine handling from the text supplied to it.
+The original two-arm gate garbled speech at its exact 200 ms internal joins.
+This follow-up produces one clip only. It byte-pins the corrected explicit text
+(`one point five gigawatts`), splits it into nine complete sentences, asserts
+that Index's official 120-token splitter cannot subdivide any call, and joins
+the resulting PCM with 200 ms sentence gaps. Per-sentence hashes and durations
+are included in the manifest.
 The kernel validates exact source/reference/weight hashes, WAV/MP3 structure,
 full decode, duration, memory and RTF, and writes a manifest. It deliberately
-does not run ASR; Dave's listening verdict is the quality gate. Do not run its
-long-form follow-up unless this focused gate passes by ear.
+does not run ASR; Dave's listening verdict is the quality gate. Do not run a
+long-form follow-up unless this corrected gate passes by ear.
 
 Kaggle's 2026-08 global Python image can contain mutually incompatible NumPy
 files. The working gate follows the existing CosyVoice isolation pattern:

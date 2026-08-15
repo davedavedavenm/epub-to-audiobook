@@ -70,11 +70,15 @@ requires a separately authorised environment-gated session.
   eight official presets cached for immediate audition. Opt in with
   `ENABLE_KITTEN_PROFILE=1`; it is not a default or automatic fallback.
 - **Gemini 3.1 Flash TTS** - accepted opt-in **Free Tier only** book engine
-  using the current Gemini Developer API and Achernar. Dave called its exact
+  using the current Gemini Developer API. Achernar passed the long-form gate;
+  all 30 official presets are registered and become selectable only after their
+  exact previews are cached. Dave called Achernar's exact
   10:10 app-path file “one of the best”. The adapter has no paid/Vertex/Batch
   fallback, makes one request per 2–3 minute passage and resumes from a local
   passage cache after quota returns. Ten calls/day means a normal novel may
   take roughly four weeks; enable only with a dedicated unbilled project key.
+  See [GEMINI-SETUP.md](GEMINI-SETUP.md) for the complete key, quota, cache and
+  recovery walkthrough.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **Piper TTS** - rejected production path; legacy/debug only
   (`ENABLE_PIPER_PROFILE=1`)
@@ -282,7 +286,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `QWEN3_URL` | Qwen3-TTS endpoint (default: `http://qwen3-tts:8011/v1`; opt-in CUDA profile) |
 | `POCKET_URL` | Pocket TTS endpoint (default: `http://pocket-tts:8012/v1`; opt-in CPU profile) |
 | `KITTEN_URL` | KittenTTS endpoint (default: `http://kitten-tts:8013/v1`; opt-in CPU profile) |
-| `GEMINI_TTS_URL` / `GEMINI_API_KEY` | Internal free-only Gemini adapter and key from the dedicated `GEMINI_FREE_PROJECT_ID` whose Plan is Free; after verifying it, set `GEMINI_FREE_PROJECT_CONFIRMED=1` and opt in with `ENABLE_GEMINI_PROFILE=1`. Never commit the key or attach billing to that project. |
+| `GEMINI_TTS_URL` / `GEMINI_API_KEY` | Internal free-only Gemini adapter and key from the dedicated `GEMINI_FREE_PROJECT_ID` whose Plan is Free; after verifying it, set `GEMINI_FREE_PROJECT_CONFIRMED=1` and opt in with `ENABLE_GEMINI_PROFILE=1`. Never commit the key or attach billing. Full procedure: [GEMINI-SETUP.md](GEMINI-SETUP.md). |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | Optional OpenAI-compatible LLM for metadata and chapter classification (deterministic fallback; generated pronunciation rules are off by default). Groq users must choose a current ID from its official model/deprecation pages; see `.env.example`. |

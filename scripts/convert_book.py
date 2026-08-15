@@ -184,8 +184,11 @@ class _P(HTMLParser):
 def chapter_text(z, name):
     p = _P(); p.feed(sanitize_html(z.read(name).decode('utf-8', 'ignore')))
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
-    modern = _TEXT_PROFILE == 'modern'
-    text = normalize_text_for_tts(text, modern=modern)
+    modern = _TEXT_PROFILE in ('modern', 'explicit')
+    text = normalize_text_for_tts(
+        text, modern=modern,
+        expand_numbers=True if _TEXT_PROFILE == 'explicit' else None,
+    )
     # Modern engines read real words natively; phonetic respellings ("Bay-JING")
     # make them worse (heard "bay...zhing"). For modern, keep ONLY acronym
     # letter-spacing rules ("CEO" -> "C E O" — heard "see you" otherwise);

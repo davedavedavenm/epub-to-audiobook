@@ -37,14 +37,17 @@ def test_index_gate_is_pinned_private_t4_and_no_paid_or_asr_path(tmp_path, monke
     assert builder.ARTHUR_SHA256 in source
 
 
-def test_index_gate_stages_native_and_prepared_same_reference_arms():
+def test_index_gate_stages_one_sentence_safe_corrected_arm():
     builder = _load_builder()
     raw, prepared = builder.source_texts()
     assert raw != prepared
     assert "$1.2 billion" in raw and "52%" in raw and "£24.6 billion" in raw
     assert "one point two billion dollars" in prepared
-    assert "fifty-two percent" in prepared
-    assert "twenty-four point six billion pounds" in prepared
-    assert "arms = [" in builder.KERNEL
-    assert '("native", RAW_TEXT, True)' in builder.KERNEL
-    assert '("prepared", PREPARED_TEXT, False)' in builder.KERNEL
+    assert "fifty two percent" in prepared
+    assert "twenty four point six billion pounds" in prepared
+    assert "one point five gigawatts" in prepared
+    assert "1.5 gigawatts" not in prepared
+    assert 'assert len(segments) == 9' in builder.KERNEL
+    assert 'tts.split_text_by_tokens(segment, 120, lang_prefix) == [segment]' in builder.KERNEL
+    assert '"segment_policy": "complete sentences; one infer call per sentence"' in builder.KERNEL
+    assert '"sentence_boundary_fix": True' in builder.KERNEL
