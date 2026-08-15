@@ -5,9 +5,11 @@
 > Groq was used historically, which explains the account activity screenshot and
 > the old `epub`-key request count. It is not the live provider now: neither
 > running app container has a cloud `LLM_API_KEY`; `app_settings` contains no
-> LLM/Groq override; and both containers point to the shared local Ollama
-> `qwen2.5:7b`, whose official OpenAI-compatible models endpoint returned 200 and
-> listed that exact model. No secret values were printed during the audit.
+> LLM/Groq override. Their otherwise-unused cloud slot still has the OpenAI
+> default URL/model but no key; both separately configure the shared local
+> Ollama `qwen2.5:7b` for the background, non-deciding QA explanation path. Its
+> OpenAI-compatible models endpoint returned 200 and listed that exact model.
+> No secret values were printed during the audit.
 >
 > Groq's official deprecation page confirms `llama-3.3-70b-versatile` shuts down
 > on 2026-08-16 for Free/Developer usage. The stale setup example and Settings
@@ -46,7 +48,23 @@
 > `1.5`, `52%`, `£24.6 billion` and `7,000`. That disproves the repo's prior
 > “modern engines cope with raw numbers” assumption. It does not establish that
 > spelling those values fixes the other voice, pronunciation or accent failures.
-> The next bounded test is one Arthur/Turbo numeric-only normalized control.
+> The bounded Arthur/Turbo numeric-only control has now rendered from an
+> explicitly normalized `modern` payload (202 words; source SHA-256
+> `8ccd447f2890e5f7cb7b9f8d41bb77cf4fe08a5cb40de2320a76559715afac1e`).
+> It is 71.064 s / 1,137,068 bytes / 24 kHz mono MP3, passed full decode, and
+> the downloaded handoff copy matches SHA-256
+> `6446f882879b68f24ddb01d65e7d2b9c61dd33389b5219d21eb9551e459f1ddb`.
+> The exact source and manifest accompany the clip. This is structural proof,
+> not a quality result: Dave has not heard it yet, and production preprocessing
+> remains unchanged pending his separate verdict on numbers, Huawei, ordinary
+> words, and Arthur likeness.
+
+> The corrected repo commit `8f2e6fd266c8424c0ccb699840235267d5cb77f8` is live on
+> both webapp and worker; `/api/health` reports overall `ok`, the queue is
+> unpaused with zero queued/active jobs, all 117 configured voice previews are
+> cached, and both GitHub workflows passed. The rejected optional
+> `chatterbox-v3` and `melotts-tts` containers are stopped (not deleted); their
+> evidence and reproducible profiles remain available.
 
 > ## 2026-08-15 Chatterbox V3 regional gate — HEARD / EXACT PATH REJECTED
 >
