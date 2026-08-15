@@ -41,8 +41,9 @@ Dave heard the exact 10:10 app-path `gemini-3.1-flash-tts-preview` / Achernar
 file and called it **“one of the best”**; he explicitly selected it for use.
 Achernar therefore passes the long-form human quality gate as an opt-in book
 narrator. This verdict does not approve every Gemini voice: Google exposes 30
-preset names, all are registered for audition, but only Achernar currently has
-a cached app preview and a heard long gate. Uncached presets stay unselectable.
+preset names, all are registered for audition, but only Achernar and Zephyr
+currently have cached app previews, and only Achernar has a heard long gate.
+Uncached presets stay unselectable.
 Dave explicitly requested every preset be cached; complete that across Free
 quota days with one attempt per voice, never by attaching billing.
 The app uses the current Gemini Developer API Interactions route with a key from
@@ -55,18 +56,6 @@ Keep the existing dedicated project and its current owner; do not transfer it
 to, or couple it with, a Google AI consumer subscription. Google documents no
 consumer-subscription uplift for Developer API quotas, so that would add
 account complexity without improving the audiobook path.
-
-## IndexTTS-2.5 is not a production narrator — Active
-
-The complete-sentence follow-up removed the two repeatable corruptions caused
-by IndexTTS-2.5's official 120-token splitter, and the repo's explicit-number
-fix corrected `1.5` to “one point five”. Dave nevertheless rejected the
-corrected clip for audiobook use on 2026-08-15: it was better, but its timing
-and pacing remained poor and it was nowhere near as natural as Gemini Zephyr or
-Chatterbox. This closes the current Index integration gate. Do not confuse the
-boundary repair with a listening pass, expose Index voices, or spend more free
-GPU quota on Index without a materially different official model/runtime or an
-explicit request to reopen it.
 
 Google warns that this preview model can drift on outputs longer than a few
 minutes. The app therefore uses the measured `explicit` number/currency text
@@ -107,6 +96,42 @@ Official sources checked 2026-08-15:
 [pricing](https://ai.google.dev/gemini-api/docs/pricing),
 [billing](https://ai.google.dev/gemini-api/docs/billing), and
 [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits).
+
+## IndexTTS-2.5 is not a production narrator — Active
+
+The complete-sentence follow-up removed the two repeatable corruptions caused
+by IndexTTS-2.5's official 120-token splitter, and the repo's explicit-number
+fix corrected `1.5` to “one point five”. Dave nevertheless rejected the
+corrected clip for audiobook use on 2026-08-15: it was better, but its timing
+and pacing remained poor and it was nowhere near as natural as Gemini Zephyr or
+Chatterbox. This closes the current Index integration gate. Do not confuse the
+boundary repair with a listening pass, expose Index voices, or spend more free
+GPU quota on Index without a materially different official model/runtime or an
+explicit request to reopen it.
+
+## NVIDIA MagpieTTS v2607 is evaluation-only until heard — Active
+
+MagpieTTS Multilingual v2607 is the next bounded free/open-weight long-form
+candidate. NVIDIA documents English stateful long-form inference and five baked
+English presets (`Aria`, `Jason`, `John`, `Leo`, `Sofia`), but documentation and
+catalogue names are not a listening verdict. Do not expose the engine or any
+voice in the app until its exact short preview is cached, independently decoded
+and heard, and its long-form continuity gate passes Dave's listening standard.
+
+The current gate pins official `nvidia/magpie_tts_multilingual_357m` v2607 at
+revision `5023df68bd3f5b5ce6d666a50979bc501af145cc` and NVIDIA NeMo Speech
+v3.0.0 at commit `fd6a877539710e2b98f28c43272ff81312f83417`. It uses one free
+Kaggle T4 run only; T4 is absent from NVIDIA's documented supported-GPU list, so
+capacity there is an experiment, not a supported deployment claim. NVIDIA's
+separate NeMo-Speech.cpp v2602 F16 GGUF path also carries state across chunks,
+but it is an older model/runtime and must not be described as the same v2607
+path. No paid fallback, automatic integration or ASR quality ranking is allowed.
+
+Official sources checked 2026-08-15:
+[model card](https://huggingface.co/nvidia/magpie_tts_multilingual_357m/blob/v2607/README.md),
+[long-form guide](https://docs.nvidia.com/nemo/speech/nightly/tts/magpietts-longform.html),
+[NeMo Speech](https://github.com/NVIDIA-NeMo/Speech), and
+[NVIDIA Open Model License](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/).
 
 ## Regional accent labels are not quality evidence — Active
 
@@ -531,9 +556,10 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | Candidate/path | Settled status | Boundary / condition for reconsideration |
 |---|---|---|
 | Chatterbox Nano + Beatrice | **Accepted default** | Free local baseline. A replacement must first beat it by ear. |
-| Chatterbox Turbo + Arthur | **Conditional / per-book audition** | Earlier long-form controls were excellent, but the 2026-08-15 seeded hard sample did not reliably sound like Arthur and failed words, proper nouns and numbers. Do not auto-select it for number-dense nonfiction until the normalized control is heard. |
+| Chatterbox Turbo + Arthur | **Conditional / per-book audition** | Earlier long-form controls were excellent, but the 2026-08-15 seeded hard sample did not reliably sound like Arthur and failed words, proper nouns and numbers. The normalized numeric control was much improved, proving input preparation mattered, but ordinary-word/proper-name and voice-stability concerns remain. |
 | VibeVoice full precision, community fp16/SDPA single-pass path | **Rejected for audiobook production** | cfg 2.0 has a very good opening but progressively accelerates/runs on and loses intent after ~3 minutes. Reopen only for a materially different officially supported long-form path, not another seed or undocumented knob. |
 | Qwen3-TTS full precision | **Current long-form leader; not default** | Full 6,166-word chapter passed human listening and beat the corrected Vibe path for consistency. It still requires explicit free-Kaggle/local-GPU selection and book-specific auditioning. |
+| NVIDIA MagpieTTS v2607 / NeMo Speech v3.0.0 | **Evaluation hold; not exposed** | One pinned free-T4 five-preset/long-form gate is allowed. Advance only if capacity validates and Dave accepts the exact cached outputs. Treat the older v2602 NeMo-Speech.cpp path as a separate future test. |
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 regional voices | **Rejected** | Synthetic-reference CFG-zero arms, seeded Arthur CFG 0/0.5 controls and genuine human Irish/Australian CFG 0.5 arms all failed by ear. The local accent route is closed. |

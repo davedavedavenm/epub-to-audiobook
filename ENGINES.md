@@ -23,8 +23,9 @@ accent-engine verdicts are dated in the table.
 | OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 | EdgeTTS accented English voices (2026-08-14) | The only currently heard regional-accent option that comes close. All tested Chinese company names were still pronounced badly, so it is not approved for Chinese-business nonfiction without a supported pronunciation fix. In the exact same-William/same-text/same-format endpoint control, Azure was slightly better. | Microsoft cloud service via unofficial pinned `edge-tts==7.2.8` interface |
 | Azure Speech Standard native AU/IE/ZA voices (2026-08-15) | **Accepted opt-in at the quality floor:** the original Darren/Connor/Luke 24 kHz trio sounded robotic/degraded despite good accents. A controlled William test showed Azure slightly beat Edge. On the final 737-word, correctly processed, 48 kHz lossless gate, Australian William, Irish Connor and South African Luke had acceptable accents and overall voices. Emotion is weak and none sounds as real as Arthur. Preserve preprocessing/IPA/paragraph pacing; F0 first, never automatic paid fallback. | Azure Speech F0, UK South |
-| Gemini 3.1 Flash TTS / Achernar (2026-08-15) | **Accepted opt-in book narrator.** Dave heard the exact 10:10 app-path file and called it “one of the best”. All 30 official presets are registered for quota-paced caching; only cached presets are selectable, and only Achernar has passed long-form. The unbilled Developer API project has no paid fallback plus a persistent local ten-RPD guard. | Google-hosted Developer API Free Tier |
+| Gemini 3.1 Flash TTS / Achernar (2026-08-15) | **Accepted opt-in book narrator.** Dave heard the exact 10:10 app-path file and called it “one of the best”. All 30 official presets are registered for quota-paced caching; Achernar and Zephyr are cached, only cached presets are selectable, and only Achernar has passed long-form. The unbilled Developer API project has no paid fallback plus a persistent local ten-RPD guard. | Google-hosted Developer API Free Tier |
 | IndexTTS-2.5 / Arthur focused gate (2026-08-15) | **Rejected for production.** Both original arms garbled at exact upstream 200 ms joins, and our explicit path mishandled `1.5`. A one-job follow-up used complete-sentence calls, said “one point five”, and removed the repeatable corruption, but Dave still found its timing/pacing poor and much less natural than Gemini Zephyr or Chatterbox. | Kaggle Tesla T4, free compute |
+| NVIDIA MagpieTTS Multilingual v2607 (2026-08-15) | **Capacity passed / listening open.** One exact-version job rendered every preset on the same prepared hard text and John across 9:14 / 79 stateful chunks. Six distinct 22.05 kHz mono MP3s independently passed hashes/full decode; T4 RTF 1.081–1.142, long-arm peak 11.61 GiB allocated / 14.31 GiB reserved. T4 remains outside NVIDIA's published support list. No voice is exposed until Dave hears it. | Free Kaggle Tesla T4 |
 | MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
 | Qwen3-TTS (2026-08-14 final ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-14 corrected app-path + documented-turn gate) | **Rejected for audiobook production.** cfg 2.0 remains its best tested setting, but the flattened path accelerated after ~3 minutes and both structurally complete repeated-same-speaker alternatives (four turns 7:16; seven turns 6:59) were rejected by ear as unacceptable. The same-text Chatterbox Turbo + Arthur control was almost perfect and did not accelerate. cfg 3.0 and 1.3 remain rejected. | Kaggle P100 |
@@ -105,8 +106,9 @@ and do not replace Chatterbox Nano/Beatrice as the default.
   (Upbeat), `Achernar` (Soft), `Alnilam` (Firm), `Schedar` (Even), `Gacrux`
   (Mature), `Pulcherrima` (Forward), `Achird` (Friendly), `Zubenelgenubi`
   (Casual), `Vindemiatrix` (Gentle), `Sadachbia` (Lively), `Sadaltager`
-  (Knowledgeable), and `Sulafat` (Warm). Only Achernar is currently exposed in
-  this app because it is the only exact preview cached and heard long-form.
+  (Knowledgeable), and `Sulafat` (Warm). Achernar and Zephyr are currently
+  exposed because their exact previews are cached; only Achernar is heard and
+  approved for long-form.
 - Pricing currently lists standard Free Tier input and audio output as free.
   Paid standard is USD1/M text tokens plus USD20/M audio tokens (audio = 25
   tokens/second); paid Batch is USD0.50/USD10 and is deliberately inaccessible
@@ -124,6 +126,39 @@ Official sources: [TTS guide](https://ai.google.dev/gemini-api/docs/speech-gener
 [official Python SDK docs](https://googleapis.github.io/python-genai/),
 [repository](https://github.com/googleapis/python-genai), and
 [package](https://pypi.org/project/google-genai/).
+
+## NVIDIA MagpieTTS Multilingual v2607 official contract (checked 2026-08-15)
+
+- Exact model: `nvidia/magpie_tts_multilingual_357m`, release `v2607`, revision
+  `5023df68bd3f5b5ce6d666a50979bc501af145cc`; the pinned `.nemo` is
+  1,470,208,000 bytes with SHA-256
+  `ec675fa8c02b9c1d5382c5c2b5a6acec6492c1e8344866c07cf3892185d18953`.
+- Exact evaluation runtime: official NVIDIA NeMo Speech release `v3.0.0`,
+  commit `fd6a877539710e2b98f28c43272ff81312f83417`. This is not a community
+  wrapper.
+- Official English presets: `Aria` (0), `Jason` (1), `John` (2), `Leo` (3),
+  and `Sofia` (4). Those names do not document accent, gender or suitability;
+  each still requires Dave's listening verdict.
+- NVIDIA documents stateful English long-form as beta. Its Python path splits
+  sentences while retaining prior text tokens, encoder context and attention
+  state, then decodes the accumulated codec sequence as one waveform. NVIDIA
+  explicitly lists audiobook/content narration as a use case.
+- Output is 22.05 kHz mono PCM. v2607 removes zero-shot voice cloning, but
+  provides IPA custom-pronunciation and text-normalization controls.
+- Licence: NVIDIA Open Model License. It permits commercial use subject to its
+  terms; do not mislabel it MIT or Apache.
+- NVIDIA's documented GPU list includes L4, L40, A10, A30, A100 and H100, not
+  T4. The repo's free Kaggle T4 run is therefore an unsupported capacity test,
+  not an official deployment configuration.
+- NeMo-Speech.cpp current main has a separate stateful long-form implementation
+  for the older v2602 F16 GGUF (448,604,832 bytes; SHA-256
+  `901d299a8b1df016cf81cae0089a7a7c15627b9633d033357e15a47d9a219a75`).
+  Treat v2602/C++ and v2607/Python as separate model/runtime gates.
+
+Official sources: [model card](https://huggingface.co/nvidia/magpie_tts_multilingual_357m/blob/v2607/README.md),
+[long-form guide](https://docs.nvidia.com/nemo/speech/nightly/tts/magpietts-longform.html),
+[NeMo Speech repository](https://github.com/NVIDIA-NeMo/Speech), and
+[NVIDIA Open Model License](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/).
 
 The first recorded Vibe GPU-memory measurement comes from a later **short
 accent sample**, not the heard full chapter: on a Kaggle P100, Irish peaked at

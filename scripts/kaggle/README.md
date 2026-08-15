@@ -31,6 +31,32 @@ kaggle kernels output  davedavedavedavenm/apple-china-tada-ch1-2 -p ./out
 Outputs are `NNN.mp3` per chapter in the kernel output. `run.py` refuses to
 proceed if the GPU isn't actually visible (`cuda_available` gate).
 
+## NVIDIA MagpieTTS v2607 stateful long-form gate
+
+`build_magpie_longform_gate.py` stages one private free-T4 job under
+`scratch/magpie_longform/kernel`. It pins the official v2607 model revision and
+SHA-256 plus the official NeMo Speech v3.0.0 source commit. It refuses CPU,
+non-T4 and paid fallback. T4 is not in NVIDIA's documented supported-GPU list,
+so this is explicitly a capacity experiment rather than a supported deployment.
+
+```bash
+python scripts/kaggle/build_magpie_longform_gate.py
+python -m kaggle kernels push -p scratch/magpie_longform/kernel
+python -m kaggle kernels status davedavedavedavenm/nvidia-magpie-v2607-longform-gate
+python -m kaggle kernels output davedavedavedavenm/nvidia-magpie-v2607-longform-gate \
+  -p scratch/magpie_longform/output
+python scripts/kaggle/validate_magpie_longform_gate.py \
+  scratch/magpie_longform/output/out
+```
+
+One model load renders the five official English presets (`Aria`, `Jason`,
+`John`, `Leo`, `Sofia`) on the same 202-word prepared hard text, then gives
+John a 1,470-word stateful continuity arm. The manifest records source,
+model/runtime, long-form chunk, audio, memory and RTF evidence. Every output is
+fully decoded; no ASR is used. A successful job proves only capacity and file
+integrity. Dave's listening verdict is required before any app integration,
+voice exposure or long-form quality claim.
+
 ## VibeVoice same-speaker-turn listening gate
 
 `build_vibe_turn_reset_kernel.py` stages two independent private kernels under

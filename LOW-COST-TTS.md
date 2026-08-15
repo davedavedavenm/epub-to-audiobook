@@ -241,9 +241,10 @@ This means most mainstream premium APIs are too expensive for full-book default 
 | Kokoro on Vast.ai GPU | Legacy manual path | Paid marketplace rate | Never automatic and not recommended: paying to accelerate rejected-quality output violates the project objective. |
 | Piper | Implemented | GBP0 incremental | Legacy/debug only; **rejected for production by ear**. Deployed 64 kbps, same-WAV higher-bitrate, and current Piper 1.6 direct A/Bs all failed badly. Not an automatic fallback. |
 | EdgeTTS | Implemented via `tts-proxy` | GBP0 direct API cost | Good quality and many voices. Treat as unofficial/fragile because it depends on the `edge-tts` package and Microsoft service behavior. |
-| Pocket TTS 2.1 | Opt-in CPU service; 16:27 long-form file ready for listening | GBP0 | 21 official English presets; explicit spoken number/currency profile; no automatic fallback. |
-| KittenTTS 0.8.1 | Opt-in CPU service; 21:16 Rosie long-form file ready for listening | GBP0 | Eight official presets; developer preview; explicit spoken number/currency profile. |
+| Pocket TTS 2.1 | **Accepted opt-in** after 16:27 long-form and corrective listening | GBP0 | 21 official English presets; Peter is decent but imperfect; explicit spoken number/currency profile; no automatic fallback. |
+| KittenTTS 0.8.1 | **Accepted opt-in** after 21:16 Rosie long-form and corrective listening | GBP0 | Eight official presets; developer preview; Rosie led on body pace/tone; explicit spoken number/currency profile. |
 | Gemini 3.1 Flash TTS / Achernar | **Accepted opt-in narrator**; exact preview and 10:10 app-path gate passed by ear | GBP0 on an unbilled Developer API Free project | Dave called the long file “one of the best”. Five one-attempt paragraph packs produced the complete 1,644-word gate after one zero-output 503 and manual resume. Current official SDK/API only, resumable cache, no paid/Vertex/Batch fallback. Free content may train Google products; ten requests/day means roughly 28 quota-days for a 600k-character novel. |
+| NVIDIA MagpieTTS Multilingual v2607 | Free-T4 capacity passed; listening open | GBP0 for the completed free-Kaggle gate | Official 364M stateful English long-form path with five baked presets. Exact v2607 model and NeMo Speech v3.0.0 runtime are pinned. All five short arms plus John's 9:14 / 79-chunk arm fully decode; T4 RTF 1.081–1.142, long-arm peak 11.61 GiB allocated / 14.31 GiB reserved. T4 is unsupported officially and quality remains unverified until Dave listens. |
 | AWS Polly Long-Form | Implemented via `tts-proxy` | Avoid | Proven too expensive for good-quality audiobook use. Keep only as legacy code path; do not use for normal conversions. |
 | Inworld TTS 1.5 | Implemented via `tts-proxy` | Likely over budget for full books | Keep as experimental/premium unless real account pricing proves otherwise. |
 
@@ -279,6 +280,7 @@ These are the most relevant low/no-cost options because they avoid per-character
 | Hume TADA (1B / 3B-ml) | Open-sourced March 2026. Built for long-form narration: ~700s audio per context window, prosody consistency across long passages, zero content hallucinations on 1,000+ test samples. MIT code, Llama 3.2 Community License weights. Voice via reference-audio cloning; no OpenAI-compatible server exists yet, so bigger integration lift than Chatterbox. | Sample via HF Space `HumeAI/tada` (needs HF token; demo requests 120s ZeroGPU per call). TADA-1B fits an RTX 3060. |
 | [IndexTTS-2.5](https://github.com/index-tts/index-tts/blob/39207d91c30899cad1e7c1b9eb678c241f678e55/README.md) | Stable `v2.5.0` adds voice cloning, token-aware 120-token splitting, 200 ms joins, `duration_factor` pace control and CMU English pronunciation annotations. The Bilibili Model Use License is not permissive OSS. | **Rejected for production after one corrective free-T4 job.** Complete-sentence calls removed the splitter-boundary corruption and fixed “one point five”, but Dave still found timing/pacing poor and the voice far less natural than Gemini Zephyr or Chatterbox. |
 | [Fish Audio S2 Pro](https://github.com/fishaudio/fish-speech/releases/tag/v2.0.0-beta) | Official beta is real and not abandoned, but it is a 4B + 400M single-device runtime with an official minimum of 24 GB VRAM and a Research License. Plain single-narrator prose also needs external chunking. | Watch only. Ordinary free Kaggle T4 is 16 GB and T4x2 is not sharded by the official runtime; local CPU is not a realistic audiobook route. Do not spend a render unless the official memory path materially changes. |
+| [NVIDIA MagpieTTS Multilingual v2607](https://huggingface.co/nvidia/magpie_tts_multilingual_357m/blob/v2607/README.md) | Official 364M model with five baked English presets, IPA pronunciation control and a beta stateful long-form path explicitly aimed at narration/audiobooks. NVIDIA Open Model License. | **Capacity passed / listening open:** five same-text preset arms plus John's 9:14 stateful continuity arm completed on one free T4 job at RTF 1.081–1.142. T4 is unsupported by NVIDIA's published list; do not integrate or expose voices before listening. |
 | Chatterbox Multilingual | MIT licensed, 500M params, 23+ languages and cloning. | Only test if multilingual or cloning quality matters more than speed. |
 | KokoClone / Kokoro voice-conversion experiments | Potential route to cheap voice cloning while keeping Kokoro speed. | Watch, but do not productionize until stability and license posture are clear. |
 
@@ -510,12 +512,15 @@ Default path:
    naturalness, pronunciation, accent authenticity or long-form comfort.
 2. Start with free/local Chatterbox Nano + Beatrice; keep Chatterbox Turbo +
    Arthur as a per-book audition alternative, not an automatic quality reference.
-3. Use free Kaggle for a better-sounding GPU finalist when it wins the audition;
-   corrected Vibe cfg 2/3 and Qwen are the current long-form comparison.
-4. Run the bounded Gemini/Achernar app-path gate. If Free quota cannot sustain
-   books, test Google Chirp 3 HD only after implementing a 1M-character monthly
-   hard stop. Keep IndexTTS-2.5, Fish S2 and CosyVoice as materially different
-   free-GPU candidates rather than dismissing them from a README skim.
+3. Use free Kaggle for a better-sounding GPU finalist when it wins the audition.
+   Qwen is the current full-precision consistency leader; VibeVoice and
+   IndexTTS-2.5 are rejected on their tested paths. NVIDIA MagpieTTS v2607 is
+   the current bounded stateful-long-form candidate.
+4. Use accepted free-only Gemini/Achernar when its slow quota-paced path suits
+   the book. If Free quota cannot sustain books, test Google Chirp 3 HD only
+   after implementing a 1M-character monthly hard stop. Keep Fish S2 and
+   CosyVoice as watchlist items until their official runtime/hardware boundary
+   materially changes.
 5. Only then optimise cost and speed. EdgeTTS is conditional (unofficial
    interface and proper-noun failures). Piper and Melo are not production
    fallbacks. Reconsider Piper only for a materially different, independently

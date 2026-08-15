@@ -1,5 +1,30 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-15 NVIDIA MagpieTTS v2607 — FREE-T4 CAPACITY PASSED / LISTENING OPEN
+>
+> NVIDIA's current official model card and long-form guide identify MagpieTTS
+> Multilingual v2607 as a 364M, five-preset model with beta stateful English
+> long-form inference aimed at audiobook/content narration. The private Kaggle
+> gate `davedavedavedavenm/nvidia-magpie-v2607-longform-gate` pinned official
+> model revision `5023df68bd3f5b5ce6d666a50979bc501af145cc` and NeMo Speech
+> v3.0.0 commit `fd6a877539710e2b98f28c43272ff81312f83417`. It refused paid,
+> CPU and non-T4 fallback. Version 1 stopped before setup because Kaggle changed
+> a Unicode source literal; version 2 loaded the exact model but exposed a
+> nightly-versus-v3.0.0 helper-signature mismatch. Version 3 used the exact
+> pinned official signature and completed; neither correction changed model,
+> inference settings, text or requested hardware.
+>
+> All five official presets rendered the same exact 202-word prepared hard
+> passage: Aria 70.914 s, Jason 74.025 s, John 89.211 s, Leo 78.344 s and Sofia
+> 72.446 s. John also completed a 1,470-word / 79-stateful-chunk continuity arm:
+> **9:14.260**, 11,086,934 bytes. Independent local validation reconstructed
+> both source hashes, matched every MP3 size/SHA, found six distinct 22.05 kHz
+> mono MP3s and fully decoded all six. T4 RTF is **1.081–1.142**; the long arm
+> peaked at **11.61 GiB allocated / 14.31 GiB reserved**, within the 16 GiB T4.
+> No ASR was used. Capacity and structure
+> now pass; audible quality remains **open until Dave listens**. No app engine,
+> default or selectable voice has changed.
+
 > ## 2026-08-15 Index join diagnosis + Gemini full-catalogue work
 >
 > Dave heard garbling at approximately 28 and 58 seconds in both IndexTTS-2.5
@@ -1400,11 +1425,12 @@ opt-in; on the 31GB box that was over-cautious for chatterbox — keep chatterbo
 — not because it is broken (it isn't; see the 2026-07-27 note at the top) but
 because it is an explicit opt-in that wants 10 GiB while it runs.
 
-## Aims vs reality — the owner's scorecard (updated 2026-07-20)
+## Historical scorecard snapshot (2026-07-20; superseded by entries above)
 
-The aims below are Dave's, stated verbatim or near-verbatim during development.
-This table is the project's honest report card; agents should treat a ❌/⚠️ here
-as the priority order.
+The aims below were Dave's, stated verbatim or near-verbatim during development.
+This table records the 2026-07-20 snapshot only. Do not use it for current
+cache counts, ASR policy, engine defaults or priority order; the dated entries
+at the top of this file and `DECISIONS.md` govern.
 
 | Aim (as stated) | State | Evidence |
 |---|---|---|
@@ -1413,7 +1439,7 @@ as the priority order.
 | Accurate progress/ETA, no fake numbers | ✅ | Real per-chapter progress (ntfy call-home); honest "chapter X/N"; no ETA before evidence. Was elapsed-guesswork before. |
 | Chapter selection = the actual book, by title | ✅ | Both local and Kaggle paths unified on `chapters.py` numbering. |
 | Covers + metadata land in ABS, chapters navigable | ✅ | Full ID3 tagging implemented for both rendering paths. |
-| **All voices cached**, instant, judged on hard text | ✅ | 69/69 usable voices, ~30ms serve, ~135-word sample with years/currency/acronyms/names, production-accurate preprocessing per engine. |
+| **All voices cached**, instant, judged on hard text | ✅ at that date | 69/69 then-configured local voices. This predates the 30 Gemini presets; current Gemini cache is 2/30 and uncached voices remain unselectable. |
 | Clear visually which voice is speaking | ✅ | Speaking card: accent glow, equaliser, stop toggle, single-voice rule. |
 | LLM guard: check/sort/act, local or free | ✅ | Shared khpi5 Ollama `qwen2.5:7b` is live and reachable; no Groq cloud key/model is currently configured. All LLM-assisted paths fail open to deterministic rules. |
 | Anyone can clone + deploy and get all this | ✅ | Unified local renderer routes all jobs cleanly through `convert_book.py`. |

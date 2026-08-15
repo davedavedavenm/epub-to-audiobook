@@ -281,6 +281,22 @@ Free quota days with the persistent ten-RPD local guard and no automatic retry.
 See [GEMINI-SETUP.md](GEMINI-SETUP.md).
 Official source: [Gemini TTS voice options](https://ai.google.dev/gemini-api/docs/speech-generation#voice-options).
 
+### NVIDIA MagpieTTS Multilingual v2607 presets (official, checked 2026-08-15)
+
+The exact v2607 model ships five baked English speaker IDs: `Aria` (0),
+`Jason` (1), `John` (2), `Leo` (3), and `Sofia` (4). NVIDIA does not document
+those names as regional accents or as guarantees of gender, character or
+narration quality. v2607 also removes zero-shot voice cloning, so this is a
+fixed preset bank rather than another Arthur/accent-reference route.
+
+None is currently an app voice or a cached production preview. One private
+free-T4 gate has produced local evaluation files for all five on the same
+prepared difficult passage, plus a 9:14 John stateful long-form passage. All six
+files are independently decoded and ready to hear, but local evaluation output
+is not the app preview cache. Each remains unapproved and unselectable until
+Dave's listening verdict. See `ENGINES.md` for the pinned model/runtime boundary
+and licence.
+
 ### Candidate models, evaluated 2026-07-27
 
 Dave sent five to look at, with: *"it took me 5 minutes to find these."* Fair —
@@ -363,13 +379,17 @@ apart from one brief garble after “romantic felicity”. `cfg_scale=3.0` (A) w
 muffled and distant even though the voice/emotion itself was acceptable;
 `1.3` had already been rejected. Acoustic similarity metrics had favoured 3.0,
 so this is a useful warning: pitch/timbre statistics cannot replace listening.
-Use 2.0 for further Vibe tests, but keep the production/default decision open
-until the isolated defect is checked through the real app path.
+The later real-path and documented same-speaker-turn gates did not cure the
+progressive pacing failure: both four-turn and seven-turn arms were rejected by
+ear. VibeVoice is therefore rejected for audiobook production on this exact
+official-weights/community-runtime path. `cfg_scale=2.0` remains only the best
+tested Vibe setting, not a production approval.
 
 **The lesson, recorded because it is the same one three times over:** I keep
 converting "this doesn't solve the problem I'm currently fixated on" into "this
-isn't worth looking at". VibeVoice does not fix accents — and it is still
-probably the most valuable model on this list for an audiobook pipeline.
+isn't worth looking at". VibeVoice was worth the full test even though that test
+ultimately rejected its audiobook path; the early dismissal and the later
+listening verdict are separate facts.
 
 ### So what is actually left for local accented English
 
@@ -447,7 +467,8 @@ recorded speech if any is available.
 |---|---|
 | Irish or South African, local | **No approved production voice.** The exact Chatterbox Multilingual V3 regional gate failed by ear. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
-| Irish, South African or Australian, online | Azure Standard native voices passed accent authenticity but failed overall for robotic/degraded sound. Edge remains the only near-pass by ear, but its company-name pronunciation failed. One Azure 48 kHz lossless control may isolate degradation; it cannot prove better timbre. |
+| Irish, South African or Australian, online | **Azure William (AU), Connor (IE) and Luke (ZA) are accepted opt-in quality-floor voices** on the proven 48 kHz lossless, correctly processed path. Accents are acceptable; emotion is weak and none is as real as Arthur. F0 first, never automatic paid fallback. |
+| General English, free GPU evaluation | NVIDIA MagpieTTS v2607 has five official presets under a bounded stateful long-form gate. No preset is exposed or approved until Dave hears it. |
 | Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
 | British/general narration, local | **Beatrice (Nano)** (`uk_female_samuel_nano` via Chatterbox Nano) is the system default narrator. Fast CPU inference (~0.87x RTF) with human-cloned British voice. |
 

@@ -193,8 +193,9 @@ but when you want the best result:
 - **Kokoro** — compatibility/debug only. Its tested voices are retired from
   normal quality selection.
 - **Chatterbox Turbo** — voice-cloned British narrators (Arthur, Edmund,
-  Harriet, Beatrice). Excellent for long books; runs on CPU or GPU. Enable with
-  the `chatterbox` profile.
+  Harriet, Beatrice). Earlier long-form samples were excellent but the latest
+  hard-text evidence is mixed, so audition the target book before selecting it.
+  Runs on CPU or GPU; enable with the `chatterbox` profile.
 - **Hume TADA** — the most expressive/natural on easy text, but a research
   model with rough edges on dense non-fiction. Enable with the `tada` profile.
 - **Pocket TTS / KittenTTS** — free local CPU opt-in book engines. Pocket exposes its
@@ -217,6 +218,9 @@ but when you want the best result:
   integration is deliberately Free Tier only and stops rather than charging or
   retrying when quota is exhausted. Ten calls/day makes it high quality but
   slow: a typical novel may resume from cache across roughly four weeks.
+- **NVIDIA MagpieTTS v2607** — free-GPU evaluation only. It has five official
+  baked English presets and a documented stateful long-form path, but no voice
+  becomes selectable until its exact preview and continuity result are heard.
 
 Which sounds best depends on the book. Trust your ears. Automated transcription
 can detect missing or repeated speech, but it cannot tell you whether a voice

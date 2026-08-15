@@ -59,8 +59,10 @@ requires a separately authorised environment-gated session.
 - **Chatterbox Nano** - default local engine with **Beatrice (Nano)** (`uk_female_samuel_nano`) as system default narrator. Fast CPU inference (~0.87x RTF, faster than realtime), voice-cloned British narrators (Beatrice, Arthur, Harriet, Edmund). The bootstrap helper and deployment wrapper enable its Compose profile automatically.
 - **Kokoro TTS** - retained for compatibility/debug comparisons only. Its tested
   voices are retired from quality contention and it is never a paid-GPU target.
-- **Chatterbox Turbo** - production narration engine with official pacing
-  controls. Enable with explicit `ENABLE_CHATTERBOX_PROFILE=1` compose profile.
+- **Chatterbox Turbo** - conditional voice-cloned narration engine. Earlier
+  long-form controls were excellent, but the latest hard-text gate was mixed;
+  audition it per book. Its official Turbo path does not expose V3's CFG or
+  exaggeration controls. Enable with explicit `ENABLE_CHATTERBOX_PROFILE=1`.
 - **Hume TADA** - expressive natural-voice model via TADA-1B. Enable with explicit `ENABLE_TADA_PROFILE=1` compose profile.
 - **Pocket TTS 2.1** - free CPU-only opt-in book engine with all 21 officially
   documented English presets cached for immediate audition. It uses the
@@ -79,6 +81,9 @@ requires a separately authorised environment-gated session.
   take roughly four weeks; enable only with a dedicated unbilled project key.
   See [GEMINI-SETUP.md](GEMINI-SETUP.md) for the complete key, quota, cache and
   recovery walkthrough.
+- **NVIDIA MagpieTTS v2607** - five-preset, stateful long-form candidate whose
+  pinned free-T4 capacity gate passed; listening is open. It is not integrated,
+  selectable or production-approved. Exact facts: [ENGINES.md](ENGINES.md).
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **Piper TTS** - rejected production path; legacy/debug only
   (`ENABLE_PIPER_PROFILE=1`)
@@ -251,7 +256,7 @@ cp .env.example .env
 
 ## Available Voices
 
-### Chatterbox Turbo & TADA — British Human-Cloned (Recommended)
+### Chatterbox Turbo & TADA — British Human-Cloned (Opt-in)
 | Voice | Gender | Source (public domain) | Engines |
 |-------|--------|------------------------|---------|
 | Arthur | Male | Andy Minter (LibriVox) | Chatterbox, TADA |

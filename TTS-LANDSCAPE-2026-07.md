@@ -10,8 +10,12 @@ acting on any vendor, version, capability, licence or price below.
 
 ## TL;DR
 
-**Your Turbo + TADA stack is still top-tier for audiobook narration.** Two
-developments, both now measured (2026-07-24):
+**Historical July conclusion:** Turbo + TADA looked top-tier for audiobook
+narration. Later listening narrowed that claim: Nano + Beatrice is the free
+local default, Turbo is conditional per book, Qwen is the full-precision
+consistency leader, Gemini/Achernar is the accepted slow free-online option,
+and Magpie v2607 is the current bounded open candidate. Two developments were
+measured on 2026-07-24:
 
 1. **Chatterbox Nano** (110M params, MIT) — **VERIFIED WORKING** as a local
    engine. Measured **RTF ~0.83 on Zorin CPU** (faster than realtime, no GPU),
@@ -29,8 +33,7 @@ developments, both now measured (2026-07-24):
    standalone kernel (`scripts/kaggle/build_chapter_kernel.py`) renders whole
    chapters today.
 
-Nothing has dethroned TADA for peak naturalness on easy text, or Turbo for
-reliable long-form non-fiction.
+That July statement is retained as history, not current operational guidance.
 
 See **§ Verified results 2026-07-24** at the bottom for the measurements.
 
@@ -79,17 +82,18 @@ turning an experiment into production.
 
 | Engine | Params | License | Clone | Long-form | CPU viable | Best for | Status in this repo |
 |--------|--------|---------|-------|-----------|------------|----------|---------------------|
-| **Chatterbox Turbo** | 350M | MIT | Yes (10s ref) | Chunked | Yes (RTF ~1.3) | Reliable narration, non-fiction | Production engine |
+| **Chatterbox Turbo** | 350M | MIT | Yes (10s ref) | Chunked | Yes (RTF ~1.3) | Conditional narration candidate | **Per-book audition; latest hard-text gate mixed** |
 | **Chatterbox Nano** | 110M | MIT | Yes (10s ref) | Chunked | **Yes (measured RTF 0.83)** | Same quality tier, no GPU needed | **WORKING — default CPU engine** |
 | **VibeVoice** | 1.5B | Research | Yes (10s ref) | 77-minute capability reproduced | GPU preferred | Short expressive passages | **SINGLE-PASS BOOK PATH REJECTED — progressive pace drift** |
 | **Qwen3-TTS** | 0.5B-1.5B | Apache 2.0 | Yes (3s ref) | Sentence passes | Yes (Q8 RTF 2.70) | Consistency leader, long-form non-fiction | **CURRENT FULL-PRECISION LONG-FORM LEADER — local Q8 / cloud** |
 | **Hume TADA-1B** | 1B | Llama 3.2 Community | Yes (ref+transcript) | No (chunked) | **CPU bf16 (RTF 1.68)** | Peak naturalness, fiction/dialogue | **Opt-in engine (#23 fixed)** |
 | **CosyVoice 3** | 0.5B | Apache 2.0 | Yes (3s ref) | Streaming mode | **No (GPU-only; CPU malformed)** | Multilingual, prosody control | **AUDITIONED — keep; Kaggle-render, see §Verified** |
-| **Kokoro** | 82M | Apache 2.0 | No (preset voices) | Chunked | Yes (fast) | Cheap bulk, fallback | Production fallback |
+| **Kokoro** | 82M | Apache 2.0 | No (preset voices) | Chunked | Yes (fast) | Compatibility/debug | **Rejected from quality contention** |
 | **Fish Speech 1.5** | 1.5B | Apache 2.0 | Yes | Chunked | GPU needed | Fast generation, multilingual | Not integrated |
 | **Fish Audio S2 Pro beta** | 4B + 400M | Fish Audio Research License | Yes | External chunking required | Official minimum 24 GB VRAM; ordinary free T4 does not fit | Expressive multilingual narration | **WATCH — not viable on current free/local hardware** |
-| **IndexTTS-2.5** | official weights | Bilibili Model Use License | Yes | 120-token segments / 200 ms joins | FP32 fits free T4: 10.982 GiB peak reserved | Voice cloning, pace and English pronunciation control | **ORIGINAL JOIN PATH REJECTED; SENTENCE-SAFE CLIP READY** |
+| **IndexTTS-2.5** | official weights | Bilibili Model Use License | Yes | 120-token segments / 200 ms joins | FP32 fits free T4: 10.982 GiB peak reserved | Voice cloning, pace and English pronunciation control | **REJECTED — sentence-safe fix removed corruption but pacing/naturalness failed** |
 | **Gemini 3.1 Flash TTS** | hosted preview | Google API terms | 30 presets | Split after a few minutes | hosted | Controllable audiobook narration | **FREE-ONLY ACHERNAR ACCEPTED BY EAR; SLOW MULTI-DAY BOOK PATH** |
+| **NVIDIA MagpieTTS v2607** | 364M | NVIDIA Open Model License | No; 5 baked presets | **Stateful English long-form beta** | GPU; free T4 measured RTF 1.081–1.142 but unsupported | Audiobooks/content narration | **CAPACITY PASSED; SIX FILES READY; LISTENING OPEN** |
 | **F5-TTS** | ~330M | MIT | Yes (ref) | Chunked | GPU preferred | Research, good quality | Not integrated |
 | **XTTS v2** (Coqui) | ~1.8B | MPL 2.0 | Yes | Chunked | GPU needed | Was the standard; Coqui defunct | Not integrated |
 | **Bark** (Suno) | ~1B | MIT | No | Poor | GPU needed | Sound effects, not narration | Not suitable |
@@ -139,7 +143,7 @@ turning an experiment into production.
 - **Lemonfox** still $5/mo for 2M chars — the cheapest commercial option if
   quality is acceptable. No one has tested it with audiobook-length content.
 
-### August 2026: Gemini, Chirp, IndexTTS-2.5 and Fish S2 correction
+### August 2026: Gemini, Chirp, IndexTTS-2.5, Fish S2 and Magpie correction
 
 - Gemini 3.1 Flash TTS standard input/output is free on the Developer API Free
   Tier and Dave's Achernar Studio sample was very good. The repo now has a
@@ -156,16 +160,25 @@ turning an experiment into production.
   `en-GB-Chirp3-HD-Achernar` exists, but Google does not document it as the same
   voice as Gemini Achernar. It is unsafe until an atomic rolling character
   ledger reserves each exact payload and refuses above 900k/31 days.
-- IndexTTS-2.5 stable shipped on 2026-08-13. Pin official commit
+- IndexTTS-2.5 stable shipped on 2026-08-13. The gate pinned official commit
   `39207d91c30899cad1e7c1b9eb678c241f678e55` and model snapshot
   `c39ce5ba981572cb187443877ff559dfb246ce63`. FP32 capacity is now proven on a
-  free Kaggle T4 at 10.982 GiB peak reserved; two 66–68 second Arthur clips are
-  validated and awaiting Dave's verdict. Only a passing short arm advances to
-  the 8–10 minute gate. P100 is excluded by Kaggle's current CUDA 12.8 image.
+  free Kaggle T4 at 10.982 GiB peak reserved. Its official token-join path
+  garbled repeatably; complete-sentence calls fixed the corruption and “one
+  point five”, but Dave still rejected the poor pacing/timing and much less
+  natural voice. The current Index path is closed. P100 is excluded by Kaggle's
+  current CUDA 12.8 image.
 - Fish Audio shipped S2 beta on 2026-03-10, but the current official runtime
   recommends at least 24 GB VRAM, uses a single device and does not shard across
   Kaggle T4x2. It remains a release/licence watch item, not a current free-GPU
   render candidate.
+- NVIDIA MagpieTTS Multilingual v2607 is a materially different 364M candidate:
+  NVIDIA documents a stateful English long-form beta and five baked presets.
+  The exact v2607 model and NeMo Speech v3.0.0 runtime completed one bounded
+  free-T4 gate: five same-text short arms plus a 9:14 / 79-chunk John arm at RTF
+  1.081–1.142. T4 is not in NVIDIA's official supported-GPU list, and audible
+  quality remains open. The older v2602 NeMo-Speech.cpp GGUF path is separate
+  and must not be conflated with v2607 Python inference.
 - Cartesia Sonic 3.5's free ~27 minutes/month and USD5/~133-minute Pro plan do
   not fund normal novels under GBP2; keep it for bounded samples only.
 
@@ -219,29 +232,27 @@ Tried to render audition samples via HF ZeroGPU spaces and Kaggle kernels.
   working HF space appears, (b) Kaggle auth is fixed (need kaggle.json with
   username+key, not KGAT_ token), or (c) we build a local/Docker integration.
 
-### 1. Listen-test Chatterbox Nano (highest leverage)
-If Nano sounds close to Turbo, it's a free 3x speedup on CPU with zero new
-infrastructure. Same MIT license, same voice cloning, same server interface.
-Use the existing A/B harness. This is the single highest-leverage action.
+### 1. Keep Chatterbox Nano + Beatrice as the free local default
+That listening/capacity gate is complete. It remains the default baseline, not
+an open experiment.
 
-### 2. Audition CosyVoice 3 on Kaggle
-The streaming/long-form mode and prosody control could be a step change for
-audiobook narration. Render the canonical passage + one chapter. Free on Kaggle.
+### 2. Complete the bounded NVIDIA MagpieTTS v2607 gate
+Hear all five exact presets on the prepared hard passage and John across the
+stateful 8–10 minute continuity arm. Integrate nothing before a listening pass.
 
 ### 3. Check TADA bf16 optimizations
 If the `hume-tada` pip package now includes bf16 + encoder caching, rebuild
 the TADA image. Free ~20% speedup and lower VRAM.
 
-### 4. Keep Turbo + TADA as production engines
-Nothing has displaced them. Turbo for reliability, TADA for peak quality on
-GPU. Nano is a potential Turbo replacement pending the listen test.
+### 4. Keep Turbo + TADA conditional
+Turbo has mixed book-specific evidence; TADA remains expressive on easy text
+but weaker on dense nonfiction. Neither is an unconditional quality reference.
 
-### 5. Gate IndexTTS-2.5; watch Fish S2
-Do not dismiss either from old 2025 evidence. IndexTTS-2.5 gets the next free-GPU
-English capacity and long-form audition after Gemini; Fish S2 waits for a
-materially lighter official runtime or free GPU with at least 24 GB VRAM
-and explicit research-licence acceptance. F5-TTS, XTTS, Bark, MetaVoice and
-Parler remain low priority absent a materially new official release.
+### 5. Keep Index closed; watch Fish S2
+IndexTTS-2.5 is rejected after its corrective listening gate. Fish S2 waits for
+a materially lighter official runtime or free GPU with at least 24 GB VRAM and
+explicit research-licence acceptance. F5-TTS, XTTS, Bark, MetaVoice and Parler
+remain low priority absent a materially new official release.
 
 ### 6. Lemonfox remains the cheapest commercial fallback
 $5/mo for 2M chars, OpenAI-compatible API. Worth a 10-minute quality test
