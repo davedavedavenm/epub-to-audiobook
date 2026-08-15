@@ -69,6 +69,14 @@ come across something". Telegram already works from phone and desktop.
 - [x] 4.3 Retract `cfg_weight=0` as a general accent control. Upstream documents
       `0.5` as the normal default and zero for a reference/target-language
       mismatch, which this English-to-English gate was not.
+- [x] 4.4 Test Azure's native Australian, Irish and South African voices with
+      the mandatory processing contract and 48 kHz high-fidelity output.
+      William, Connor and Luke pass Dave's minimum standard; accents and overall
+      voices are acceptable, but emotion is weak and none sounds as real as
+      Arthur.
+- [ ] 4.5 Integrate the three accepted Azure voices as explicit opt-ins with an
+      F0 quota guard, correct SSML-billable-character estimates and no automatic
+      paid fallback.
 
 V3 is the only model in the Chatterbox family that claims **accent
 preservation**. Nano and Turbo are English-only agent models and their accent
@@ -76,8 +84,9 @@ cloning path is closed even though Arthur/Turbo is excellent general narration.
 The exact V3/synthetic-reference/CFG-zero path failed and is closed. This was
 not a fair "Arthur plus accent" comparison: it changed model, prompt source and
 settings together. Only a same-text, same-human-reference Turbo-vs-V3 test at
-official defaults can isolate the model. For practical regional voices, compare
-the supported Azure voices plus pronunciation controls.
+official defaults can isolate the model. For practical regional voices, Azure
+plus its pronunciation controls is now the accepted minimum-quality route;
+integration remains open.
 See VOICES.md.
 
 ## 5. Fix `_trim_leadin()` properly — #21

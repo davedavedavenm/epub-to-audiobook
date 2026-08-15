@@ -105,8 +105,19 @@ Dave then explicitly authorised one longer, correctly processed passage for
 each of the same three accents. The bounded gate used one common 737-word source,
 exactly three requests, Azure's documented IPA mechanism, deterministic number
 expansion and the documented 48 kHz high-fidelity lossless format. All three
-outputs are structurally verified and await his listening verdict. This
-authorisation is exhausted: do not render more voices or passages from it.
+outputs are structurally verified. Dave judged all three accents and voices
+acceptable. They lack Arthur's realism and are weak on emotion, but pass his
+minimum standard. William, Connor and Luke are therefore approved as **opt-in
+Azure regional voices**, never as the default or an automatic cloud fallback.
+This authorisation is exhausted: do not render more voices or passages from it.
+
+The accepted path must retain the proven contract: deterministic number and
+currency expansion, real paragraph/title/author pacing, Azure IPA for the
+pinned difficult terms and lossless/high-fidelity 48 kHz synthesis. F0 is used
+first. If free quota is insufficient, stop for an explicit per-book cost choice;
+never switch to S0 or start a paid render automatically. Microsoft's billing
+boundary includes SSML body markup, so estimates and guards must count it rather
+than plain text alone.
 
 ## Shared-host CPU candidates reserve capacity for the product — Active
 

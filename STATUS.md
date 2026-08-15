@@ -86,10 +86,18 @@
 > `8fffdba7701d67de8e352f8101540f9cc25306ffe280b74771deb2fbd2b13b38`;
 > Luke 3:49.000 / 21,984,044 bytes /
 > `71fe491786e8d2d8126d90359433beacaba1317901552f9cab171b0d197997e0`.
-> All fully decode. The run used an estimated 12,111 F0 text characters,
-> bringing cumulative estimated synthesis to 21,305 (4.261% of 500,000); the
-> resource remains F0 and production defaults remain unchanged. Quality is
-> **open pending Dave's listening verdict**. No further Azure work is running.
+> All fully decode. Microsoft's billing documentation counts the SSML body
+> markup as well as its visible text (only the outer `speak`/`voice` tags are
+> excluded), so the corrected estimate is 14,367 billable F0 characters, not
+> the earlier 12,111 plain-text count. Cumulative estimated synthesis is 23,561
+> characters (4.7122% of 500,000); the resource remains F0 and production
+> defaults remain unchanged.
+>
+> Dave's verdict: **all three accents are acceptable and all three voices are
+> acceptable**. They are not great for emotion and none sounds as real as
+> Arthur, but they pass his minimum standard. This approves William, Connor and
+> Luke as opt-in Azure regional voices, not as the system default and not as an
+> automatic cloud fallback. No further Azure work is running.
 
 > ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
 >

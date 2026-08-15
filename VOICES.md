@@ -183,10 +183,17 @@ explicit title/author pauses and the hard number/currency passage. Deterministic
 processing left no digits or currency symbols; 12 difficult terms use Azure's
 official IPA `<phoneme>` mechanism instead of the rejected legacy respellings.
 Australian William, Irish Connor and South African Luke each rendered once to
-lossless 48 kHz PCM (3:49–4:12), fully decoded and awaiting Dave's verdict. The
-three requests used an estimated 12,111 characters, bringing cumulative F0 text
-to 21,305 characters (4.261%). Do not infer approval or issue another request
-from this completed gate.
+lossless 48 kHz PCM (3:49–4:12) and fully decoded. Dave judged all three accents
+and voices acceptable. They are not great for emotion and none sounds as real
+as Arthur, but they pass his minimum standard and are approved as opt-in Azure
+regional voices. They are not the default.
+
+Microsoft counts SSML body markup as billable characters, excluding only the
+outer `speak` and `voice` tags. The corrected estimate for the gate is therefore
+14,367 billable characters (12,111 was only the visible/plain-text count),
+bringing cumulative estimated F0 synthesis to 23,561 characters (4.7122%). Any
+production estimator must use this boundary. Do not issue another request from
+this completed gate.
 
 The files were 24 kHz / 160 kbps mono MP3. Microsoft documents that selecting a
 48 kHz format invokes a separate high-fidelity standard model and supports
