@@ -11,13 +11,13 @@ writes all evidence under ignored ``scratch/``.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 import threading
 import time
 from urllib.error import HTTPError, URLError
@@ -192,6 +192,19 @@ def _docker_image_id(container: str) -> str:
     return subprocess.check_output(
         ["docker", "inspect", "--format", "{{.Image}}", container], text=True
     ).strip()
+
+
+def _production_sample_text() -> str:
+    """Read the exact deployed sample after the production dependency path."""
+    encoded = _docker_text(
+        "epub-to-audiobook-ui",
+        "python",
+        "-c",
+        "import base64; from voice_sample import sample_text_for; "
+        "text = sample_text_for('chatterbox'); "
+        "print(base64.b64encode(text.encode('utf-8')).decode('ascii'))",
+    )
+    return base64.b64decode(encoded, validate=True).decode("utf-8")
 
 
 def _package_direct_url(container: str) -> dict:
@@ -385,9 +398,6 @@ def main() -> int:
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parents[1]
-    sys.path.insert(0, str(repo / "webapp"))
-    from voice_sample import sample_text_for  # noqa: PLC0415
-
     queue = _json_get("http://127.0.0.1:8881/api/queue/status")
     active = _active_jobs()
     if queue.get("queued_count") or active:
@@ -398,7 +408,7 @@ def main() -> int:
     output_dir = (repo / args.output_root / stamp).resolve()
     output_dir.mkdir(parents=True, exist_ok=False)
 
-    source = sample_text_for("chatterbox")
+    source = _production_sample_text()
     source_path = output_dir / "source.txt"
     source_path.write_text(source, encoding="utf-8", newline="\n")
     source_sha = _sha256(source_path)

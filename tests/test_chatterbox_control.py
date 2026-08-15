@@ -51,6 +51,8 @@ def test_server_seed_is_temporary_and_custom_reference_wins():
     assert "np.random.get_state()" in server and "np.random.set_state(numpy_state)" in server
     assert "torch.get_rng_state()" in server and "torch.set_rng_state(torch_state)" in server
     assert 'f"if [ -f /app/voices/custom/{voice}.wav ]; then "' in harness
+    assert '"epub-to-audiobook-ui"' in harness
+    assert "base64.b64decode(encoded, validate=True)" in harness
 
 
 def test_v3_compose_default_matches_official_same_language_default():
