@@ -23,7 +23,8 @@ accent-engine verdicts are dated in the table.
 | OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 | EdgeTTS accented English voices (2026-08-14) | The only currently heard regional-accent option that comes close. All tested Chinese company names were still pronounced badly, so it is not approved for Chinese-business nonfiction without a supported pronunciation fix. In the exact same-William/same-text/same-format endpoint control, Azure was slightly better. | Microsoft cloud service via unofficial pinned `edge-tts==7.2.8` interface |
 | Azure Speech Standard native AU/IE/ZA voices (2026-08-15) | **Accepted opt-in at the quality floor:** the original Darren/Connor/Luke 24 kHz trio sounded robotic/degraded despite good accents. A controlled William test showed Azure slightly beat Edge. On the final 737-word, correctly processed, 48 kHz lossless gate, Australian William, Irish Connor and South African Luke had acceptable accents and overall voices. Emotion is weak and none sounds as real as Arthur. Preserve preprocessing/IPA/paragraph pacing; F0 first, never automatic paid fallback. | Azure Speech F0, UK South |
-| Gemini 3.1 Flash TTS / Achernar (2026-08-15) | **Short Studio/app preview passed; 10:10 technical long-form gate passed; listening open.** Dave called the exact app preview “very good”. Five one-attempt paragraph-packed requests produced a complete, fully decoded 1,644-word file after one earlier zero-output 503. The repo integrates only Achernar through an unbilled Gemini Developer API Free project, with no paid fallback. Do not promote until Dave hears the exact long-form file. | Google-hosted Developer API Free Tier |
+| Gemini 3.1 Flash TTS / Achernar (2026-08-15) | **Accepted opt-in book narrator.** Dave heard the exact 10:10 app-path file and called it “one of the best”. Five one-attempt paragraph-packed requests produced the complete, fully decoded 1,644-word file after one earlier zero-output 503. The repo integrates only Achernar through an unbilled Gemini Developer API Free project, with no paid fallback. Ten requests/day makes full novels slow; cache/resume spans quota days. | Google-hosted Developer API Free Tier |
+| IndexTTS-2.5 / Arthur focused gate (2026-08-15) | **Technical capacity passed; listening open.** Exact official release/model loaded FP32 on a free T4 at 10.982 GiB peak reserved. Raw/native-normalized and production-prepared same-seed clips are 66.124/68.237 s at RTF 1.863/1.796. Both independently decode; no ASR was used. Do not promote or render long-form until Dave hears them. | Kaggle Tesla T4, free compute |
 | MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
 | Qwen3-TTS (2026-08-14 final ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-14 corrected app-path + documented-turn gate) | **Rejected for audiobook production.** cfg 2.0 remains its best tested setting, but the flattened path accelerated after ~3 minutes and both structurally complete repeated-same-speaker alternatives (four turns 7:16; seven turns 6:59) were rejected by ear as unacceptable. The same-text Chatterbox Turbo + Arthur control was almost perfect and did not accelerate. cfg 3.0 and 1.3 remain rejected. | Kaggle P100 |
@@ -93,7 +94,19 @@ and do not replace Chatterbox Nano/Beatrice as the default.
 - Google documents natural-language control over style, accent, pace and tone,
   but also warns that voice/quality may drift beyond a few minutes and recommends
   smaller transcripts. Our 2,200-character paragraph packs implement that
-  recommendation; their audible joins still require Dave's gate.
+  recommendation; Achernar's exact 10:10 joined output passed Dave's gate.
+- The official catalogue has 30 preset names. Google's labels describe voice
+  character, not gender, nationality or guaranteed accent: `Zephyr` (Bright),
+  `Puck` (Upbeat), `Charon` (Informative), `Kore` (Firm), `Fenrir` (Excitable),
+  `Leda` (Youthful), `Orus` (Firm), `Aoede` (Breezy), `Callirrhoe`
+  (Easy-going), `Autonoe` (Bright), `Enceladus` (Breathy), `Iapetus` (Clear),
+  `Umbriel` (Easy-going), `Algieba` (Smooth), `Despina` (Smooth), `Erinome`
+  (Clear), `Algenib` (Gravelly), `Rasalgethi` (Informative), `Laomedeia`
+  (Upbeat), `Achernar` (Soft), `Alnilam` (Firm), `Schedar` (Even), `Gacrux`
+  (Mature), `Pulcherrima` (Forward), `Achird` (Friendly), `Zubenelgenubi`
+  (Casual), `Vindemiatrix` (Gentle), `Sadachbia` (Lively), `Sadaltager`
+  (Knowledgeable), and `Sulafat` (Warm). Only Achernar is currently exposed in
+  this app because it is the only exact preview cached and heard long-form.
 - Pricing currently lists standard Free Tier input and audio output as free.
   Paid standard is USD1/M text tokens plus USD20/M audio tokens (audio = 25
   tokens/second); paid Batch is USD0.50/USD10 and is deliberately inaccessible

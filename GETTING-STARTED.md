@@ -212,17 +212,18 @@ but when you want the best result:
   approved for books. Starting either Compose profile assumes a GPU is already
   attached; it never rents one. See [ENGINES.md](ENGINES.md) for the exact
   rejection boundary, runtime/licence and measured-hour limits.
-- **Gemini 3.1 Flash TTS / Achernar** — opt-in online candidate. Dave's short
-  Studio sample passed, but the app-path long-form gate is still pending. The
+- **Gemini 3.1 Flash TTS / Achernar** — accepted opt-in online book narrator.
+  Dave heard the exact 10:10 app-path file and called it “one of the best”. The
   integration is deliberately Free Tier only and stops rather than charging or
-  retrying when quota is exhausted.
+  retrying when quota is exhausted. Ten calls/day makes it high quality but
+  slow: a typical novel may resume from cache across roughly four weeks.
 
 Which sounds best depends on the book. Trust your ears. Automated transcription
 can detect missing or repeated speech, but it cannot tell you whether a voice
 is natural, clear or pleasant. More detail: [ENGINES.md](ENGINES.md) and
 [VOICES.md](VOICES.md).
 
-### Enable the free-only Gemini candidate
+### Enable the accepted free-only Gemini narrator
 
 1. In [Google AI Studio API keys](https://aistudio.google.com/apikey), create a
    dedicated project/key and confirm its **Plan/Billing Tier says Free**. Do not
@@ -235,9 +236,10 @@ is natural, clear or pleasant. More detail: [ENGINES.md](ENGINES.md) and
    Google's inference response does not itself report the key's billing tier.
 3. Run `./scripts/deploy.sh`, then open Settings and press **Prepare Achernar
    preview once**. Open the exact preview in Voices before selecting it.
-4. Start with a bounded 20–30 minute range. The app sends paragraph-aware
-   2–3 minute passages once each and caches successful WAVs. If Free quota ends,
-   the job stops; use Resume later to reuse the cache.
+4. The app sends paragraph-aware 2–3 minute passages once each and caches
+   successful WAVs. If Free quota ends, the job stops; use Resume later to reuse
+   the cache. Expect about 273 requests (roughly 28 quota-days) for a
+   600,000-character novel at the proven packing size.
 
 Free Tier prompts and outputs may be used to improve Google's products. Do not
 use it for confidential text unless that is acceptable. Current official

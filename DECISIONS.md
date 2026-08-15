@@ -35,11 +35,13 @@ headline rates or hypothetical hardware speedups presented as facts.
 reverses, the existing quality-priority decision: bad free audio is still not a
 successful audiobook, but cost decides between options that are genuinely good.
 
-## Gemini 3.1 Flash TTS is a free-only opt-in candidate — Active
+## Gemini 3.1 Flash TTS / Achernar is an accepted free-only narrator — Active
 
-Dave's short Google AI Studio audition of `gemini-3.1-flash-tts-preview` with
-the Achernar voice was **very good**. That admits exactly Achernar to a longer
-app-path gate; it does not approve a full-book default or every Gemini voice.
+Dave heard the exact 10:10 app-path `gemini-3.1-flash-tts-preview` / Achernar
+file and called it **“one of the best”**; he explicitly selected it for use.
+Achernar therefore passes the long-form human quality gate as an opt-in book
+narrator. This verdict does not approve every Gemini voice: Google exposes 30
+preset names, but only Achernar has a cached app preview and a heard long gate.
 The app uses the current Gemini Developer API Interactions route with a key from
 a project whose AI Studio plan is **Free**. It has no Vertex route, Batch API,
 paid model or paid-tier fallback. Do not attach Cloud Billing to that project.
@@ -57,15 +59,19 @@ profile and paragraph-aware requests capped at 2,200 characters (roughly two to
 three minutes), then joins lossless PCM locally. Each passage gets exactly one
 API request. Successful passage WAVs are cached; any 429, 500, timeout or other
 failure stops the job without automatic retry, and a manual Resume reuses the
-cache. The exact Achernar app preview is now persisted, independently decoded
-and served byte-identically by the app; it remains only a short-form gate.
+cache. The exact Achernar app preview is persisted, independently decoded and
+served byte-identically by the app. Five one-attempt requests produced the
+accepted, fully decoded 10:10 file covering the exact 1,644-word source at zero
+actual cost.
 
-This path remains **candidate / long-form not yet heard**. The bounded technical
-gate is complete: five one-attempt requests produced a fully decoded 10:10 file
-covering the exact 1,644-word source, at zero actual cost. Dave must hear that
-exact file for voice consistency, joins, pronunciation and pacing before any
-production/default promotion. The Free Tier uses submitted content to improve
-Google's products; do not send private/confidential books without accepting that term.
+Keep it explicit rather than the portable repo default: new installations do
+not have a Gemini key, the current account permits only ten requests/day, and
+Free Tier content is used to improve Google's products. At the proven
+2,200-character passage size, a roughly 600,000-character novel needs about 273
+requests—approximately 28 quota-days if no requests fail. Successful passages
+resume from cache across days. Never send private/confidential books without
+accepting the Free Tier data-use term, and never attach billing or fall through
+to paid service.
 Official sources checked 2026-08-15:
 [TTS guide](https://ai.google.dev/gemini-api/docs/speech-generation),
 [model card](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview),

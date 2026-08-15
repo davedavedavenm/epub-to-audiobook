@@ -1,6 +1,33 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-15 Gemini 3.1 Flash TTS — LIVE FREE-ONLY PREVIEW / LONG GATE PENDING
+> ## 2026-08-15 IndexTTS-2.5 — FREE-T4 CAPACITY PASSED / LISTENING OPEN
+>
+> Dave authorised the next free/open-weight candidate after selecting Gemini.
+> One private Kaggle job, `davedavedavedavenm/indextts25-arthur-focused-gate`,
+> completed on explicit `NvidiaTeslaT4` free compute. The harness pins official
+> release commit `39207d91c30899cad1e7c1b9eb678c241f678e55`, model revision
+> `c39ce5ba981572cb187443877ff559dfb246ce63`, FP32 and the exact Arthur
+> reference. It refuses P100/CPU fallback and paid compute. One model load
+> produced only two short same-seed arms: Index's native normalizer and the
+> repo's explicit number/currency preparation. No ASR was used. Do not start a
+> long-form render unless Dave accepts a clip.
+> The first staged version was deleted while running after the full host suite
+> proved its prepared-text builder had taken the normalizer's missing-dependency
+> fallback. No result from that invalid version will be handed off. The
+> replacement byte-pins raw SHA-256
+> `f6294d0b3a9257277f26cf505f6814933500da641f826d3e6ca3cc1e28c45a0f`
+> and production-prepared SHA-256
+> `57b51dd4df3795dda2e1dab04c68d25c7eea97f5b160dfd8b65537bd5ee2389c`.
+> The corrected run loaded in 86.880 s at 10.982 GiB peak reserved GPU memory.
+> Native is 66.124 s, RTF 1.863, MP3 SHA-256
+> `1a41d20f819ba641345b2494b08dee07d5ecef62c637d42aad73fc4074beb791`;
+> prepared is 68.237 s, RTF 1.796, MP3 SHA-256
+> `2070d5b41ea4e439e5c299df4217a786b89b6b9e426fd6f41003edfda5ac9997`.
+> Both are 22.05 kHz mono, distinct, non-trivial and passed independent local
+> hash/WAV/full-MP3-decode validation. The technical T4 capacity gate passes;
+> voice, pronunciation, numbers and pacing remain Dave's listening decision.
+>
+> ## 2026-08-15 Gemini 3.1 Flash TTS — ACCEPTED FREE-ONLY NARRATOR
 >
 > Dave rated the Google AI Studio `gemini-3.1-flash-tts-preview` + Achernar
 > sample “very good” and asked for a free or near-free route. The repo now has a
@@ -27,7 +54,9 @@
 > A dedicated unbilled project (`dave-audio-free-20260815`) and API-restricted key
 > are live; the key remains only in the host `.env`. Whole-stack revision
 > `17e45937b17128f15d37ba2fe7c2da740a077cb4` is healthy in both web and worker,
-> and `gemini-tts` is healthy. Exactly one final SDK preview request produced the
+> and `gemini-tts` is healthy. The later deployed whole-stack revision is
+> `c33442e356e908cdee49cb08d89c25c8f9f5dcec`; web and worker report the same
+> SHA. Exactly one final SDK preview request produced the
 > persisted app-path file: 81.576 s, 1,631,564 bytes, MP3/24 kHz/mono, SHA-256
 > `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`.
 > It fully decoded, `/api/preview/gemini_achernar` returned the identical bytes,
@@ -54,9 +83,8 @@
 > metrics record one Free Tier request and **zero output tokens**. No passage was
 > cached, no second request was sent, and the app remained responsive. Google’s
 > official error reference defines 503 as temporary overload/down and recommends
-> waiting before retrying. The listening gate therefore remains **open**, not
-> failed and not passed; resume must be a later explicit action, never an
-> automatic retry.
+> waiting before retrying. At that point the listening gate remained open;
+> resume had to be a later explicit action, never an automatic retry.
 >
 > Dave explicitly authorised a later manual resume. That run succeeded with
 > exactly five one-attempt requests and no cache regeneration. The final file is
@@ -68,8 +96,12 @@
 > 8,524 characters. Cloud Monitoring records nine of ten Free Tier requests used
 > today (three bring-up previews, the zero-output 503, and five successful gate
 > passages). Billing remains disabled and actual cost is zero. The **technical
-> long-form gate passes**; naturalness, joins, voice consistency and pacing remain
-> open until Dave hears this exact file.
+> long-form technical gate passes**. Dave then heard this exact file, called it
+> **“one of the best”**, and selected it for use. Achernar is now an accepted
+> explicit book narrator. It is not the portable repo default because the
+> account has only ten requests/day and a new installation has no Gemini key.
+> At the proven 2,200-character packing, a 600,000-character novel would require
+> roughly 273 calls—about 28 quota-days—with passage cache/resume across days.
 > Structured Gemini failures now retain Google's documented machine code and
 > safe message in converter/job diagnostics while redacting keys/tokens,
 > omitting arbitrary response bodies and preserving the one-attempt policy.

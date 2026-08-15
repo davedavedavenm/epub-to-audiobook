@@ -88,8 +88,8 @@ turning an experiment into production.
 | **Kokoro** | 82M | Apache 2.0 | No (preset voices) | Chunked | Yes (fast) | Cheap bulk, fallback | Production fallback |
 | **Fish Speech 1.5** | 1.5B | Apache 2.0 | Yes | Chunked | GPU needed | Fast generation, multilingual | Not integrated |
 | **Fish Audio S2 Pro beta** | 4B + 400M | Fish Audio Research License | Yes | External chunking required | Official minimum 24 GB VRAM; ordinary free T4 does not fit | Expressive multilingual narration | **WATCH — not viable on current free/local hardware** |
-| **IndexTTS-2.5** | official weights | Bilibili Model Use License | Yes | 120-token segments / 200 ms joins | Free Kaggle T4 FP32 capacity unverified | Voice cloning, pace and English pronunciation control | **NEXT FREE-GPU CAPACITY/AUDITION GATE** |
-| **Gemini 3.1 Flash TTS** | hosted preview | Google API terms | Preset voices | Split after a few minutes | hosted | Controllable audiobook narration | **FREE-ONLY ACHERNAR; 10:10 TECHNICAL GATE PASSED, LISTENING OPEN** |
+| **IndexTTS-2.5** | official weights | Bilibili Model Use License | Yes | 120-token segments / 200 ms joins | FP32 fits free T4: 10.982 GiB peak reserved | Voice cloning, pace and English pronunciation control | **SHORT ARTHUR CLIPS READY; LISTENING OPEN** |
+| **Gemini 3.1 Flash TTS** | hosted preview | Google API terms | 30 presets | Split after a few minutes | hosted | Controllable audiobook narration | **FREE-ONLY ACHERNAR ACCEPTED BY EAR; SLOW MULTI-DAY BOOK PATH** |
 | **F5-TTS** | ~330M | MIT | Yes (ref) | Chunked | GPU preferred | Research, good quality | Not integrated |
 | **XTTS v2** (Coqui) | ~1.8B | MPL 2.0 | Yes | Chunked | GPU needed | Was the standard; Coqui defunct | Not integrated |
 | **Bark** (Suno) | ~1B | MIT | No | Poor | GPU needed | Sound effects, not narration | Not suitable |
@@ -148,7 +148,9 @@ turning an experiment into production.
   few minutes, so the app uses paragraph-aware 2–3 minute passages and an
   on-disk resume cache. The first technical long-form gate produced a complete,
   fully decoded 10:10 file from five passages after one zero-output 503 and a
-  later manual resume; Dave's listening verdict remains open.
+  later manual resume. Dave heard that exact file, called it “one of the best”,
+  and selected Achernar as an opt-in book narrator. Ten calls/day means a normal
+  novel resumes from cache across roughly four weeks; this is not a fast path.
 - Google Cloud Chirp 3 HD includes 1M characters/month per billing account,
   then automatically bills USD30/M; ordinary budgets are alerts, not hard caps.
   `en-GB-Chirp3-HD-Achernar` exists, but Google does not document it as the same
@@ -156,9 +158,10 @@ turning an experiment into production.
   ledger reserves each exact payload and refuses above 900k/31 days.
 - IndexTTS-2.5 stable shipped on 2026-08-13. Pin official commit
   `39207d91c30899cad1e7c1b9eb678c241f678e55` and model snapshot
-  `c39ce5ba981572cb187443877ff559dfb246ce63`; first prove FP32 model load and a
-  30-second render on a free Kaggle T4 before its normalized short and 8–10
-  minute Arthur gates. P100 is excluded by Kaggle's current CUDA 12.8 image.
+  `c39ce5ba981572cb187443877ff559dfb246ce63`. FP32 capacity is now proven on a
+  free Kaggle T4 at 10.982 GiB peak reserved; two 66–68 second Arthur clips are
+  validated and awaiting Dave's verdict. Only a passing short arm advances to
+  the 8–10 minute gate. P100 is excluded by Kaggle's current CUDA 12.8 image.
 - Fish Audio shipped S2 beta on 2026-03-10, but the current official runtime
   recommends at least 24 GB VRAM, uses a single device and does not shard across
   Kaggle T4x2. It remains a release/licence watch item, not a current free-GPU

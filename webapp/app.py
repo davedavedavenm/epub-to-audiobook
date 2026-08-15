@@ -550,10 +550,10 @@ VOICES = {
     'en-AU-NatashaNeural': {'name': 'Australian female — Natasha (Edge)', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
     'en-AU-WilliamNeural': {'name': 'Australian male — William (Edge)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
 
-    # Gemini Developer API. Only the exact voice Dave heard and approved in a
-    # short sample is registered. It remains absent from selectable surfaces
-    # until its exact app-path preview is persisted and playable.
-    'gemini_achernar': {'name': 'Achernar (Gemini 3.1 — candidate)', 'accent': 'British',
+    # Gemini Developer API. Achernar's cached preview and exact 10:10 app-path
+    # file passed Dave's listening gate. Google's other 29 presets remain
+    # unregistered until their exact previews are cached and heard.
+    'gemini_achernar': {'name': 'Achernar (Gemini 3.1 — approved)', 'accent': 'British',
                         'gender': 'Female', 'engine': 'gemini'},
 
     # ============ AWS POLLY LONG-FORM VOICES ============

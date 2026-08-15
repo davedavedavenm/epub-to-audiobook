@@ -69,11 +69,12 @@ requires a separately authorised environment-gated session.
 - **KittenTTS 0.8.1** - free CPU-only developer-preview book engine with all
   eight official presets cached for immediate audition. Opt in with
   `ENABLE_KITTEN_PROFILE=1`; it is not a default or automatic fallback.
-- **Gemini 3.1 Flash TTS** - opt-in **Free Tier only** candidate using the
-  current Gemini Developer API and the heard Achernar voice. The adapter has no
-  paid/Vertex/Batch fallback, makes one request per 2–3 minute passage and
-  resumes from a local passage cache after quota returns. Long-form approval is
-  still pending; enable only with a dedicated unbilled project key.
+- **Gemini 3.1 Flash TTS** - accepted opt-in **Free Tier only** book engine
+  using the current Gemini Developer API and Achernar. Dave called its exact
+  10:10 app-path file “one of the best”. The adapter has no paid/Vertex/Batch
+  fallback, makes one request per 2–3 minute passage and resumes from a local
+  passage cache after quota returns. Ten calls/day means a normal novel may
+  take roughly four weeks; enable only with a dedicated unbilled project key.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **Piper TTS** - rejected production path; legacy/debug only
   (`ENABLE_PIPER_PROFILE=1`)

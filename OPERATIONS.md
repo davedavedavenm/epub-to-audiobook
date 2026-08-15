@@ -48,7 +48,8 @@ STATUS.md.**
 - Monitor the active limit in AI Studio. Do not infer quota from another account
   or convert a Free project to Paid to finish a book. Free Tier content may be
   used by Google to improve products.
-- Live proof at revision `17e4593`: official `google-genai==2.18.1`, healthy
+- Live proof now deployed at whole-stack revision `c33442e`: official
+  `google-genai==2.18.1`, healthy
   adapter, one 81.576 s Achernar preview cached at 1,631,564 bytes, SHA-256
   `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`,
   full decode passed, preview endpoint bytes matched, and voice cache was
@@ -65,8 +66,11 @@ STATUS.md.**
   in one attempt each and produced the complete 10:10.128 MP3, SHA-256
   `3f9d1ce6482eb3313b9065c16439d8bd47e63c1f4ca0fb88000a232be8e76841`.
   Decode and exact transcript-sequence checks passed; app health remained 200.
-  Cloud Monitoring showed 9/10 daily requests consumed. The listening verdict
-  remains open. Do not regenerate this gate or spend the final daily request.
+  Cloud Monitoring showed 9/10 daily requests consumed. Dave heard the exact
+  result, called it “one of the best” and selected Achernar for use. Do not
+  regenerate this gate or spend the final daily request. The accepted path is
+  intentionally slow: about 273 calls / 28 quota-days for a 600k-character
+  novel at the proven 2,200-character packing.
 
 ## 2026-07-26 — Revoked Evolution notification key repaired
 

@@ -258,6 +258,25 @@ a personal library; revisit before any commercial use.
 
 </details>
 
+### Gemini 3.1 Flash TTS preset catalogue (official, checked 2026-08-15)
+
+Google documents 30 names with character labels, not guaranteed gender,
+nationality or accent: Zephyr (Bright), Puck (Upbeat), Charon (Informative),
+Kore (Firm), Fenrir (Excitable), Leda (Youthful), Orus (Firm), Aoede (Breezy),
+Callirrhoe (Easy-going), Autonoe (Bright), Enceladus (Breathy), Iapetus
+(Clear), Umbriel (Easy-going), Algieba (Smooth), Despina (Smooth), Erinome
+(Clear), Algenib (Gravelly), Rasalgethi (Informative), Laomedeia (Upbeat),
+Achernar (Soft), Alnilam (Firm), Schedar (Even), Gacrux (Mature), Pulcherrima
+(Forward), Achird (Friendly), Zubenelgenubi (Casual), Vindemiatrix (Gentle),
+Sadachbia (Lively), Sadaltager (Knowledgeable), and Sulafat (Warm).
+
+Only `gemini_achernar` is currently offered by the app. Its exact preview is
+cached and its 10:10 production-path file passed Dave's listening gate as “one
+of the best”. Catalogue presence is not a voice verdict: the other 29 must each
+get a persisted preview before a Play/selection option can be exposed. Do not
+spend the ten-request daily allowance generating an unaudited catalogue sweep.
+Official source: [Gemini TTS voice options](https://ai.google.dev/gemini-api/docs/speech-generation#voice-options).
+
 ### Candidate models, evaluated 2026-07-27
 
 Dave sent five to look at, with: *"it took me 5 minutes to find these."* Fair —
@@ -269,7 +288,7 @@ cloner?**
 |---|---|---|---|
 | **[MeloTTS](https://github.com/myshell-ai/MeloTTS)** | **trained per-accent** | `EN-US`, `EN-BR`, `EN_INDIA`, `EN-AU`, `EN-Default` | Installed and fast, then **rejected by ear** for poor pronunciation, number handling and overall TTS quality. **No Irish.** |
 | **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | Not a low-cost Zorin candidate: current S2 Pro is 4B and its official install guide calls for 24 GB GPU memory. CPU packaging exists but does not make it practical here. |
-| **[IndexTTS-2.5](https://github.com/index-tts/index-tts/blob/39207d91c30899cad1e7c1b9eb678c241f678e55/README.md)** | zero-shot cloning from one reference | No official named or regional-English preset catalogue | Next free-Kaggle T4 capacity/audition candidate. If it passes, available app voices are only the repo's explicitly licensed human-reference library, with each exact preview cached before exposure. |
+| **[IndexTTS-2.5](https://github.com/index-tts/index-tts/blob/39207d91c30899cad1e7c1b9eb678c241f678e55/README.md)** | zero-shot cloning from one reference | No official named or regional-English preset catalogue | Focused Arthur gate fits a free T4 and two validated clips are ready for listening. If it passes by ear, available app voices are only the repo's explicitly licensed human-reference library, with each exact preview cached before exposure. |
 | **[Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)** | zero-shot cloning + named voices | English voices (tara, leah, jess, leo, dan, mia, zac, zoe); no accent variants | Cloning half will hit the rule. **But it ships fine-tuning tooling and data-processing scripts** — the supported route to a custom local voice. 3B, heavy on CPU. ⚠️ Their own guidance: *"I recommend not using synthetic data for training as it produces worse results"* — a direct warning against distilling Edge output, which is worth knowing **before** attempting the distil path below. |
 | **[Dia2-2B](https://huggingface.co/nari-labs/Dia2-2B)** | dialogue TTS, context conditioning | English only, 2-minute cap | Not accent-targeted, and the 2-minute cap rules out narration. |
 | **[VibeVoice](https://microsoft.github.io/VibeVoice/)** | long-form multi-speaker | English + Chinese | **See below — I dismissed this wrongly, and it matters more than accents.** |
