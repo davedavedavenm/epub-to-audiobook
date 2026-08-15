@@ -73,9 +73,16 @@ def test_engine_url_kitten():
     assert model == 'KittenML/kitten-tts-mini-0.8'
 
 
+def test_engine_url_gemini_is_pinned():
+    url, model = get_engine_url('gemini', JOB_ID)
+    assert url == appmod.GEMINI_TTS_URL
+    assert model == 'gemini-3.1-flash-tts-preview'
+
+
 def test_cpu_candidates_use_measured_explicit_text_profile():
     assert appmod.text_profile_for_engine('pocket') == 'explicit'
     assert appmod.text_profile_for_engine('kitten') == 'explicit'
+    assert appmod.text_profile_for_engine('gemini') == 'explicit'
     assert appmod.text_profile_for_engine('chatterbox_nano') == 'modern'
     assert appmod.text_profile_for_engine('kokoro') == 'legacy'
 
@@ -90,12 +97,32 @@ def test_cpu_candidate_catalogues_match_official_lists():
             'kitten_rosie', 'kitten_hugo', 'kitten_kiki', 'kitten_leo'} == set(kitten)
 
 
-def test_cpu_candidate_previews_use_explicit_numeric_profile():
-    for engine in ('pocket', 'kitten'):
+def test_explicit_candidate_previews_use_explicit_numeric_profile():
+    for engine in ('pocket', 'kitten', 'gemini'):
         out = appmod._preview_text_for(engine)
         assert '$1.2' not in out
         assert 'one point two billion dollars' in out
         assert 'fifty-two percent' in out
+
+
+def test_gemini_failure_never_enters_automatic_retry(monkeypatch):
+    appmod.init_db()
+    job_id = 'gemini-quota-no-retry'
+    appmod.save_job({
+        'id': job_id,
+        'book_name': 'Bounded gate',
+        'status': 'converting',
+        'tts_engine': 'gemini',
+        'voice': 'gemini_achernar',
+    })
+    monkeypatch.setattr(appmod, 'append_job_log', lambda *args, **kwargs: None)
+    assert appmod.handle_job_failure(
+        job_id, 'container_died', '429 RESOURCE_EXHAUSTED free quota'
+    ) is False
+    job = appmod.get_job(job_id)
+    assert job['status'] == 'failed'
+    assert job['retry_count'] == 0
+    assert 'No automatic retry' in job['error']
 
 
 def test_engine_url_edge():

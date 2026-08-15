@@ -60,3 +60,42 @@ def test_chunk_can_preserve_real_paragraph_boundaries():
         "First paragraph ends here.",
         "Second paragraph begins here.",
     ]
+
+
+def test_chunk_can_pack_paragraphs_without_flattening_them():
+    cb = _load_cb()
+    text = "First paragraph ends here.\n\nSecond paragraph begins here.\n\nThird one."
+    assert cb.chunk(text, 60, pack_paragraphs=True) == [
+        "First paragraph ends here.\n\nSecond paragraph begins here.",
+        "Third one.",
+    ]
+
+
+def test_long_paragraph_pieces_do_not_gain_fake_paragraph_breaks():
+    cb = _load_cb()
+    text = "This first sentence is deliberately long. This second sentence is long too."
+    pieces = cb.chunk(text, 45, pack_paragraphs=True)
+    assert '\n\n' not in ''.join(pieces)
+    assert ' '.join(pieces) == text
+
+
+def test_passage_cache_avoids_a_second_network_request(tmp_path, monkeypatch):
+    cb = _load_cb()
+    calls = []
+
+    class Response:
+        content = _wav(1000)
+        def raise_for_status(self):
+            return None
+
+    def post(*args, **kwargs):
+        calls.append((args, kwargs))
+        return Response()
+
+    monkeypatch.setattr(cb.requests, 'post', post)
+    first = cb.synth('http://engine/v1', 'voice', 'One sentence.', 100,
+                     chunk_cache_dir=tmp_path, max_chunk_attempts=1)
+    second = cb.synth('http://engine/v1', 'voice', 'One sentence.', 100,
+                      chunk_cache_dir=tmp_path, max_chunk_attempts=1)
+    assert first == second
+    assert len(calls) == 1, "resuming a completed passage spent quota again"

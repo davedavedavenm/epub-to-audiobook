@@ -11,6 +11,7 @@ Usage:
       --voice uk_male_minter_tada --out ./audiobook [--start 1 --end 3]
 """
 import argparse
+import hashlib
 import io
 import json
 import os
@@ -152,7 +153,7 @@ def _chunk_passage(text, n):
     return out or [text]
 
 
-def chunk(text, n, preserve_paragraphs=False):
+def chunk(text, n, preserve_paragraphs=False, pack_paragraphs=False):
     """Split text into bounded synthesis requests.
 
     The production-compatible default retains the historic flat behaviour.
@@ -161,6 +162,29 @@ def chunk(text, n, preserve_paragraphs=False):
     text or synthetic silence; it only preserves a boundary already present in
     the EPUB so the candidate can be heard in a controlled A/B before rollout.
     """
+    if pack_paragraphs:
+        # Pack complete source paragraphs up to the request limit. Long
+        # paragraphs are sentence-packed, but a paragraph break is retained
+        # whenever both neighbouring paragraphs fit. This gives long-form APIs
+        # enough context without flattening the structure or spending one
+        # request per short paragraph.
+        paragraphs = [re.sub(r'[ \t]+', ' ', p).strip()
+                      for p in re.split(r'\n\s*\n', text) if p.strip()]
+        units = []
+        for paragraph in paragraphs:
+            for piece_idx, piece in enumerate(_chunk_passage(paragraph, n)):
+                units.append((piece, piece_idx == 0))
+        out, current = [], ''
+        for unit, starts_paragraph in units:
+            separator = ('\n\n' if starts_paragraph else ' ') if current else ''
+            if current and len(current) + len(separator) + len(unit) > n:
+                out.append(current)
+                current = unit
+            else:
+                current += separator + unit
+        if current:
+            out.append(current)
+        return out or [_chunk_passage(text, n)[0]]
     if not preserve_paragraphs:
         return _chunk_passage(text, n)
     paragraphs = [p for p in re.split(r'\n\s*\n', text) if p.strip()]
@@ -309,23 +333,52 @@ def _capture_chunk(job_id, chapter_idx, text, voice, model):
         print(f"  (chunk capture failed, non-fatal: {e})", flush=True)
 
 
+def _valid_cached_wav(path: Path) -> bool:
+    try:
+        if path.stat().st_size <= 44:
+            return False
+        with wave.open(str(path), 'rb') as wav:
+            return wav.getnchannels() > 0 and wav.getframerate() > 0 and wav.getnframes() > 0
+    except (OSError, wave.Error):
+        return False
+
+
 def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', speed=1.0,
           job_id=None, request_timeout=3600, join_silence_ms=0, seed_offset=0,
-          preserve_paragraphs=False):
+          preserve_paragraphs=False, pack_paragraphs=False, chunk_cache_dir=None,
+          max_chunk_attempts=3):
     """Render text to a CLEAN single audio stream. Requests WAV per chunk (so
     chunks join losslessly at the sample level) and returns WAV bytes; the
     caller encodes one MP3 from that."""
     import time
     parts = []
-    chunks = chunk(text, chunk_chars, preserve_paragraphs=preserve_paragraphs)
+    chunks = chunk(text, chunk_chars, preserve_paragraphs=preserve_paragraphs,
+                   pack_paragraphs=pack_paragraphs)
     total_chunks = len(chunks)
     for chunk_idx, c in enumerate(chunks, 1):
         print(f"Processing chapter-{chapter_idx}_chunk_{chunk_idx}_of_{total_chunks}", flush=True)
+        cache_path = None
+        if chunk_cache_dir:
+            cache_basis = json.dumps({
+                'engine_url': engine_url.rstrip('/'), 'model': model, 'voice': voice,
+                'speed': speed, 'text': c,
+                # A changed Gemini direction must never reuse audio produced by
+                # the old one. Other engines simply contribute an empty value.
+                'style': os.environ.get('GEMINI_TTS_STYLE', ''),
+            }, sort_keys=True, ensure_ascii=False).encode('utf-8')
+            key = hashlib.sha256(cache_basis).hexdigest()
+            cache_path = Path(chunk_cache_dir) / f'{chapter_idx:04d}' / f'{key}.wav'
+            if _valid_cached_wav(cache_path):
+                print(f"  chunk cache hit: {cache_path.name[:12]}", flush=True)
+                parts.append(cache_path.read_bytes())
+                _capture_chunk(job_id, chapter_idx, c, voice, model)
+                continue
         # Record BEFORE synthesis: what we asked to be voiced is the thing the
         # verifier compares the audio against.
         _capture_chunk(job_id, chapter_idx, c, voice, model)
         # per-chunk retry: long CPU generations can drop the connection
-        for attempt in range(3):
+        attempts = max(1, int(max_chunk_attempts))
+        for attempt in range(attempts):
             try:
                 r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
                                   json={"model": model, "input": c, "voice": voice,
@@ -335,12 +388,21 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', sp
                                         "seed": 12345 + seed_offset + ((chapter_idx - 1) * 1000) + (chunk_idx - 1)},
                                   timeout=(15, request_timeout))
                 r.raise_for_status()
-                parts.append(_ensure_wav(r.content))
+                wav_bytes = _ensure_wav(r.content)
+                parts.append(wav_bytes)
+                if cache_path:
+                    cache_path.parent.mkdir(parents=True, exist_ok=True)
+                    part_path = cache_path.with_suffix('.wav.part')
+                    part_path.write_bytes(wav_bytes)
+                    if not _valid_cached_wav(part_path):
+                        part_path.unlink(missing_ok=True)
+                        raise RuntimeError('refusing to cache invalid WAV response')
+                    os.replace(part_path, cache_path)
                 break
             except (requests.ConnectionError, requests.Timeout) as e:
-                if attempt == 2:
+                if attempt == attempts - 1:
                     raise
-                print(f"  chunk retry {attempt+1}/2 after error: {str(e)[:80]}", flush=True)
+                print(f"  chunk retry {attempt+1}/{attempts-1} after error: {str(e)[:80]}", flush=True)
                 time.sleep(10 * (attempt + 1))
     return _concat_wav(parts, join_silence_ms=join_silence_ms)
 
@@ -371,6 +433,14 @@ def main():
     ap.add_argument('--preserve-paragraph-boundaries', action='store_true',
                     help='never combine text from two source paragraphs in one TTS request; '
                          'evaluation-only until a listening verdict approves it')
+    ap.add_argument('--pack-paragraphs', action='store_true',
+                    help='pack complete paragraphs into bounded requests while retaining '
+                         'their breaks; intended for long-context cloud TTS')
+    ap.add_argument('--chunk-cache-dir', default='',
+                    help='persist successful WAV passages here so a quota/network stop '
+                         'can resume without regenerating completed passages')
+    ap.add_argument('--max-chunk-attempts', type=int, default=3,
+                    help='network attempts per passage; use 1 for quota-limited APIs')
     ap.add_argument('--min-words', type=int, default=120,
                     help='skip chapters shorter than this (front-matter)')
     ap.add_argument('--denoise', action='store_true',
@@ -514,7 +584,10 @@ def main():
                         model=a.model, speed=a.speed, job_id=a.job_id,
                         request_timeout=a.request_timeout,
                         join_silence_ms=a.join_silence_ms,
-                        preserve_paragraphs=a.preserve_paragraph_boundaries)
+                        preserve_paragraphs=a.preserve_paragraph_boundaries,
+                        pack_paragraphs=a.pack_paragraphs,
+                        chunk_cache_dir=a.chunk_cache_dir or None,
+                        max_chunk_attempts=a.max_chunk_attempts)
             mp3 = _to_mp3(wav, denoise=a.denoise, meta=meta)
             if mp3:
                 fn = out / f"{idx:03d}{suffix}.mp3"
@@ -523,6 +596,11 @@ def main():
                 fn = out / f"{idx:03d}{suffix}.wav"
                 fn.write_bytes(wav)
                 print(f"[chapter {idx}] ffmpeg not found — wrote clean WAV instead of MP3", flush=True)
+            # Passage cache exists only to survive an interrupted chapter. Once
+            # that chapter has a durable final file, retaining duplicate PCM
+            # would waste roughly 1.7 GB for a ten-hour book.
+            if a.chunk_cache_dir:
+                shutil.rmtree(Path(a.chunk_cache_dir) / f'{idx:04d}', ignore_errors=True)
             print(f"Converted chapter {idx}", flush=True)
             print(f"[chapter {idx}] wrote {fn} ({fn.stat().st_size} bytes)", flush=True)
         # QA Layer 2 (opt-in): ASR-verify what we just rendered against source.

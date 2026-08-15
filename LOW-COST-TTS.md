@@ -2,14 +2,15 @@
 
 Goal: produce a genuinely good audiobook for free wherever possible; when a
 paid path is necessary to reach that quality, use the lowest measured total
-cost per finished book.
+cost per finished book, with a hard maximum of GBP2.
 
 > **Quality is the admission test; free/cheapest is the selection rule among
 > engines that pass.** A local, free or fast engine that sounds bad is not a
 > successful audiobook engine. Candidates must first pass Dave's listening for
 > naturalness, authentic accent, pronunciation (including names and numbers),
 > pacing and long-form comfort. Prefer free local/Kaggle generation; if none
-> passes, choose the lowest measured paid cost per finished book.
+> passes, choose the lowest measured paid cost per finished book and reject any
+> route that cannot stay at or below GBP2.
 
 > **The premise of this document has largely been won (2026-07-25).** It was
 > written when a good local render was impractical and the question was which
@@ -222,11 +223,11 @@ must not be used as pronunciation evidence.
 
 Provider pricing is usually per 1M characters. A practical audiobook estimate:
 
-| Book size | Approx words | Approx characters | Max price per 1M chars to stay under GBP3 |
+| Book size | Approx words | Approx characters | Max price per 1M chars to stay under GBP2 |
 |-----------|--------------|--------------------|-------------------------------------------|
-| Short | 50k | 300k | GBP10.00 |
-| Typical novel | 90k-110k | 540k-660k | GBP4.55-GBP5.55 |
-| Long | 150k | 900k | GBP3.33 |
+| Short | 50k | 300k | GBP6.67 |
+| Typical novel | 90k-110k | 540k-660k | GBP3.03-GBP3.70 |
+| Long | 150k | 900k | GBP2.22 |
 
 This means most mainstream premium APIs are too expensive for full-book default use. They can still be useful for samples, short books, or selected premium conversions.
 
@@ -242,6 +243,7 @@ This means most mainstream premium APIs are too expensive for full-book default 
 | EdgeTTS | Implemented via `tts-proxy` | GBP0 direct API cost | Good quality and many voices. Treat as unofficial/fragile because it depends on the `edge-tts` package and Microsoft service behavior. |
 | Pocket TTS 2.1 | Opt-in CPU service; 16:27 long-form file ready for listening | GBP0 | 21 official English presets; explicit spoken number/currency profile; no automatic fallback. |
 | KittenTTS 0.8.1 | Opt-in CPU service; 21:16 Rosie long-form file ready for listening | GBP0 | Eight official presets; developer preview; explicit spoken number/currency profile. |
+| Gemini 3.1 Flash TTS / Achernar | Free-only adapter implemented; long gate pending | GBP0 on an unbilled Developer API Free project | Short Studio sample was very good. Current API only, 2–3 minute paragraph packs, one attempt, resumable cache, no paid/Vertex/Batch fallback. Free content may train Google products; quota may limit book feasibility. |
 | AWS Polly Long-Form | Implemented via `tts-proxy` | Avoid | Proven too expensive for good-quality audiobook use. Keep only as legacy code path; do not use for normal conversions. |
 | Inworld TTS 1.5 | Implemented via `tts-proxy` | Likely over budget for full books | Keep as experimental/premium unless real account pricing proves otherwise. |
 
@@ -252,15 +254,17 @@ Prices below were rechecked against the providers' official pages on
 book fallback until Dave hears a representative long-form sample and the
 actual account bill confirms the calculation.
 
-| Option | Price signal | Rough cost for 600k chars | Fits GBP3/book? | Implementation fit |
+| Option | Price signal | Rough cost for 600k chars | Fits GBP2/book? | Implementation fit |
 |--------|--------------|---------------------------|-----------------|--------------------|
 | [Azure Speech](https://azure.microsoft.com/en-gb/pricing/details/speech/) | F0 includes 500k Neural chars/month; checked UK South S0 retail meter ~GBP11.36/1M chars | F0 free if the monthly hard cap is respected; S0 ~GBP6.82 before SSML overhead | **F0 only** | **Quality-floor pass, integration open:** 48 kHz William (AU), Connor (IE) and Luke (ZA) are acceptable by ear, though weak on emotion and less real than Arthur. Mandatory number/currency processing, paragraph pacing and IPA corrections. Microsoft bills SSML body markup as well as visible text; only outer `speak`/`voice` tags are excluded. F0 first, never automatic paid fallback. |
+| [Gemini 3.1 Flash TTS](https://ai.google.dev/gemini-api/docs/pricing) | Standard input/output is free on Free Tier; paid is USD1/M text tokens + USD20/M audio tokens (25 audio tokens/s) | **GBP0 only on Free**; 10 hours is 900k audio tokens, about USD18 output plus text, already far above GBP2 | **Free only** | Achernar short sample passed. Preview model, restrictive/account-specific quota and documented drift beyond a few minutes. Implemented with hard Free-only/no-retry/cache guards. |
+| [Google Cloud Chirp 3 HD](https://cloud.google.com/text-to-speech/pricing) | First 1M chars/month free, then USD30/M; billing must be enabled | Often GBP0 for one normal book within the monthly allowance; about USD18/600k after it is exhausted | **Free allowance only** | Strong next same-vendor control, including an Achernar-labelled voice. It needs an app-side monthly character hard stop before any request because Cloud billing can charge overage. Not integrated or heard here. |
+| [Cartesia Sonic 3.5](https://www.cartesia.ai/pricing) | Free ~27 min/month; Pro USD5 for ~133 min; Startup USD49 for ~1,667 min | Free/Pro do not cover a novel; Startup amortization remains well above GBP2 for a typical book | No for normal books | Current model claims better naturalness and alphanumeric reading. Keep for short auditions only unless pricing changes. |
 | [Lemonfox TTS](https://www.lemonfox.ai/text-to-speech-api) | USD5/mo includes 2M TTS chars; extra USD0.50 per 200k | USD1.50 of included capacity when batched, but USD5 minimum bill for one isolated month | **Cheapest known paid candidate** if quality passes and books are batched | Advertises OpenAI/ElevenLabs-compatible APIs; controlled quality/reliability test still required. |
 | OpenAI `gpt-4o-mini-tts` | Pricing includes text input tokens and audio output tokens; pricing docs estimate USD0.015/min | About GBP5.40 for a 8-hour audiobook by minute pricing | Usually no | Could fit only shorter books. Needs real sample and billing check before trusting. |
 | [OpenAI `tts-1`](https://developers.openai.com/api/docs/models/tts-1) | USD15/1M chars | USD9 / about GBP6.75 | No for typical novels | Easy API shape, but above the cheapest candidate. |
 | [Inworld TTS-2](https://inworld.ai/pricing) | USD25/1M chars on demand; official page advertises 70 free minutes | USD15 before any free allowance | No for normal books | Sample allowance may be useful; paid rate is not competitive with Lemonfox. |
 | Deepgram Aura-2 | USD0.030/1k chars = USD30/1M chars | About GBP13.50 | No | Good for voice-agent clarity; too expensive for this project's default budget. |
-| Google Chirp 3 HD | USD30/1M chars after free tier | About GBP13.50 | No | Quality candidate, but above target except free-tier experiments. |
 | [ElevenLabs Flash/Turbo](https://elevenlabs.io/pricing/api) | USD0.05/1k chars = USD50/1M chars | USD30 / about GBP22.50 | No | Use only for samples. |
 | [ElevenLabs Multilingual](https://elevenlabs.io/pricing/api) | USD0.10/1k chars = USD100/1M chars | USD60 / about GBP45 | No | Premium only; not aligned with this project. |
 
@@ -273,6 +277,8 @@ These are the most relevant low/no-cost options because they avoid per-character
 | Kokoro latest direct stack | Kokoro is Apache-2.0, 82M params, fast, cheap, and already the repo default through Kokoro-FastAPI. No new model since v1.0 (Jan 2025), so no free upgrade waiting here. | Confirm current Docker image uses the latest stable Kokoro voice/model set; benchmark CPU vs GPU on 1 known book. |
 | Chatterbox Turbo | MIT licensed, 350M params, lower compute than original Chatterbox, voice cloning, paralinguistic tags (`[laugh]`, `[sigh]`, `[chuckle]`). Won a widely-cited mid-2026 blind test vs ElevenLabs (65.3% vs 24.5%). **Sampled 2026-07-02 — see below.** | Done for a synthetic passage; next is a real-book chapter test. Deployment path: [devnen/Chatterbox-TTS-Server](https://github.com/devnen/Chatterbox-TTS-Server) exposes OpenAI-compatible `/v1/audio/speech`, Docker (NVIDIA/AMD/CPU), sentence chunking for audiobooks — drop-in beside Kokoro-FastAPI, no custom wrapper needed. |
 | Hume TADA (1B / 3B-ml) | Open-sourced March 2026. Built for long-form narration: ~700s audio per context window, prosody consistency across long passages, zero content hallucinations on 1,000+ test samples. MIT code, Llama 3.2 Community License weights. Voice via reference-audio cloning; no OpenAI-compatible server exists yet, so bigger integration lift than Chatterbox. | Sample via HF Space `HumeAI/tada` (needs HF token; demo requests 120s ZeroGPU per call). TADA-1B fits an RTX 3060. |
+| [IndexTTS2](https://github.com/index-tts/index-tts) | Official repo emphasises English stability plus decoupled speaker/emotion control; free local/free-GPU inference is possible. The weights use Bilibili's model-use licence, not a permissive OSS licence. | Pin the current official repo + weight hashes and run one normalized 8–10 minute Arthur-reference gate on free Kaggle. Check personal-use licence terms before retaining output. |
+| [Fish Audio S2](https://github.com/fishaudio/fish-speech/releases) | Not abandoned: official `v2.0.0-beta` shipped 2026-03-10 with a Qwen3 Dual-AR model and fine-grained emotion tags. It is still a pre-release under the Fish Audio Research License and its headline speed uses an H200. | Keep on watch; first prove it fits a free Kaggle GPU and pin the research-use boundary before spending a render. Do not treat sparse post-beta commits as a quality rejection. |
 | Chatterbox Multilingual | MIT licensed, 500M params, 23+ languages and cloning. | Only test if multilingual or cloning quality matters more than speed. |
 | KokoClone / Kokoro voice-conversion experiments | Potential route to cheap voice cloning while keeping Kokoro speed. | Watch, but do not productionize until stability and license posture are clear. |
 
@@ -506,8 +512,10 @@ Default path:
    Arthur as a per-book audition alternative, not an automatic quality reference.
 3. Use free Kaggle for a better-sounding GPU finalist when it wins the audition;
    corrected Vibe cfg 2/3 and Qwen are the current long-form comparison.
-4. Re-evaluate listenable CosyVoice on free Kaggle, keep OmniVoice as a
-   short-form accent candidate, and grade Chatterbox Multilingual V3 by ear.
+4. Run the bounded Gemini/Achernar app-path gate. If Free quota cannot sustain
+   books, test Google Chirp 3 HD only after implementing a 1M-character monthly
+   hard stop. Keep IndexTTS2, Fish S2 and CosyVoice as materially different
+   free-GPU candidates rather than dismissing them from a README skim.
 5. Only then optimise cost and speed. EdgeTTS is conditional (unofficial
    interface and proper-noun failures). Piper and Melo are not production
    fallbacks. Reconsider Piper only for a materially different, independently

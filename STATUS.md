@@ -1,5 +1,38 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-15 Gemini 3.1 Flash TTS — IMPLEMENTED LOCALLY / LIVE KEY AND LONG GATE PENDING
+>
+> Dave rated the Google AI Studio `gemini-3.1-flash-tts-preview` + Achernar
+> sample “very good” and asked for a free or near-free route. The repo now has a
+> dedicated non-root OpenAI-compatible adapter using Google's current Gemini
+> Developer API **Interactions** endpoint. It is pinned to that one model and
+> Achernar; it cannot call Vertex, Batch, another paid model or a configurable
+> upstream. Only a key belonging to an unbilled AI Studio project whose plan is
+> Free is permitted. It fails closed without the separate operator assertion
+> `GEMINI_FREE_PROJECT_CONFIRMED=1`; the docs explicitly state that the inference
+> API cannot verify tier and the unbilled project is the real boundary. Free
+> Tier input/output is currently listed as free; Google
+> states Free Tier content is used to improve its products.
+>
+> Production plumbing is complete locally: opt-in Compose/deploy profile,
+> engine-bound Achernar voice, explicit number/currency preprocessing,
+> paragraph-aware 2,200-character requests, lossless passage joins, one request
+> per passage, SHA-keyed resume cache, and a hard no-auto-retry branch at both
+> HTTP and job recovery levels. Quota exhaustion marks the job failed with a
+> manual-resume message; completed passages remain cached. Preview creation is
+> an explicit Settings action and repeated clicks are cache hits. No API request
+> is made at startup.
+>
+> Verified locally: the full host suite passes (302), all five adapter-specific
+> tests pass in its pinned dependency environment (308 total), compile succeeds
+> and Compose config validates. Docker Desktop was not running, so the image build
+> is not yet a local verification claim. The live Zorin checkout currently has
+> no `GEMINI_API_KEY` and the profile is disabled; **no Gemini synthesis or
+> deployment has occurred**. Next gate: create/confirm a dedicated Free project
+> key, deploy the whole stack from Git, generate/open the exact cached preview,
+> then render one 20–30 minute passage. Free quota feasibility is unknown until
+> the active project limits and that bounded run are measured.
+
 > ## 2026-08-15 Azure Speech access — F0 LIVE / SYNTHESIS PAUSED
 >
 > Dave authorised the installed official Azure CLI using Microsoft's device-code

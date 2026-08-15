@@ -212,11 +212,37 @@ but when you want the best result:
   approved for books. Starting either Compose profile assumes a GPU is already
   attached; it never rents one. See [ENGINES.md](ENGINES.md) for the exact
   rejection boundary, runtime/licence and measured-hour limits.
+- **Gemini 3.1 Flash TTS / Achernar** — opt-in online candidate. Dave's short
+  Studio sample passed, but the app-path long-form gate is still pending. The
+  integration is deliberately Free Tier only and stops rather than charging or
+  retrying when quota is exhausted.
 
 Which sounds best depends on the book. Trust your ears. Automated transcription
 can detect missing or repeated speech, but it cannot tell you whether a voice
 is natural, clear or pleasant. More detail: [ENGINES.md](ENGINES.md) and
 [VOICES.md](VOICES.md).
+
+### Enable the free-only Gemini candidate
+
+1. In [Google AI Studio API keys](https://aistudio.google.com/apikey), create a
+   dedicated project/key and confirm its **Plan/Billing Tier says Free**. Do not
+   click **Set up billing** for this project. Google says Cloud welcome credits
+   cannot pay Gemini API usage, so they are not a safety mechanism.
+2. On the deployment host, add the real key only to `.env` (never Git):
+   `GEMINI_API_KEY=...`, `GEMINI_FREE_PROJECT_ID=...`,
+   `GEMINI_FREE_PROJECT_CONFIRMED=1` and
+   `ENABLE_GEMINI_PROFILE=1`. The confirmation is a fail-closed operator guard;
+   Google's inference response does not itself report the key's billing tier.
+3. Run `./scripts/deploy.sh`, then open Settings and press **Prepare Achernar
+   preview once**. Open the exact preview in Voices before selecting it.
+4. Start with a bounded 20–30 minute range. The app sends paragraph-aware
+   2–3 minute passages once each and caches successful WAVs. If Free quota ends,
+   the job stops; use Resume later to reuse the cache.
+
+Free Tier prompts and outputs may be used to improve Google's products. Do not
+use it for confidential text unless that is acceptable. Current official
+limits are account/project-specific; inspect them in AI Studio rather than
+copying a remembered RPM/RPD number.
 
 ## Optional: Goodreads → LazyLibrarian → audiobook first
 
@@ -267,6 +293,9 @@ Official references:
 - **A conversion failed** — open the job's **Log** in the Queue tab; it usually
   says exactly what happened. Press **Resume** to retry just the missing
   chapters.
+- **Gemini says quota exhausted** — this is a deliberate stop, not a retry
+  loop. Wait for the Free project quota to reset and press Resume; completed
+  passages remain cached.
 - **Collect evidence:** attach `docker compose ps`, the relevant container log,
   `/api/health`, `/api/engines/health`, and the Git revision from `/api/version`.
   Remove tokens, private feed URLs and book text.

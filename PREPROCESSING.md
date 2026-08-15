@@ -267,6 +267,13 @@ normalized arm fails closed unless the app-pinned `num2words==0.5.14`
 dependency is present. Jo's residual insertion and Jasper's scratchy opening
 are separate synthesis artifacts, not reasons to undo the normalization.
 
+Gemini 3.1 Flash TTS also uses this `explicit` contract. The hard sample already
+proved that leaving numbers/currency raw can make an otherwise strong voice
+look bad, while legacy phonetic respellings can damage modern neural voices.
+Therefore Gemini gets deterministic spoken numbers/currency and safe acronym
+letter-spacing, but not the legacy proper-name respelling dictionary. Preview,
+first render and recovery all use the same mapping.
+
 | Transform | modern (chatterbox / tada) | legacy (kokoro / piper / edge / polly) |
 | --- | --- | --- |
 | Structural clean (endnotes, unicode) | ✅ | ✅ |

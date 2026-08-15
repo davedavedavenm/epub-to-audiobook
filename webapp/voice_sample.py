@@ -31,7 +31,7 @@ SAMPLE_TEXT = (
 from lexicon import SEED_PRONUNCIATION as SAMPLE_LEXICON  # noqa: E402
 
 MODERN_ENGINES = ("chatterbox", "tada")
-EXPLICIT_ENGINES = ("pocket", "kitten")
+EXPLICIT_ENGINES = ("pocket", "kitten", "gemini")
 
 
 def sample_text_for(engine: str) -> str:
@@ -40,8 +40,9 @@ def sample_text_for(engine: str) -> str:
 
     Asymmetric on purpose (measured engine contracts):
       * chatterbox/tada -> numbers/dates left ALONE, no phonetic respellings.
-      * pocket/kitten -> explicit numbers/currency, acronym spacing only. This
-        is the arm Dave selected for Peter, Jasper and Rosie on 2026-08-14.
+      * pocket/kitten/gemini -> explicit numbers/currency, acronym spacing only.
+        This is the arm Dave selected for Peter, Jasper and Rosie on 2026-08-14,
+        and the safe contract for the number-dense Gemini audition.
       * kokoro/piper/edge/polly -> numbers spelled out, which they need.
     Sending raw text to everything would make the dumb engines mangle "$1.2
     billion" and you'd be judging a preprocessing bug, not the voice.

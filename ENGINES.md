@@ -23,6 +23,7 @@ accent-engine verdicts are dated in the table.
 | OmniVoice British/Australian (2026-07-28) | Far better than Melo; accents good, but Huawei/Xiaomi pronunciation bad and CPU throughput unsuitable for full books | CPU only (zorin) |
 | EdgeTTS accented English voices (2026-08-14) | The only currently heard regional-accent option that comes close. All tested Chinese company names were still pronounced badly, so it is not approved for Chinese-business nonfiction without a supported pronunciation fix. In the exact same-William/same-text/same-format endpoint control, Azure was slightly better. | Microsoft cloud service via unofficial pinned `edge-tts==7.2.8` interface |
 | Azure Speech Standard native AU/IE/ZA voices (2026-08-15) | **Accepted opt-in at the quality floor:** the original Darren/Connor/Luke 24 kHz trio sounded robotic/degraded despite good accents. A controlled William test showed Azure slightly beat Edge. On the final 737-word, correctly processed, 48 kHz lossless gate, Australian William, Irish Connor and South African Luke had acceptable accents and overall voices. Emotion is weak and none sounds as real as Arthur. Preserve preprocessing/IPA/paragraph pacing; F0 first, never automatic paid fallback. | Azure Speech F0, UK South |
+| Gemini 3.1 Flash TTS / Achernar (2026-08-15) | **Short Studio audition passed; app-path long-form open.** Dave called it “very good”. The repo integrates only Achernar through an unbilled Gemini Developer API Free project, with no paid fallback. Do not promote until the cached preview and bounded 20–30 minute passage are heard. | Google-hosted Developer API Free Tier |
 | MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
 | Qwen3-TTS (2026-08-14 final ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-14 corrected app-path + documented-turn gate) | **Rejected for audiobook production.** cfg 2.0 remains its best tested setting, but the flattened path accelerated after ~3 minutes and both structurally complete repeated-same-speaker alternatives (four turns 7:16; seven turns 6:59) were rejected by ear as unacceptable. The same-text Chatterbox Turbo + Arthur control was almost perfect and did not accelerate. cfg 3.0 and 1.3 remain rejected. | Kaggle P100 |
@@ -76,6 +77,34 @@ the listener-selected `explicit` number/currency profile across previews and
 book/recovery paths. Both are admitted as opt-in CPU book choices after long-
 form and corrective listening. They remain excluded from automatic fallback
 and do not replace Chatterbox Nano/Beatrice as the default.
+
+## Gemini 3.1 Flash TTS official contract (checked 2026-08-15)
+
+- Exact model: `gemini-3.1-flash-tts-preview`; preview release, latest model
+  update listed as April 2026, no shutdown date announced.
+- Current API path used here: Gemini Developer API Interactions,
+  `POST https://generativelanguage.googleapis.com/v1beta/interactions`.
+  The older Generate Content guide is now labelled legacy.
+- Official output is raw PCM, 24 kHz, mono, 16-bit. The adapter wraps it in WAV;
+  book delivery performs the single final MP3 encoding locally.
+- Google documents natural-language control over style, accent, pace and tone,
+  but also warns that voice/quality may drift beyond a few minutes and recommends
+  smaller transcripts. Our 2,200-character paragraph packs implement that
+  recommendation; their audible joins still require Dave's gate.
+- Pricing currently lists standard Free Tier input and audio output as free.
+  Paid standard is USD1/M text tokens plus USD20/M audio tokens (audio = 25
+  tokens/second); paid Batch is USD0.50/USD10 and is deliberately inaccessible
+  here. Free Tier data is used to improve Google products; Paid is not.
+- New projects start Free. Linking Cloud Billing moves a project to a paid tier;
+  Google says post-March-2026 welcome credits cannot pay for Gemini API. Active
+  rate limits are shown in AI Studio and are not hard-coded here.
+
+Official sources: [TTS guide](https://ai.google.dev/gemini-api/docs/speech-generation),
+[model](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview),
+[pricing](https://ai.google.dev/gemini-api/docs/pricing),
+[billing](https://ai.google.dev/gemini-api/docs/billing),
+[rate limits](https://ai.google.dev/gemini-api/docs/rate-limits), and
+[deprecations](https://ai.google.dev/gemini-api/docs/deprecations).
 
 The first recorded Vibe GPU-memory measurement comes from a later **short
 accent sample**, not the heard full chapter: on a Kaggle P100, Irish peaked at

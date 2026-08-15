@@ -23,8 +23,9 @@ that floor, choose in this order:
 1. **Free generation wherever possible** — normally local CPU or free Kaggle.
 2. If no free path reaches the quality floor, use the **lowest measured total
    cost per finished book** that does.
-3. Pay more only when a cheaper passing option is unavailable or has failed the
-   same controlled listening comparison.
+3. Paid generation has a hard ceiling of **GBP2 per finished book**. A provider
+   that cannot fit that ceiling through a real free allowance or honest
+   multi-book amortisation is not a production fallback, however good its demo.
 
 Speed is not worth a bill by itself. Cost comparisons must use measured
 book-level totals (including startup/retry overhead where known), not vendor
@@ -33,6 +34,38 @@ headline rates or hypothetical hardware speedups presented as facts.
 **Why:** stated directly by Dave on 2026-08-13. This refines, rather than
 reverses, the existing quality-priority decision: bad free audio is still not a
 successful audiobook, but cost decides between options that are genuinely good.
+
+## Gemini 3.1 Flash TTS is a free-only opt-in candidate — Active
+
+Dave's short Google AI Studio audition of `gemini-3.1-flash-tts-preview` with
+the Achernar voice was **very good**. That admits exactly Achernar to a longer
+app-path gate; it does not approve a full-book default or every Gemini voice.
+The app uses the current Gemini Developer API Interactions route with a key from
+a project whose AI Studio plan is **Free**. It has no Vertex route, Batch API,
+paid model or paid-tier fallback. Do not attach Cloud Billing to that project.
+Because inference responses do not expose billing tier, the adapter additionally
+requires `GEMINI_FREE_PROJECT_CONFIRMED=1` after the operator checks AI Studio;
+the dedicated unbilled project, not that flag, is the real no-charge boundary.
+
+Google warns that this preview model can drift on outputs longer than a few
+minutes. The app therefore uses the measured `explicit` number/currency text
+profile and paragraph-aware requests capped at 2,200 characters (roughly two to
+three minutes), then joins lossless PCM locally. Each passage gets exactly one
+API request. Successful passage WAVs are cached; any 429, 500, timeout or other
+failure stops the job without automatic retry, and a manual Resume reuses the
+cache. The exact Achernar app preview must be persisted and playable before the
+voice appears.
+
+This path remains **candidate / long-form not yet heard**. First prove one
+bounded 20–30 minute passage for voice consistency, joins, pronunciation and
+quota feasibility. The Free Tier uses submitted content to improve Google's
+products; do not send private/confidential books without accepting that term.
+Official sources checked 2026-08-15:
+[TTS guide](https://ai.google.dev/gemini-api/docs/speech-generation),
+[model card](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview),
+[pricing](https://ai.google.dev/gemini-api/docs/pricing),
+[billing](https://ai.google.dev/gemini-api/docs/billing), and
+[rate limits](https://ai.google.dev/gemini-api/docs/rate-limits).
 
 ## Regional accent labels are not quality evidence — Active
 

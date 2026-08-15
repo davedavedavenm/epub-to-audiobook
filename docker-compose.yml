@@ -412,6 +412,33 @@ services:
       retries: 5
       start_period: 180s
 
+  # Gemini 3.1 Flash TTS through the Gemini Developer API FREE tier only.
+  # This adapter has no Vertex endpoint, paid model, batch route, or retry
+  # loop. Use a key from a dedicated project whose AI Studio plan says Free.
+  # Quota exhaustion stops the job; it never falls back to a paid service.
+  gemini-tts:
+    build:
+      context: ./gemini
+    container_name: gemini-tts
+    logging: *default-logging
+    restart: unless-stopped
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_FREE_PROJECT_ID=${GEMINI_FREE_PROJECT_ID:-}
+      - GEMINI_FREE_PROJECT_CONFIRMED=${GEMINI_FREE_PROJECT_CONFIRMED:-0}
+      - GEMINI_REQUEST_TIMEOUT=${GEMINI_REQUEST_TIMEOUT:-300}
+      - GEMINI_TTS_STYLE=${GEMINI_TTS_STYLE:-}
+    profiles:
+      - gemini
+    expose:
+      - "8014"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8014/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   # Piper TTS with OpenAI-compatible API
   # Uses openedai-speech as a wrapper for Piper
   piper-tts:
@@ -481,6 +508,9 @@ services:
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
       - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
       - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
+      - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_TTS_STYLE=${GEMINI_TTS_STYLE:-}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks
@@ -592,6 +622,9 @@ services:
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
       - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
       - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
+      - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_TTS_STYLE=${GEMINI_TTS_STYLE:-}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks

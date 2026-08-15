@@ -709,6 +709,26 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <h3 style="margin-top:0; font-family:var(--serif);">Gemini 3.1 Audiobook Voice — Free Tier Only</h3>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px; line-height:1.55;">
+                            Achernar is the short sample Dave approved. The app uses only the
+                            <strong>Gemini Developer API Free Tier</strong>: no Vertex endpoint,
+                            no batch billing, no automatic retry and no paid fallback. Create a
+                            dedicated AI Studio project whose Plan says <strong>Free</strong>, do
+                            not attach Cloud Billing, then add <code>GEMINI_API_KEY</code>,
+                            <code>GEMINI_FREE_PROJECT_ID</code>,
+                            <code>GEMINI_FREE_PROJECT_CONFIRMED=1</code> and
+                            <code>ENABLE_GEMINI_PROFILE=1</code> to the host <code>.env</code> and
+                            redeploy. Quota exhaustion pauses the book; completed passages resume
+                            from disk.
+                        </p>
+                        <button class="btn" style="height:48px;" onclick="prepareGeminiPreview(this)">
+                            Prepare Achernar preview once
+                        </button>
+                        <span id="gemini-preview-status" style="margin-left:12px; color:var(--text-secondary);"></span>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top:0; font-family:var(--serif);">Pronunciation Dictionary (All Books)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Regex rules applied to <strong>every</strong> conversion, one per line as <code>search==replace</code>.
@@ -1035,6 +1055,25 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const data = await resp.json();
         btn.textContent = resp.ok ? `✅ Saved (${data.lines} rules)` : '❌ ' + (data.error || 'Failed');
         setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3000);
+    }
+
+    async function prepareGeminiPreview(btn) {
+        const original = btn.textContent;
+        const status = document.getElementById('gemini-preview-status');
+        btn.textContent = 'Preparing…'; btn.disabled = true;
+        if(status) status.textContent = 'One API request at most';
+        try {
+            const resp = await fetch('/api/settings/prepare_gemini_preview', { method: 'POST' });
+            const data = await resp.json();
+            if(!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            btn.textContent = data.status === 'cached' ? 'Already cached' : 'Preview ready';
+            if(status) status.textContent = 'Open Voices to play Achernar';
+        } catch(e) {
+            btn.textContent = 'Not prepared';
+            if(status) status.textContent = String(e.message || e);
+        } finally {
+            setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 4000);
+        }
     }
 
     async function saveSettings() {

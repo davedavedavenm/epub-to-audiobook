@@ -69,6 +69,9 @@ fi
 if [[ "${ENABLE_KITTEN_PROFILE:-0}" == "1" ]]; then
   PROFILE_ARGS+=(--profile kitten)
 fi
+if [[ "${ENABLE_GEMINI_PROFILE:-0}" == "1" ]]; then
+  PROFILE_ARGS+=(--profile gemini)
+fi
 
 echo "Enabled Compose profiles: ${PROFILE_ARGS[*]}"
 APP_GIT_SHA="${GIT_SHA}" APP_BUILD_TIME="${BUILD_TIME}" APP_VERSION="${VERSION}" \

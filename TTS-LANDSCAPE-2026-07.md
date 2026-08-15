@@ -87,6 +87,9 @@ turning an experiment into production.
 | **CosyVoice 3** | 0.5B | Apache 2.0 | Yes (3s ref) | Streaming mode | **No (GPU-only; CPU malformed)** | Multilingual, prosody control | **AUDITIONED — keep; Kaggle-render, see §Verified** |
 | **Kokoro** | 82M | Apache 2.0 | No (preset voices) | Chunked | Yes (fast) | Cheap bulk, fallback | Production fallback |
 | **Fish Speech 1.5** | 1.5B | Apache 2.0 | Yes | Chunked | GPU needed | Fast generation, multilingual | Not integrated |
+| **Fish Audio S2 beta** | 4B + 400M | Fish Audio Research License | Yes | Chunked/streaming | H200 benchmark; free-GPU fit unverified | Expressive multilingual narration | **TRACK — official beta 2026-03-10; not abandoned or integrated** |
+| **IndexTTS2** | official weights | Bilibili Model Use License | Yes | Chunked | CUDA 12.8 path documented | Decoupled identity/emotion, English | **HIGH-PRIORITY FREE-GPU AUDITION** |
+| **Gemini 3.1 Flash TTS** | hosted preview | Google API terms | Preset voices | Split after a few minutes | hosted | Controllable audiobook narration | **FREE-ONLY ACHERNAR INTEGRATION; LONG GATE OPEN** |
 | **F5-TTS** | ~330M | MIT | Yes (ref) | Chunked | GPU preferred | Research, good quality | Not integrated |
 | **XTTS v2** (Coqui) | ~1.8B | MPL 2.0 | Yes | Chunked | GPU needed | Was the standard; Coqui defunct | Not integrated |
 | **Bark** (Suno) | ~1B | MIT | No | Poor | GPU needed | Sound effects, not narration | Not suitable |
@@ -131,10 +134,27 @@ turning an experiment into production.
 
 ### Commercial API pricing — no material change
 - ElevenLabs still $0.05-0.10/1k chars. OpenAI gpt-4o-mini-tts still ~$0.015/min.
-- Deepgram, Google Chirp 3 HD unchanged. All still above the GBP3/book target
+- Deepgram and paid Google Chirp 3 HD remain above the GBP2/book ceiling
   for full novels.
 - **Lemonfox** still $5/mo for 2M chars — the cheapest commercial option if
   quality is acceptable. No one has tested it with audiobook-length content.
+
+### August 2026: Gemini, Chirp, IndexTTS2 and Fish S2 correction
+
+- Gemini 3.1 Flash TTS standard input/output is free on the Developer API Free
+  Tier and Dave's Achernar Studio sample was very good. The repo now has a
+  strict free-only integration. Google documents drift after a few minutes, so
+  the app uses paragraph-aware 2–3 minute passages and an on-disk resume cache.
+- Google Cloud Chirp 3 HD includes 1M characters/month free, then USD30/M. It is
+  not safe to integrate until a local monthly hard cap prevents overage.
+- IndexTTS2 is not an old ranking footnote: its official current repo exposes
+  emotion/speaker controls and improved English. It deserves a pinned free-GPU
+  long-form audition, subject to its Bilibili model-use licence.
+- Fish Audio shipped S2 beta on 2026-03-10. Sparse updates since then are a
+  maturity concern, not proof of abandonment. Its research licence and H200
+  reference performance make free-GPU fit the first question.
+- Cartesia Sonic 3.5's free ~27 minutes/month and USD5/~133-minute Pro plan do
+  not fund normal novels under GBP2; keep it for bounded samples only.
 
 ### Dead or stalled projects
 - **Coqui TTS** — company defunct since 2024. Forks exist (idiap/coqui-ai-TTS)
@@ -203,9 +223,11 @@ the TADA image. Free ~20% speedup and lower VRAM.
 Nothing has displaced them. Turbo for reliability, TADA for peak quality on
 GPU. Nano is a potential Turbo replacement pending the listen test.
 
-### 5. Don't chase: Fish Speech, F5-TTS, XTTS, Bark, MetaVoice, Parler
-None offer a clear advantage over the current stack for English audiobook
-narration with UK voices. Revisit if the project adds multilingual support.
+### 5. Keep, but gate: Fish S2 and IndexTTS2
+Do not dismiss either from old 2025 evidence. IndexTTS2 gets the next free-GPU
+English long-form audition after Gemini; Fish S2 waits for a proven free-GPU fit
+and explicit research-licence acceptance. F5-TTS, XTTS, Bark, MetaVoice and
+Parler remain low priority absent a materially new official release.
 
 ### 6. Lemonfox remains the cheapest commercial fallback
 $5/mo for 2M chars, OpenAI-compatible API. Worth a 10-minute quality test

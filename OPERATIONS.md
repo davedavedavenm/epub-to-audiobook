@@ -27,6 +27,28 @@ STATUS.md.**
   reported overall `ok` at app revision
   `9dcff344cdd935089887e56db76f88b7238603a0`.
 
+### Gemini Free Tier operating boundary
+
+- `gemini-tts` is an opt-in adapter (`ENABLE_GEMINI_PROFILE=1`), not part of the
+  live baseline and never an automatic fallback. It accepts only
+  `gemini-3.1-flash-tts-preview` + `gemini_achernar` and calls the current
+  Developer API Interactions endpoint.
+- The key must come from a dedicated project shown as **Free** in AI Studio.
+  Never attach Cloud Billing to that project. The adapter contains no Vertex,
+  Batch or paid route. Set `GEMINI_FREE_PROJECT_CONFIRMED=1` only after that
+  visual check. The inference API does not expose billing tier, so the unbilled
+  project—not the flag—is the actual no-charge boundary.
+- A passage is at most 2,200 characters and gets one attempt. Successful WAVs
+  live under `/data/gemini_chunks/<job-id>/` until that chapter is finalized.
+  HTTP 429/500, timeout or any other failure bypasses generic worker recovery
+  and becomes `failed`; Resume later uses cached passages.
+- Preview warming must not call Gemini. The only supported creation path is the
+  explicit Settings button; open `/api/preview/gemini_achernar` yourself before
+  claiming it ready. `/api/voices` must report it cached before it is offered.
+- Monitor the active limit in AI Studio. Do not infer quota from another account
+  or convert a Free project to Paid to finish a book. Free Tier content may be
+  used by Google to improve products.
+
 ## 2026-07-26 — Revoked Evolution notification key repaired
 
 The active Zorin webapp and worker inherited an older revoked global key from the deployed `.env`,

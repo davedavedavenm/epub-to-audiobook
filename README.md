@@ -35,7 +35,8 @@ requires a separately authorised environment-gated session.
 
 ## The safe defaults
 
-- **Quality first, then free, then the lowest measured cost per finished book.**
+- **Quality first, then free, then the lowest measured cost per finished book,
+  with a hard GBP2/book ceiling.**
 - **Local CPU is the default.** No queue state can rent a GPU. Paid Vast
   rendering is an explicit operator-only action and is off by default.
 - **Beatrice on Chatterbox Nano** is the default narrator. Piper is deliberately
@@ -68,6 +69,11 @@ requires a separately authorised environment-gated session.
 - **KittenTTS 0.8.1** - free CPU-only developer-preview book engine with all
   eight official presets cached for immediate audition. Opt in with
   `ENABLE_KITTEN_PROFILE=1`; it is not a default or automatic fallback.
+- **Gemini 3.1 Flash TTS** - opt-in **Free Tier only** candidate using the
+  current Gemini Developer API and the heard Achernar voice. The adapter has no
+  paid/Vertex/Batch fallback, makes one request per 2–3 minute passage and
+  resumes from a local passage cache after quota returns. Long-form approval is
+  still pending; enable only with a dedicated unbilled project key.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 - **Piper TTS** - rejected production path; legacy/debug only
   (`ENABLE_PIPER_PROFILE=1`)
@@ -275,6 +281,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `QWEN3_URL` | Qwen3-TTS endpoint (default: `http://qwen3-tts:8011/v1`; opt-in CUDA profile) |
 | `POCKET_URL` | Pocket TTS endpoint (default: `http://pocket-tts:8012/v1`; opt-in CPU profile) |
 | `KITTEN_URL` | KittenTTS endpoint (default: `http://kitten-tts:8013/v1`; opt-in CPU profile) |
+| `GEMINI_TTS_URL` / `GEMINI_API_KEY` | Internal free-only Gemini adapter and key from the dedicated `GEMINI_FREE_PROJECT_ID` whose Plan is Free; after verifying it, set `GEMINI_FREE_PROJECT_CONFIRMED=1` and opt in with `ENABLE_GEMINI_PROFILE=1`. Never commit the key or attach billing to that project. |
 | `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | Optional OpenAI-compatible LLM for metadata and chapter classification (deterministic fallback; generated pronunciation rules are off by default). Groq users must choose a current ID from its official model/deprecation pages; see `.env.example`. |

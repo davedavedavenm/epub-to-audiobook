@@ -77,6 +77,7 @@ VIBEVOICE_URL = os.environ.get('VIBEVOICE_URL', 'http://vibevoice-tts:8010/v1')
 QWEN3_URL = os.environ.get('QWEN3_URL', 'http://qwen3-tts:8011/v1')
 POCKET_URL = os.environ.get('POCKET_URL', 'http://pocket-tts:8012/v1')
 KITTEN_URL = os.environ.get('KITTEN_URL', 'http://kitten-tts:8013/v1')
+GEMINI_TTS_URL = os.environ.get('GEMINI_TTS_URL', 'http://gemini-tts:8014/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
@@ -466,6 +467,12 @@ TTS_ENGINES = {
         'description': 'Opt-in free CPU candidate; eight official preset voices',
         'url_env': 'KITTEN_URL',
         'default_url': 'http://kitten-tts:8013/v1'
+    },
+    'gemini': {
+        'name': 'Gemini 3.1 Flash TTS (free tier only)',
+        'description': 'Opt-in Developer API preview; stops on free quota and never falls back to paid',
+        'url_env': 'GEMINI_TTS_URL',
+        'default_url': 'http://gemini-tts:8014/v1'
     }
 }
 
@@ -542,6 +549,12 @@ VOICES = {
     # two are NOT local and need internet.
     'en-AU-NatashaNeural': {'name': 'Australian female — Natasha (Edge)', 'accent': 'Australian', 'gender': 'Female', 'engine': 'edge'},
     'en-AU-WilliamNeural': {'name': 'Australian male — William (Edge)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'edge'},
+
+    # Gemini Developer API. Only the exact voice Dave heard and approved in a
+    # short sample is registered. It remains absent from selectable surfaces
+    # until its exact app-path preview is persisted and playable.
+    'gemini_achernar': {'name': 'Achernar (Gemini 3.1 — candidate)', 'accent': 'British',
+                        'gender': 'Female', 'engine': 'gemini'},
 
     # ============ AWS POLLY LONG-FORM VOICES ============
     'polly_ruth': {'name': 'Ruth', 'accent': 'American', 'gender': 'Female', 'engine': 'polly'},
@@ -1189,7 +1202,10 @@ def calculate_price_estimate(engine: str, char_count: int) -> float | None:
     }
     free_engines = {
         'kokoro', 'edge', 'piper', 'chatterbox', 'chatterbox_nano',
-        'tada', 'cosyvoice', 'vibevoice', 'qwen3', 'melotts', 'omnivoice'
+        'tada', 'cosyvoice', 'vibevoice', 'qwen3', 'melotts', 'omnivoice',
+        # This adapter is deliberately restricted to an unbilled Gemini API
+        # Free Tier project. It has no Vertex or paid-tier fallback.
+        'gemini'
     }
     if engine in free_engines:
         return 0.0
@@ -1850,7 +1866,8 @@ def handle_job_failure(job_id, error_type, error_msg):
     Falls back to full job retry if no partial output exists.
 
     Self-healing: 
-    1. Always retries up to MAX_RETRY_COUNT regardless of error type.
+    1. Retries local container deaths/timeouts up to MAX_RETRY_COUNT. The
+       free-tier Gemini path is explicitly excluded from automatic retries.
     2. Automatically corrects invalid chapter ranges if out-of-range error detected.
 
     Args:
@@ -1868,6 +1885,36 @@ def handle_job_failure(job_id, error_type, error_msg):
 
     job = get_job(job_id)
     if not job:
+        return False
+
+    # Gemini is intentionally a one-attempt, Free-Tier-only path. A failed
+    # request (especially HTTP 429 quota exhaustion) must never be multiplied
+    # by the generic container/watchdog retry machinery. Completed passage WAVs
+    # remain in /data/gemini_chunks/<job_id>, so a user-initiated retry resumes
+    # from cache without re-consuming successful passages.
+    if job.get('tts_engine') == 'gemini':
+        quota_exhausted = bool(re.search(r'\b429\b|RESOURCE_EXHAUSTED|quota',
+                                         error_msg, re.IGNORECASE))
+        if quota_exhausted:
+            final_error = (
+                'Gemini Free Tier quota exhausted. No automatic retry was made. '
+                'Retry the job manually after quota is available; completed '
+                'passages are cached and will not be requested again.'
+            )
+        else:
+            final_error = (
+                f'Gemini request failed and was not automatically retried: {error_msg}. '
+                'Completed passages remain cached for a manual retry.'
+            )
+        with get_db() as conn:
+            conn.execute('''
+                UPDATE jobs
+                SET status = 'failed', error = ?, completed_at = ?
+                WHERE id = ?
+            ''', (final_error, datetime.now().isoformat(), job_id))
+            conn.commit()
+        app.logger.error(f"Job {job_id} stopped without Gemini auto-retry: {final_error}")
+        append_job_log(job_id, final_error)
         return False
 
     # --- Self-Healing: Automatic Chapter Range Correction ---
@@ -2526,8 +2573,33 @@ def get_voice_preview(voice_id: str) -> Path:
                 await edge_tts.Communicate(ptext, voice_id).save(str(preview_path))
 
             asyncio.run(_edge())
+        elif engine == 'gemini':
+            # One explicit free-tier request, then local encoding. The adapter
+            # intentionally returns lossless WAV only and never retries.
+            response = requests.post(
+                f"{GEMINI_TTS_URL}/audio/speech",
+                json={
+                    "model": "gemini-3.1-flash-tts-preview",
+                    "input": ptext,
+                    "voice": voice_id,
+                    "response_format": "wav",
+                    "speed": 1.0,
+                },
+                timeout=int(os.environ.get('PREVIEW_TIMEOUT', '600')),
+            )
+            response.raise_for_status()
+            proc = subprocess.run(
+                ['ffmpeg', '-v', 'error', '-i', 'pipe:0', '-f', 'mp3',
+                 '-b:a', '192k', 'pipe:1'],
+                input=response.content, capture_output=True, check=False,
+            )
+            if proc.returncode or not proc.stdout:
+                raise RuntimeError('ffmpeg could not encode the Gemini preview')
+            part = preview_path.with_suffix('.mp3.part')
+            part.write_bytes(proc.stdout)
+            os.replace(part, preview_path)
         elif engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
-                       'pocket', 'kitten'):
+                        'pocket', 'kitten'):
             # Direct preview from an isolated local engine service.
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
             # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
@@ -2536,6 +2608,7 @@ def get_voice_preview(voice_id: str) -> Path:
             # (2026-07-14). Be generous; this is a background job.
             _url = (VIBEVOICE_URL if engine == 'vibevoice'
                     else QWEN3_URL if engine == 'qwen3'
+                    else GEMINI_TTS_URL if engine == 'gemini'
                     else POCKET_URL if engine == 'pocket'
                     else KITTEN_URL if engine == 'kitten'
                     else TADA_URL if engine == 'tada'
@@ -2833,6 +2906,8 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         return POCKET_URL, 'pocket-tts-2.1'
     elif tts_engine == 'kitten':
         return KITTEN_URL, 'KittenML/kitten-tts-mini-0.8'
+    elif tts_engine == 'gemini':
+        return GEMINI_TTS_URL, 'gemini-3.1-flash-tts-preview'
     else:
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else KOKORO_URL
         return url, 'kokoro'
@@ -2847,7 +2922,7 @@ def text_profile_for_engine(tts_engine: str) -> str:
     respellings. Keeping this mapping centralized makes preview, first render
     and recovery use the same input contract.
     """
-    if tts_engine in ('pocket', 'kitten'):
+    if tts_engine in ('pocket', 'kitten', 'gemini'):
         return 'explicit'
     if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
         return 'modern'
@@ -2913,6 +2988,15 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
         # Reproduce the accepted audition's sentence-sized passes and 350ms
         # joins; this is a quality parameter, not generic converter trivia.
         cmd.extend(['--chunk-chars', '450', '--join-silence-ms', '350'])
+    elif tts_engine == 'gemini':
+        # Google warns that 3.1 quality can drift after a few minutes. Pack
+        # complete paragraphs to roughly 2–3 minute requests, make one attempt
+        # only, and persist successful passages so free-quota exhaustion can
+        # resume without paying the request again.
+        cache_dir = Path('/data/gemini_chunks') / str(job_id)
+        cmd.extend(['--chunk-chars', '2200', '--pack-paragraphs',
+                    '--chunk-cache-dir', str(cache_dir),
+                    '--max-chunk-attempts', '1', '--request-timeout', '300'])
 
     _asr = str(get_setting('ASR_VERIFY')
                if get_setting('ASR_VERIFY') is not None
@@ -4257,13 +4341,18 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # Chatterbox Turbo/Nano genuinely have no speed control and ignore the
         # field, so say so rather than implying it worked.
         if tts_speed and float(tts_speed) != 1.0:
-            cmd.extend(['--speed', str(tts_speed)])
-            if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten'):
+            if tts_engine == 'gemini':
+                append_job_log(job_id,
+                               f"NOTE: speed {tts_speed}x requested, but Gemini pacing is "
+                               f"pinned by the heard style prompt; the request remains at 1.0x.")
+            elif tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten'):
+                cmd.extend(['--speed', str(tts_speed)])
                 append_job_log(job_id,
                                f"NOTE: speed {tts_speed}x requested, but {tts_engine} has no "
                                f"documented OpenAI-style speed control and will ignore it. "
                                f"Audio will render at the engine's native pace.")
             else:
+                cmd.extend(['--speed', str(tts_speed)])
                 append_job_log(job_id, f"Narration speed: {tts_speed}x")
 
         if search_conf_path and search_conf_path.exists():
@@ -4275,6 +4364,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             cmd.extend(['--chunk-chars', '1000000', '--request-timeout', '21600'])
         elif tts_engine == 'qwen3':
             cmd.extend(['--chunk-chars', '450', '--join-silence-ms', '350'])
+        elif tts_engine == 'gemini':
+            cache_dir = Path('/data/gemini_chunks') / str(job_id)
+            cmd.extend(['--chunk-chars', '2200', '--pack-paragraphs',
+                        '--chunk-cache-dir', str(cache_dir),
+                        '--max-chunk-attempts', '1', '--request-timeout', '300'])
 
         log_file_path = Path(LOG_DIR) / f"{job_id}_convert.log"
         log_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -4537,6 +4631,7 @@ def check_engines_health(max_age=20):
         'qwen3': f"{QWEN3_URL.rstrip('/')}/audio/voices",
         'pocket': f"{POCKET_URL.rstrip('/')}/audio/voices",
         'kitten': f"{KITTEN_URL.rstrip('/')}/audio/voices",
+        'gemini': f"{GEMINI_TTS_URL.rstrip('/')}/audio/voices",
         'piper': f"{PIPER_URL.rstrip('/')}/models",  # openedai-speech has no /audio/voices
     }
     out = {}
@@ -4568,6 +4663,7 @@ def check_engines_health(max_age=20):
 ENGINE_CREDENTIALS = {
     'inworld': ('INWORLD_API_KEY', 'Needs an Inworld API key (Settings → API keys)'),
     'polly': ('AWS_ACCESS_KEY_ID', 'Needs AWS credentials (Settings → API keys)'),
+    'gemini': ('GEMINI_API_KEY', 'Needs a key from a dedicated unbilled Google AI Studio Free Tier project'),
 }
 
 
@@ -5062,6 +5158,31 @@ def test_kaggle_connection():
         return jsonify({'error': f'Kaggle auth failed: {msg}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/prepare_gemini_preview', methods=['POST'])
+def prepare_gemini_preview():
+    """Make at most one Gemini request and persist Achernar's exact preview.
+
+    Repeated button presses are cache hits. This is deliberately an explicit
+    operator action: startup maintenance must never consume network quota.
+    """
+    voice_id = 'gemini_achernar'
+    if _preview_is_cached(voice_id):
+        return jsonify({'status': 'cached', 'message': 'Achernar preview is already ready.'})
+    if not os.environ.get('GEMINI_API_KEY', '').strip():
+        return jsonify({'error': 'GEMINI_API_KEY is not configured. Add the key from an '
+                        'unbilled AI Studio Free Tier project to .env and redeploy.'}), 400
+    health = check_engines_health(max_age=0)
+    if health.get('gemini') is not True:
+        return jsonify({'error': 'The Gemini free-only adapter is not running. Enable '
+                        'ENABLE_GEMINI_PROFILE=1 and redeploy.'}), 409
+    preview = get_voice_preview(voice_id)
+    if not preview or not _preview_is_cached(voice_id):
+        return jsonify({'error': 'Gemini did not produce a valid preview. No retry was made; '
+                        'check the adapter log for the quota/API response.'}), 502
+    return jsonify({'status': 'generated', 'message': 'Achernar preview generated once and cached.',
+                    'url': f'/api/preview/{voice_id}'})
 
 
 @app.route('/api/settings/test_abs', methods=['POST'])
