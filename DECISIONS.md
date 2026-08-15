@@ -53,11 +53,11 @@ profile and paragraph-aware requests capped at 2,200 characters (roughly two to
 three minutes), then joins lossless PCM locally. Each passage gets exactly one
 API request. Successful passage WAVs are cached; any 429, 500, timeout or other
 failure stops the job without automatic retry, and a manual Resume reuses the
-cache. The exact Achernar app preview must be persisted and playable before the
-voice appears.
+cache. The exact Achernar app preview is now persisted, independently decoded
+and served byte-identically by the app; it remains only a short-form gate.
 
 This path remains **candidate / long-form not yet heard**. First prove one
-bounded 20–30 minute passage for voice consistency, joins, pronunciation and
+bounded 8–10 minute passage for voice consistency, joins, pronunciation and
 quota feasibility. The Free Tier uses submitted content to improve Google's
 products; do not send private/confidential books without accepting that term.
 Official sources checked 2026-08-15:

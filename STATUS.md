@@ -1,11 +1,12 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-15 Gemini 3.1 Flash TTS — IMPLEMENTED LOCALLY / LIVE KEY AND LONG GATE PENDING
+> ## 2026-08-15 Gemini 3.1 Flash TTS — LIVE FREE-ONLY PREVIEW / LONG GATE PENDING
 >
 > Dave rated the Google AI Studio `gemini-3.1-flash-tts-preview` + Achernar
 > sample “very good” and asked for a free or near-free route. The repo now has a
-> dedicated non-root OpenAI-compatible adapter using Google's current Gemini
-> Developer API **Interactions** endpoint. It is pinned to that one model and
+> dedicated non-root OpenAI-compatible adapter using Google's official
+> `google-genai==2.18.1` SDK and current Gemini Developer API **Interactions**
+> endpoint. It is pinned to that one model and
 > Achernar; it cannot call Vertex, Batch, another paid model or a configurable
 > upstream. Only a key belonging to an unbilled AI Studio project whose plan is
 > Free is permitted. It fails closed without the separate operator assertion
@@ -14,7 +15,7 @@
 > Tier input/output is currently listed as free; Google
 > states Free Tier content is used to improve its products.
 >
-> Production plumbing is complete locally: opt-in Compose/deploy profile,
+> Production plumbing is deployed on Zorin: opt-in Compose/deploy profile,
 > engine-bound Achernar voice, explicit number/currency preprocessing,
 > paragraph-aware 2,200-character requests, lossless passage joins, one request
 > per passage, SHA-keyed resume cache, and a hard no-auto-retry branch at both
@@ -23,15 +24,25 @@
 > an explicit Settings action and repeated clicks are cache hits. No API request
 > is made at startup.
 >
-> Verified locally: the full host suite passes (302), all five adapter-specific
-> tests pass in its pinned dependency environment (308 total), compile succeeds
-> and Compose config validates. Docker Desktop was not running, so the image build
-> is not yet a local verification claim. The live Zorin checkout currently has
-> no `GEMINI_API_KEY` and the profile is disabled; **no Gemini synthesis or
-> deployment has occurred**. Next gate: create/confirm a dedicated Free project
-> key, deploy the whole stack from Git, generate/open the exact cached preview,
-> then render one 20–30 minute passage. Free quota feasibility is unknown until
-> the active project limits and that bounded run are measured.
+> A dedicated unbilled project (`dave-audio-free-20260815`) and API-restricted key
+> are live; the key remains only in the host `.env`. Whole-stack revision
+> `17e45937b17128f15d37ba2fe7c2da740a077cb4` is healthy in both web and worker,
+> and `gemini-tts` is healthy. Exactly one final SDK preview request produced the
+> persisted app-path file: 81.576 s, 1,631,564 bytes, MP3/24 kHz/mono, SHA-256
+> `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`.
+> It fully decoded, `/api/preview/gemini_achernar` returned the identical bytes,
+> and `/api/voices` reported `118/118` configured previews ready.
+> Post-change verification passed 303 host tests plus all eight adapter tests
+> in its pinned SDK environment (311 total).
+>
+> The original raw-REST bring-up made two generation calls whose audio could not
+> be decoded from the undocumented wire shape; one intervening request was
+> rejected at HTTP 400 before generation. No automatic retry occurred. Further
+> trial-and-error calls were stopped and the adapter was changed to the exact
+> official SDK response path. Adapter coverage is now eight tests and explicitly
+> pins `HttpRetryOptions(attempts=1)`. The next spend-controlled gate is one
+> resumable **8–10 minute** passage, only after Dave hears the exact cached
+> preview. Free quota feasibility remains unknown until that bounded run.
 
 > ## 2026-08-15 Azure Speech access — F0 LIVE / SYNTHESIS PAUSED
 >

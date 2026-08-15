@@ -29,8 +29,8 @@ STATUS.md.**
 
 ### Gemini Free Tier operating boundary
 
-- `gemini-tts` is an opt-in adapter (`ENABLE_GEMINI_PROFILE=1`), not part of the
-  live baseline and never an automatic fallback. It accepts only
+- `gemini-tts` is an opt-in adapter (`ENABLE_GEMINI_PROFILE=1`), currently live
+  on Zorin but never an automatic fallback. It accepts only
   `gemini-3.1-flash-tts-preview` + `gemini_achernar` and calls the current
   Developer API Interactions endpoint.
 - The key must come from a dedicated project shown as **Free** in AI Studio.
@@ -48,6 +48,12 @@ STATUS.md.**
 - Monitor the active limit in AI Studio. Do not infer quota from another account
   or convert a Free project to Paid to finish a book. Free Tier content may be
   used by Google to improve products.
+- Live proof at revision `17e4593`: official `google-genai==2.18.1`, healthy
+  adapter, one 81.576 s Achernar preview cached at 1,631,564 bytes, SHA-256
+  `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`,
+  full decode passed, preview endpoint bytes matched, and voice cache was
+  `118/118`. Do not regenerate it: the explicit Settings action is now a cache
+  hit.
 
 ## 2026-07-26 — Revoked Evolution notification key repaired
 

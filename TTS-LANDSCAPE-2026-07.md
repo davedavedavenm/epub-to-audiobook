@@ -143,8 +143,10 @@ turning an experiment into production.
 
 - Gemini 3.1 Flash TTS standard input/output is free on the Developer API Free
   Tier and Dave's Achernar Studio sample was very good. The repo now has a
-  strict free-only integration. Google documents drift after a few minutes, so
-  the app uses paragraph-aware 2–3 minute passages and an on-disk resume cache.
+  strict free-only integration; its exact 81.576-second app preview is cached,
+  fully decoded and served byte-identically. Google documents drift after a
+  few minutes, so the app uses paragraph-aware 2–3 minute passages and an
+  on-disk resume cache.
 - Google Cloud Chirp 3 HD includes 1M characters/month free, then USD30/M. It is
   not safe to integrate until a local monthly hard cap prevents overage.
 - IndexTTS2 is not an old ranking footnote: its official current repo exposes
