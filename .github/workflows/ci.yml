@@ -17,12 +17,15 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: webapp/requirements.txt
+          cache-dependency-path: |
+            webapp/requirements.txt
+            gemini/requirements.txt
 
       - name: Install deps
         run: |
           pip install -q flask requests gunicorn num2words nltk ebooklib \
             beautifulsoup4 lxml boto3 kaggle pytest
+          pip install -q -r gemini/requirements.txt
 
       - name: Lint
         run: |
