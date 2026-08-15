@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from scripts.kaggle import build_magpie_longform_gate as gate
+from scripts.kaggle import build_magpie_longform_gate as gate  # noqa: E402
 
 
 EXPECTED_ARMS = {

@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from scripts.kaggle.build_indextts25_gate import PREPARED_TEXT
+from scripts.kaggle.build_indextts25_gate import PREPARED_TEXT  # noqa: E402
 
 
 OUT = ROOT / "scratch" / "magpie_longform" / "kernel"
