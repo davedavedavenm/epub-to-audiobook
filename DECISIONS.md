@@ -60,10 +60,12 @@ failure stops the job without automatic retry, and a manual Resume reuses the
 cache. The exact Achernar app preview is now persisted, independently decoded
 and served byte-identically by the app; it remains only a short-form gate.
 
-This path remains **candidate / long-form not yet heard**. First prove one
-bounded 8–10 minute passage for voice consistency, joins, pronunciation and
-quota feasibility. The Free Tier uses submitted content to improve Google's
-products; do not send private/confidential books without accepting that term.
+This path remains **candidate / long-form not yet heard**. The bounded technical
+gate is complete: five one-attempt requests produced a fully decoded 10:10 file
+covering the exact 1,644-word source, at zero actual cost. Dave must hear that
+exact file for voice consistency, joins, pronunciation and pacing before any
+production/default promotion. The Free Tier uses submitted content to improve
+Google's products; do not send private/confidential books without accepting that term.
 Official sources checked 2026-08-15:
 [TTS guide](https://ai.google.dev/gemini-api/docs/speech-generation),
 [model card](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview),

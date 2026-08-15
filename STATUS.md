@@ -32,17 +32,16 @@
 > `7a17a180bf34ecffb75022f4f6a0a9d6bed33483f52f69e95cf35f5b88975ea3`.
 > It fully decoded, `/api/preview/gemini_achernar` returned the identical bytes,
 > and `/api/voices` reported `118/118` configured previews ready.
-> Post-change verification passed 303 host tests plus all eight adapter tests
-> in its pinned SDK environment (311 total).
+> Post-change verification now passes 305 host tests plus all nine adapter tests
+> in its pinned SDK environment (314 total).
 >
 > The original raw-REST bring-up made two generation calls whose audio could not
 > be decoded from the undocumented wire shape; one intervening request was
 > rejected at HTTP 400 before generation. No automatic retry occurred. Further
 > trial-and-error calls were stopped and the adapter was changed to the exact
-> official SDK response path. Adapter coverage is now eight tests and explicitly
-> pins `HttpRetryOptions(attempts=1)`. The next spend-controlled gate is one
-> resumable **8–10 minute** passage, only after Dave hears the exact cached
-> preview. Free quota feasibility remains unknown until that bounded run.
+> official SDK response path. Adapter coverage is now nine tests and explicitly
+> pins `HttpRetryOptions(attempts=1)`. Dave then approved the exact cached
+> preview, allowing the spend-controlled long-form gate recorded below.
 >
 > Dave approved the exact cached preview as “very good”. The first bounded
 > long-form attempt used a 1,644-word, complete-paragraph public-domain excerpt
@@ -58,6 +57,22 @@
 > waiting before retrying. The listening gate therefore remains **open**, not
 > failed and not passed; resume must be a later explicit action, never an
 > automatic retry.
+>
+> Dave explicitly authorised a later manual resume. That run succeeded with
+> exactly five one-attempt requests and no cache regeneration. The final file is
+> 10:10.128, 12,202,952 bytes, MP3/24 kHz/mono, SHA-256
+> `3f9d1ce6482eb3313b9065c16439d8bd47e63c1f4ca0fb88000a232be8e76841`.
+> Full ffmpeg decode passed. The six captured transcript records were proven to
+> be the failed first passage followed by the exact successful five-passage
+> sequence; the successful sequence reconstructs all 1,644 processed words and
+> 8,524 characters. Cloud Monitoring records nine of ten Free Tier requests used
+> today (three bring-up previews, the zero-output 503, and five successful gate
+> passages). Billing remains disabled and actual cost is zero. The **technical
+> long-form gate passes**; naturalness, joins, voice consistency and pacing remain
+> open until Dave hears this exact file.
+> Structured Gemini failures now retain Google's documented machine code and
+> safe message in converter/job diagnostics while redacting keys/tokens,
+> omitting arbitrary response bodies and preserving the one-attempt policy.
 
 > ## 2026-08-15 Azure Speech access — F0 LIVE / SYNTHESIS PAUSED
 >

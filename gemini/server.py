@@ -9,6 +9,7 @@ billable service.
 Official contract (checked 2026-08-15):
 https://ai.google.dev/gemini-api/docs/speech-generation
 https://ai.google.dev/api/interactions-api
+https://ai.google.dev/gemini-api/docs/api-errors
 https://ai.google.dev/gemini-api/docs/pricing
 https://ai.google.dev/gemini-api/docs/billing
 """
@@ -104,6 +105,19 @@ def _client() -> genai.Client:
     )
 
 
+def _api_error_detail(exc: genai_errors.APIError) -> str:
+    """Keep Google's documented machine code alongside its safe message."""
+    error = exc.details.get("error", {}) if isinstance(exc.details, dict) else {}
+    classification = exc.status
+    if not classification and isinstance(error, dict):
+        documented_code = error.get("code")
+        if isinstance(documented_code, str):
+            classification = documented_code
+    message = str(exc.message or "Gemini API error")
+    detail = f"{classification}: {message}" if classification else message
+    return detail[:500]
+
+
 def _synth(text: str, voice_name: str) -> bytes:
     style = os.environ.get("GEMINI_TTS_STYLE", DEFAULT_STYLE).strip() or DEFAULT_STYLE
     prompt = f"{style}\n\nTRANSCRIPT:\n{text}"
@@ -121,7 +135,7 @@ def _synth(text: str, voice_name: str) -> bytes:
     except genai_errors.APIError as exc:
         raise HTTPException(
             status_code=exc.code or 502,
-            detail=str(exc.message or exc.status or "Gemini API error")[:500],
+            detail=_api_error_detail(exc),
         ) from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"Gemini request failed: {exc}") from exc

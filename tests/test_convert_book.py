@@ -6,6 +6,9 @@ import wave
 import importlib.util
 from pathlib import Path
 
+import pytest
+import requests
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -99,3 +102,66 @@ def test_passage_cache_avoids_a_second_network_request(tmp_path, monkeypatch):
                       chunk_cache_dir=tmp_path, max_chunk_attempts=1)
     assert first == second
     assert len(calls) == 1, "resuming a completed passage spent quota again"
+
+
+def test_gemini_http_failure_preserves_safe_detail_without_retry_or_secrets(monkeypatch):
+    cb = _load_cb()
+    calls = []
+
+    class Response:
+        content = b''
+        status_code = 503
+        reason = 'Service Unavailable'
+
+        def json(self):
+            return {
+                'detail': (
+                    'service_unavailable: temporary model capacity; '
+                    'key=AIza012345678901234567890123456789'
+                )
+            }
+
+        def raise_for_status(self):
+            raise requests.HTTPError(
+                'generic error for https://adapter/audio/speech?key=do-not-log',
+                response=self,
+            )
+
+    def post(*args, **kwargs):
+        calls.append((args, kwargs))
+        return Response()
+
+    monkeypatch.setattr(cb.requests, 'post', post)
+    with pytest.raises(requests.HTTPError) as error:
+        cb.synth(
+            'http://gemini-tts/v1', 'gemini_achernar', 'One sentence.', 100,
+            model=cb._GEMINI_MODEL, max_chunk_attempts=1,
+        )
+
+    message = str(error.value)
+    assert message.startswith('HTTP 503 Service Unavailable: service_unavailable:')
+    assert 'temporary model capacity' in message
+    assert '[REDACTED]' in message
+    assert 'AIza' not in message
+    assert 'do-not-log' not in message
+    assert len(calls) == 1, "the observability path must not add an API retry"
+
+
+def test_gemini_http_failure_ignores_unstructured_response_body():
+    cb = _load_cb()
+
+    class Response:
+        status_code = 503
+        reason = 'Service Unavailable'
+        text = '<html>secret proxy diagnostic</html>'
+
+        def json(self):
+            raise ValueError('not JSON')
+
+        def raise_for_status(self):
+            raise requests.HTTPError('generic error', response=self)
+
+    with pytest.raises(requests.HTTPError) as error:
+        cb._raise_for_status_with_safe_detail(Response())
+    assert str(error.value) == 'HTTP 503 Service Unavailable'
+    assert 'secret proxy diagnostic' not in str(error.value)

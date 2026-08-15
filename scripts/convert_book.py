@@ -46,6 +46,73 @@ from lexicon import SEED_PRONUNCIATION  # noqa: E402
 _LEXICON = {}
 _TEXT_PROFILE = 'modern'
 _SEARCH_REPLACE_RULES = []
+_GEMINI_MODEL = 'gemini-3.1-flash-tts-preview'
+_HTTP_ERROR_DETAIL_LIMIT = 500
+
+
+def _redact_http_error_text(value):
+    """Return bounded, single-line diagnostic text without common credentials."""
+    text = re.sub(r'[\x00-\x1f\x7f]+', ' ', str(value or '')).strip()
+    text = re.sub(r'(?i)\bBearer\s+[^\s,;]+', 'Bearer [REDACTED]', text)
+    text = re.sub(r'\bAIza[0-9A-Za-z_-]{20,}', '[REDACTED]', text)
+    text = re.sub(
+        r'(?i)(\b(?:api[_-]?key|access[_-]?token|authorization|token|key)\b\s*[:=]\s*)'
+        r'("[^"]*"|\'[^\']*\'|[^\s,;]+)',
+        r'\1[REDACTED]',
+        text,
+    )
+    return text[:_HTTP_ERROR_DETAIL_LIMIT]
+
+
+def _structured_http_error_detail(response):
+    """Extract only documented JSON error fields; never dump an arbitrary body.
+
+    Gemini's Interactions API documents ``error.code`` and ``error.message``.
+    The local FastAPI adapter deliberately wraps its safe upstream summary in
+    ``detail``.  Restricting extraction to those fields keeps HTML proxy pages,
+    request URLs, headers and credentials out of converter/job logs.
+
+    Official contract (checked 2026-08-15):
+    https://ai.google.dev/gemini-api/docs/api-errors
+    """
+    try:
+        payload = response.json()
+    except (TypeError, ValueError):
+        return ''
+    if not isinstance(payload, dict):
+        return ''
+
+    detail = payload.get('detail')
+    if isinstance(detail, str):
+        return _redact_http_error_text(detail)
+
+    error = payload.get('error')
+    if not isinstance(error, dict):
+        return ''
+    code = error.get('code')
+    message = error.get('message')
+    fields = []
+    if isinstance(code, (str, int)):
+        fields.append(str(code))
+    if isinstance(message, str):
+        fields.append(message)
+    return _redact_http_error_text(': '.join(fields))
+
+
+def _raise_for_status_with_safe_detail(response):
+    """Preserve a structured adapter error while omitting request secrets."""
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        status = getattr(response, 'status_code', None)
+        reason = _redact_http_error_text(getattr(response, 'reason', ''))
+        summary = f"HTTP {status}" if status is not None else "HTTP request failed"
+        if reason:
+            summary += f" {reason}"
+        detail = _structured_http_error_detail(response)
+        if detail:
+            summary += f": {detail}"
+        raise requests.HTTPError(summary, response=response) from exc
 
 def load_search_and_replace(path):
     rules = []
@@ -387,7 +454,10 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', sp
                                         # it; existing Pydantic shims ignore the field.
                                         "seed": 12345 + seed_offset + ((chapter_idx - 1) * 1000) + (chunk_idx - 1)},
                                   timeout=(15, request_timeout))
-                r.raise_for_status()
+                if model == _GEMINI_MODEL:
+                    _raise_for_status_with_safe_detail(r)
+                else:
+                    r.raise_for_status()
                 wav_bytes = _ensure_wav(r.content)
                 parts.append(wav_bytes)
                 if cache_path:

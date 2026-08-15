@@ -61,6 +61,12 @@ STATUS.md.**
   temporary service overload/down: leave the job stopped and resume manually
   later. Do not convert this into an automatic retry loop, because every failed
   attempt consumes the project’s ten-request daily allowance.
+- Dave then explicitly authorised one manual resume. All five passages succeeded
+  in one attempt each and produced the complete 10:10.128 MP3, SHA-256
+  `3f9d1ce6482eb3313b9065c16439d8bd47e63c1f4ca0fb88000a232be8e76841`.
+  Decode and exact transcript-sequence checks passed; app health remained 200.
+  Cloud Monitoring showed 9/10 daily requests consumed. The listening verdict
+  remains open. Do not regenerate this gate or spend the final daily request.
 
 ## 2026-07-26 — Revoked Evolution notification key repaired
 

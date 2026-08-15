@@ -127,6 +127,28 @@ def test_quota_failure_is_returned_without_retry(monkeypatch):
     assert client.closed is True
 
 
+def test_service_unavailable_machine_code_is_preserved(monkeypatch):
+    api_error = genai_errors.APIError(
+        503,
+        {
+            'error': {
+                'code': 'service_unavailable',
+                'message': 'The service is temporarily overloaded.',
+            }
+        },
+    )
+    client = FakeClient(error=api_error)
+    monkeypatch.setattr(gemini, '_client', lambda: client)
+    with pytest.raises(HTTPException) as error:
+        gemini._synth('Exact transcript.', 'Achernar')
+    assert error.value.status_code == 503
+    assert error.value.detail == (
+        'service_unavailable: The service is temporarily overloaded.'
+    )
+    assert len(client.interactions.calls) == 1
+    assert client.closed is True
+
+
 def test_paid_or_unknown_model_is_rejected_before_synthesis(monkeypatch):
     monkeypatch.setenv('GEMINI_API_KEY', 'free-project-key')
     monkeypatch.setenv('GEMINI_FREE_PROJECT_ID', 'dedicated-free-project')
