@@ -7,7 +7,8 @@ HTTP failure is returned and the caller pauses; it never falls through to a
 billable service.
 
 Official contract (checked 2026-08-15):
-https://ai.google.dev/gemini-api/docs/generate-content/speech-generation
+https://ai.google.dev/gemini-api/docs/speech-generation
+https://ai.google.dev/api/interactions-api
 https://ai.google.dev/gemini-api/docs/pricing
 https://ai.google.dev/gemini-api/docs/billing
 """
@@ -100,13 +101,66 @@ def _error_detail(response: requests.Response) -> str:
     return (response.text or f"HTTP {response.status_code}")[:500]
 
 
+def _pcm_from_interaction(body: dict) -> bytes:
+    """Extract inline L16 from the raw REST Interaction response.
+
+    Google's SDK adds an ``output_audio`` convenience property, but the raw
+    REST resource returns model output in ``steps[].content[]``.  Pinning the
+    parser to that documented wire shape prevents a successful generation from
+    being discarded merely because an SDK-only field is absent.
+    """
+    blocks: list[bytes] = []
+    for step in body.get("steps", []):
+        if not isinstance(step, dict) or step.get("type") != "model_output":
+            continue
+        for content in step.get("content", []):
+            if not isinstance(content, dict) or content.get("type") != "audio":
+                continue
+            mime_type = content.get("mime_type")
+            sample_rate = content.get("sample_rate")
+            channels = content.get("channels")
+            if mime_type not in {None, "audio/l16"}:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Gemini returned unexpected audio format: {mime_type}",
+                )
+            if sample_rate not in {None, 24_000} or channels not in {None, 1}:
+                raise HTTPException(
+                    status_code=502,
+                    detail=("Gemini returned unexpected PCM layout: "
+                            f"sample_rate={sample_rate}, channels={channels}"),
+                )
+            encoded = content.get("data")
+            if not isinstance(encoded, str) or not encoded:
+                continue
+            try:
+                blocks.append(base64.b64decode(encoded, validate=True))
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=502, detail="Gemini returned invalid base64 audio"
+                ) from exc
+    pcm = b"".join(blocks)
+    if not pcm:
+        status = body.get("status", "unknown")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gemini REST interaction contained no inline audio (status={status})",
+        )
+    return pcm
+
+
 def _synth(text: str, voice_name: str) -> bytes:
     style = os.environ.get("GEMINI_TTS_STYLE", DEFAULT_STYLE).strip() or DEFAULT_STYLE
     prompt = f"{style}\n\nTRANSCRIPT:\n{text}"
     payload = {
         "model": MODEL_ID,
         "input": prompt,
-        "response_format": {"type": "audio"},
+        "response_format": {
+            "type": "audio",
+            "mime_type": "audio/l16",
+            "sample_rate": 24_000,
+            "delivery": "inline",
+        },
         "generation_config": {
             "speech_config": [{"voice": voice_name}],
         },
@@ -116,7 +170,11 @@ def _synth(text: str, voice_name: str) -> bytes:
     try:
         upstream = requests.post(
             UPSTREAM_URL,
-            headers={"x-goog-api-key": _api_key(), "Content-Type": "application/json"},
+            headers={
+                "x-goog-api-key": _api_key(),
+                "Content-Type": "application/json",
+                "Api-Revision": "2026-05-20",
+            },
             json=payload,
             timeout=(15, int(os.environ.get("GEMINI_REQUEST_TIMEOUT", "300"))),
         )
@@ -124,12 +182,7 @@ def _synth(text: str, voice_name: str) -> bytes:
         raise HTTPException(status_code=503, detail=f"Gemini request failed: {exc}") from exc
     if upstream.status_code != 200:
         raise HTTPException(status_code=upstream.status_code, detail=_error_detail(upstream))
-    try:
-        encoded = upstream.json()["output_audio"]["data"]
-        pcm = base64.b64decode(encoded, validate=True)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail="Gemini response contained no valid audio") from exc
-    return _wav_from_pcm(pcm)
+    return _wav_from_pcm(_pcm_from_interaction(upstream.json()))
 
 
 @app.get("/health")

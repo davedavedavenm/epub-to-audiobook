@@ -47,7 +47,19 @@ def test_one_request_returns_valid_24khz_mono_wav(monkeypatch):
     monkeypatch.setenv('GEMINI_FREE_PROJECT_ID', 'dedicated-free-project')
     monkeypatch.setenv('GEMINI_FREE_PROJECT_CONFIRMED', '1')
     pcm = b'\x00\x00' * 2400
-    body = {'output_audio': {'data': base64.b64encode(pcm).decode('ascii')}}
+    body = {
+        'status': 'completed',
+        'steps': [{
+            'type': 'model_output',
+            'content': [{
+                'type': 'audio',
+                'data': base64.b64encode(pcm).decode('ascii'),
+                'mime_type': 'audio/l16',
+                'sample_rate': 24000,
+                'channels': 1,
+            }],
+        }],
+    }
     calls = []
 
     def post(*args, **kwargs):
@@ -59,8 +71,14 @@ def test_one_request_returns_valid_24khz_mono_wav(monkeypatch):
     assert len(calls) == 1
     assert calls[0][0][0] == gemini.UPSTREAM_URL
     assert calls[0][1]['headers']['x-goog-api-key'] == 'free-project-key'
+    assert calls[0][1]['headers']['Api-Revision'] == '2026-05-20'
     assert calls[0][1]['json']['model'] == 'gemini-3.1-flash-tts-preview'
-    assert calls[0][1]['json']['response_format'] == {'type': 'audio'}
+    assert calls[0][1]['json']['response_format'] == {
+        'type': 'audio',
+        'mime_type': 'audio/l16',
+        'sample_rate': 24000,
+        'delivery': 'inline',
+    }
     assert calls[0][1]['json']['generation_config']['speech_config'] == [
         {'voice': 'Achernar'}
     ]
@@ -69,6 +87,35 @@ def test_one_request_returns_valid_24khz_mono_wav(monkeypatch):
         assert wav.getnchannels() == 1
         assert wav.getsampwidth() == 2
         assert wav.getnframes() == 2400
+
+
+def test_sdk_only_output_audio_field_is_not_mistaken_for_raw_rest(monkeypatch):
+    """The official reference marks output_audio as SDK-added; accepting it
+    here would regress the adapter back to the shape that discarded the first
+    successful raw REST generation."""
+    body = {'status': 'completed', 'output_audio': {'data': 'AAAA'}}
+    with pytest.raises(HTTPException) as error:
+        gemini._pcm_from_interaction(body)
+    assert error.value.status_code == 502
+    assert 'no inline audio' in error.value.detail
+
+
+def test_multiple_documented_audio_blocks_are_concatenated():
+    first = b'\x01\x00' * 3
+    second = b'\x02\x00' * 2
+    body = {
+        'status': 'completed',
+        'steps': [{
+            'type': 'model_output',
+            'content': [
+                {'type': 'audio', 'mime_type': 'audio/l16',
+                 'data': base64.b64encode(first).decode('ascii')},
+                {'type': 'audio', 'mime_type': 'audio/l16',
+                 'data': base64.b64encode(second).decode('ascii')},
+            ],
+        }],
+    }
+    assert gemini._pcm_from_interaction(body) == first + second
 
 
 def test_quota_failure_is_returned_without_retry(monkeypatch):
