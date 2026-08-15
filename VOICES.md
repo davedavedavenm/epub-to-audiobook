@@ -171,8 +171,11 @@ one tightly controlled follow-up. Exact `en-AU-WilliamNeural`, the same pinned
 rendered once through `edge-tts==7.2.8` and once through Azure Speech F0. Both
 are 16.032 seconds / 96,192 bytes and fully decode; their hashes differ. Azure
 estimated cumulative synthesis text is now 9,194 characters (1.8388%), still
-with $0 subscription-credit use. Await Dave's same-voice verdict before drawing
-an endpoint-quality conclusion or making another Azure request.
+with $0 subscription-credit use. Dave judged Azure **only slightly better, but
+better**. This rules out the Azure endpoint as the cause of the earlier relative
+degradation; different speakers and input confounded that comparison. It is not
+an absolute audiobook-quality approval for William or Azure. Do not make another
+Azure request without an agreed question and character budget.
 
 The files were 24 kHz / 160 kbps mono MP3. Microsoft documents that selecting a
 48 kHz format invokes a separate high-fidelity standard model and supports

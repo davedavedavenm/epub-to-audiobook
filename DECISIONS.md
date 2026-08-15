@@ -92,10 +92,14 @@ voice, and do not integrate or spend beyond F0 without a new listening verdict.
 The app's preferred Edge Australian preview and the rejected Azure Australian
 clip were not the same speaker (William versus Darren), so they did not isolate
 the service path. Dave approved one 300-character endpoint control. Exact
-`en-AU-WilliamNeural`, text, neutral prosody and 24 kHz/48 kbps output are now
-matched across Edge Read Aloud and Azure F0, structurally verified and awaiting
-his listening verdict. Make no further Azure request until that verdict; the
-test does not reopen any rejected Darren/Connor/Luke production decision.
+`en-AU-WilliamNeural`, text, neutral prosody and 24 kHz/48 kbps output were
+matched across Edge Read Aloud and Azure F0 and structurally verified. Dave's
+verdict is that Azure is only slightly better, but is better. Therefore the
+Azure endpoint did not cause the earlier perceived degradation relative to
+Edge; the different speaker and input confounded that comparison. This relative
+win does not approve William/Azure for production or reopen the rejected
+Darren/Connor/Luke decision. Make no further Azure request without a separately
+agreed listening question and character budget.
 
 ## Shared-host CPU candidates reserve capacity for the product — Active
 

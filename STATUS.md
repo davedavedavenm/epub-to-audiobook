@@ -60,9 +60,13 @@
 > `c03485700f9e7e54097d326bd994c0becfc98f0872ed7d32b7f3f04376569e62`.
 > Both fully decode. This consumed exactly 300 more estimated F0 characters,
 > bringing cumulative estimated synthesis text to 9,194 (1.8388%); subscription
-> credit use remains $0. The endpoint cause remains **open pending Dave's
-> same-voice listening verdict**. No production default changed and no further
-> Azure request is authorised by this control.
+> credit use remains $0. Dave's same-voice verdict: **Azure is only slightly
+> better, but it is better**. This closes the endpoint question: Azure did not
+> cause the earlier perceived degradation relative to Edge. The earlier large
+> difference was confounded by speaker and input; it must not be attributed to
+> the service route. This is a relative result, not production approval for
+> William or Azure. No production default changed and no further Azure request
+> is authorised by this control.
 
 > ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
 >
