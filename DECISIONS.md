@@ -65,16 +65,20 @@ pronunciation. Close this local V3 accent route and do not expose the candidates
 
 The hard passage also exposed an independent input failure: the modern-engine
 contract passed currency, percentages and large integers as raw symbols/digits.
-The verdict rejects the outputs; it does not prove how much of the numeric
-failure belongs to Chatterbox versus that payload. A numeric-only normalized
-Arthur control is the one justified diagnostic. It must be heard before
-changing production preprocessing or restoring Arthur as an unconditional
-quality reference.
+The numeric-only normalized Arthur control was then heard and was **much
+improved**. Because the deployed engine/reference and passage were retained,
+this establishes text preparation as a material cause of the first arm's
+failure. It does not approve the remaining proper-name/ordinary-word handling,
+change production preprocessing, or restore Arthur as an unconditional quality
+reference without the narrower listening decision.
 
 The next supported online comparison is Azure Speech's native regional voices
-with its documented SSML phoneme/custom-lexicon controls. Its free allowance
-may cover bounded use, but no paid use is automatic: measure characters and
-obtain Dave's listening approval first. See `VOICES.md` for official sources.
+with its documented SSML phoneme/custom-lexicon controls. A dedicated UK South
+SpeechServices **F0** resource is now available, but the listening gate is
+strictly budgeted: one to three explicitly named voices, a default ceiling of
+1,000 source characters total, no catalogue-wide default, no retry into an
+existing output directory, and Dave's approval before another synthesis run.
+Never create or switch to S0 automatically. See `VOICES.md` for official sources.
 
 ## Shared-host CPU candidates reserve capacity for the product — Active
 

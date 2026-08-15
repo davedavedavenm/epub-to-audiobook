@@ -143,6 +143,18 @@ limit. The checked UK South S0 rate is about GBP11.36/million characters (about
 GBP6.82 for 600k), above this repo's normal target. Azure therefore remains an
 optional F0 listening candidate, not an approval or authority to spend.
 
+**Live F0 boundary (2026-08-15):** Dave authorised Microsoft Azure CLI through
+the official device flow and a dedicated UK South `SpeechServices` resource was
+created at SKU **F0**, tagged `free-only`; no key was printed or committed. The
+first harness was stopped when Dave required shorter, focused tests. Seven
+Australian requests had already completed: 7 × 1,142 source characters = an
+estimated 7,994 billable characters (1.599% of the 500k monthly F0 allowance),
+with no Irish or South African synthesis. The replacement harness has no broad
+default: it requires one to three exact GA voice IDs, defaults to a 1,000-total-
+character ceiling, and refuses an output directory containing an MP3. Do not
+make another Azure synthesis request without agreeing the exact shortlist and
+text first.
+
 Official references: [Chatterbox](https://github.com/resemble-ai/chatterbox),
 [Azure language/voice catalogue](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support),
 [Azure pronunciation controls](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation),

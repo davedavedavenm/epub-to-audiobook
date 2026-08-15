@@ -1,5 +1,29 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-15 Azure Speech access — F0 LIVE / SYNTHESIS PAUSED
+>
+> Dave authorised the installed official Azure CLI using Microsoft's device-code
+> flow. The exact active subscription shown in his portal was selected, the
+> previously unregistered Cognitive Services provider was registered, and a
+> dedicated UK South `SpeechServices` resource was created at SKU **F0** inside
+> its own `free-only` test resource group. No Speech key was printed, persisted
+> in Git, or added to the production app; S0 was not created or enabled.
+>
+> The official live voice endpoint returned 15 GA Australian, two GA Irish and
+> two GA South African neural voices. An initial catalogue-oriented harness was
+> interrupted when Dave mandated focused short tests. Seven Australian requests
+> had completed by the time the interrupt landed; no Irish or South African
+> synthesis started. Exact estimated text use is **7 × 1,142 = 7,994 characters**,
+> **1.599%** of the 500,000-character monthly F0 allowance, with no draw on the
+> subscription's $200 credit. There is no background renderer or retry running.
+>
+> `scripts/render_azure_accent_samples.py` now fails closed unless the operator
+> supplies one to three exact live GA IDs. Its default total character ceiling
+> is 1,000, it refuses duplicate voices and an output directory already holding
+> MP3s, and it never promotes the resource off F0. Unit/regression coverage pins
+> those limits. **No more Azure synthesis is authorised until the exact short
+> text and shortlist are agreed first.**
+
 > ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
 >
 > Groq was used historically, which explains the account activity screenshot and
