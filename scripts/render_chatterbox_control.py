@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Render the controlled Arthur/Chatterbox diagnostic on the product host.
+"""Render controlled Chatterbox model and human-reference diagnostics.
 
 This is an evaluation harness, not an app voice-cache path.  Every arm uses
-the exact same production-normalized hard passage, Arthur reference and server
-chunker.  It refuses to run while a conversion is active or queued and writes
-all evidence under ignored ``scratch/``.
+the exact same production-normalized hard passage, seed and server chunker.
+The three model arms share Arthur; the accent arms change only the declared
+human reference. It refuses to run while a conversion is active or queued and
+writes all evidence under ignored ``scratch/``.
 """
 
 from __future__ import annotations
@@ -26,6 +27,10 @@ from urllib.request import Request, urlopen
 APP_REF = "5de7a54aa4e5e2baadb0182dde554908b48b85c2"
 ARTHUR_SHA256 = "8774082c3acf6c215dc9307a4a9cce5fd50d4242fc9263534ed420675873e252"
 ARTHUR_BYTES = 864_182
+TADHG_SHA256 = "5f9190dc1923d4741e889fedf14671642c09171ddcc8ac8145c3b501cf125ea6"
+TADHG_BYTES = 864_208
+VCTK_P374_SHA256 = "f1db6a7a352526cdf867b27ec7ebfd00538b8f88375953217c1b212756725c73"
+VCTK_P374_BYTES = 864_078
 ACTIVE_STATUSES = {
     "queued", "preparing", "running", "verifying", "syncing",
     "recovering", "converting", "converting pdf", "converting to audio",
@@ -51,6 +56,10 @@ ARMS = (
         "model_repo": "ResembleAI/chatterbox-turbo",
         "model_snapshot": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
         "multilingual_v3": False,
+        "voice": "uk_male_minter",
+        "reference_sha256": ARTHUR_SHA256,
+        "reference_bytes": ARTHUR_BYTES,
+        "reference_source": "User-authorized human Arthur narration reference",
         "note": "Turbo's pinned generate() ignores CFG/exaggeration controls",
     },
     {
@@ -62,6 +71,10 @@ ARMS = (
         "model_repo": "ResembleAI/chatterbox",
         "model_snapshot": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
         "multilingual_v3": True,
+        "voice": "uk_male_minter",
+        "reference_sha256": ARTHUR_SHA256,
+        "reference_bytes": ARTHUR_BYTES,
+        "reference_source": "User-authorized human Arthur narration reference",
         "note": "Previously deployed V3 setting; not the same-language official default",
     },
     {
@@ -73,7 +86,46 @@ ARMS = (
         "model_repo": "ResembleAI/chatterbox",
         "model_snapshot": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
         "multilingual_v3": True,
+        "voice": "uk_male_minter",
+        "reference_sha256": ARTHUR_SHA256,
+        "reference_bytes": ARTHUR_BYTES,
+        "reference_source": "User-authorized human Arthur narration reference",
         "note": "Official same-language V3 default",
+    },
+    {
+        "id": "irish-tadhg-v3-cfg-0.5",
+        "container": "chatterbox-v3",
+        "url": "http://127.0.0.1:8009",
+        "cfg_weight": 0.5,
+        "exaggeration": 0.5,
+        "model_repo": "ResembleAI/chatterbox",
+        "model_snapshot": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
+        "multilingual_v3": True,
+        "voice": "tadhg_hynes",
+        "reference_sha256": TADHG_SHA256,
+        "reference_bytes": TADHG_BYTES,
+        "reference_source": (
+            "Human Irish LibriVox narrator; The Woodlanders. Exact upstream "
+            "chapter/offset provenance remains incomplete."
+        ),
+        "reference_url": "https://librivox.org/the-woodlanders-by-thomas-hardy-2/",
+        "note": "Human Irish reference; official same-language V3 default",
+    },
+    {
+        "id": "australian-vctk-p374-v3-cfg-0.5",
+        "container": "chatterbox-v3",
+        "url": "http://127.0.0.1:8009",
+        "cfg_weight": 0.5,
+        "exaggeration": 0.5,
+        "model_repo": "ResembleAI/chatterbox",
+        "model_snapshot": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
+        "multilingual_v3": True,
+        "voice": "vctk_australian_m_p374",
+        "reference_sha256": VCTK_P374_SHA256,
+        "reference_bytes": VCTK_P374_BYTES,
+        "reference_source": "Human Australian VCTK 0.92 speaker p374; CC BY 4.0",
+        "reference_url": "https://datashare.ed.ac.uk/handle/10283/3443",
+        "note": "Human Australian reference; official same-language V3 default",
     },
 )
 
@@ -96,20 +148,22 @@ def _docker_text(container: str, *args: str) -> str:
         ["docker", "exec", container, *args], text=True).strip()
 
 
-def _reference_evidence(container: str) -> dict:
+def _reference_evidence(arm: dict) -> dict:
+    container = arm["container"]
+    voice = arm["voice"]
     effective_path = _docker_text(
         container,
         "sh", "-lc",
-        "p=/app/voices/uk_male_minter.wav; "
-        "if [ -f /app/voices/custom/uk_male_minter.wav ]; then "
-        "p=/app/voices/custom/uk_male_minter.wav; fi; "
+        f"p=/app/voices/{voice}.wav; "
+        f"if [ -f /app/voices/custom/{voice}.wav ]; then "
+        f"p=/app/voices/custom/{voice}.wav; fi; "
         "printf '%s\\n' \"$p\"",
     )
     sha, _ = _docker_text(container, "sha256sum", effective_path).split(maxsplit=1)
     size = int(_docker_text(container, "stat", "-c", "%s", effective_path))
-    if (sha, size) != (ARTHUR_SHA256, ARTHUR_BYTES):
+    if (sha, size) != (arm["reference_sha256"], arm["reference_bytes"]):
         raise RuntimeError(
-            f"{container} Arthur mismatch: sha256={sha}, bytes={size}"
+            f"{container} {voice} mismatch: sha256={sha}, bytes={size}"
         )
     probe = json.loads(_docker_text(
         container,
@@ -123,13 +177,14 @@ def _reference_evidence(container: str) -> dict:
         "sample_rate": "24000", "channels": 1,
     }
     if len(probe["streams"]) != 1 or any(stream.get(k) != v for k, v in expected.items()):
-        raise RuntimeError(f"unexpected Arthur format in {container}: {probe}")
+        raise RuntimeError(f"unexpected {voice} format in {container}: {probe}")
     duration = float(probe["format"]["duration"])
     if abs(duration - 18.0) > 0.001:
-        raise RuntimeError(f"unexpected Arthur duration in {container}: {duration}")
+        raise RuntimeError(f"unexpected {voice} duration in {container}: {duration}")
     return {
         "effective_path": effective_path, "sha256": sha, "bytes": size,
-        "duration_seconds": duration, **expected,
+        "duration_seconds": duration, "source": arm["reference_source"],
+        "source_url": arm.get("reference_url"), **expected,
     }
 
 
@@ -367,7 +422,6 @@ def main() -> int:
         "source_chars": len(source),
         "source_words": len(source.split()),
         "server_text_contract": chunk_evidence,
-        "voice": "uk_male_minter",
         "queue_preflight": queue,
     }
 
@@ -390,11 +444,11 @@ def main() -> int:
             raise RuntimeError(f"this gate is CPU-only, got health={health}")
         if bool(health.get("multilingual_v3")) is not arm["multilingual_v3"]:
             raise RuntimeError(f"wrong model family for {arm['id']}: health={health}")
-        reference = _reference_evidence(arm["container"])
+        reference = _reference_evidence(arm)
         payload = {
             "model": "tts-1",
             "input": source,
-            "voice": "uk_male_minter",
+            "voice": arm["voice"],
             "response_format": "mp3",
             "seed": SEED,
             "cfg_weight": arm["cfg_weight"],

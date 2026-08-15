@@ -31,6 +31,12 @@ def test_control_arms_use_one_seed_and_explicit_controls():
     assert {arm["exaggeration"] for arm in control.ARMS} == {0.5}
     assert all(status == status.lower() for status in control.ACTIVE_STATUSES)
     assert "recovering" in control.ACTIVE_STATUSES
+    by_id = {arm["id"]: arm for arm in control.ARMS}
+    assert by_id["irish-tadhg-v3-cfg-0.5"]["reference_sha256"] == control.TADHG_SHA256
+    assert (
+        by_id["australian-vctk-p374-v3-cfg-0.5"]["reference_sha256"]
+        == control.VCTK_P374_SHA256
+    )
 
 
 def test_server_seed_is_temporary_and_custom_reference_wins():
@@ -44,7 +50,7 @@ def test_server_seed_is_temporary_and_custom_reference_wins():
     assert "random.getstate()" in server and "random.setstate(python_state)" in server
     assert "np.random.get_state()" in server and "np.random.set_state(numpy_state)" in server
     assert "torch.get_rng_state()" in server and "torch.set_rng_state(torch_state)" in server
-    assert "/app/voices/custom/uk_male_minter.wav" in harness
+    assert 'f"if [ -f /app/voices/custom/{voice}.wav ]; then "' in harness
 
 
 def test_v3_compose_default_matches_official_same_language_default():
