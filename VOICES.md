@@ -177,6 +177,17 @@ degradation; different speakers and input confounded that comparison. It is not
 an absolute audiobook-quality approval for William or Azure. Do not make another
 Azure request without an agreed question and character budget.
 
+Dave subsequently authorised exactly one longer, correctly processed passage
+for each accent. The common 737-word source retains real paragraph boundaries,
+explicit title/author pauses and the hard number/currency passage. Deterministic
+processing left no digits or currency symbols; 12 difficult terms use Azure's
+official IPA `<phoneme>` mechanism instead of the rejected legacy respellings.
+Australian William, Irish Connor and South African Luke each rendered once to
+lossless 48 kHz PCM (3:49–4:12), fully decoded and awaiting Dave's verdict. The
+three requests used an estimated 12,111 characters, bringing cumulative F0 text
+to 21,305 characters (4.261%). Do not infer approval or issue another request
+from this completed gate.
+
 The files were 24 kHz / 160 kbps mono MP3. Microsoft documents that selecting a
 48 kHz format invokes a separate high-fidelity standard model and supports
 lossless `riff-48khz-16bit-mono-pcm`, so one same-voice 48 kHz control is a valid

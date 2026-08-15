@@ -101,6 +101,13 @@ win does not approve William/Azure for production or reopen the rejected
 Darren/Connor/Luke decision. Make no further Azure request without a separately
 agreed listening question and character budget.
 
+Dave then explicitly authorised one longer, correctly processed passage for
+each of the same three accents. The bounded gate used one common 737-word source,
+exactly three requests, Azure's documented IPA mechanism, deterministic number
+expansion and the documented 48 kHz high-fidelity lossless format. All three
+outputs are structurally verified and await his listening verdict. This
+authorisation is exhausted: do not render more voices or passages from it.
+
 ## Shared-host CPU candidates reserve capacity for the product — Active
 
 Pocket and Kitten remain CPU-only, but each service is capped at **four CPU

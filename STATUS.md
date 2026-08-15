@@ -67,6 +67,29 @@
 > the service route. This is a relative result, not production approval for
 > William or Azure. No production default changed and no further Azure request
 > is authorised by this control.
+>
+> Dave next requested longer correctly processed samples for all three accents.
+> A single 737-word / 4,037-character source was prepared once and sent once to
+> each already-heard male regional voice: Australian William, Irish Connor and
+> South African Luke. It combines 24 complete *Yellow Wallpaper* paragraphs
+> with the hard Apple/numbers passage. The app normalizer expanded every number,
+> percentage and currency expression; no digits or currency symbols survived.
+> Twenty-nine SSML paragraphs preserve title/author/body pacing, and Azure's
+> documented IPA `<phoneme>` mechanism handles 12 pinned difficult terms,
+> including `co-heirs`, `draught`, Huawei, Xiaomi and Nguyen. The legacy shouted
+> respellings were not used.
+>
+> Exactly three F0 requests produced lossless high-fidelity 48 kHz mono PCM:
+> William 3:51.887 / 22,261,244 bytes / SHA-256
+> `412e5320e9e1a74f8d4b07bffca3fd140d3dc107fafaa63a42494b57b9af9cad`;
+> Connor 4:11.863 / 24,178,844 bytes /
+> `8fffdba7701d67de8e352f8101540f9cc25306ffe280b74771deb2fbd2b13b38`;
+> Luke 3:49.000 / 21,984,044 bytes /
+> `71fe491786e8d2d8126d90359433beacaba1317901552f9cab171b0d197997e0`.
+> All fully decode. The run used an estimated 12,111 F0 text characters,
+> bringing cumulative estimated synthesis to 21,305 (4.261% of 500,000); the
+> resource remains F0 and production defaults remain unchanged. Quality is
+> **open pending Dave's listening verdict**. No further Azure work is running.
 
 > ## 2026-08-15 Groq decommission audit — LIVE / NOT CURRENTLY IN USE
 >
