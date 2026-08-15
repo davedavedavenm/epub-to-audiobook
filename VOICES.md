@@ -271,9 +271,11 @@ Achernar (Soft), Alnilam (Firm), Schedar (Even), Gacrux (Mature), Pulcherrima
 Sadachbia (Lively), Sadaltager (Knowledgeable), and Sulafat (Warm).
 
 All 30 IDs are registered, but the UI exposes each one only after its exact
-app-path preview is cached. `gemini_achernar` is cached and its 10:10
+app-path preview is cached. `gemini_achernar` and `gemini_zephyr` are cached;
+Achernar's 10:10
 production-path file passed Dave's listening gate as “one of the best”.
-Catalogue presence is not a voice verdict: the other 29 remain auditions.
+Catalogue presence is not a voice verdict: Zephyr and the other 28 remain
+auditions rather than approved long-form narrators.
 Dave explicitly requested the full catalogue on 2026-08-15; warm it across
 Free quota days with the persistent ten-RPD local guard and no automatic retry.
 See [GEMINI-SETUP.md](GEMINI-SETUP.md).
@@ -290,7 +292,7 @@ cloner?**
 |---|---|---|---|
 | **[MeloTTS](https://github.com/myshell-ai/MeloTTS)** | **trained per-accent** | `EN-US`, `EN-BR`, `EN_INDIA`, `EN-AU`, `EN-Default` | Installed and fast, then **rejected by ear** for poor pronunciation, number handling and overall TTS quality. **No Irish.** |
 | **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | Not a low-cost Zorin candidate: current S2 Pro is 4B and its official install guide calls for 24 GB GPU memory. CPU packaging exists but does not make it practical here. |
-| **[IndexTTS-2.5](https://github.com/index-tts/index-tts/blob/39207d91c30899cad1e7c1b9eb678c241f678e55/README.md)** | zero-shot cloning from one reference | No official named or regional-English preset catalogue | Focused Arthur gate fits a free T4 and two validated clips are ready for listening. If it passes by ear, available app voices are only the repo's explicitly licensed human-reference library, with each exact preview cached before exposure. |
+| **[IndexTTS-2.5](https://github.com/index-tts/index-tts/blob/39207d91c30899cad1e7c1b9eb678c241f678e55/README.md)** | zero-shot cloning from one reference | No official named or regional-English preset catalogue | **Rejected for production.** Complete-sentence calls fixed the upstream-splitter corruptions, but the corrected Arthur clip still had poor timing/pacing and was far less natural than Gemini Zephyr or Chatterbox. |
 | **[Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)** | zero-shot cloning + named voices | English voices (tara, leah, jess, leo, dan, mia, zac, zoe); no accent variants | Cloning half will hit the rule. **But it ships fine-tuning tooling and data-processing scripts** — the supported route to a custom local voice. 3B, heavy on CPU. ⚠️ Their own guidance: *"I recommend not using synthetic data for training as it produces worse results"* — a direct warning against distilling Edge output, which is worth knowing **before** attempting the distil path below. |
 | **[Dia2-2B](https://huggingface.co/nari-labs/Dia2-2B)** | dialogue TTS, context conditioning | English only, 2-minute cap | Not accent-targeted, and the 2-minute cap rules out narration. |
 | **[VibeVoice](https://microsoft.github.io/VibeVoice/)** | long-form multi-speaker | English + Chinese | **See below — I dismissed this wrongly, and it matters more than accents.** |

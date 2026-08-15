@@ -20,20 +20,24 @@
 > ASR. The corrected output is 85.529 s, MP3 SHA-256
 > `dc1dbfba54cf3d4c4fa10d41f246b002f14776bfe78d2509d40d6a43c11cbd94`.
 > All nine source/segment hashes, the eight exact 200 ms joins, WAV structure
-> and full MP3 decode passed independent local validation. Listening remains
-> open; do not integrate Index before Dave hears it.
+> and full MP3 decode passed independent local validation. Dave then heard the
+> corrected clip: the corruptions were improved, but timing and pacing were
+> poor and it remained far less natural than Gemini Zephyr or Chatterbox.
+> **IndexTTS-2.5 is rejected for production; its listening gate is closed.**
 >
-> Gemini's complete official 30-preset catalogue is now registered. Uncached
-> presets remain unselectable; Achernar remains the only long-form-approved
+> Gemini's complete official 30-preset catalogue is now registered. Achernar
+> and Zephyr are cached and independently decoded (`2/30`); uncached presets
+> remain unselectable and Achernar remains the only long-form-approved
 > voice. The adapter has gained a persistent Pacific-day usage ledger which
 > counts failures and refuses request eleven before upstream. The catalogue
-> will be warmed across Free quota days, one attempt per preset, without
-> attaching billing. New-user setup is consolidated in `GEMINI-SETUP.md`.
+> is being warmed across Free quota days, one batch action per day and one
+> attempt per preset, without attaching billing. New-user setup is consolidated
+> in `GEMINI-SETUP.md`.
 > Preview, web-worker and standalone explicit-number paths now all use
 > `modern=True, expand_numbers=True`, fixing the bare-decimal gap in every
 > parallel path.
 
-> ## 2026-08-15 IndexTTS-2.5 — FREE-T4 CAPACITY PASSED / LISTENING OPEN
+> ## 2026-08-15 IndexTTS-2.5 — FREE-T4 CAPACITY PASSED / QUALITY REJECTED
 >
 > Dave authorised the next free/open-weight candidate after selecting Gemini.
 > One private Kaggle job, `davedavedavedavenm/indextts25-arthur-focused-gate`,

@@ -56,6 +56,18 @@ to, or couple it with, a Google AI consumer subscription. Google documents no
 consumer-subscription uplift for Developer API quotas, so that would add
 account complexity without improving the audiobook path.
 
+## IndexTTS-2.5 is not a production narrator — Active
+
+The complete-sentence follow-up removed the two repeatable corruptions caused
+by IndexTTS-2.5's official 120-token splitter, and the repo's explicit-number
+fix corrected `1.5` to “one point five”. Dave nevertheless rejected the
+corrected clip for audiobook use on 2026-08-15: it was better, but its timing
+and pacing remained poor and it was nowhere near as natural as Gemini Zephyr or
+Chatterbox. This closes the current Index integration gate. Do not confuse the
+boundary repair with a listening pass, expose Index voices, or spend more free
+GPU quota on Index without a materially different official model/runtime or an
+explicit request to reopen it.
+
 Google warns that this preview model can drift on outputs longer than a few
 minutes. The app therefore uses the measured `explicit` number/currency text
 profile and paragraph-aware requests capped at 2,200 characters (roughly two to
