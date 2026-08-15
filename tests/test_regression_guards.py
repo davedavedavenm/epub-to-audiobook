@@ -376,11 +376,16 @@ def test_conversion_engine_failover_wired():
 
 
 def test_rejected_piper_is_not_an_automatic_fallback():
-    """A healthy endpoint is not enough: Piper failed the controlled listening
-    A/B and must never silently replace a quality-approved engine."""
+    """Piper failed its listening gates and is fully retired. It must remain
+    absent from product/config surfaces while stale jobs fail closed."""
     assert "_ENGINE_FALLBACK_ORDER = ['tada', 'chatterbox', 'kokoro']" in APP
     assert 'PROFILE_ARGS=(--profile chatterbox-nano)' in DEPLOY
-    assert 'ENABLE_PIPER_PROFILE' in DEPLOY
+    assert 'ENABLE_PIPER_PROFILE' not in DEPLOY
+    assert "raise ValueError('Piper is retired" in APP
+    assert "'piper': {" not in APP
+    assert 'piper-tts:' not in COMPOSE
+    assert 'PIPER_URL' not in COMPOSE
+    assert '--profile piper' not in DEPLOY
 
 
 def test_deploy_reads_opt_in_profiles_from_dotenv_without_sourcing_secrets():

@@ -10,9 +10,9 @@ STATUS.md.**
 - `epub-to-audiobook-worker` is **running and healthy**, with `OOMKilled=false`
   and exit code 0. The earlier “down after exit 137 on 3 August” report is
   obsolete.
-- `piper-tts` is stopped. Its last historical exit code is 137, but Docker does
-  not report an OOM kill. This is expected product state: Piper is a rejected
-  production path and is legacy/debug opt-in only.
+- `piper-tts` is fully retired. Its historical exit-137 record was not an OOM
+  kill; the service/profile/route/voices were removed on 2026-08-15 after the
+  controlled listening failure. It must not appear in current Compose state.
 - The supported baseline is webapp + worker + Kokoro + Chatterbox Nano. Prove
   live state with `/api/health`, `/api/engines/health`, both container revision
   labels and direct output/file checks; do not infer it from this dated note.
@@ -95,7 +95,7 @@ back. This incident did not touch conversion state or generated media.
 
 *(Refreshed 2026-07-25 — several bullets here had gone stale.)*
 
-- Kokoro + Piper + Chatterbox (Turbo **and** Nano) + webapp/worker fit
+- Kokoro + Chatterbox (Turbo **and** Nano) + webapp/worker fit
   comfortably on 31 GB.
 - **Chatterbox NANO is the default engine** (`DEFAULT_VOICE=uk_female_samuel_nano` — Beatrice Nano).
   A/B'd against Turbo on an identical passage: indistinguishable in quality at
@@ -104,8 +104,8 @@ back. This incident did not touch conversion state or generated media.
   Turbo remains fully selectable; it is simply no longer the default.
 - `scripts/deploy.sh` starts **chatterbox-nano** by default — Nano
   carries the default voice, so its container must be up or the default engine
-  is offline on a fresh deploy. Piper is legacy/debug and opt-in
-  (`ENABLE_PIPER_PROFILE=1`) after failing the controlled quality A/B. Turbo and
+  is offline on a fresh deploy. Piper is fully retired after failing the
+  controlled quality A/B. Turbo and
   TADA stay opt-in (`ENABLE_CHATTERBOX_PROFILE=1` /
   `ENABLE_TADA_PROFILE=1`) because they are heavy.
   Pocket and Kitten are also opt-in (`ENABLE_POCKET_PROFILE=1` /
@@ -152,7 +152,7 @@ back. This incident did not touch conversion state or generated media.
   `/api/library/convert`. The MP3s are always produced; the M4B is built from
   them before the Audiobookshelf sync, so it ships with the book. Audiobookshelf
   reads its chapter index natively.
-- **Narration speed** is honoured by Kokoro, Piper, Edge, Polly and CosyVoice.
+- **Narration speed** is honoured by Kokoro, Edge, Polly and CosyVoice.
   Chatterbox (Turbo/Nano) and TADA have **no speed control** — the UI greys the
   field out for them and the job log records that the request was ignored. For
   Chatterbox pacing use `CHATTERBOX_EXAGGERATION` / `CHATTERBOX_CFG_WEIGHT`.

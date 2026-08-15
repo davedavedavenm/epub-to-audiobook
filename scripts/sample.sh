@@ -40,7 +40,6 @@ CANDIDATES="
 chatterbox|http://localhost:8004|uk_male_minter
 tada|http://localhost:8005|uk_male_minter_tada
 kokoro|http://localhost:8880|bm_george
-piper|http://localhost:8000|en_GB
 "
 if [ -z "$ENGINE_URL" ]; then
   while IFS='|' read -r name base dv; do

@@ -1154,7 +1154,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     // engines whose API honours it (kokoro via FastAPI, edge).
     // cosyvoice joins the list 2026-07-25: its inference_zero_shot takes a real
     // speed factor, now plumbed through cosyvoice/server.py.
-    const SPEED_ENGINES = ['kokoro', 'piper', 'edge', 'polly', 'cosyvoice'];
+    const SPEED_ENGINES = ['kokoro', 'edge', 'polly', 'cosyvoice'];
     function speedSupported(engine) { return SPEED_ENGINES.includes(engine); }
     function engineOfVoice(voiceId) { return (voices[voiceId] || {}).engine; }
     // Grey out + annotate a speed input based on the currently-selected voice.
@@ -1186,8 +1186,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         'chatterbox': 'CHATTERBOX TURBO (Heavy — Needs GPU)',
         'kokoro': 'KOKORO TTS (Neural)',
         'edge': 'EDGE TTS (Cloud)',
-        'tada': 'TADA (Natural GPU)',
-        'piper': 'PIPER (Legacy)'
+        'tada': 'TADA (Natural GPU)'
     };
     function buildVoiceOptions(selectedId) {
         const usable = selectableVoices();
@@ -2350,7 +2349,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div class="job-detail-row">
                         <div class="job-detail-item">Narrator <b>${j.voice_name || j.voice}${j.voice2 ? ' + ' + (j.voice2_name || j.voice2) : ''}</b></div>
                         <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
-                        ${['kokoro','piper','edge','polly'].includes(j.tts_engine) ? `<div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>` : ''}
+                        ${['kokoro','edge','polly'].includes(j.tts_engine) ? `<div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>` : ''}
                         <div class="job-detail-item">Range <b>${j.start_chapter || 1} - ${j.end_chapter || 'End'}</b></div>
                     </div>
                     <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">

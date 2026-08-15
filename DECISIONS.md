@@ -109,14 +109,12 @@ boundary repair with a listening pass, expose Index voices, or spend more free
 GPU quota on Index without a materially different official model/runtime or an
 explicit request to reopen it.
 
-## NVIDIA MagpieTTS v2607 is evaluation-only until heard — Active
+## NVIDIA MagpieTTS v2607 raw NeMo path is rejected; hosted NIM diagnosis remains open — Active
 
-MagpieTTS Multilingual v2607 is the next bounded free/open-weight long-form
-candidate. NVIDIA documents English stateful long-form inference and five baked
-English presets (`Aria`, `Jason`, `John`, `Leo`, `Sofia`), but documentation and
-catalogue names are not a listening verdict. Do not expose the engine or any
-voice in the app until its exact short preview is cached, independently decoded
-and heard, and its long-form continuity gate passes Dave's listening standard.
+Dave rejected every exact output from the pinned raw NeMo path on 2026-08-15.
+All five short voices had a repeatable defect around five seconds and were poor;
+the 9:14 John arm had the same clipping/cut defect. Accents and tone were good,
+but reliability failed the audiobook bar. Do not expose this path or its voices.
 
 The current gate pins official `nvidia/magpie_tts_multilingual_357m` v2607 at
 revision `5023df68bd3f5b5ce6d666a50979bc501af145cc` and NVIDIA NeMo Speech
@@ -126,6 +124,26 @@ capacity there is an experiment, not a supported deployment claim. NVIDIA's
 separate NeMo-Speech.cpp v2602 F16 GGUF path also carries state across chunks,
 but it is an older model/runtime and must not be described as the same v2607
 path. No paid fallback, automatic integration or ASR quality ranking is allowed.
+
+The failure boundary remains open. All short arms entered NVIDIA's automatic
+stateful sentence-chunk mode, and the shared defect aligns with the first
+sentence boundary; the long arm exhibited the same class. The harness produced
+one model waveform per arm and added no PCM joins, so this is not our MP3
+stitcher. It did, however, use the public `.nemo` checkpoint directly rather
+than NVIDIA's production NIM service, disabled model text normalization after
+repo-side normalization, and inherited checkpoint temperature `0.6` while the
+current official example explicitly uses `0.7`. One focused official hosted
+NIM PCM comparison is allowed when an NVIDIA API key is available. It must use
+one short text, no repeated querying and no production/whole-book workload.
+
+NVIDIA currently grants Developer Program members free hosted NIM endpoint
+access for prototyping, subject to account rate limits. That is not a published
+free production audiobook allowance: production NIM use requires NVIDIA AI
+Enterprise, and the hosted prototype service has no guaranteed whole-book
+capacity. Official sources checked 2026-08-15:
+[NIM FAQ](https://docs.api.nvidia.com/nim/docs/product),
+[run-anywhere terms](https://docs.api.nvidia.com/nim/docs/run-anywhere), and
+[Magpie NIM API](https://build.nvidia.com/nvidia/magpie-tts-multilingual/api).
 
 Official sources checked 2026-08-15:
 [model card](https://huggingface.co/nvidia/magpie_tts_multilingual_357m/blob/v2607/README.md),
@@ -451,7 +469,12 @@ problem. Date: 2026-08-12.
 
 ## TTS engine defaults & Narrator — Active
 
-Chatterbox Nano is the default production engine, and **Beatrice (Nano)** (`uk_female_samuel_nano`) is the default system narrator voice. Piper is legacy/debug only (`ENABLE_PIPER_PROFILE=1` required, not a fallback). Chatterbox Turbo and TADA require explicit opt-in (`ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1`).
+Chatterbox Nano is the default production engine, and **Beatrice (Nano)**
+(`uk_female_samuel_nano`) is the default system narrator voice. Piper is fully
+retired: no service, profile, route, health probe or selectable voice remains.
+Stale Piper jobs fail closed and require an explicit narrator choice. Chatterbox
+Turbo and TADA require explicit opt-in (`ENABLE_CHATTERBOX_PROFILE=1` /
+`ENABLE_TADA_PROFILE=1`).
 
 **Why:** Beatrice (Nano) offers high-quality UK human-cloned narration at fast CPU speeds (~0.87x RTF) without requiring extra docker profiles or GPU hardware. Piper audio was rejected on listening ("absolute shit") on 2026-07-28.
 
@@ -559,7 +582,7 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | Chatterbox Turbo + Arthur | **Conditional / per-book audition** | Earlier long-form controls were excellent, but the 2026-08-15 seeded hard sample did not reliably sound like Arthur and failed words, proper nouns and numbers. The normalized numeric control was much improved, proving input preparation mattered, but ordinary-word/proper-name and voice-stability concerns remain. |
 | VibeVoice full precision, community fp16/SDPA single-pass path | **Rejected for audiobook production** | cfg 2.0 has a very good opening but progressively accelerates/runs on and loses intent after ~3 minutes. Reopen only for a materially different officially supported long-form path, not another seed or undocumented knob. |
 | Qwen3-TTS full precision | **Current long-form leader; not default** | Full 6,166-word chapter passed human listening and beat the corrected Vibe path for consistency. It still requires explicit free-Kaggle/local-GPU selection and book-specific auditioning. |
-| NVIDIA MagpieTTS v2607 / NeMo Speech v3.0.0 | **Evaluation hold; not exposed** | One pinned free-T4 five-preset/long-form gate is allowed. Advance only if capacity validates and Dave accepts the exact cached outputs. Treat the older v2602 NeMo-Speech.cpp path as a separate future test. |
+| NVIDIA MagpieTTS v2607 / raw NeMo Speech v3.0.0 | **Rejected; not exposed** | All five short arms and the long arm shared an early cut/clipping defect and failed by ear. One focused hosted-NIM PCM comparison may diagnose raw-runtime versus production-service behaviour; it does not reopen integration. Treat v2602 NeMo-Speech.cpp as a separate path. |
 | CosyVoice 3 | **Keep / integration candidate** | A real 30-minute free-Kaggle render was listenable. Proper nouns need attention; this is not a rejection. |
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 regional voices | **Rejected** | Synthetic-reference CFG-zero arms, seeded Arthur CFG 0/0.5 controls and genuine human Irish/Australian CFG 0.5 arms all failed by ear. The local accent route is closed. |
@@ -571,7 +594,7 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | EdgeTTS through `edge-tts` | **Conditional hold** | Free direct cost and accents were acceptable, but the interface is unofficial/fragile and proper nouns failed. Re-test only with a pronunciation fix and current service docs. |
 | MOSS-TTS Local Transformer v1.5 | **Rejected as audiobook finalist** | Multiple corrective long-form structures still collapsed or sounded joined/off-paced. Reopen only for a materially changed official release, not another seed/chunk tweak. |
 | MeloTTS tested UK/AU voices | **Rejected for production** | Human listening rejected overall TTS, pronunciation and numbers. Reopen only for a materially different official model/voice release. |
-| Piper official VCTK-medium path | **Rejected for production** | Current/deployed runtime plus encoding-controlled A/Bs all failed. This does not reject every future Piper model; it closes this exact official model path. |
+| Piper official VCTK-medium path | **Fully retired from this product** | Current/deployed runtime plus encoding-controlled A/Bs all failed. The service, profile, configuration, routing and voice catalogue were removed on 2026-08-15; historical evidence remains in the docs. |
 | Kokoro tested voices | **Retired from quality contention** | Keep only compatibility/debug uses unless a materially new official model clears the listening floor. Never use paid GPU merely to make rejected-quality audio faster. |
 | AWS Polly Long-Form | **Rejected on cost/value** | Recheck current official price and run a quality/cost audition only if it becomes the cheapest option capable of passing the human floor. |
 

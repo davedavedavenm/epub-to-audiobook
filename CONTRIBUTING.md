@@ -34,6 +34,5 @@ docker compose up -d
 | `kokoro-tts` | Default TTS engine (port 8880) |
 | `chatterbox-tts` | Voice-cloning engine, profile `chatterbox` (port 8004) |
 | `tada-tts` | Voice-cloning engine, profile `tada` (port 8005) |
-| `piper-tts` | Lightweight fallback, profile `piper` (port 5000) |
 | `tts-proxy` | Transcript capture + Edge/Polly/Inworld routing |
 | `docker-socket-proxy` | Restricted Docker API proxy for webapp/worker |

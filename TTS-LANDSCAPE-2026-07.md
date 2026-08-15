@@ -14,7 +14,7 @@ acting on any vendor, version, capability, licence or price below.
 narration. Later listening narrowed that claim: Nano + Beatrice is the free
 local default, Turbo is conditional per book, Qwen is the full-precision
 consistency leader, Gemini/Achernar is the accepted slow free-online option,
-and Magpie v2607 is the current bounded open candidate. Two developments were
+and the raw Magpie v2607 path failed its listening gate. Two developments were
 measured on 2026-07-24:
 
 1. **Chatterbox Nano** (110M params, MIT) — **VERIFIED WORKING** as a local
@@ -93,7 +93,7 @@ turning an experiment into production.
 | **Fish Audio S2 Pro beta** | 4B + 400M | Fish Audio Research License | Yes | External chunking required | Official minimum 24 GB VRAM; ordinary free T4 does not fit | Expressive multilingual narration | **WATCH — not viable on current free/local hardware** |
 | **IndexTTS-2.5** | official weights | Bilibili Model Use License | Yes | 120-token segments / 200 ms joins | FP32 fits free T4: 10.982 GiB peak reserved | Voice cloning, pace and English pronunciation control | **REJECTED — sentence-safe fix removed corruption but pacing/naturalness failed** |
 | **Gemini 3.1 Flash TTS** | hosted preview | Google API terms | 30 presets | Split after a few minutes | hosted | Controllable audiobook narration | **FREE-ONLY ACHERNAR ACCEPTED BY EAR; SLOW MULTI-DAY BOOK PATH** |
-| **NVIDIA MagpieTTS v2607** | 364M | NVIDIA Open Model License | No; 5 baked presets | **Stateful English long-form beta** | GPU; free T4 measured RTF 1.081–1.142 but unsupported | Audiobooks/content narration | **CAPACITY PASSED; SIX FILES READY; LISTENING OPEN** |
+| **NVIDIA MagpieTTS v2607** | 364M | NVIDIA Open Model License | No; 5 baked presets | **Stateful English long-form beta** | GPU; free T4 measured RTF 1.081–1.142 but unsupported | Audiobooks/content narration | **RAW NEMO PATH REJECTED — SHARED EARLY CUT; HOSTED-NIM DIAGNOSTIC OPEN** |
 | **F5-TTS** | ~330M | MIT | Yes (ref) | Chunked | GPU preferred | Research, good quality | Not integrated |
 | **XTTS v2** (Coqui) | ~1.8B | MPL 2.0 | Yes | Chunked | GPU needed | Was the standard; Coqui defunct | Not integrated |
 | **Bark** (Suno) | ~1B | MIT | No | Poor | GPU needed | Sound effects, not narration | Not suitable |
@@ -176,8 +176,11 @@ turning an experiment into production.
   NVIDIA documents a stateful English long-form beta and five baked presets.
   The exact v2607 model and NeMo Speech v3.0.0 runtime completed one bounded
   free-T4 gate: five same-text short arms plus a 9:14 / 79-chunk John arm at RTF
-  1.081–1.142. T4 is not in NVIDIA's official supported-GPU list, and audible
-  quality remains open. The older v2602 NeMo-Speech.cpp GGUF path is separate
+  1.081–1.142. Dave rejected all six files after a shared early cut/clipping
+  defect; the accents and tone were good but reliability was unacceptable. The
+  defect aligns with the first stateful sentence boundary. One focused hosted
+  NIM comparison remains open because the production service differs from the
+  raw NeMo path. The older v2602 NeMo-Speech.cpp GGUF path is separate
   and must not be conflated with v2607 Python inference.
 - Cartesia Sonic 3.5's free ~27 minutes/month and USD5/~133-minute Pro plan do
   not fund normal novels under GBP2; keep it for bounded samples only.
@@ -236,9 +239,11 @@ Tried to render audition samples via HF ZeroGPU spaces and Kaggle kernels.
 That listening/capacity gate is complete. It remains the default baseline, not
 an open experiment.
 
-### 2. Complete the bounded NVIDIA MagpieTTS v2607 gate
-Hear all five exact presets on the prepared hard passage and John across the
-stateful 8–10 minute continuity arm. Integrate nothing before a listening pass.
+### 2. Diagnose NVIDIA Magpie only through one hosted-NIM control
+The raw v2607 NeMo gate is rejected. If an NVIDIA API key is supplied, make one
+short official hosted-NIM PCM request using the documented path/settings and
+compare the early sentence boundary. Do not spend another Kaggle run, repeat
+queries, render a book or integrate a voice from this diagnostic alone.
 
 ### 3. Check TADA bf16 optimizations
 If the `hume-tada` pip package now includes bf16 + encoder caching, rebuild

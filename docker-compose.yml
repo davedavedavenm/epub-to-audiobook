@@ -444,44 +444,6 @@ services:
       retries: 3
       start_period: 10s
 
-  # Piper TTS with OpenAI-compatible API
-  # Uses openedai-speech as a wrapper for Piper
-  piper-tts:
-    # The `-min` variant, deliberately. The full `openedai-speech` image ships
-    # XTTS-v2 as well; it was tried on 2026-07-27 as a local route to accented
-    # English and **failed the same way Chatterbox did** — Dave: "bullshit,
-    # americanised crap".
-    #
-    # That is now three cloning engines (Chatterbox Nano, Chatterbox Turbo,
-    # XTTS-v2) producing the same result from good accented references. The
-    # conclusion is not about any one engine: **zero-shot cloning does not carry
-    # an accent.** It takes timbre from the reference and phonetics from its own
-    # training data. See VOICES.md.
-    #
-    # To get XTTS back for some OTHER purpose (it is a fine cloner, just not an
-    # accent one), set PIPER_IMAGE=ghcr.io/matatonic/openedai-speech:latest —
-    # 8 GB, pulls torch, slow first start. Licence is Coqui Public Model License,
-    # non-commercial.
-    image: ${PIPER_IMAGE:-ghcr.io/matatonic/openedai-speech-min:latest}
-    container_name: piper-tts
-    ports:
-      - "5000:8000"
-    restart: unless-stopped
-    environment:
-      - TTS_HOME=/data
-      - HF_HOME=/data
-    volumes:
-      - piper-data:/data
-      # Bind-mounted so added voices and the voice map survive image rebuilds.
-      # The image ships both inside /app, where edits are lost on recreate —
-      # which is why the accented VCTK voices have to live here. NOTE: these
-      # mounts SHADOW the image's own directories, so piper/voices must also
-      # contain the stock models copied out of the image (scripts/piper_setup.sh).
-      - ./piper/voices:/app/voices
-      - ./piper/config:/app/config
-    profiles:
-      - piper  # Only start with: docker compose --profile piper up
-
   webapp:
     build:
       context: .
@@ -505,7 +467,6 @@ services:
       - KOKORO_URL=${KOKORO_URL:-http://kokoro-tts:8880/v1}
       # If set (e.g. http://tts-proxy:8882), conversion containers will send TTS requests via the proxy
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
-      - PIPER_URL=http://piper-tts:8000/v1
       - CHATTERBOX_URL=${CHATTERBOX_URL:-http://chatterbox-tts:8004/v1}
       - CHATTERBOX_NANO_URL=${CHATTERBOX_NANO_URL:-http://chatterbox-nano:8004/v1}
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
@@ -619,7 +580,6 @@ services:
       - PYTHONUNBUFFERED=1
       - KOKORO_URL=${KOKORO_URL:-http://kokoro-tts:8880/v1}
       - TTS_PROXY_URL=${TTS_PROXY_URL:-}
-      - PIPER_URL=http://piper-tts:8000/v1
       - CHATTERBOX_URL=${CHATTERBOX_URL:-http://chatterbox-tts:8004/v1}
       - CHATTERBOX_NANO_URL=${CHATTERBOX_NANO_URL:-http://chatterbox-nano:8004/v1}
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
@@ -730,7 +690,6 @@ networks:
 
 volumes:
   kokoro-cache:
-  piper-data:
   chatterbox-cache:
   tada-cache:
   melotts-cache:

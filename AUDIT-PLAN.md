@@ -71,7 +71,8 @@ Every item below is a concrete, verifiable change. Order is by risk-reduction pe
 - [x] Fix version mismatch: `.env.example` says 2.0.0, README says 2.0.x
 
 ### 2.4 `.env.example` completeness
-- [x] Add missing vars: `KOKORO_URL`, `CHATTERBOX_URL`, `TADA_URL`, `PIPER_URL`,
+- [x] Add missing vars: `KOKORO_URL`, `CHATTERBOX_URL`, `TADA_URL`, historical
+      `PIPER_URL` (removed when Piper was retired on 2026-08-15),
       `TTS_PROXY_URL`, `GPU_RENDER_ENABLED`, `AUTOSCALE_*`, `AUDIO_ASR_VERIFY_ENABLED`,
       `TELEGRAM_*`, `AWS_*`, `KAGGLE_*`, `MAX_CONCURRENT_JOBS`, `VOICE_CACHE_*`
 

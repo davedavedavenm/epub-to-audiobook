@@ -54,11 +54,6 @@ BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 # RTF 0.87 (measured) — light enough to run always, unlike Turbo/TADA which
 # stay opt-in because they are heavy and slow.
 PROFILE_ARGS=(--profile chatterbox-nano)
-if profile_enabled ENABLE_PIPER_PROFILE; then
-  # Legacy/debug only. The controlled Piper 1.2/1.6 + encoding A/B failed the
-  # audiobook quality bar on 2026-07-28, so never enable it by default.
-  PROFILE_ARGS+=(--profile piper)
-fi
 if profile_enabled ENABLE_CHATTERBOX_PROFILE; then
   PROFILE_ARGS+=(--profile chatterbox)
 fi

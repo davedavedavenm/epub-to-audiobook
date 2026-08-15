@@ -22,7 +22,6 @@ logger = logging.getLogger("tts_proxy")
 
 DB_PATH = Path(os.environ.get("DB_PATH", "/data/jobs.db"))
 UPSTREAM_BASE = os.environ.get("TTS_UPSTREAM_BASE", "http://kokoro-tts:8880/v1").rstrip("/")
-PIPER_BASE = os.environ.get("PIPER_URL", "http://piper-tts:8000/v1").rstrip("/")
 STORE_ROOT = Path(os.environ.get("TRANSCRIPTS_DIR", "/data/transcripts"))
 STORE_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -243,12 +242,7 @@ async def audio_speech(job_id: str, request: Request):
             logger.info(f"Processing Polly request for voice: {voice}")
             audio_content = await get_polly_audio(text, voice)
         else:
-            # Check if this is Piper or Kokoro
             target_base = UPSTREAM_BASE
-            if payload.get("model") == "tts-1":
-                target_base = PIPER_BASE
-                logger.info(f"Routing to Piper: {target_base}")
-
             upstream_url = f"{target_base}/audio/speech"
             async with httpx.AsyncClient(timeout=None) as client:
                 r = await client.post(upstream_url, json=payload)

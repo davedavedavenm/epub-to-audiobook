@@ -25,7 +25,7 @@ accent-engine verdicts are dated in the table.
 | Azure Speech Standard native AU/IE/ZA voices (2026-08-15) | **Accepted opt-in at the quality floor:** the original Darren/Connor/Luke 24 kHz trio sounded robotic/degraded despite good accents. A controlled William test showed Azure slightly beat Edge. On the final 737-word, correctly processed, 48 kHz lossless gate, Australian William, Irish Connor and South African Luke had acceptable accents and overall voices. Emotion is weak and none sounds as real as Arthur. Preserve preprocessing/IPA/paragraph pacing; F0 first, never automatic paid fallback. | Azure Speech F0, UK South |
 | Gemini 3.1 Flash TTS / Achernar (2026-08-15) | **Accepted opt-in book narrator.** Dave heard the exact 10:10 app-path file and called it “one of the best”. All 30 official presets are registered for quota-paced caching; Achernar and Zephyr are cached, only cached presets are selectable, and only Achernar has passed long-form. The unbilled Developer API project has no paid fallback plus a persistent local ten-RPD guard. | Google-hosted Developer API Free Tier |
 | IndexTTS-2.5 / Arthur focused gate (2026-08-15) | **Rejected for production.** Both original arms garbled at exact upstream 200 ms joins, and our explicit path mishandled `1.5`. A one-job follow-up used complete-sentence calls, said “one point five”, and removed the repeatable corruption, but Dave still found its timing/pacing poor and much less natural than Gemini Zephyr or Chatterbox. | Kaggle Tesla T4, free compute |
-| NVIDIA MagpieTTS Multilingual v2607 (2026-08-15) | **Capacity passed / listening open.** One exact-version job rendered every preset on the same prepared hard text and John across 9:14 / 79 stateful chunks. Six distinct 22.05 kHz mono MP3s independently passed hashes/full decode; T4 RTF 1.081–1.142, long-arm peak 11.61 GiB allocated / 14.31 GiB reserved. T4 remains outside NVIDIA's published support list. No voice is exposed until Dave hears it. | Free Kaggle Tesla T4 |
+| NVIDIA MagpieTTS Multilingual v2607 raw NeMo path (2026-08-15) | **Capacity passed / quality rejected.** Every exact short arm had a shared defect around five seconds and was poor; the 9:14 John arm had the same clipping/cut class. Accents and tone were good, but reliability failed. The timing aligns with the first automatic stateful sentence boundary. One focused hosted-NIM PCM request remains a root-cause diagnostic, not an integration gate. | Free Kaggle Tesla T4 |
 | MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
 | Qwen3-TTS (2026-08-14 final ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-14 corrected app-path + documented-turn gate) | **Rejected for audiobook production.** cfg 2.0 remains its best tested setting, but the flattened path accelerated after ~3 minutes and both structurally complete repeated-same-speaker alternatives (four turns 7:16; seven turns 6:59) were rejected by ear as unacceptable. The same-text Chatterbox Turbo + Arthur control was almost perfect and did not accelerate. cfg 3.0 and 1.3 remain rejected. | Kaggle P100 |
@@ -136,6 +136,22 @@ Official sources: [TTS guide](https://ai.google.dev/gemini-api/docs/speech-gener
 - Exact evaluation runtime: official NVIDIA NeMo Speech release `v3.0.0`,
   commit `fd6a877539710e2b98f28c43272ff81312f83417`. This is not a community
   wrapper.
+- **Listening result:** rejected on the exact raw NeMo path. All five short
+  presets shared an audible defect around five seconds, and the 9:14 John arm
+  showed the same clipping/cut class. Good accent/tone did not overcome the
+  reliability failure. No preset is exposed.
+- The shared time corresponds to the first sentence boundary in automatic
+  stateful long-form mode. The harness called `do_tts` once per arm and made no
+  PCM joins, so this is not the app's audiobook stitcher. The run did use
+  `apply_TN=False` after repo-side expansion and inherited checkpoint
+  temperature `0.6`; NVIDIA's current long-form example uses `apply_TN=True`
+  and explicit `temperature=0.7`. This keeps root cause open rather than
+  blaming the model family.
+- NVIDIA's hosted Magpie NIM is a separate production service path. Developer
+  Program members currently receive free endpoint access for prototyping,
+  subject to rate limits; NVIDIA does not publish a guaranteed free whole-book
+  production allowance. Production NIM use requires NVIDIA AI Enterprise. One
+  short hosted PCM comparison is allowed when a key exists; no repeated calls.
 - Official English presets: `Aria` (0), `Jason` (1), `John` (2), `Leo` (3),
   and `Sofia` (4). Those names do not document accent, gender or suitability;
   each still requires Dave's listening verdict.
@@ -284,8 +300,10 @@ injection. Same-text deployed-encoding, same-WAV higher-bitrate and
 current-runtime clips all returned `200 audio/mpeg` and were graded by ear.
 All three failed badly: almost every word wrong and poor sound. The old wrapper
 and bitrate are therefore not the fix; the tested official VCTK-medium model
-path is closed. Keep Piper only as legacy/debug compatibility, not a production
-engine or automatic fallback. See VOICES.md.
+path is closed. Piper was fully retired from the executable product on
+2026-08-15. The service, profile, route, configuration and voice entries are
+gone; this section remains only as the evidence for that decision. See
+VOICES.md.
 
 ## Hume TADA-1B
 

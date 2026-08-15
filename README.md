@@ -39,9 +39,9 @@ requires a separately authorised environment-gated session.
   with a hard GBP2/book ceiling.**
 - **Local CPU is the default.** No queue state can rent a GPU. Paid Vast
   rendering is an explicit operator-only action and is off by default.
-- **Beatrice on Chatterbox Nano** is the default narrator. Piper is deliberately
-  stopped unless a legacy/debug comparison is requested; its tested production
-  path failed the listening bar.
+- **Beatrice on Chatterbox Nano** is the default narrator. Piper is fully
+  retired after its controlled listening failure; it is not a service, profile,
+  fallback or selectable voice.
 - **Voice Play buttons are cache reads.** They never start a hidden synthesis
   job. A voice appears in audition pickers only after a non-trivial preview MP3
   is persisted.
@@ -81,12 +81,13 @@ requires a separately authorised environment-gated session.
   take roughly four weeks; enable only with a dedicated unbilled project key.
   See [GEMINI-SETUP.md](GEMINI-SETUP.md) for the complete key, quota, cache and
   recovery walkthrough.
-- **NVIDIA MagpieTTS v2607** - five-preset, stateful long-form candidate whose
-  pinned free-T4 capacity gate passed; listening is open. It is not integrated,
-  selectable or production-approved. Exact facts: [ENGINES.md](ENGINES.md).
+- **NVIDIA MagpieTTS v2607** - its pinned raw-NeMo free-T4 capacity gate passed,
+  but all five short voices and the long arm failed listening with a shared
+  early cut/clipping defect. It is not integrated or selectable. One focused
+  official hosted-NIM comparison remains open to distinguish the public raw
+  runtime from NVIDIA's production service. Exact facts: [ENGINES.md](ENGINES.md);
+  safe one-request procedure: [NVIDIA-NIM-DIAGNOSTIC.md](NVIDIA-NIM-DIAGNOSTIC.md).
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
-- **Piper TTS** - rejected production path; legacy/debug only
-  (`ENABLE_PIPER_PROFILE=1`)
 
 ### Web Application & Media Delivery
 - **Studio Console Web UI** - modern dark obsidian slate theme with Google Fonts (Plus Jakarta Sans & JetBrains Mono)
@@ -274,7 +275,6 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | European | Dora | Alex, Santa |
 
 ### Other Voices
-- **Piper:** legacy/debug entries only; not a production recommendation
 - **EdgeTTS:** British/American/Australian incl. Ryan, Sonia, Libby, Ava, Andrew, Brian, Aria, Jenny
 - **Inworld (paid):** Graham, Rupert, Olivia, Blake, Elizabeth, Dennis, Ashley, Luna
 
@@ -292,7 +292,6 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `POCKET_URL` | Pocket TTS endpoint (default: `http://pocket-tts:8012/v1`; opt-in CPU profile) |
 | `KITTEN_URL` | KittenTTS endpoint (default: `http://kitten-tts:8013/v1`; opt-in CPU profile) |
 | `GEMINI_TTS_URL` / `GEMINI_API_KEY` | Internal free-only Gemini adapter and key from the dedicated `GEMINI_FREE_PROJECT_ID` whose Plan is Free; after verifying it, set `GEMINI_FREE_PROJECT_CONFIRMED=1` and opt in with `ENABLE_GEMINI_PROFILE=1`. Never commit the key or attach billing. Full procedure: [GEMINI-SETUP.md](GEMINI-SETUP.md). |
-| `PIPER_URL` | Piper TTS endpoint (default: `http://piper-tts:8000/v1`) |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | Optional OpenAI-compatible LLM for metadata and chapter classification (deterministic fallback; generated pronunciation rules are off by default). Groq users must choose a current ID from its official model/deprecation pages; see `.env.example`. |
 | `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` / `AUDIOBOOKSHELF_USER` / `AUDIOBOOKSHELF_PORT` | Audiobookshelf rsync sync target |
@@ -342,7 +341,6 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 - [Kokoro-FastAPI](https://github.com/remsky/kokoro-fastapi) / [Kokoro](https://github.com/hexgrad/kokoro) - neural TTS
 - [Chatterbox](https://github.com/resemble-ai/chatterbox) - voice-cloning TTS
 - [Hume TADA](https://github.com/HumeAI/tada) - text-audio-aligned TTS
-- [Piper](https://github.com/rhasspy/piper) / [openedai-speech](https://github.com/matatonic/openedai-speech) — legacy/debug integration only
 - [epub_to_audiobook](https://github.com/p0n1/epub_to_audiobook) - core conversion tool
 - Voice references: public-domain [LibriVox](https://librivox.org) narrators
 

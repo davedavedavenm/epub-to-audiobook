@@ -1,6 +1,32 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-15 NVIDIA MagpieTTS v2607 — FREE-T4 CAPACITY PASSED / LISTENING OPEN
+> ## 2026-08-15 Piper retired; NVIDIA Magpie raw path rejected / diagnosis open
+>
+> Piper has been removed from the product rather than merely stopped: Compose
+> service/profile/volume declarations, environment settings, proxy routing,
+> engine and voice catalogues, preview generation, health probes and helper
+> scripts are gone. Old queued Piper jobs fail closed instead of silently using
+> another engine. The controlled rejection evidence remains in `ENGINES.md` and
+> `VOICES.md`; it is history, not an executable option.
+>
+> Dave heard all five exact Magpie short files and the John long file. Every
+> short arm had a repeatable defect at about five seconds and was poor; the long
+> arm had the same clipping/cut class. Accents and tone were good, but all six
+> fail production reliability. The shared timing aligns with Magpie's first
+> automatic sentence-state boundary. The harness creates one model waveform and
+> performs no PCM joins, ruling out the app's audiobook stitcher. The test still
+> used the public raw NeMo path, not NVIDIA's production hosted NIM, and differed
+> from the current documented example on text normalization and temperature.
+> Root cause therefore remains **open**, scoped to raw NeMo versus hosted NIM.
+> No Magpie voice is exposed.
+>
+> NVIDIA's official Developer Program provides free hosted NIM endpoints for
+> prototyping, subject to rate limits. It is not a guaranteed free whole-book or
+> production allowance; production NIM deployment requires NVIDIA AI Enterprise.
+> One focused official NIM PCM request is the next valid diagnostic when an API
+> key is available. Do not repeat-query it or use it for a book.
+
+> ## 2026-08-15 NVIDIA MagpieTTS v2607 — FREE-T4 CAPACITY PASSED / LISTENING FAILED
 >
 > NVIDIA's current official model card and long-form guide identify MagpieTTS
 > Multilingual v2607 as a 364M, five-preset model with beta stateful English
@@ -21,9 +47,10 @@
 > both source hashes, matched every MP3 size/SHA, found six distinct 22.05 kHz
 > mono MP3s and fully decoded all six. T4 RTF is **1.081–1.142**; the long arm
 > peaked at **11.61 GiB allocated / 14.31 GiB reserved**, within the 16 GiB T4.
-> No ASR was used. Capacity and structure
-> now pass; audible quality remains **open until Dave listens**. No app engine,
-> default or selectable voice has changed.
+> No ASR was used. Capacity and file structure passed, but Dave subsequently
+> rejected every output for a shared early cut/clipping defect and poor overall
+> quality. This section preserves the capacity evidence; it is not the current
+> quality verdict. No app engine, default or selectable voice changed.
 
 > ## 2026-08-15 Index join diagnosis + Gemini full-catalogue work
 >
@@ -751,11 +778,11 @@
 
 > ## 2026-08-13 current baseline, Vibe verdict and cache contract — VERIFIED / DEPLOYED
 >
-> **Live services:** `epub-to-audiobook-worker` is running/healthy, exit 0 and
-> `OOMKilled=false`; the earlier 3 August exit-137 report is stale. `piper-tts`
-> is intentionally stopped: its historical exit 137 was not an OOM kill and the
-> tested Piper path is rejected for production. Chatterbox Nano/Beatrice remains
-> the default local narrator. No paid GPU path is armed.
+> **Historical live services at 2026-08-13:** `epub-to-audiobook-worker` was
+> running/healthy, exit 0 and `OOMKilled=false`; the earlier 3 August exit-137
+> report was stale. `piper-tts` was intentionally stopped at that point and was
+> fully removed on 2026-08-15. Chatterbox Nano/Beatrice remains the default
+> local narrator. No paid GPU path is armed.
 >
 > **UI:** the first navigation
 > destination is now explicitly **Home**, the brand and persistent top-bar Home
@@ -1383,7 +1410,7 @@ zorin was upgraded from the NUC8i7BEH (4-core mobile i7, 15GB, one dead RAM slot
 Iris iGPU) to a **12th-gen i5-12400 (6c/12t desktop) + 31GB RAM** (UHD 730, still
 no CUDA). This structurally kills the resource-starvation bug class (throttling,
 engines "offline" when busy) and makes **local rendering with light engines
-(kokoro/piper/edge) comfortable**. Fixed IPs: **.41 wired / .47 wireless** (DHCP
+(kokoro/edge) comfortable**. Fixed IPs: **.41 wired / .47 wireless** (DHCP
 lease transferred off the temp .34; ssh config still points at the dead .247 —
 update it).
 
@@ -1632,7 +1659,7 @@ can drive, and self-service configuration.
 | [#21](../../issues/21) | enhancement | TADA: path to production-ready | Closed |
 
 
-## Live deployment check (2026-07-25)
+## Historical live deployment check (2026-07-25; superseded)
 
 Verified against the running stack at `192.168.1.41`, not from documentation:
 
@@ -1640,7 +1667,7 @@ Verified against the running stack at `192.168.1.41`, not from documentation:
   zorin is clean apart from untracked `data/` and one `.bak` compose file.
   (`/api/health` reports `git_sha: "local"`, which is the build label, not
   evidence of a live patch — don't read it as one.)
-- **Engines live:** chatterbox (Turbo), chatterbox_nano, kokoro, piper, edge
+- **Engines live at that time:** chatterbox (Turbo), chatterbox_nano, kokoro, piper, edge
   all `true`; tada, inworld, polly `false`.
 - **Turbo and kokoro are both running** even though OPERATIONS.md describes the
   default deploy as Piper + chatterbox-nano with Turbo opt-in. The box has more
@@ -1711,7 +1738,8 @@ extrapolated from one passage. A 12.4-hour book is therefore ~10.8 h end to end.
    — it passed by default because it had nothing to inspect.
 
    Root cause: `chunks.jsonl`, the only input the verifier has, is written by
-   **tts-proxy**. `get_engine_url()` routes piper/edge/polly/inworld/kokoro
+   **tts-proxy**. At that time, `get_engine_url()` routed
+   piper/edge/polly/inworld/kokoro
    through the proxy, but returns `CHATTERBOX_NANO_URL`, `CHATTERBOX_URL` and
    `TADA_URL` **directly**. So no Chatterbox book has ever been ASR-verified,
    and since Nano is the default voice, **the default path ships unverified**

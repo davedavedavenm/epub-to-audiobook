@@ -23,7 +23,6 @@ RENDER_TARGET="${E2E_RENDER_TARGET:-local}"
 DEFAULT_ENGINES=(
   "chatterbox_nano:uk_male_minter_nano"
   "kokoro:bm_george"
-  "piper:fable"
   "edge:en-GB-RyanNeural"
   "chatterbox:uk_male_minter"
 )

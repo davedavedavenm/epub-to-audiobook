@@ -2,6 +2,8 @@ import os
 import sys
 import tempfile
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'webapp'))
 
 os.environ.setdefault('DB_PATH', os.path.join(tempfile.mkdtemp(), 'test.db'))
@@ -31,10 +33,15 @@ def test_engine_url_kokoro():
     assert model == 'kokoro'
 
 
-def test_engine_url_piper():
-    url, model = get_engine_url('piper', JOB_ID)
-    assert url == _proxy_or('http://piper-tts:8000/v1')
-    assert model == 'tts-1'
+def test_retired_piper_job_fails_closed():
+    with pytest.raises(ValueError, match='Piper is retired'):
+        get_engine_url('piper', JOB_ID)
+
+
+def test_retired_piper_is_not_offered():
+    assert 'piper' not in appmod.TTS_ENGINES
+    assert not [voice for voice, info in appmod.VOICES.items()
+                if info.get('engine') == 'piper']
 
 
 def test_engine_url_chatterbox():

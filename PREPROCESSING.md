@@ -82,7 +82,7 @@ output before you ban the *idea*.**
 The asymmetry is the *point*, not a defect. A good voice-clone model reads real
 words and numbers natively; a weak one cannot. So:
 
-- **Weak engines (kokoro / piper / edge / polly) get EVERYTHING** — numbers spelled,
+- **Weak engines (kokoro / edge / polly) get EVERYTHING** — numbers spelled,
   proper nouns respelled, abbreviations expanded, the full seed + LLM + QA lexicon.
   This is what makes them usable at all, and it is why kokoro leapt in quality once
   the sample finally applied it.
@@ -274,7 +274,7 @@ Therefore Gemini gets deterministic spoken numbers/currency and safe acronym
 letter-spacing, but not the legacy proper-name respelling dictionary. Preview,
 first render and recovery all use the same mapping.
 
-| Transform | modern (chatterbox / tada) | legacy (kokoro / piper / edge / polly) |
+| Transform | modern (chatterbox / tada) | legacy (kokoro / edge / polly) |
 | --- | --- | --- |
 | Structural clean (endnotes, unicode) | ✅ | ✅ |
 | **Years** (`1997` → "nineteen ninety-seven") | ✅ *(reversed 2026-07-14, #26)* | ✅ |

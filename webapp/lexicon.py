@@ -8,7 +8,7 @@ the audition but correct in the book (Dave, 2026-07-14). An audition you can't
 trust is worse than no audition.
 
 NOTE how these are consumed (MODERN-ENGINE CONTRACT, tts_preprocess):
-  * legacy engines (kokoro/piper/edge/polly) -> the WHOLE dict applies.
+  * legacy engines (kokoro/edge/polly) -> the WHOLE dict applies.
   * modern engines (chatterbox/tada)         -> only the LETTER-SPACING class
     survives the filter; phonetic respellings are dropped, because shouty
     respellings ("Bay-JING") made modern engines worse. That means modern engines

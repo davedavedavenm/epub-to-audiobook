@@ -19,7 +19,7 @@ p374 at CFG 0.5 were all rejected. Accents, pronunciation and numbers remained
 unacceptable. A locale label or human reference is not evidence that generated
 speech is an authentic or pleasant audiobook voice.
 
-**The tested Piper path is rejected for production audiobooks (Dave,
+**The tested Piper path is rejected and fully retired from the product (Dave,
 2026-07-28).** Most existing voices sounded bad and inauthentic. A controlled
 audit then compared deployed Piper 1.2 at both encodings with current Piper 1.6
 direct, using the same official VCTK model and text. Dave's verdict on all three:
@@ -88,7 +88,7 @@ English:
 | Model | English accents | Local | Status here |
 |---|---|---|---|
 | **Kokoro** | US, UK **only** | yes | running — checked live, no Irish/Australian |
-| **Piper** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speaker labels | yes | **rejected by ear** for this project; old/current runtime and encoding A/B all failed badly |
+| **Piper (historical)** | UK, US; Irish/Scottish/Welsh/Australian via VCTK speaker labels | no longer installed | **fully retired**; old/current runtime and encoding A/B all failed badly |
 | **MeloTTS** | US, UK, Indian, **Australian**, default | yes | installed and **rejected by ear**; no Irish |
 | **OmniVoice** | US, UK, AU, CA, IN + five non-native-English accents | yes | accents good; slow on CPU; **no Irish/ZA** in fixed upstream vocabulary |
 | **Chatterbox Multilingual V3** | cloned reference; official claim is improved accent preservation | yes | **Rejected by ear:** synthetic CFG-zero arms plus seeded Arthur and genuine human Irish/Australian official-default controls all failed |
@@ -231,9 +231,10 @@ and Luke; Piper VCTK p272 for Scottish, since **Edge has no Scottish English
 voice at all**). It still flattened them. That failure is what turned "Chatterbox
 can't do accents" into the general rule at the top of this file.
 
-To bring XTTS back for some *other* job — it is a capable cloner, just not an
-accent one — set `PIPER_IMAGE=ghcr.io/matatonic/openedai-speech:latest`. Licence
-is Coqui Public Model License, non-commercial.
+Historical note: XTTS was reached by changing the former Piper wrapper image to
+`ghcr.io/matatonic/openedai-speech:latest`. That service and configuration were
+retired on 2026-08-15; this is evidence, not a current setup instruction.
+Licence is Coqui Public Model License, non-commercial.
 
 <details>
 <summary>Original write-up, kept for the reasoning (it was sound; the result was not)</summary>
@@ -289,13 +290,15 @@ those names as regional accents or as guarantees of gender, character or
 narration quality. v2607 also removes zero-shot voice cloning, so this is a
 fixed preset bank rather than another Arthur/accent-reference route.
 
-None is currently an app voice or a cached production preview. One private
+None is an app voice or a cached production preview. One private
 free-T4 gate has produced local evaluation files for all five on the same
 prepared difficult passage, plus a 9:14 John stateful long-form passage. All six
-files are independently decoded and ready to hear, but local evaluation output
-is not the app preview cache. Each remains unapproved and unselectable until
-Dave's listening verdict. See `ENGINES.md` for the pinned model/runtime boundary
-and licence.
+files were independently decoded, then rejected by Dave: each short arm shared
+an early defect around five seconds, and the long arm had the same clipping/cut
+class. Accents and tone were good, but reliability was unacceptable. The raw
+NeMo path is closed and every preset remains unselectable. A single hosted NIM
+comparison may diagnose the runtime boundary; it does not approve a voice. See
+`ENGINES.md` for the exact model/runtime, free-developer and licence boundaries.
 
 ### Candidate models, evaluated 2026-07-27
 
@@ -468,8 +471,8 @@ recorded speech if any is available.
 | Irish or South African, local | **No approved production voice.** The exact Chatterbox Multilingual V3 regional gate failed by ear. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
 | Irish, South African or Australian, online | **Azure William (AU), Connor (IE) and Luke (ZA) are accepted opt-in quality-floor voices** on the proven 48 kHz lossless, correctly processed path. Accents are acceptable; emotion is weak and none is as real as Arthur. F0 first, never automatic paid fallback. |
-| General English, free GPU evaluation | NVIDIA MagpieTTS v2607 has five official presets under a bounded stateful long-form gate. No preset is exposed or approved until Dave hears it. |
-| Piper regional path | **Do not use for production audiobooks.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation. |
+| General English, free GPU evaluation | NVIDIA MagpieTTS v2607 raw NeMo path is **rejected** after all five presets and the long arm shared an early cut/clipping defect. One hosted-NIM diagnostic remains open; no preset is exposed. |
+| Piper regional path | **Fully retired.** Deployed/high-bitrate/current-runtime A/Bs all failed voice quality, authenticity and pronunciation; no service or voices remain. |
 | British/general narration, local | **Beatrice (Nano)** (`uk_female_samuel_nano` via Chatterbox Nano) is the system default narrator. Fast CPU inference (~0.87x RTF) with human-cloned British voice. |
 
 The Voices page is an audition surface, not a synthesis trigger. It offers only
@@ -644,13 +647,10 @@ current. Use `scripts/deploy.sh`. See OPERATIONS.md.
 
 ## How the pieces fit
 
-- **Piper** — `piper/voice_to_speaker.yaml` maps voice ids to model + speaker
-  index. Speaker indices come from the model's own `speaker_id_map`, **not** the
-  VCTK number: `p364` is index `106`. Config and models are bind-mounted
-  (`piper/config`, `piper/voices`) because the image keeps both inside `/app`
-  where edits are lost on recreate. `scripts/piper_setup.sh` copies the stock
-  models out of the image first — the mounts shadow the image directory, so
-  skipping that step removes the built-in voices.
+- **Piper (historical only)** — its former service, voice map, setup script and
+  selectable catalogue were deleted on 2026-08-15. Historical speaker/model
+  evidence above is intentionally retained so the rejected path is not
+  rediscovered or accidentally rebuilt.
 - **Chatterbox** — reference WAVs in `chatterbox/voices/` (baked into the image)
   and `CUSTOM_VOICES_DIR` = `data/voices` (overlaid at `/app/voices/custom`, no
   rebuild needed). That directory is owned by the container uid; **write to it

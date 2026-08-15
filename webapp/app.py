@@ -66,7 +66,6 @@ def enforce_same_origin_writes():
 # NOTE: KOKORO_URL is a mutable global — gpu_manager.py switches it
 # between CPU and GPU endpoints at runtime. Do NOT cache this value.
 KOKORO_URL = os.environ.get('KOKORO_URL', 'http://localhost:8880/v1')
-PIPER_URL = os.environ.get('PIPER_URL', 'http://piper-tts:8000/v1')
 CHATTERBOX_URL = os.environ.get('CHATTERBOX_URL', 'http://chatterbox-tts:8004/v1')
 # Nano is a SEPARATE container (chatterbox-nano, CHATTERBOX_NANO=1). One
 # chatterbox container loads Turbo XOR Nano at startup, so the two models
@@ -438,12 +437,6 @@ TTS_ENGINES = {
         'url_env': 'KOKORO_URL',
         'default_url': 'http://kokoro-tts:8880/v1'
     },
-    'piper': {
-        'name': 'Piper',
-        'description': 'Legacy/debug only — not approved for audiobook quality',
-        'url_env': 'PIPER_URL',
-        'default_url': 'http://piper-tts:8000/v1'
-    },
     'vibevoice': {
         'name': 'VibeVoice 1.5B',
         'description': 'Long-form finalist; cfg 2.0 won the pinned blind test (Kaggle or opt-in local CUDA)',
@@ -506,14 +499,6 @@ VOICES = {
     'am_michael': {'name': 'Michael', 'accent': 'American', 'gender': 'Male', 'engine': 'kokoro'},
     'am_eric': {'name': 'Eric', 'accent': 'American', 'gender': 'Male', 'engine': 'kokoro'},
     'am_liam': {'name': 'Liam', 'accent': 'American', 'gender': 'Male', 'engine': 'kokoro'},
-
-    # ============ PIPER VOICES (LOCAL, FAST; NOT QUALITY-APPROVED) ============
-    'fable': {'name': 'Northern Male (Piper legacy)', 'accent': 'British', 'gender': 'Male', 'engine': 'piper'},
-    'alloy': {'name': 'Alloy (Piper legacy)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
-    'echo': {'name': 'Echo (Piper legacy)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
-    'onyx': {'name': 'Onyx (Piper legacy)', 'accent': 'American', 'gender': 'Male', 'engine': 'piper'},
-    'nova': {'name': 'Nova (Piper legacy)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
-    'shimmer': {'name': 'Shimmer (Piper legacy)', 'accent': 'American', 'gender': 'Female', 'engine': 'piper'},
 
     # ============ EDGETTS VOICES (FREE, HIGH QUALITY) ============
     # British Edge Voices
@@ -622,28 +607,6 @@ VOICES = {
     'tadhg_hynes': {'name': 'Tadhg Hynes (rich, Hardy/Dickens)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'chatterbox'},
     'martin_geeson': {'name': 'Martin Geeson (British male, classic prose)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'nigel_boydell': {'name': 'Nigel Boydell (British male, characterful)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
-    # --- VCTK accent-labelled speakers (Piper; evaluation/legacy only) ---
-    # Dave, 2026-07-27: "those accents are shit" — of the CLONES below. The
-    # reference clips audited clean (right speakers, ~18s each, all distinct),
-    # so the speakers were never the problem. Zero-shot cloning transfers
-    # timbre well and phonetics poorly, so an Irish reference lands as
-    # vaguely-Irish. Piper's en_GB-vctk-medium was TRAINED on these exact
-    # speakers, which justified an audition but did not establish authenticity.
-    # Dave rejected the current outputs on 2026-07-28 for voice quality, accent
-    # authenticity and pronunciation. See VOICES.md for the deployment audit;
-    # the controlled Piper 1.2/1.6 + encoding A/B then failed at every layer.
-    'vctk_irish_m_p364_native': {'name': 'Irish male — Donegal (Piper legacy)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_irish_m_p245_native': {'name': 'Irish male — Dublin (Piper legacy)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_irish_f_p288_native': {'name': 'Irish female — Dublin (Piper legacy)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_irish_f_p283_native': {'name': 'Irish female — Cork (Piper legacy)', 'accent': 'Irish', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_northernirish_m_p292_native': {'name': 'Northern Irish male — Belfast (Piper legacy)', 'accent': 'Northern Irish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_northernirish_f_p293_native': {'name': 'Northern Irish female — Belfast (Piper legacy)', 'accent': 'Northern Irish', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_australian_m_p326_native': {'name': 'Australian male — Sydney (Piper legacy)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_australian_m_p374_native': {'name': 'Australian male (Piper legacy)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_welsh_f_p253_native': {'name': 'Welsh female — Cardiff (Piper legacy)', 'accent': 'Welsh', 'gender': 'Female', 'engine': 'piper'},
-    'vctk_scottish_m_p272_native': {'name': 'Scottish male — Edinburgh (Piper legacy)', 'accent': 'Scottish', 'gender': 'Male', 'engine': 'piper'},
-    'vctk_scottish_f_p262_native': {'name': 'Scottish female — Edinburgh (Piper legacy)', 'accent': 'Scottish', 'gender': 'Female', 'engine': 'piper'},
-
     # --- NO ACCENTED VOICES ON CHATTERBOX. THIS IS SETTLED. ---
     #
     # Tried twice, failed twice, on the same underlying cause.
@@ -1223,14 +1186,13 @@ def calculate_price_estimate(engine: str, char_count: int) -> float | None:
     PRICING = {
         'kokoro': 0.0,
         'edge': 0.0,
-        'piper': 0.0,
         'polly': 100.0,   # AWS Polly Long-form
         'openai': 15.0,   # Standard
         'openai-hd': 30.0,
         'azure': 16.0     # Neural
     }
     free_engines = {
-        'kokoro', 'edge', 'piper', 'chatterbox', 'chatterbox_nano',
+        'kokoro', 'edge', 'chatterbox', 'chatterbox_nano',
         'tada', 'cosyvoice', 'vibevoice', 'qwen3', 'melotts', 'omnivoice',
         # This adapter is deliberately restricted to an unbilled Gemini API
         # Free Tier project. It has no Vertex or paid-tier fallback.
@@ -2537,21 +2499,7 @@ def get_voice_preview(voice_id: str) -> Path:
         return preview_path if preview_path.exists() else None
 
     try:
-        if engine == 'piper':
-            # Use Piper TTS
-            response = requests.post(
-                f"{PIPER_URL}/audio/speech",
-                json={
-                    "model": "tts-1",
-                    "input": ptext,
-                    "voice": voice_id
-                },
-                timeout=60
-            )
-            response.raise_for_status()
-            with open(preview_path, 'wb') as f:
-                f.write(response.content)
-        elif engine == 'polly':
+        if engine == 'polly':
             # Skip if AWS keys are not set
             if not (get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID')):
                 raise Exception("AWS credentials not configured for Polly")
@@ -2915,8 +2863,10 @@ def retry_missing_chapters(
 
 def get_engine_url(tts_engine: str, job_id: str) -> tuple:
     if tts_engine == 'piper':
-        url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else 'http://piper-tts:8000/v1'
-        return url, 'tts-1'
+        # Piper was fully retired after failing its controlled listening gates.
+        # Keep this tombstone so an old queued job fails visibly instead of
+        # falling through to Kokoro and producing an unwanted audiobook.
+        raise ValueError('Piper is retired; choose a currently offered narrator')
     elif tts_engine in ('inworld', 'edge', 'polly'):
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
         model = 'inworld' if tts_engine == 'inworld' else 'tts-1'
@@ -4663,7 +4613,6 @@ def check_engines_health(max_age=20):
         'pocket': f"{POCKET_URL.rstrip('/')}/audio/voices",
         'kitten': f"{KITTEN_URL.rstrip('/')}/audio/voices",
         'gemini': f"{GEMINI_TTS_URL.rstrip('/')}/audio/voices",
-        'piper': f"{PIPER_URL.rstrip('/')}/models",  # openedai-speech has no /audio/voices
     }
     out = {}
     for eng, url in probes.items():
@@ -5515,8 +5464,7 @@ def version_info():
         'build_time': APP_BUILD_TIME,
         'stack_path': STACK_PATH,
         'host_stack_dir': HOST_STACK_DIR,
-        'kokoro_url': KOKORO_URL,
-        'piper_url': PIPER_URL
+        'kokoro_url': KOKORO_URL
     })
 
 
@@ -6255,7 +6203,7 @@ def diagnostics():
             ['docker', 'stats', '--no-stream', '--format', '{{.Name}}|{{.CPUPerc}}|{{.MemUsage}}'],
             capture_output=True, text=True, timeout=6
         )
-        lines = [ln for ln in (result.stdout or '').splitlines() if 'epub' in ln or 'kokoro' in ln or 'piper' in ln or 'audiobook-' in ln]
+        lines = [ln for ln in (result.stdout or '').splitlines() if 'epub' in ln or 'kokoro' in ln or 'audiobook-' in ln]
         docker_summary = '\n'.join(lines[:20])
     except Exception as e:
         docker_summary = f'Unavailable: {e}'
