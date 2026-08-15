@@ -3,9 +3,11 @@ import importlib.util
 import io
 import wave
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
+from google.genai import errors as genai_errors
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,14 +16,26 @@ gemini = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gemini)
 
 
-class FakeResponse:
-    def __init__(self, status=200, body=None, text=''):
-        self.status_code = status
-        self._body = body or {}
-        self.text = text
+class FakeInteractions:
+    def __init__(self, result=None, error=None):
+        self.result = result
+        self.error = error
+        self.calls = []
 
-    def json(self):
-        return self._body
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error:
+            raise self.error
+        return self.result
+
+
+class FakeClient:
+    def __init__(self, result=None, error=None):
+        self.interactions = FakeInteractions(result=result, error=error)
+        self.closed = False
+
+    def close(self):
+        self.closed = True
 
 
 def test_adapter_is_pinned_to_developer_api_free_path():
@@ -31,6 +45,8 @@ def test_adapter_is_pinned_to_developer_api_free_path():
     assert 'vertex' not in source.lower().replace('vertex route', '')
     assert 'batchGenerateContent' not in source
     assert gemini.MODEL_ID == 'gemini-3.1-flash-tts-preview'
+    requirements = (ROOT / 'gemini' / 'requirements.txt').read_text(encoding='utf-8')
+    assert 'google-genai==2.18.1' in requirements
 
 
 def test_key_without_explicit_free_project_confirmation_is_refused(monkeypatch):
@@ -47,35 +63,20 @@ def test_one_request_returns_valid_24khz_mono_wav(monkeypatch):
     monkeypatch.setenv('GEMINI_FREE_PROJECT_ID', 'dedicated-free-project')
     monkeypatch.setenv('GEMINI_FREE_PROJECT_CONFIRMED', '1')
     pcm = b'\x00\x00' * 2400
-    body = {
-        'status': 'completed',
-        'steps': [{
-            'type': 'model_output',
-            'content': [{
-                'type': 'audio',
-                'data': base64.b64encode(pcm).decode('ascii'),
-                'mime_type': 'audio/l16',
-                'sample_rate': 24000,
-                'channels': 1,
-            }],
-        }],
-    }
-    calls = []
-
-    def post(*args, **kwargs):
-        calls.append((args, kwargs))
-        return FakeResponse(body=body)
-
-    monkeypatch.setattr(gemini.requests, 'post', post)
+    interaction = SimpleNamespace(
+        output_audio=SimpleNamespace(data=base64.b64encode(pcm).decode('ascii'))
+    )
+    client = FakeClient(result=interaction)
+    monkeypatch.setattr(gemini, '_client', lambda: client)
     result = gemini._synth('Exact transcript.', 'Achernar')
-    assert len(calls) == 1
-    assert calls[0][0][0] == gemini.UPSTREAM_URL
-    assert calls[0][1]['headers']['x-goog-api-key'] == 'free-project-key'
-    assert calls[0][1]['json']['model'] == 'gemini-3.1-flash-tts-preview'
-    assert calls[0][1]['json']['response_format'] == {'type': 'audio'}
-    assert calls[0][1]['json']['generation_config']['speech_config'] == [
+    assert len(client.interactions.calls) == 1
+    call = client.interactions.calls[0]
+    assert call['model'] == 'gemini-3.1-flash-tts-preview'
+    assert call['response_format'] == {'type': 'audio'}
+    assert call['generation_config']['speech_config'] == [
         {'voice': 'Achernar'}
     ]
+    assert client.closed is True
     with wave.open(io.BytesIO(result), 'rb') as wav:
         assert wav.getframerate() == 24000
         assert wav.getnchannels() == 1
@@ -83,51 +84,47 @@ def test_one_request_returns_valid_24khz_mono_wav(monkeypatch):
         assert wav.getnframes() == 2400
 
 
-def test_sdk_only_output_audio_field_is_not_mistaken_for_raw_rest(monkeypatch):
-    """The official reference marks output_audio as SDK-added; accepting it
-    here would regress the adapter back to the shape that discarded the first
-    successful raw REST generation."""
-    body = {'status': 'completed', 'output_audio': {'data': 'AAAA'}}
+def test_missing_sdk_output_audio_is_rejected(monkeypatch):
+    client = FakeClient(result=SimpleNamespace(output_audio=None))
+    monkeypatch.setattr(gemini, '_client', lambda: client)
     with pytest.raises(HTTPException) as error:
-        gemini._pcm_from_interaction(body)
+        gemini._synth('Exact transcript.', 'Achernar')
     assert error.value.status_code == 502
-    assert 'no inline audio' in error.value.detail
+    assert 'output_audio' in error.value.detail
 
 
-def test_multiple_documented_audio_blocks_are_concatenated():
-    first = b'\x01\x00' * 3
-    second = b'\x02\x00' * 2
-    body = {
-        'status': 'completed',
-        'steps': [{
-            'type': 'model_output',
-            'content': [
-                {'type': 'audio', 'mime_type': 'audio/l16',
-                 'data': base64.b64encode(first).decode('ascii')},
-                {'type': 'audio', 'mime_type': 'audio/l16',
-                 'data': base64.b64encode(second).decode('ascii')},
-            ],
-        }],
-    }
-    assert gemini._pcm_from_interaction(body) == first + second
+def test_official_sdk_client_has_exactly_one_attempt(monkeypatch):
+    monkeypatch.setenv('GEMINI_API_KEY', 'free-project-key')
+    monkeypatch.setenv('GEMINI_FREE_PROJECT_ID', 'dedicated-free-project')
+    monkeypatch.setenv('GEMINI_FREE_PROJECT_CONFIRMED', '1')
+    captured = {}
+
+    def factory(**kwargs):
+        captured.update(kwargs)
+        return FakeClient()
+
+    monkeypatch.setattr(gemini.genai, 'Client', factory)
+    gemini._client()
+    options = captured['http_options']
+    assert options.retry_options.attempts == 1
+    assert options.timeout == 300_000
 
 
 def test_quota_failure_is_returned_without_retry(monkeypatch):
     monkeypatch.setenv('GEMINI_API_KEY', 'free-project-key')
     monkeypatch.setenv('GEMINI_FREE_PROJECT_ID', 'dedicated-free-project')
     monkeypatch.setenv('GEMINI_FREE_PROJECT_CONFIRMED', '1')
-    calls = []
-
-    def post(*args, **kwargs):
-        calls.append(1)
-        return FakeResponse(429, {'error': {'message': 'Free quota exhausted'}})
-
-    monkeypatch.setattr(gemini.requests, 'post', post)
+    api_error = genai_errors.APIError(
+        429, {'error': {'message': 'Free quota exhausted', 'status': 'RESOURCE_EXHAUSTED'}}
+    )
+    client = FakeClient(error=api_error)
+    monkeypatch.setattr(gemini, '_client', lambda: client)
     with pytest.raises(HTTPException) as error:
         gemini._synth('Exact transcript.', 'Achernar')
     assert error.value.status_code == 429
     assert 'Free quota exhausted' in error.value.detail
-    assert len(calls) == 1
+    assert len(client.interactions.calls) == 1
+    assert client.closed is True
 
 
 def test_paid_or_unknown_model_is_rejected_before_synthesis(monkeypatch):

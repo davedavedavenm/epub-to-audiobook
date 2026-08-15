@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import base64
 import io
-import logging
 import os
 import wave
 
-import requests
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import JSONResponse
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 from pydantic import BaseModel
 
 
@@ -38,7 +39,6 @@ DEFAULT_STYLE = (
 )
 
 app = FastAPI()
-logger = logging.getLogger("gemini_tts")
 
 
 class SpeechRequest(BaseModel):
@@ -92,96 +92,49 @@ def _wav_from_pcm(pcm: bytes) -> bytes:
     return out.getvalue()
 
 
-def _error_detail(response: requests.Response) -> str:
-    try:
-        body = response.json()
-        message = body.get("error", {}).get("message")
-        if message:
-            return str(message)[:500]
-    except Exception:
-        pass
-    return (response.text or f"HTTP {response.status_code}")[:500]
-
-
-def _pcm_from_interaction(body: dict) -> bytes:
-    """Extract inline L16 from the raw REST Interaction response.
-
-    Google's SDK adds an ``output_audio`` convenience property, but the raw
-    REST resource returns model output in ``steps[].content[]``.  Pinning the
-    parser to that documented wire shape prevents a successful generation from
-    being discarded merely because an SDK-only field is absent.
-    """
-    blocks: list[bytes] = []
-    for step in body.get("steps", []):
-        if not isinstance(step, dict) or step.get("type") != "model_output":
-            continue
-        for content in step.get("content", []):
-            if not isinstance(content, dict) or content.get("type") != "audio":
-                continue
-            mime_type = content.get("mime_type")
-            sample_rate = content.get("sample_rate")
-            channels = content.get("channels")
-            if mime_type not in {None, "audio/l16"}:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Gemini returned unexpected audio format: {mime_type}",
-                )
-            if sample_rate not in {None, 24_000} or channels not in {None, 1}:
-                raise HTTPException(
-                    status_code=502,
-                    detail=("Gemini returned unexpected PCM layout: "
-                            f"sample_rate={sample_rate}, channels={channels}"),
-                )
-            encoded = content.get("data")
-            if not isinstance(encoded, str) or not encoded:
-                continue
-            try:
-                blocks.append(base64.b64decode(encoded, validate=True))
-            except Exception as exc:
-                raise HTTPException(
-                    status_code=502, detail="Gemini returned invalid base64 audio"
-                ) from exc
-    pcm = b"".join(blocks)
-    if not pcm:
-        status = body.get("status", "unknown")
-        raise HTTPException(
-            status_code=502,
-            detail=f"Gemini REST interaction contained no inline audio (status={status})",
-        )
-    return pcm
+def _client() -> genai.Client:
+    """Build the official SDK client with retries explicitly disabled."""
+    timeout_ms = int(os.environ.get("GEMINI_REQUEST_TIMEOUT", "300")) * 1000
+    return genai.Client(
+        api_key=_api_key(),
+        http_options=genai_types.HttpOptions(
+            timeout=timeout_ms,
+            retry_options=genai_types.HttpRetryOptions(attempts=1),
+        ),
+    )
 
 
 def _synth(text: str, voice_name: str) -> bytes:
     style = os.environ.get("GEMINI_TTS_STYLE", DEFAULT_STYLE).strip() or DEFAULT_STYLE
     prompt = f"{style}\n\nTRANSCRIPT:\n{text}"
-    payload = {
-        "model": MODEL_ID,
-        "input": prompt,
-        # Keep this exactly aligned with the TTS-specific official REST
-        # example. The generic Interactions schema advertises additional audio
-        # format controls, but this TTS model rejects them with HTTP 400.
-        "response_format": {"type": "audio"},
-        "generation_config": {
-            "speech_config": [{"voice": voice_name}],
-        },
-    }
-    # Exactly one request. In particular, 429/503 are not retried here: a
-    # preview model's free quota is a stop condition, not permission to hammer.
+    # Use the official SDK path from Google's TTS guide. ``output_audio`` is an
+    # SDK convenience property, not a raw REST field; using it avoids coupling
+    # this adapter to the Interactions API's changing wire representation.
+    client = _client()
     try:
-        upstream = requests.post(
-            UPSTREAM_URL,
-            headers={"x-goog-api-key": _api_key(), "Content-Type": "application/json"},
-            json=payload,
-            timeout=(15, int(os.environ.get("GEMINI_REQUEST_TIMEOUT", "300"))),
+        interaction = client.interactions.create(
+            model=MODEL_ID,
+            input=prompt,
+            response_format={"type": "audio"},
+            generation_config={"speech_config": [{"voice": voice_name}]},
         )
-    except (requests.ConnectionError, requests.Timeout) as exc:
+    except genai_errors.APIError as exc:
+        raise HTTPException(
+            status_code=exc.code or 502,
+            detail=str(exc.message or exc.status or "Gemini API error")[:500],
+        ) from exc
+    except Exception as exc:
         raise HTTPException(status_code=503, detail=f"Gemini request failed: {exc}") from exc
-    if upstream.status_code != 200:
-        detail = _error_detail(upstream)
-        logger.warning("Gemini upstream rejected request: status=%s detail=%s",
-                       upstream.status_code, detail)
-        raise HTTPException(status_code=upstream.status_code, detail=detail)
-    return _wav_from_pcm(_pcm_from_interaction(upstream.json()))
+    finally:
+        client.close()
+    try:
+        encoded = interaction.output_audio.data
+        pcm = base64.b64decode(encoded, validate=True)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail="Gemini SDK response contained no valid output_audio"
+        ) from exc
+    return _wav_from_pcm(pcm)
 
 
 @app.get("/health")
