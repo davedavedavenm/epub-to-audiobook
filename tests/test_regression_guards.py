@@ -383,6 +383,17 @@ def test_rejected_piper_is_not_an_automatic_fallback():
     assert 'ENABLE_PIPER_PROFILE' in DEPLOY
 
 
+def test_deploy_reads_opt_in_profiles_from_dotenv_without_sourcing_secrets():
+    """Compose reads .env itself, but deploy.sh must also read the ENABLE_*
+    switches it uses to construct the profile arguments.  Do not source the
+    whole file: credentials and free-form style prompts need not be shell code.
+    """
+    assert 'profile_enabled()' in DEPLOY
+    assert 'sed -n "s/^${name}=//p" .env' in DEPLOY
+    assert 'source .env' not in DEPLOY
+    assert 'profile_enabled ENABLE_GEMINI_PROFILE' in DEPLOY
+
+
 def _load_tp():
     import importlib.util
     spec = importlib.util.spec_from_file_location('tp2', ROOT / 'webapp' / 'tts_preprocess.py')

@@ -27,6 +27,23 @@ if [ ! -f .env ]; then
   cp .env.example .env
 fi
 
+# Docker Compose reads .env automatically, but this shell script does not.
+# Read only the boolean profile switches here instead of sourcing the whole
+# file (which may contain secrets or values that are not valid shell syntax).
+profile_enabled() {
+  local name="$1"
+  local value="${!name:-}"
+  if [[ -z "${value}" ]]; then
+    value="$(sed -n "s/^${name}=//p" .env | tail -n 1)"
+    value="${value%$'\r'}"
+    value="${value#\"}"
+    value="${value%\"}"
+    value="${value#\'}"
+    value="${value%\'}"
+  fi
+  [[ "${value}" == "1" ]]
+}
+
 # Full commit, not an abbreviated display SHA: Kaggle finalist kernels fetch
 # this exact object and assert parity with the deployed worker before rendering.
 GIT_SHA="$(git rev-parse HEAD)"
@@ -37,39 +54,39 @@ BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 # RTF 0.87 (measured) — light enough to run always, unlike Turbo/TADA which
 # stay opt-in because they are heavy and slow.
 PROFILE_ARGS=(--profile chatterbox-nano)
-if [[ "${ENABLE_PIPER_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_PIPER_PROFILE; then
   # Legacy/debug only. The controlled Piper 1.2/1.6 + encoding A/B failed the
   # audiobook quality bar on 2026-07-28, so never enable it by default.
   PROFILE_ARGS+=(--profile piper)
 fi
-if [[ "${ENABLE_CHATTERBOX_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_CHATTERBOX_PROFILE; then
   PROFILE_ARGS+=(--profile chatterbox)
 fi
-if [[ "${ENABLE_TADA_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_TADA_PROFILE; then
   PROFILE_ARGS+=(--profile tada)
 fi
-if [[ "${ENABLE_MELOTTS_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_MELOTTS_PROFILE; then
   PROFILE_ARGS+=(--profile melotts)
 fi
-if [[ "${ENABLE_OMNIVOICE_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_OMNIVOICE_PROFILE; then
   PROFILE_ARGS+=(--profile omnivoice)
 fi
-if [[ "${ENABLE_CHATTERBOX_V3_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_CHATTERBOX_V3_PROFILE; then
   PROFILE_ARGS+=(--profile chatterbox-v3)
 fi
-if [[ "${ENABLE_VIBEVOICE_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_VIBEVOICE_PROFILE; then
   PROFILE_ARGS+=(--profile vibevoice)
 fi
-if [[ "${ENABLE_QWEN3_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_QWEN3_PROFILE; then
   PROFILE_ARGS+=(--profile qwen3)
 fi
-if [[ "${ENABLE_POCKET_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_POCKET_PROFILE; then
   PROFILE_ARGS+=(--profile pocket)
 fi
-if [[ "${ENABLE_KITTEN_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_KITTEN_PROFILE; then
   PROFILE_ARGS+=(--profile kitten)
 fi
-if [[ "${ENABLE_GEMINI_PROFILE:-0}" == "1" ]]; then
+if profile_enabled ENABLE_GEMINI_PROFILE; then
   PROFILE_ARGS+=(--profile gemini)
 fi
 
