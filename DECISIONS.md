@@ -41,11 +41,10 @@ Dave heard the exact 10:10 app-path `gemini-3.1-flash-tts-preview` / Achernar
 file and called it **“one of the best”**; he explicitly selected it for use.
 Achernar therefore passes the long-form human quality gate as an opt-in book
 narrator. This verdict does not approve every Gemini voice: Google exposes 30
-preset names, all are registered for audition, but only Achernar and Zephyr
-currently have cached app previews, and only Achernar has a heard long gate.
-Uncached presets stay unselectable.
-Dave explicitly requested every preset be cached; complete that across Free
-quota days with one attempt per voice, never by attaching billing.
+preset names and all 30 now have cached, independently decoded app previews,
+but only Achernar has a heard long gate. The other 29 remain auditions.
+The cache was completed across Free quota days with one attempt per voice and
+without attaching billing. The selectable-only-when-cached guard remains.
 The app uses the current Gemini Developer API Interactions route with a key from
 a project whose AI Studio plan is **Free**. It has no Vertex route, Batch API,
 paid model or paid-tier fallback. Do not attach Cloud Billing to that project.

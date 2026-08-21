@@ -1,5 +1,22 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-21 Gemini preset preview cache complete — 30/30 verified
+>
+> The final Free-tier-only batch cached Achird, Gacrux, Pulcherrima, Sadachbia,
+> Sadaltager, Sulafat, Vindemiatrix and Zubenelgenubi in one request with no
+> retry. The persistent Pacific-day ledger finished at 8/10 used, leaving two
+> calls; no billing, Vertex route, paid fallback, project/key change or ASR was
+> used. Before the request, UI, worker and live checkout matched SHA `3ae6502`,
+> app/adapter health passed and the queue had no queued or active work.
+>
+> Independent validation then opened the exact preview path for every one of
+> the 30 Gemini IDs. All 30 returned HTTP 200 `audio/mpeg`, probed as MP3,
+> 24 kHz mono, had nontrivial durations/sizes (79.008–89.088 seconds;
+> 1,580,204–1,781,804 bytes), and completed a full FFmpeg decode with no error.
+> This completes the requested instant-play audition cache. It does **not**
+> approve 30 narrators: Achernar remains the only Gemini preset to pass Dave's
+> long-form listening gate; the other 29 are cached auditions.
+
 > ## 2026-08-15 Piper retired; NVIDIA Magpie raw path rejected / diagnosis open
 >
 > Piper has been removed from the product rather than merely stopped: Compose
@@ -77,12 +94,12 @@
 > poor and it remained far less natural than Gemini Zephyr or Chatterbox.
 > **IndexTTS-2.5 is rejected for production; its listening gate is closed.**
 >
-> Gemini's complete official 30-preset catalogue is now registered. Achernar
-> and Zephyr are cached and independently decoded (`2/30`); uncached presets
-> remain unselectable and Achernar remains the only long-form-approved
-> voice. The adapter has gained a persistent Pacific-day usage ledger which
-> counts failures and refuses request eleven before upstream. The catalogue
-> is being warmed across Free quota days, one batch action per day and one
+> Gemini's complete official 30-preset catalogue is registered and, as of
+> 2026-08-21, all 30 exact app-path previews are cached and independently
+> decoded (`30/30`). Achernar remains the only long-form-approved voice; the
+> other 29 are auditions. The adapter has a persistent Pacific-day usage ledger
+> which counts failures and refuses request eleven before upstream. The
+> catalogue was warmed across Free quota days, one batch action per day and one
 > attempt per preset, without attaching billing. New-user setup is consolidated
 > in `GEMINI-SETUP.md`.
 > Preview, web-worker and standalone explicit-number paths now all use
@@ -1466,7 +1483,7 @@ at the top of this file and `DECISIONS.md` govern.
 | Accurate progress/ETA, no fake numbers | ✅ | Real per-chapter progress (ntfy call-home); honest "chapter X/N"; no ETA before evidence. Was elapsed-guesswork before. |
 | Chapter selection = the actual book, by title | ✅ | Both local and Kaggle paths unified on `chapters.py` numbering. |
 | Covers + metadata land in ABS, chapters navigable | ✅ | Full ID3 tagging implemented for both rendering paths. |
-| **All voices cached**, instant, judged on hard text | ✅ at that date | 69/69 then-configured local voices. This predates the 30 Gemini presets; current Gemini cache is 2/30 and uncached voices remain unselectable. |
+| **All voices cached**, instant, judged on hard text | ✅ | 69/69 then-configured local voices, plus all 30 Gemini presets as of 2026-08-21. Every Gemini preview was opened and fully decoded; only Achernar is long-form approved. |
 | Clear visually which voice is speaking | ✅ | Speaking card: accent glow, equaliser, stop toggle, single-voice rule. |
 | LLM guard: check/sort/act, local or free | ✅ | Shared khpi5 Ollama `qwen2.5:7b` is live and reachable; no Groq cloud key/model is currently configured. All LLM-assisted paths fail open to deterministic rules. |
 | Anyone can clone + deploy and get all this | ✅ | Unified local renderer routes all jobs cleanly through `convert_book.py`. |
