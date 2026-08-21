@@ -271,14 +271,15 @@ Achernar (Soft), Alnilam (Firm), Schedar (Even), Gacrux (Mature), Pulcherrima
 (Forward), Achird (Friendly), Zubenelgenubi (Casual), Vindemiatrix (Gentle),
 Sadachbia (Lively), Sadaltager (Knowledgeable), and Sulafat (Warm).
 
-All 30 IDs are registered, but the UI exposes each one only after its exact
-app-path preview is cached. `gemini_achernar` and `gemini_zephyr` are cached;
-Achernar's 10:10
-production-path file passed Dave's listening gate as “one of the best”.
-Catalogue presence is not a voice verdict: Zephyr and the other 28 remain
-auditions rather than approved long-form narrators.
-Dave explicitly requested the full catalogue on 2026-08-15; warm it across
-Free quota days with the persistent ten-RPD local guard and no automatic retry.
+All 30 IDs are registered and all 30 exact app-path previews were cached across
+Free quota days by 2026-08-21. An independent final sweep opened every
+`/api/preview/<voice_id>` path, found HTTP 200 MP3 at 24 kHz mono, and fully
+decoded every file; durations span 79.008–89.088 seconds and sizes span
+1,580,204–1,781,804 bytes. The UI continues to expose a voice only while its
+persisted preview is ready. Achernar's 10:10 production-path file passed Dave's
+listening gate as “one of the best”. Catalogue/cache presence is not a voice
+verdict: the other 29 remain auditions rather than approved long-form narrators.
+The persistent ten-RPD local guard and no-automatic-retry rule remain in force.
 See [GEMINI-SETUP.md](GEMINI-SETUP.md).
 Official source: [Gemini TTS voice options](https://ai.google.dev/gemini-api/docs/speech-generation#voice-options).
 
