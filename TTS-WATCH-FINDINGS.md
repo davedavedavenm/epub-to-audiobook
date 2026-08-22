@@ -84,6 +84,17 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 August 2026 — MOSS voice-profile LoRAs (500 voices) — **watch**
+
+- **Released:** 22 August 2026. CC-BY-4.0 adapters with shipped weights, per-voice reference audio/profile metadata and a PEFT quickstart; commercial reuse is permitted with attribution.
+- **What changed:** 500 rank-4 adapters (about 34.4 MB each; 17.36 GB for the complete set) target fixed synthetic speaker identities and prosodic behaviour on the 4.55B `moss-tts-local` voice-acting base.
+- **Evidence:** all 500 improve held-out loss over the frozen base (median 0.1571 nats), but this is not perceptual or long-form evidence. The card says roughly 96% of adapter capacity affects the semantic/prosodic transformer; timbre still depends substantially on the reference clip.
+- **Important limits:** English/German only, no published audiobook-length listening, regional-accent validation, RTF/VRAM reduction or demonstrated joins/pacing fix. The 4.55B base remains GPU-oriented; downloading one adapter avoids the 17.36 GB bundle but not the base-model cost.
+- **Project relevance:** this directly targets speaker identity/prosody, so it is more material than prior MOSS packaging/GGUF updates, but it does not yet reverse the project's heard MOSS rejection.
+- **Recommended next step:** watch for independent long-form samples or a first-party chapter/identity benchmark; only then run one bounded Kaggle comparison against the existing rejected MOSS sample and Qwen3-TTS.
+
+Source: [weights, model card and quickstart](https://huggingface.co/laion/moss-voice-profile-loras-500).
+
 ### 20 August 2026 — Scylla's Band v2 — **test**
 
 - **Released:** 19 August 2026. Apache-2.0 runtime and weights; commercial use permitted. Training data is not distributed.
