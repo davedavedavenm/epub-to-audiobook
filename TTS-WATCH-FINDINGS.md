@@ -84,6 +84,17 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 23 August 2026 — MOSS Voice-Acting 4.55B SFT — **watch**
+
+- **Released:** 23 August 2026. CC-BY-4.0 full checkpoint with model code embedded in the Hugging Face repository; commercial reuse is permitted with attribution. It derives from the Apache-2.0 MOSS voice-acting v2 base.
+- **What changed:** unlike yesterday's per-voice LoRAs, all 4.13B parameters were fine-tuned over 3,147,802 English/German utterances for three epochs, mixing synthetic voice profiles with real speech.
+- **Evidence:** held-out token loss improved monotonically from 4.7076 to 4.6314 on both constituent datasets, but upstream explicitly says this is not a listening-quality result; speaker similarity was not re-measured.
+- **Runtime:** the shipped BF16 checkpoint is 8.26 GB and the official example is CUDA-only. No quantised/ONNX/GGUF route, safe Kaggle VRAM figure, CPU result or audiobook-length benchmark is published.
+- **Project relevance:** a full model update could alter the prior MOSS voice/prosody verdict more than packaging changes, but there is still no evidence that joins, pacing, drift, pronunciation or authentic regional English improve. It does not yet justify replacing Qwen3-TTS or reopening a project test.
+- **Recommended next step:** watch for first-party or independent long-form A/B audio and measured inference requirements; only then run one bounded Kaggle comparison against the rejected MOSS sample and Qwen3-TTS.
+
+Source: [weights, model card, training and validation details](https://huggingface.co/laion/moss-tts-local-transformer-4.55b-voice-acting-v2-sft).
+
 ### 22 August 2026 — MOSS voice-profile LoRAs (500 voices) — **watch**
 
 - **Released:** 22 August 2026. CC-BY-4.0 adapters with shipped weights, per-voice reference audio/profile metadata and a PEFT quickstart; commercial reuse is permitted with attribution.
