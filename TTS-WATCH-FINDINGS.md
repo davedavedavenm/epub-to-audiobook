@@ -84,6 +84,17 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 25 August 2026 — LoudKit 0.1.0 / loudr-1 — **test**
+
+- **Released:** the public 0.1.0 code and completed `loudr-1` model bundle landed on 25 August 2026. Code and weights are Apache-2.0; the model is derived from MIT-licensed Chatterbox and includes full component/voice provenance.
+- **What changed:** this is a new local inference engine and checkpoint package rather than a new architecture: PyTorch, ONNX Runtime and CoreML, five SDKs, 20 managed voices across ten languages, and cloning from roughly ten seconds of permitted audio.
+- **Runtime:** synthesis-only downloads are 750 MB for PyTorch, 2.60 GB for ONNX and 1.16 GB for CoreML. First-party end-to-end measurements report 1.21× realtime on an Apple M3 Pro ONNX CPU versus 0.33× for PyTorch CPU; no x86/Zorin CPU result is published.
+- **Long-form evidence:** passages are windowed at about ten seconds; six-token carry-over reduces measured join pitch restart from about 74 Hz to about 7 Hz, and tail detectors target hallucinations. Upstream still warns that joins can be audible and difficult punctuation, numbers and abbreviations can mispronounce or alter prosody. No authentic British/Irish/Australian/South-African or chapter-length listening result is published.
+- **Project relevance:** the ONNX CPU path, explicit join work, cloning and permissive licence could make this Chatterbox-derived route materially more practical than the previously evaluated variants, but its own limitations hit the project's hard-text and audiobook gates. It does not displace Nano/Beatrice without listening.
+- **Recommended next test:** run one bounded x86/Zorin ONNX comparison on the hard-text corpus with a permitted Beatrice/Arthur-style reference, measuring RTF/RSS and joins; advance to ten minutes only if voice, regional phonetics, names and numbers pass by ear.
+
+Sources: [runtime/code](https://github.com/loudreader/loudkit), [weights/model card](https://huggingface.co/loudreader/loudr-1), [voice samples](https://loudreader.github.io/loudkit/demo/).
+
 ### 23 August 2026 — MOSS Voice-Acting 4.55B SFT — **watch**
 
 - **Released:** 23 August 2026. CC-BY-4.0 full checkpoint with model code embedded in the Hugging Face repository; commercial reuse is permitted with attribution. It derives from the Apache-2.0 MOSS voice-acting v2 base.
