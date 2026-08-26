@@ -84,6 +84,17 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 26 August 2026 — Breeze TTS 2 — **watch**
+
+- **Released:** official PyTorch inference code and usable model weights landed on 25 August 2026. Code is Apache-2.0, but the weights, derivatives and self-hosted outputs use the BreezeBlue Research and Non-Commercial License; commercial audiobooks require separate written permission.
+- **What is new:** a bilingual English/Chinese open-weight model with reference-based voice cloning/direction, reference-free voice design, natural-language pace/style control, inline vocal events and streaming inference. The shipped checkpoint components total about 7.65 GB (7.12 GiB).
+- **Runtime:** upstream reports about 7.7 GiB VRAM in eager mode and recommends a 12 GB CUDA GPU; its 0.32 RTF and sub-40 ms first-audio figures are H100 fast-path measurements. There is no CPU, ONNX/GGUF, quantised or T4/Kaggle result.
+- **Long-form evidence:** upstream positions it for real-time interaction and publishes no chapter/audiobook test, speaker-drift result, pronunciation/custom-lexicon control or authentic regional-English validation. The default generation limit is 750 audio tokens, so sustained narration still needs verified segmentation and joins.
+- **Project relevance:** the cloning plus natural-language pacing control and strong published short-form quality make it a credible free-GPU audition lead, but the non-commercial output restriction and missing long-form/T4 evidence prevent production use or displacement of Qwen3-TTS.
+- **Recommended next step:** watch for first-party long-form/identity evidence or a measured T4 run; only then attempt one bounded Kaggle short gate against Qwen3-TTS and the hard-text corpus.
+
+Sources: [official runtime/code](https://github.com/breezeblue-ai/breeze-tts), [weights/model card](https://huggingface.co/BreezeBlue/Breeze-TTS-2), [exact model licence](https://huggingface.co/BreezeBlue/Breeze-TTS-2/blob/main/LICENSE).
+
 ### 25 August 2026 — LoudKit 0.1.0 / loudr-1 — **test**
 
 - **Released:** the public 0.1.0 code and completed `loudr-1` model bundle landed on 25 August 2026. Code and weights are Apache-2.0; the model is derived from MIT-licensed Chatterbox and includes full component/voice provenance.
