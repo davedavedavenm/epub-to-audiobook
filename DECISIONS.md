@@ -98,6 +98,42 @@ Listening establishes these outcomes, not their model-side root causes. Keep
 Audio8 and ZONOS2 out of the product. Only Audio8 is eligible for an explicitly
 authorised longer gate; ZONOS2's current cloned-narrator path is closed.
 
+---
+
+## August 2026 native-voice gate: LoudKit and Sopro both rejected — Active
+
+Do not register LoudKit 0.1.0 / loudr-1 or Sopro v2 turbo as application
+engines. Dave heard eight arms across two gates on 2026-08-28 and rejected all
+of them: **none good enough.**
+
+- **LoudKit** was heard on its two shipped English voices, `joe` and
+  `kathleen`, at upstream defaults on the ONNX CPU path, and earlier on a
+  cloned reference across both ONNX and PyTorch.
+- **Sopro** was heard on Beatrice at upstream defaults and at solver `steps 16`.
+  Raising the solver steps did not change the verdict, and the two arms share an
+  identical token stream, so the acoustic decoder is not what held it back.
+
+Neither engine displaces Chatterbox Nano / Beatrice, and neither earns a longer
+gate. This is a listening verdict; it does not diagnose either model.
+
+**Two facts worth keeping, because they bound any future reconsideration:**
+
+- **Sopro ships no native voices.** `--ref` is a required argument and the model
+  repository contains no voice profiles. It is cloning-only by construction, so
+  every render needs a reference chosen by Dave. It can never be auditioned on
+  native supported voices.
+- **LoudKit's ONNX export is fixed at a 255-token window.** Its default
+  `max_new_tokens` / `max_speech_tokens` of 255 caused the trimmed tails and the
+  dropped sentence seen in the first gate; at 512 on PyTorch the cap clears and
+  all thirteen chunks come back clean. But ONNX refuses the wider window — the
+  graphs are static at query 255 / prompt 238 — and PyTorch measures RTF 6.96,
+  which is not a book path. Escaping the cap requires re-exporting the ONNX
+  graphs, which is upstream's stated remedy and real work.
+
+Neither fact reopens either engine. They exist so that a future "LoudKit looks
+promising" or "try Sopro" proposal starts from what was already measured and
+already heard.
+
 ## Project optimisation order: quality floor, then free, then cheapest — Active
 
 An audiobook must first pass Dave's human listening floor for naturalness,
