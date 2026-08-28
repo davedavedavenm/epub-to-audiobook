@@ -14,6 +14,90 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
+## Repo boundary: split by host, not by acquisition method — Active
+
+There is no separate "acquisition" or grey-market repository, and none should be
+created. The homelab repo boundary is **where the thing runs**, not what kind of
+thing it is:
+
+- **`epub-to-audiobook`** — the conversion application only. It starts at the
+  human decision to generate a book, or the human action of sending an article
+  URL.
+- **`infra`** — anything running on docker-vm, including the whole book-grab
+  pipeline (LazyLibrarian, qBittorrent/Gluetun, SABnzbd, `book_sync.sh`,
+  `acquisition_verify.sh`, `wanted_monitor`), plus the canonical protocol docs.
+- **`mediahub`** — anything running on the NAS: Prowlarr, the arr suite, the
+  slskd/soularr music stack.
+
+**Consequence for this repo:** `scripts/wanted/` (`wanted_monitor.py`,
+`openbooks_bridge.py`, `run_wanted_monitor.sh`) belongs in
+`infra/stacks/docker-vm/media-stack/scripts/wanted/`, alongside its siblings and
+the documentation that already describes it. After that move this repo contains
+no acquisition code at all.
+
+**Why not a dedicated acquisition repo:** it would cut across the existing
+host/plane ownership rule, forcing every future placement question to be
+answered on two axes instead of one. It would also break the Arcane GitOps map
+(`docker-vm-media-stack-gitops` is path-bound to
+`infra/stacks/docker-vm/media-stack/compose.yaml`), a known-expensive repair.
+And it buys no protection: every repo involved is private, so a second private
+repo changes no exposure. Exposure is governed solely by what gets published —
+see the next entry.
+
+Reconsider only if book acquisition grows enough to justify a `booklib` repo
+owning the pipeline end to end. Not before.
+
+## Open-sourcing route: fresh squashed public repo, never a visibility flip — Active
+
+Publishing this application is an eventual intention, not an imminent one. When
+it happens it must be done as a **new repository seeded from a single squashed
+commit** of the then-current tree — not by flipping this repository public.
+
+**Why:** the git history of this repo contains `.env`, `.secrets/`, `ssh-keys/`,
+internal LAN addresses and the full `wanted_monitor`/OpenBooks lineage. Deleting
+or moving those files does not remove them from the log, so a visibility flip
+would publish all of it. Squashing discards the commit log, which for a
+single-author project costs nothing of value.
+
+**Standing rule until then:** keep LAN-specific values — hostnames, IP
+addresses, internal ports — in configuration and environment, never hardcoded in
+application code. Every such value committed now is one more thing to find and
+strip later.
+
+## August 2026 CPU new-engine gate: Scylla rejected; Audio8 and ZONOS2 remain bounded — Active
+
+Do not register Audio8, Scylla's Band v2 or ZONOS2 as application engines from
+the 2026-08-22 audition.
+
+- **Scylla v2 / Ink is rejected for production in both ONNX INT8 and FP32.**
+  Dave heard the same robotic, emotionless, effectively one-long-sentence
+  delivery in both arms. Full precision did not repair it, so quantisation is
+  not a credible explanation and no longer gate is justified for this voice.
+- **Audio8's Arthur voice passes the short voice-quality impression, but the
+  evaluated long-text path fails continuity.** The raw arm audibly dropped
+  words. The prepared arm used twelve independent calls, different seeds and
+  200 ms joins; it faded at forced mid-sentence boundaries and changed tone and
+  speed between chunks. Do not treat that joined harness as an audiobook path.
+  A corrective complete-sentence, fixed-seed, zero-added-silence arm was
+  subsequently “better” by ear. Audio8 therefore remains the only survivor of
+  this gate, but “better” is not an unqualified continuity or long-form pass.
+  Three corrective calls also exceeded upstream's recommended 150 characters.
+  Do not register it before an explicitly accepted longer gate.
+- **ZONOS2 Q4 passes only the bounded first-paragraph voice audition.** Dave
+  called that clip really good. The same settings in one full-passage call
+  dropped the last 35 words and lost the Arthur identity, so it fails sustained
+  narration. A persistent-server, cached-Arthur, fixed-setting corrective arm
+  restored structural coverage after one clause repair, but Dave still heard
+  different voices with Arthur fading in and out. The underlying/base voice was
+  acceptable; cloned narrator identity was not. Close the current ZONOS2 Arthur
+  audiobook path unless upstream materially changes its continuity mechanism.
+  Q8 has no verdict because Q4 already peaked at 12.3 GiB inside a 14 GiB WSL
+  limit and quantisation has not been shown to cause the identity drift.
+
+Listening establishes these outcomes, not their model-side root causes. Keep
+Audio8 and ZONOS2 out of the product. Only Audio8 is eligible for an explicitly
+authorised longer gate; ZONOS2's current cloned-narrator path is closed.
+
 ## Project optimisation order: quality floor, then free, then cheapest — Active
 
 An audiobook must first pass Dave's human listening floor for naturalness,
