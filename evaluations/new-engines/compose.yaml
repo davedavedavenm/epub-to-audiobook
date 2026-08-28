@@ -54,6 +54,42 @@ services:
       - zonos2-models:/models
       - zonos2-hf:/cache/huggingface
 
+  loudkit:
+    build:
+      context: ../..
+      dockerfile: evaluations/new-engines/loudkit.Dockerfile
+    cpus: 4
+    mem_limit: 10g
+    memswap_limit: 10g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+      - HF_HOME=/cache/huggingface
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+    volumes:
+      - ../..:/repo:ro
+      - ./output:/output
+      - loudkit-models:/models
+      - loudkit-hf:/cache/huggingface
+
+  sopro:
+    build:
+      context: ../..
+      dockerfile: evaluations/new-engines/sopro.Dockerfile
+    cpus: 4
+    mem_limit: 6g
+    memswap_limit: 6g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+      - HF_HOME=/cache/huggingface
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+    volumes:
+      - ../..:/repo:ro
+      - ./output:/output
+      - sopro-models:/models
+      - sopro-hf:/cache/huggingface
+
 volumes:
   audio8-models:
   audio8-hf:
@@ -61,3 +97,7 @@ volumes:
   scylla-hf:
   zonos2-models:
   zonos2-hf:
+  loudkit-models:
+  loudkit-hf:
+  sopro-models:
+  sopro-hf:

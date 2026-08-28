@@ -84,14 +84,14 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
-### 27 August 2026 — Sopro v2 (sopro-v2-turbo) — **watch**
+### 27 August 2026 — Sopro v2 (sopro-v2-turbo) — **tested; awaiting listening**
 
 - **Released:** open-weight code and the `sopro-v2-turbo` checkpoint landed 25 August 2026, with active stream-gate hardening commits on 27 August. Code and model weights are Apache-2.0; commercial audiobook use is permitted without a separate licence.
 - **What is new:** a 120M-parameter lightweight voice-cloning TTS family — zero-shot cloning from 5–20 s reference audio, streaming (~300 ms time-to-first-audio on a laptop CPU) and offline synthesis across English, European Portuguese, French and German. Upstream reports 0.24 RTF offline and 0.21 RTF streaming on an M3 CPU, 0.07 RTF on H100.
 - **Runtime:** CPU-first — ONNX demo, CUDA auto-detect, defaults to CPU on macOS, ~120M params (F32). No published x86/Zorin CPU RTF/RSS, quantised/GGUF route, or Kaggle T4 figure.
 - **Long-form evidence:** none published. The streaming path (chunked attention + causal vocoder) is explicitly not bit-exact with the offline path, so joins/pacing for sustained narration are unverified; mixed-language text is a noted weak spot.
 - **Project relevance:** a permissive, CPU-runnable, English-capable open-weight model with cloning is a credible local audition lead and sits closer to the project's free-local-CPU default than the non-commercial Breeze TTS 2, but it lacks the long-form/authentic-accent evidence needed to displace Nano/Beatrice or Qwen3-TTS.
-- **Recommended next step:** watch for first-party or independent long-form/audiobook samples and measured x86 CPU RTF; only then run one bounded Zorin gate on the hard-text corpus against a permitted Beatrice/Arthur-style reference, measuring joins, names and numbers.
+- **Project result, 28 August:** the bounded CPU gate ran on the hard-text corpus with the authentic Arthur reference, four threads, offline path, whole passage in one call. Measured **RTF 0.945 fp32 / 0.963 int8** on a Ryzen 9 8945HS — faster than real time on x86 CPU, and int8 is marginally slower, so quantisation buys nothing here. Peak working set 954 MiB. Structural ASR covered the complete passage in both arms (WER 0.115 / 0.110), including the WTO/EU/supply-chain tail that ZONOS2 lost; divergences are number-format and acronym only. Exact MP3s sent to Dave; **voice, accent, pacing and joins are not yet judged.**
 
 Sources: [runtime/code](https://github.com/samuel-vitorino/sopro), [weights/model card](https://huggingface.co/samuel-vitorino/sopro-v2-turbo), [blog](https://research.haloneuro.ai/posts/sopro-v2).
 
@@ -106,14 +106,16 @@ Sources: [runtime/code](https://github.com/samuel-vitorino/sopro), [weights/mode
 
 Sources: [official runtime/code](https://github.com/breezeblue-ai/breeze-tts), [weights/model card](https://huggingface.co/BreezeBlue/Breeze-TTS-2), [exact model licence](https://huggingface.co/BreezeBlue/Breeze-TTS-2/blob/main/LICENSE).
 
-### 25 August 2026 — LoudKit 0.1.0 / loudr-1 — **test**
+### 25 August 2026 — LoudKit 0.1.0 / loudr-1 — **tested; drops a sentence on both runtimes**
 
 - **Released:** the public 0.1.0 code and completed `loudr-1` model bundle landed on 25 August 2026. Code and weights are Apache-2.0; the model is derived from MIT-licensed Chatterbox and includes full component/voice provenance.
 - **What changed:** this is a new local inference engine and checkpoint package rather than a new architecture: PyTorch, ONNX Runtime and CoreML, five SDKs, 20 managed voices across ten languages, and cloning from roughly ten seconds of permitted audio.
 - **Runtime:** synthesis-only downloads are 750 MB for PyTorch, 2.60 GB for ONNX and 1.16 GB for CoreML. First-party end-to-end measurements report 1.21× realtime on an Apple M3 Pro ONNX CPU versus 0.33× for PyTorch CPU; no x86/Zorin CPU result is published.
 - **Long-form evidence:** passages are windowed at about ten seconds; six-token carry-over reduces measured join pitch restart from about 74 Hz to about 7 Hz, and tail detectors target hallucinations. Upstream still warns that joins can be audible and difficult punctuation, numbers and abbreviations can mispronounce or alter prosody. No authentic British/Irish/Australian/South-African or chapter-length listening result is published.
 - **Project relevance:** the ONNX CPU path, explicit join work, cloning and permissive licence could make this Chatterbox-derived route materially more practical than the previously evaluated variants, but its own limitations hit the project's hard-text and audiobook gates. It does not displace Nano/Beatrice without listening.
-- **Recommended next test:** run one bounded x86/Zorin ONNX comparison on the hard-text corpus with a permitted Beatrice/Arthur-style reference, measuring RTF/RSS and joins; advance to ten minutes only if voice, regional phonetics, names and numbers pass by ear.
+- **Project result, 28 August:** the bounded CPU gate ran the cloned Arthur path on the hard-text corpus, four threads, whole passage in one `synthesize_long` call. **ONNX RTF 1.177** (2,946 MiB peak working set); the PyTorch CPU reference control measured **RTF 7.564** and is unusable for books regardless of quality. Both arms rendered 13 windows and **both dropped the same sentence** — “Rivals — Huawei, Xiaomi, Samsung — circle constantly.” Because the two backends run different precisions and therefore different token streams, a shared omission points at the model or its windowing rather than a runtime bug. Upstream's own detectors set `hit_token_cap` in both arms with chunks running to the full 255-token cap, and three to four chunks report a trimmed `ended_tail`; `suspect` is false. ASR establishes gross omission only, not cause.
+- **Also material:** no shipped English voice is British. The roster lists `joe` and `kathleen` as the only English profiles, both CC0 OHF-Voice donations, so the managed-voice route cannot clear the authentic-accent gate and only the cloned path is project-relevant.
+- **Next gate:** Dave's listening verdict on the exact MP3s sent 28 August decides whether the missing sentence is audible and whether the Chatterbox-derived runtime is worth pursuing for joins on an accepted voice.
 
 Sources: [runtime/code](https://github.com/loudreader/loudkit), [weights/model card](https://huggingface.co/loudreader/loudr-1), [voice samples](https://loudreader.github.io/loudkit/demo/).
 
