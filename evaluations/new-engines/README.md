@@ -26,7 +26,12 @@ Run one engine at a time:
 docker compose -f evaluations/new-engines/compose.yaml run --rm audio8
 docker compose -f evaluations/new-engines/compose.yaml run --rm scylla
 docker compose -f evaluations/new-engines/compose.yaml run --rm zonos2
+docker compose -f evaluations/new-engines/compose.yaml run --rm loudkit
+docker compose -f evaluations/new-engines/compose.yaml run --rm sopro
 ```
+
+`render_loudkit.py` accepts `LOUDKIT_ARMS=onnx` or `torch`; `render_sopro.py`
+accepts `SOPRO_ARMS=fp32` or `int8`. Both default to running both arms.
 
 For a pinned official prebuilt, `render_zonos2.py` also accepts `ZONOS2_CLI`,
 `ZONOS2_MODELS_DIR`, `AUDITION_PREPARED_TEXT`, and `ZONOS2_ARMS=q4_k` or
@@ -128,3 +133,83 @@ one cached Arthur embedding and fixed settings, the current cloned-narrator
 continuity path fails even after the harness-side corrections. Audio8 is the
 only candidate eligible for a separately authorised longer gate; Scylla and
 the current ZONOS2 Arthur path stop here.
+
+## Second gate — LoudKit and Sopro, 2026-08-28, structurally checked, awaiting listening
+
+The two candidates carried forward from the 21–27 August watch log. Both are
+Apache-2.0 on code *and* weights, verified at the exact revisions below, so
+neither carries the licence boundary that holds Breeze TTS 2 out of production.
+
+| Engine | Exact source and weights | Licence / boundary | Arms |
+|---|---|---|---|
+| LoudKit 0.1.0 / loudr-1 | [runtime `58fd4a5` (tag v0.1.0)](https://github.com/loudreader/loudkit/tree/58fd4a58de8980b42c1021492728876d67ea2718), [weights `0fe297e`](https://huggingface.co/loudreader/loudr-1/tree/0fe297e449ba4f31113977f6c7f8c438fdfd1be3) | Apache-2.0 code and weights; derived from MIT Chatterbox. No shipped English voice is British — the roster lists `joe` and `kathleen` as the only English profiles, both CC0 OHF-Voice donations — so only the cloned Arthur path is project-relevant | ONNX Runtime CPU, PyTorch CPU |
+| Sopro v2 turbo (120M) | [runtime `cb2b2a1`](https://github.com/samuel-vitorino/sopro/tree/cb2b2a1949cd70cca469d689416906a6d181fa22), [weights `0abc556`](https://huggingface.co/samuel-vitorino/sopro-v2-turbo/tree/0abc5561e8ffd7b582b8aea2eb9e5f3bf7637c26) | Apache-2.0 code and weights; single-maintainer project, bus factor one | offline fp32, offline int8 |
+
+Both engines window long text themselves, so the harness passes the whole
+prepared passage in **one call** and adds no join silence: LoudKit's own
+`manifest.json` declares `max_tokens` 255 with `prefix_tokens` 6 carry-over,
+and Sopro splits on `--max-seconds`. Their join handling is the thing under
+test; pre-chunking would have measured our splitter instead, which is what
+produced Audio8's forced-boundary artefacts. Each engine keeps a same-text
+control on a second numeric path, in the role Scylla's FP32 control played.
+
+Sopro's streaming path is excluded: upstream states it is not bit-exact with
+the offline path and recommends offline for quality.
+
+The prepared input hash is `8ccd447f2890e5f7…`, byte-identical to the text
+Audio8, Scylla and ZONOS2 rendered on 22 August, so these arms are directly
+comparable to the files Dave has already heard.
+
+Ryzen 9 8945HS, four inference threads, CPU only, no GPU present on the host.
+Peak working set is sampled externally because native Windows has no
+`resource.getrusage`; the earlier gate recorded these as "not available".
+
+| Arm | Audio | Wall | RTF | Peak working set | ASR boundary |
+|---|---:|---:|---:|---:|---|
+| Sopro v2 Arthur fp32 | 82.683 s | 78.132 s | **0.945** | not sampled | WER 0.115; complete content, number/acronym formatting diffs only |
+| Sopro v2 Arthur int8 | 82.621 s | 79.567 s | **0.963** | 954 MiB | WER 0.110; complete content, number/acronym formatting diffs only |
+| LoudKit Arthur ONNX | 81.960 s | 96.466 s | **1.177** | 2,946 MiB | **WER 0.170; dropped "Rivals — Huawei, Xiaomi, Samsung — circle constantly"** |
+| LoudKit Arthur PyTorch | 80.440 s | 608.415 s | **7.564** | 1,485 MiB | **WER 0.170; dropped the same sentence bar the word "Rivals"** |
+
+### What the measurements establish
+
+**Sopro runs faster than real time on x86 CPU and int8 buys nothing.** 0.945
+against 0.963 means the quantised arm is marginally *slower* here; if the two
+are indistinguishable by ear there is no reason to run int8. Under a gigabyte
+of working set is also small enough to sit beside the product on Zorin.
+
+**LoudKit loses a sentence, and the runtime is not the cause.** Both arms drop
+the same em-dash-heavy sentence. Because ONNX and PyTorch run different
+precisions and therefore different token streams — upstream's identity contract
+is explicit that fp16 in the generator flips roughly one token in a thousand —
+two independent readings losing the same sentence points at the model or its
+windowing, not at a backend bug. This is the same failure class as ZONOS2's
+dropped 35-word tail and Audio8's raw-arm omission. ASR establishes gross
+omission only; it does not establish the cause.
+
+Upstream's own per-chunk detectors agree that something happened there: the
+render is 13 chunks, `hit_token_cap` is true in both arms with chunks running
+to the full 255-token cap, and three to four chunks report `ended_tail`
+(a trimmed hallucinated tail). `suspect` is false in both arms, so no chunk was
+judged impossibly long for its text.
+
+**Both engines carried the ending ZONOS2 lost.** The WTO/EU/supply-chain tail
+survives in all four arms.
+
+### Harness note — the passage API
+
+`Engine.synthesize()` renders exactly one window and is documented as such. The
+first attempt at this gate called it and got 10.2 s of audio for the
+1,142-character corpus, with upstream's `hit_token_cap` set and a chunk count of
+one. `Engine.synthesize_long()` is the passage API. `render_loudkit.py` now
+refuses to write an arm with fewer than two chunks or under 60 seconds, and
+`tests/test_new_engine_auditions.py` pins that. `hit_token_cap` is recorded in
+the evidence, never used to reject an arm: upstream defines it as worth
+surfacing, and the quality verdict is Dave's.
+
+### Awaiting listening
+
+All four exact MP3s were sent to Dave on 28 August. Nothing here is a quality
+verdict, a project recommendation or an engine registration. Voice, accent,
+pacing, joins and whether LoudKit's missing sentence is audible are decided by
+ear. No app engine was registered, no voice added, no deployment state changed.
