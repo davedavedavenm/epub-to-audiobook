@@ -84,7 +84,7 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
-### 27 August 2026 — Sopro v2 (sopro-v2-turbo) — **tested on Beatrice; cloning-only**
+### 27 August 2026 — Sopro v2 (sopro-v2-turbo) — **tested and rejected by ear**
 
 - **Released:** open-weight code and the `sopro-v2-turbo` checkpoint landed 25 August 2026, with active stream-gate hardening commits on 27 August. Code and model weights are Apache-2.0; commercial audiobook use is permitted without a separate licence.
 - **What is new:** a 120M-parameter lightweight voice-cloning TTS family — zero-shot cloning from 5–20 s reference audio, streaming (~300 ms time-to-first-audio on a laptop CPU) and offline synthesis across English, European Portuguese, French and German. Upstream reports 0.24 RTF offline and 0.21 RTF streaming on an M3 CPU, 0.07 RTF on H100.
@@ -93,6 +93,7 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 - **Project relevance:** a permissive, CPU-runnable, English-capable open-weight model with cloning is a credible local audition lead and sits closer to the project's free-local-CPU default than the non-commercial Breeze TTS 2, but it lacks the long-form/authentic-accent evidence needed to displace Nano/Beatrice or Qwen3-TTS.
 - **Project result, 28 August:** the bounded CPU gate ran on the hard-text corpus with the authentic Arthur reference, four threads, offline path, whole passage in one call. Measured **RTF 0.945 fp32 / 0.963 int8** on a Ryzen 9 8945HS — faster than real time on x86 CPU, and int8 is marginally slower, so quantisation buys nothing here. Peak working set 954 MiB. Structural ASR covered the complete passage in both arms (WER 0.115 / 0.110), including the WTO/EU/supply-chain tail that ZONOS2 lost; divergences are number-format and acronym only. Exact MP3s sent to Dave; **voice, accent, pacing and joins are not yet judged.**
 - **Correction, 28 August:** those first arms ran at `temperature=0.7`, a value copied from the Audio8 harness and documented nowhere by Sopro, whose own default is **0.8**. They were not default renders. Re-run at upstream defaults with Dave's chosen **Beatrice** reference: **RTF 0.738**, 1,031 MiB peak working set. A `steps 16` arm (solver default is 2) has identical duration to the millisecond — `steps` drives only the acoustic decoder — so it is a clean A/B for whether the fast default costs quality; it measures RTF 1.622.
+- **Verdict, 28 August:** Dave heard the Beatrice default and `steps 16` arms and rejected both — not good enough. Raising solver steps did not change it, and both arms share one token stream, so the acoustic decoder was not the limitation. Not an application engine, no longer gate. See `DECISIONS.md`.
 - **Structural limit:** Sopro ships **no native voices**. `--ref` is a required argument and the model repository contains no voice profiles, so it cannot be auditioned on native supported voices at all. It is cloning-only by construction, and every render needs a reference chosen by Dave.
 
 Sources: [runtime/code](https://github.com/samuel-vitorino/sopro), [weights/model card](https://huggingface.co/samuel-vitorino/sopro-v2-turbo), [blog](https://research.haloneuro.ai/posts/sopro-v2).
@@ -108,7 +109,7 @@ Sources: [runtime/code](https://github.com/samuel-vitorino/sopro), [weights/mode
 
 Sources: [official runtime/code](https://github.com/breezeblue-ai/breeze-tts), [weights/model card](https://huggingface.co/BreezeBlue/Breeze-TTS-2), [exact model licence](https://huggingface.co/BreezeBlue/Breeze-TTS-2/blob/main/LICENSE).
 
-### 25 August 2026 — LoudKit 0.1.0 / loudr-1 — **tested on native voices; cap-bound on the fast path**
+### 25 August 2026 — LoudKit 0.1.0 / loudr-1 — **tested and rejected by ear**
 
 - **Released:** the public 0.1.0 code and completed `loudr-1` model bundle landed on 25 August 2026. Code and weights are Apache-2.0; the model is derived from MIT-licensed Chatterbox and includes full component/voice provenance.
 - **What changed:** this is a new local inference engine and checkpoint package rather than a new architecture: PyTorch, ONNX Runtime and CoreML, five SDKs, 20 managed voices across ten languages, and cloning from roughly ten seconds of permitted audio.
@@ -120,7 +121,7 @@ Sources: [official runtime/code](https://github.com/breezeblue-ai/breeze-tts), [
 - **Correction, 28 August:** the earlier claim that the shared omission “points at the model or its windowing” was **wrong and untested**. `SamplingConfig.max_new_tokens` and `WindowConfig.max_speech_tokens` both default to 255. Raising both to 512 on the PyTorch path clears `hit_token_cap` and returns **all 13 chunks `clean`** with no trimmed tails (75.28 s vs 73.68 s). The omission was the default window, not a model defect.
 - **The fix is unavailable on the fast path.** Raising the cap on ONNX is refused: the exported graphs are static at query 255 / prompt 238, and upstream instructs re-exporting the graphs rather than reframing. PyTorch accepts the wider window at RTF 6.96, which is not a book path. LoudKit at 255 tokens trims tails; escaping that means re-exporting ONNX graphs.
 - **Native voices, 28 August:** `joe` and `kathleen`, the only English profiles, rendered at upstream defaults on ONNX CPU — RTF 1.261 / 1.263, ~3.2–3.3 GiB peak working set. An earlier arm cloned Arthur without being asked and skipped every shipped voice on the harness's own accent judgement; both were corrected.
-- **Next gate:** Dave's listening verdict on the exact MP3s sent 28 August.
+- **Verdict, 28 August:** Dave heard the native `joe` and `kathleen` arms and the earlier cloned arms and rejected all of them — not good enough. Not an application engine, no longer gate. See `DECISIONS.md`.
 
 Sources: [runtime/code](https://github.com/loudreader/loudkit), [weights/model card](https://huggingface.co/loudreader/loudr-1), [voice samples](https://loudreader.github.io/loudkit/demo/).
 

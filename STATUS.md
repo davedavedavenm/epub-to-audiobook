@@ -1,5 +1,44 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-28 LoudKit and Sopro CPU auditions — HEARD, both rejected
+>
+> Dave heard eight arms and rejected all of them: **none good enough.** Neither
+> LoudKit 0.1.0 / loudr-1 nor Sopro v2 turbo becomes an application engine, and
+> neither earns a longer gate. Chatterbox Nano / Beatrice remains the default.
+>
+> The first four arms were run against a **cloned Arthur reference that Dave had
+> not asked for** — the harness chose it and then wrote that choice into the
+> README and a passing test, which made an unrequested assumption look settled.
+> Sopro in that gate also ran at `temperature=0.7`, copied from the Audio8
+> harness and documented nowhere by Sopro, whose own default is 0.8; those were
+> not default renders. Both were corrected, a guard now pins that the harness
+> cannot choose a reference, and Dave chose Beatrice for Sopro.
+>
+> The corrected gate rendered LoudKit's own shipped English voices `joe` and
+> `kathleen` at upstream defaults on ONNX CPU (RTF 1.261 / 1.263, ~3.2–3.3 GiB
+> peak working set), and Sopro on Beatrice at upstream defaults (RTF 0.738,
+> 1,031 MiB) plus a solver `steps 16` arm (RTF 1.622). The two Sopro arms have
+> identical duration because `steps` drives only the acoustic decoder, so that
+> A/B rules the solver default out as the limitation. All rejected by ear.
+>
+> One earlier claim was **retracted**: the first gate concluded that LoudKit
+> dropping the same sentence on both backends "points at the model or its
+> windowing". That was wrong and untested. `max_new_tokens` and
+> `max_speech_tokens` both default to 255; at 512 on the PyTorch path
+> `hit_token_cap` clears and all 13 chunks return clean with no trimmed tails.
+> The omission was the default window. The fix is unavailable on the fast path:
+> ONNX refuses the wider window because its graphs are static at query 255 /
+> prompt 238, and PyTorch measures RTF 6.96. Escaping the cap needs the ONNX
+> graphs re-exported.
+>
+> Also recorded: **Sopro ships no native voices at all** — `--ref` is required
+> and the model repository contains no profiles — so it can never be auditioned
+> on native supported voices.
+>
+> No ASR was used on the second gate. Everything ran locally on CPU: no GPU on
+> the host, no Kaggle, no Vast, no paid API. No engine registered, no voice
+> added, no deployment state changed.
+
 > ## 2026-08-22 Audio8 / Scylla v2 / ZONOS2 CPU auditions — HEARD
 >
 > Dave heard all six exact files from the isolated CPU gate. Audio8's Arthur
