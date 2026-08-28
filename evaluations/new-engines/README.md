@@ -30,8 +30,9 @@ docker compose -f evaluations/new-engines/compose.yaml run --rm loudkit
 docker compose -f evaluations/new-engines/compose.yaml run --rm sopro
 ```
 
-`render_loudkit.py` accepts `LOUDKIT_ARMS=onnx` or `torch`; `render_sopro.py`
-accepts `SOPRO_ARMS=fp32` or `int8`. Both default to running both arms.
+`render_loudkit.py` accepts `LOUDKIT_ARMS=joe,kathleen,kathleen_cap512` and
+`LOUDKIT_BACKEND=onnx|torch`; `render_sopro.py` accepts
+`SOPRO_ARMS=default,steps16`.
 
 For a pinned official prebuilt, `render_zonos2.py` also accepts `ZONOS2_CLI`,
 `ZONOS2_MODELS_DIR`, `AUDITION_PREPARED_TEXT`, and `ZONOS2_ARMS=q4_k` or
@@ -178,14 +179,16 @@ against 0.963 means the quantised arm is marginally *slower* here; if the two
 are indistinguishable by ear there is no reason to run int8. Under a gigabyte
 of working set is also small enough to sit beside the product on Zorin.
 
-**LoudKit loses a sentence, and the runtime is not the cause.** Both arms drop
-the same em-dash-heavy sentence. Because ONNX and PyTorch run different
-precisions and therefore different token streams — upstream's identity contract
-is explicit that fp16 in the generator flips roughly one token in a thousand —
-two independent readings losing the same sentence points at the model or its
-windowing, not at a backend bug. This is the same failure class as ZONOS2's
-dropped 35-word tail and Audio8's raw-arm omission. ASR establishes gross
-omission only; it does not establish the cause.
+**LoudKit loses a sentence.** Both arms drop the same em-dash-heavy sentence.
+
+> **Retracted 2026-08-28.** This section originally concluded that a shared
+> omission across two backends "points at the model or its windowing, not at a
+> backend bug." That was wrong, and it was asserted without testing the setting
+> responsible. `SamplingConfig.max_new_tokens` and
+> `WindowConfig.max_speech_tokens` both default to **255** — the exact cap these
+> runs reported hitting — and `lk.load(algorithm=...)` accepts an override that
+> was never tried. The raised-cap diagnostic below settles it: the cause is the
+> default cap, not the model.
 
 Upstream's own per-chunk detectors agree that something happened there: the
 render is 13 chunks, `hit_token_cap` is true in both arms with chunks running
@@ -213,3 +216,94 @@ All four exact MP3s were sent to Dave on 28 August. Nothing here is a quality
 verdict, a project recommendation or an engine registration. Voice, accent,
 pacing, joins and whether LoudKit's missing sentence is audible are decided by
 ear. No app engine was registered, no voice added, no deployment state changed.
+
+
+## Native-voice gate — 2026-08-28
+
+Dave's instruction after hearing the first four arms: evaluate each engine on
+its **own native supported voices**, not on a cloned reference. British is
+preferred where it exists, but the accent judgement is his, made by ear.
+
+Two corrections to how the previous gate was run, both recorded because they
+changed what he was given to listen to:
+
+1. **The cloned Arthur path was never requested.** It was chosen by the harness,
+   then written into the README and into a passing test, which made an
+   unrequested assumption look like a settled decision. Reference choice is
+   Dave's; `tests/test_new_engine_auditions.py` now pins that the harness cannot
+   pick one.
+2. **Sopro was run at `temperature=0.7`,** a value copied from the Audio8 harness
+   and documented nowhere by Sopro, whose own default is 0.8. Those files were
+   not default renders. Sampling now resolves to upstream's `GenerationConfig`
+   and `DEFAULT_ALGORITHM`; nothing is passed that upstream does not default.
+
+**Sopro ships no native voices at all.** `--ref` is a required argument and the
+model repository contains no voice profiles, so it cannot be auditioned the way
+this gate asks. It is cloning-only by construction. Dave chose **Beatrice**
+(`uk_female_samuel`, the repository's shipped default narrator) as its reference
+on 2026-08-28.
+
+**LoudKit ships 20 managed voices**, of which `joe` and `kathleen` are the only
+English profiles (both CC0 OHF-Voice donations). Both are rendered here. The
+previous gate skipped every shipped voice on the harness's own accent judgement;
+that filtering is removed.
+
+Ryzen 9 8945HS, four threads, CPU only, no GPU on the host. No Kaggle, no
+rented GPU, no paid API was used at any point in this gate.
+
+| Arm | Voice | Audio | Wall | RTF | Peak working set |
+|---|---|---:|---:|---:|---:|
+| `loudkit_joe_onnx` | native `joe` | 71.76 s | 90.49 s | 1.261 | 3,207 MiB |
+| `loudkit_kathleen_onnx` | native `kathleen` | 73.68 s | 93.04 s | 1.263 | 3,310 MiB |
+| `sopro_v2_beatrice_default` | Beatrice ref | 71.14 s | 52.48 s | **0.738** | 1,031 MiB |
+| `sopro_v2_beatrice_steps16` | Beatrice ref | 71.14 s | 115.36 s | 1.622 | 1,068 MiB |
+
+The two Sopro arms have identical duration to the millisecond because `steps`
+drives only the acoustic solver: same token stream, same reading, same pacing,
+finer decode. It is a clean A/B for whether the solver default is leaving
+quality on the table.
+
+At upstream's real default temperature Sopro measures RTF 0.738, against the
+0.945 reported from the invented-temperature run.
+
+### The 255-token cap — the dropped sentence explained
+
+The first gate reported that both LoudKit backends dropped
+"Rivals — Huawei, Xiaomi, Samsung — circle constantly," and concluded that
+pointed at the model. **That conclusion was wrong.**
+
+`SamplingConfig.max_new_tokens` and `WindowConfig.max_speech_tokens` both
+default to 255. Raising both to 512 on the PyTorch path:
+
+| Run | Token cap | `hit_token_cap` | Chunk verdicts | Audio |
+|---|---:|---|---|---:|
+| `loudkit_kathleen_onnx` | 255 (default) | **True** | 3–4 chunks `ended_tail` | 73.68 s |
+| `loudkit_kathleen_cap512_torch` | 512 | **False** | **all 13 `clean`** | 75.28 s |
+
+Every trimmed tail disappears and the cap stops firing. The omission was a
+consequence of the default window, not a model defect.
+
+**But the fix is not available on the fast path.** Raising the cap on ONNX is
+refused outright:
+
+> the exported ONNX graphs are static at query 255 / prompt 238; this
+> AlgorithmConfig frames None/None. A different window is a different algorithm
+> — re-export the graphs rather than silently reframing here.
+
+The cap is baked into the shipped ONNX export. PyTorch accepts the wider window
+but measures RTF 6.96, which is not a book path. So LoudKit at 255 tokens trims
+tails, and escaping that requires re-exporting the ONNX graphs — upstream's own
+documented remedy — not a config change.
+
+### Method note
+
+No ASR was run on this gate. Dave has stated repeatedly that transcript scoring
+is not useful to him and that the ear decides voice quality. Files are still
+fully decoded and length-checked, and the engine's **own** instrumentation
+(`hit_token_cap`, per-chunk `inspections`, chunk counts) is recorded — that is
+the engine reporting on itself, not an external transcript check.
+
+### Awaiting listening
+
+The four exact MP3s were sent to Dave on 28 August. No engine registered, no
+voice added, no deployment state changed. Nothing here is a quality verdict.

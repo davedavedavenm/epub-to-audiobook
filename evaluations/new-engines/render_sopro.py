@@ -1,23 +1,34 @@
-"""Sopro v2 turbo CPU audition — cloned Arthur, offline path, one call per arm.
+"""Sopro v2 turbo CPU audition — Beatrice reference, offline path, upstream defaults.
 
-Upstream splits long text into segments itself (`--max-seconds` caps a segment,
-total length is unbounded), so this harness deliberately passes the whole
-prepared passage in a single call. Pre-chunking here would test our splitter,
-not Sopro's.
+Sopro ships **no native voices**: `--ref` is a required CLI argument and the
+model repository contains no voice profiles, so every render needs a reference
+clip. Dave chose Beatrice (`uk_female_samuel`), the repository's shipped default
+narrator, on 2026-08-28. Nothing here picks a reference on its own.
 
-Upstream also states the streaming path is not bit-exact with the offline path
-and recommends offline for best quality, so only the offline path is auditioned.
-The int8 arm is the same-text numeric control, in the same role Scylla's FP32
-control played: if both arms fail the same way, quantisation is not the cause.
+Sampling is left at upstream's own defaults — temperature 0.8, top_p 0.9,
+top_k 25 — by passing nothing. An earlier run of this gate passed
+temperature 0.7, a value copied from the Audio8 harness and not documented
+anywhere by Sopro; those files were not upstream-default renders.
+
+`steps` is Sopro's acoustic solver step count and its documented default is 2.
+That is the only setting varied here, because it is the obvious quality knob on
+a flow-matching decoder and leaving it unexplored would say nothing about the
+engine's ceiling.
+
+Upstream splits long text into segments itself (`max_segment_chars` 300,
+`max_seconds` 30) and carries `prompt_tokens` across the join, so the whole
+prepared passage is passed in one call. Pre-chunking would test our splitter.
+
+The streaming path is excluded: upstream states it is not bit-exact with the
+offline path and recommends offline for quality.
 """
 
 from __future__ import annotations
 
 import os
 import time
-from pathlib import Path
 
-from shared import ARTHUR, OUTPUT, corpus, finish, verify_reference
+from shared import BEATRICE, OUTPUT, corpus, finish, verify_beatrice
 
 try:
     import resource
@@ -30,53 +41,55 @@ PACKAGE_VERSION = "2.0.5"
 MODEL_ID = "samuel-vitorino/sopro-v2-turbo"
 MODEL_REVISION = "0abc5561e8ffd7b582b8aea2eb9e5f3bf7637c26"
 
-# Upstream documented defaults for the offline path, pinned here so the arms
-# differ only in the numeric precision of the AR weights.
-STEPS = 2
-TEMPERATURE = 0.7
-TOP_P = 0.9
 SEED = 42
+UPSTREAM_DEFAULT_STEPS = 2
+
+# arm name -> steps. None means "pass nothing", i.e. upstream's own default.
+ARMS = {
+    "default": None,
+    "steps16": 16,
+}
 
 
 def main() -> None:
     import torch
 
     _, prepared = corpus()
-    reference = verify_reference()
+    reference = verify_beatrice()
     torch.set_num_threads(4)
 
     selected = {
         item.strip()
-        for item in os.environ.get("SOPRO_ARMS", "fp32,int8").split(",")
+        for item in os.environ.get("SOPRO_ARMS", ",".join(ARMS)).split(",")
         if item.strip()
     }
-    unknown = selected - {"fp32", "int8"}
+    unknown = selected - set(ARMS)
     if unknown:
         raise ValueError(f"unknown SOPRO_ARMS: {sorted(unknown)}")
 
     from sopro import SoproTTS
 
-    for arm in ("fp32", "int8"):
+    tts = SoproTTS.from_pretrained(
+        MODEL_ID, revision=MODEL_REVISION, device="cpu"
+    )
+    defaults = tts.generation
+
+    for arm, steps in ARMS.items():
         if arm not in selected:
             continue
-        tts = SoproTTS.from_pretrained(
-            MODEL_ID,
-            revision=MODEL_REVISION,
-            device="cpu",
-            quantization="int8" if arm == "int8" else None,
-        )
-        stem = f"sopro_v2_arthur_{arm}"
+        stem = f"sopro_v2_beatrice_{arm}"
         wav = OUTPUT / f"{stem}.wav"
         OUTPUT.mkdir(parents=True, exist_ok=True)
         torch.manual_seed(SEED)
         started = time.perf_counter()
+        # Only `steps` is ever passed. Everything else resolves to the values
+        # in tts.generation, which are upstream's, not ours.
+        extra = {} if steps is None else {"steps": steps}
         audio = tts.synthesize(
             prepared,
-            ref_audio_path=str(ARTHUR),
+            ref_audio_path=str(BEATRICE),
             lang="en",
-            steps=STEPS,
-            temperature=TEMPERATURE,
-            top_p=TOP_P,
+            **extra,
         )
         wall = time.perf_counter() - started
         tts.save_wav(str(wav), audio)
@@ -97,18 +110,24 @@ def main() -> None:
                 "runtime_package": f"sopro=={PACKAGE_VERSION}",
                 "model_revision": MODEL_REVISION,
                 "path": "offline (upstream states streaming is not bit-exact and prefers offline)",
-                "voice": "cloned from the authentic user-authorized Arthur reference",
+                "native_voices": "none — Sopro ships no voice profiles; --ref is required",
+                "voice": "Beatrice reference, chosen by Dave 2026-08-28",
                 "settings": {
                     "threads": 4,
-                    "steps": STEPS,
-                    "temperature": TEMPERATURE,
-                    "top_p": TOP_P,
                     "seed": 42,
-                    "int8_ar_weights": arm == "int8",
+                    "steps": steps if steps is not None else defaults.steps,
+                    "steps_is_upstream_default": steps is None,
+                    "temperature": defaults.temperature,
+                    "top_p": defaults.top_p,
+                    "top_k": defaults.top_k,
+                    "max_seconds": defaults.max_seconds,
+                    "max_segment_chars": defaults.max_segment_chars,
+                    "prompt_tokens_carried": defaults.prompt_tokens,
+                    "sampling_source": "upstream GenerationConfig defaults; nothing overridden but steps",
                 },
                 "chunking": (
-                    "engine-internal: upstream splits long text into segments itself, "
-                    "so the whole prepared passage is one call"
+                    "engine-internal: upstream splits on max_segment_chars and carries "
+                    "prompt_tokens across the join, so the whole prepared passage is one call"
                 ),
                 "join_silence_ms": 0,
                 "input_path": "repository explicit preparation; upstream text frontend is minimal and prefers words over symbols",

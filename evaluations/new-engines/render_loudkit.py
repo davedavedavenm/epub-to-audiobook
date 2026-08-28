@@ -1,31 +1,34 @@
-"""LoudKit 0.1.0 / loudr-1 CPU audition — cloned Arthur, ONNX and PyTorch arms.
+"""LoudKit 0.1.0 / loudr-1 CPU audition — the engine's own native voices.
 
-Why the cloned reference is the only project-relevant arm: loudr-1 ships twenty
-managed voices, but its own roster lists exactly two English profiles (`joe`,
-`kathleen`), both CC0 donations from the OHF-Voice/Nabu Casa set — no shipped
-English voice is British, so a managed-voice arm could not clear this project's
-authentic-accent gate whatever it sounded like. Arthur is enrolled instead.
+This renders loudr-1 as shipped: its managed voice profiles, upstream defaults,
+no cloning and no reference clip. The roster's only English profiles are `joe`
+and `kathleen`, both CC0 OHF-Voice donations; their accents are whatever they
+are and that is for Dave to judge, not for this harness to pre-filter.
 
-Why one call per arm: upstream's own `manifest.json` declares the chunking
-(`max_tokens` 255, `prefix_tokens` 6, split on sentence and clause marks), so
-LoudKit's windowing and its six-token carry-over are exactly what is under test.
-Pre-chunking here would substitute our splitter for theirs and measure nothing.
+Backend: ONNX Runtime CPU, the path with a published faster-than-realtime CPU
+figure. The PyTorch CPU reference measured RTF 7.564 here and is not a viable
+book path, so it is available (`LOUDKIT_BACKEND=torch`) but not a default arm.
 
-Why two arms: ONNX Runtime CPU is the path with a published faster-than-realtime
-CPU figure (1.21x on an M3 Pro, against 0.33x for the PyTorch CPU reference on
-the same machine). The PyTorch arm is the same-text runtime control. Upstream
-promises token-stream parity but not byte-identical waveforms across backends,
-so if both arms fail the same way the runtime is not the explanation — the same
-logic Scylla's FP32 control used to clear INT8.
+Passage API: `Engine.synthesize()` renders exactly one window and is documented
+as such — calling it returned 10.2 s for this 1,142-character corpus.
+`Engine.synthesize_long()` splits across windows and conditions each chunk on
+its predecessor, which is the join behaviour under test.
+
+Token cap: upstream's SamplingConfig.max_new_tokens and
+WindowConfig.max_speech_tokens both default to 255, and the default-config runs
+of 2026-08-28 reported hit_token_cap with chunks landing on exactly 255. The
+`cap512` arm raises both so the dropped-content question can be answered
+against a setting rather than assumed to be a property of the model.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import time
 from pathlib import Path
 
-from shared import ARTHUR, OUTPUT, corpus, finish, verify_reference
+from shared import OUTPUT, corpus, finish
 
 try:
     import resource
@@ -37,70 +40,69 @@ SOURCE_COMMIT = "58fd4a58de8980b42c1021492728876d67ea2718"  # tag v0.1.0
 PACKAGE_VERSION = "0.1.0"
 MODEL_ID = "loudreader/loudr-1"
 MODEL_REVISION = "0fe297e449ba4f31113977f6c7f8c438fdfd1be3"
-PROFILES = Path(os.environ.get("AUDITION_MODELS_ROOT", "/models")) / "loudkit-voices"
 
 SEED = 42
+RAISED_CAP = 512
+
+# arm -> (native voice name, raised token cap or None for upstream defaults)
+ARMS = {
+    "joe": ("joe", None),
+    "kathleen": ("kathleen", None),
+    "kathleen_cap512": ("kathleen", RAISED_CAP),
+}
 
 
 def main() -> None:
     import loudkit as lk
 
     _, prepared = corpus()
-    reference = verify_reference()
+    backend = os.environ.get("LOUDKIT_BACKEND", "onnx")
+    device = {"onnx": "onnx", "torch": "cpu"}[backend]
 
     selected = {
         item.strip()
-        for item in os.environ.get("LOUDKIT_ARMS", "onnx,torch").split(",")
+        for item in os.environ.get("LOUDKIT_ARMS", "joe,kathleen").split(",")
         if item.strip()
     }
-    unknown = selected - {"onnx", "torch"}
+    unknown = selected - set(ARMS)
     if unknown:
         raise ValueError(f"unknown LOUDKIT_ARMS: {sorted(unknown)}")
 
-    PROFILES.mkdir(parents=True, exist_ok=True)
-    profile_path = PROFILES / "arthur.safetensors"
-    if not profile_path.is_file():
-        enrolled = lk.enroll(
-            str(ARTHUR), MODEL_ID, name="arthur", language="en",
-            device="cpu", revision=MODEL_REVISION,
-        )
-        enrolled.save(str(profile_path))
-
-    # loudkit selects the backend through the device literal: "onnx" runs ONNX
-    # Runtime, "cpu" runs the PyTorch CPU reference path.
-    devices = {"onnx": "onnx", "torch": "cpu"}
-    for arm in ("onnx", "torch"):
+    for arm, (voice_name, cap) in ARMS.items():
         if arm not in selected:
             continue
+        algorithm = None
+        if cap is not None:
+            base = lk.DEFAULT_ALGORITHM
+            algorithm = dataclasses.replace(
+                base,
+                sampling=dataclasses.replace(base.sampling, max_new_tokens=cap),
+                window=dataclasses.replace(base.window, max_speech_tokens=cap),
+            )
         engine = lk.load(
             MODEL_ID,
-            device=devices[arm],
+            device=device,
             execution=lk.ExecutionOverrides(num_threads=4, onnx_provider="cpu"),
+            algorithm=algorithm,
             revision=MODEL_REVISION,
         )
-        voice = lk.voice(str(profile_path))
-        stem = f"loudkit_arthur_{arm}"
+        voice = lk.voice(voice_name, repo=MODEL_ID, revision=MODEL_REVISION)
+        stem = f"loudkit_{arm}_{backend}"
         wav = OUTPUT / f"{stem}.wav"
         OUTPUT.mkdir(parents=True, exist_ok=True)
         started = time.perf_counter()
-        # synthesize() renders exactly one window and is documented as such;
-        # synthesize_long() is the passage API that splits across windows and
-        # conditions each chunk on its predecessor. Calling the single-window
-        # form here silently returned 10.2 s for this 1,142-character passage.
         result = engine.synthesize_long(prepared, voice, seed=SEED)
         wall = time.perf_counter() - started
-        # Refuse only on structural truncation. hit_token_cap means some chunk
-        # stopped at the cap rather than at a stop token — upstream's words:
-        # "usually a sign of a broken EOS path, and always worth surfacing".
-        # Surfacing is not rejecting: it is recorded below and judged by the
-        # ASR pass and by ear, not by this guard.
+        # Refuse only on structural truncation. hit_token_cap is surfaced, not
+        # used to reject: upstream calls it "worth surfacing", and the quality
+        # verdict is Dave's.
         if len(result.chunks) < 2 or result.duration < 60:
             raise RuntimeError(
                 f"LoudKit {arm} arm did not window the passage: "
                 f"chunks={len(result.chunks)} duration={result.duration:.3f}s "
                 "— refusing to write a truncated audition"
             )
-        result.save(str(wav), voice="arthur", language="en")
+        result.save(str(wav), voice=voice_name, language="en")
         finish(
             stem=stem,
             wav=wav,
@@ -118,21 +120,32 @@ def main() -> None:
                 "runtime_package": f"loudkit=={PACKAGE_VERSION}",
                 "model_revision": MODEL_REVISION,
                 "lineage": "derived from MIT-licensed Chatterbox (Resemble AI); Nano is this project's current default narrator",
-                "voice": "cloned from the authentic user-authorized Arthur reference",
-                "managed_voice_note": (
-                    "not used: no shipped English voice is British — the roster lists "
-                    "joe and kathleen as the only English profiles, both CC0 OHF-Voice donations"
-                ),
+                "voice": f"native shipped profile '{voice_name}' — no cloning, no reference clip",
+                "voice_provenance": "roster lists joe and kathleen as the only English profiles, both CC0 OHF-Voice donations",
                 "settings": {
                     "threads": 4,
                     "seed": 42,
-                    "backend": arm,
-                    "device": devices[arm],
+                    "backend": backend,
+                    "device": device,
                     "onnx_provider": "cpu",
+                    "max_new_tokens": cap if cap is not None else lk.DEFAULT_ALGORITHM.sampling.max_new_tokens,
+                    "max_speech_tokens": cap if cap is not None else lk.DEFAULT_ALGORITHM.window.max_speech_tokens,
+                    "token_cap_is_upstream_default": cap is None,
+                    "temperature": lk.DEFAULT_ALGORITHM.sampling.temperature,
+                    "min_p": lk.DEFAULT_ALGORITHM.sampling.min_p,
+                    "repetition_penalty": lk.DEFAULT_ALGORITHM.sampling.repetition_penalty,
+                    "euler_steps": lk.DEFAULT_ALGORITHM.euler_steps,
+                    "speed": 1.0,
+                    "sampling_source": "upstream DEFAULT_ALGORITHM; only the token cap is varied, and only in the cap512 arm",
                 },
-                # Upstream's own truncation/repetition flags. hit_token_cap is the
-                # exact failure class that ended the ZONOS2 arm (early EOS losing
-                # the tail), so it is recorded whether or not it fires.
+                "chunking": (
+                    "engine-internal: upstream manifest declares max_tokens 255 with "
+                    "prefix_tokens 6 carry-over, so the whole prepared passage is one "
+                    "synthesize_long call"
+                ),
+                "join_silence_ms": 0,
+                "input_path": "repository explicit preparation; upstream warns difficult punctuation, numbers and abbreviations can shift prosody",
+                # Upstream's own instrumentation, not an external transcript check.
                 "upstream_backend": getattr(result, "backend", None),
                 "upstream_hit_token_cap": getattr(result, "hit_token_cap", None),
                 "upstream_suspect": getattr(result, "suspect", None),
@@ -143,13 +156,6 @@ def main() -> None:
                 "upstream_duration_seconds": round(float(getattr(result, "duration", 0.0)), 3),
                 "checkpoint_sha256": getattr(result, "checkpoint_sha256", None),
                 "voice_sha256": getattr(result, "voice_sha256", None),
-                "chunking": (
-                    "engine-internal: upstream manifest declares max_tokens 255 with "
-                    "prefix_tokens 6 carry-over, so the whole prepared passage is one call"
-                ),
-                "join_silence_ms": 0,
-                "input_path": "repository explicit preparation; upstream warns difficult punctuation, numbers and abbreviations can shift prosody",
-                **reference,
             },
         )
 
