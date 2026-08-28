@@ -1,5 +1,64 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-22 Audio8 / Scylla v2 / ZONOS2 CPU auditions — HEARD
+>
+> Dave heard all six exact files from the isolated CPU gate. Audio8's Arthur
+> voice was good, but both arms audibly dropped or faded; the prepared arm also
+> changed pace/tone as though it had been chunked. That arm was in fact twelve
+> independent calls with seeds 42–53 and 200 ms joins. Three forced boundaries
+> split sentences at “percent / and,” “over / two hundred,” and “Dr. / Wang.”
+> Signal measurement found every call's final 100 ms fell to 0.5–12% of the
+> preceding speech level. The prepared clip's content was structurally complete,
+> but this continuity path fails; the raw clip also omitted the end of the
+> eighteen-hour-days sentence. Audio8 remains a bounded corrective candidate,
+> not an app engine or long-form pass.
+>
+> Scylla's Band v2 / Ink failed by ear in both INT8 and FP32: robotic, no
+> emotion, and effectively one long sentence despite acceptable pronunciation.
+> The matching verdict across quantisations rules out INT8 as the material
+> explanation. Stop at the short gate; no Scylla integration or longer render.
+>
+> ZONOS2 Arthur Q4's complete 19.888-second first paragraph was “really good.”
+> The 56.517-second single-pass arm audibly dropped its ending and the Arthur
+> voice disappeared; structural ASR independently found the final 35 words
+> missing. This is a short voice-quality pass but a sustained-narration failure.
+> The model emitted EOS near its generated frame limit, but listening does not
+> establish why the identity drifted. The only justified follow-up is a
+> persistent fixed-setting, sentence/paragraph-bounded continuity A/B before
+> any longer gate. Q8 remains untested because Q4 peaked at 12.3 GiB in a
+> 14 GiB WSL cap. No product, deployment, GPU, cloud or paid route changed.
+>
+> The authorised corrective stage then produced two new listening candidates.
+> Audio8's 82.709-second `prepared_sentence_fixed` arm keeps the exact prepared
+> words, uses nine complete-sentence calls with seed 42 throughout and adds no
+> join silence. Three sentences exceed upstream's recommended 150 characters
+> (173/235/187), which remains an explicit limitation. The MP3 fully decodes;
+> structural ASR covers the complete passage (WER 0.120), with differences
+> dominated by numeric/acronym formatting and pronunciation uncertainty.
+>
+> ZONOS2's first persistent-server/cached-Arthur sentence arm exposed another
+> real truncation: its 139-character iPhone sentence stopped after “revenue”
+> and omitted the entire App Store clause. That failed arm is retained. A
+> narrow same-setting repair split only that compound sentence at its natural
+> conjunction, changing punctuation but no words. Both halves completed, and
+> the rebuilt 69.718-second MP3 fully decodes with structural ASR covering the
+> complete source (WER 0.110). This is **not yet a quality or continuity pass**:
+> both exact corrective files await Dave's listening verdict. No engine was
+> registered and no deployment state changed.
+>
+> Dave then heard both exact corrective MP3s. Audio8 was **“better”**. That
+> confirms the complete-sentence/fixed-seed/no-added-silence changes materially
+> improved the earlier join behavior, but it is not yet an explicit long-form
+> approval. Audio8 is the only candidate from this gate still eligible for a
+> separately authorised longer test.
+>
+> ZONOS2 still sounded like different voices, with Arthur fading in and out.
+> Dave considered the underlying/base voice itself OK. The persistent model,
+> one cached speaker embedding and fixed settings rule out model reload and
+> per-request re-encoding as explanations for this particular result; they do
+> not establish the remaining model-side cause. The current cloned-Arthur
+> audiobook path fails continuity and is closed. No app engine was added.
+
 > ## 2026-08-21 Gemini preset preview cache complete — 30/30 verified
 >
 > The final Free-tier-only batch cached Achird, Gacrux, Pulcherrima, Sadachbia,
