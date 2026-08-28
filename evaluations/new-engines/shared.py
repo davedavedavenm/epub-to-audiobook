@@ -15,6 +15,8 @@ REPO_ROOT = Path("/repo") if Path("/repo/webapp").is_dir() else Path(__file__).r
 OUTPUT = Path("/output") if Path("/output").is_dir() else Path(__file__).with_name("output")
 ARTHUR = REPO_ROOT / "chatterbox" / "voices" / "uk_male_minter.wav"
 ARTHUR_SHA256 = "8774082c3acf6c215dc9307a4a9cce5fd50d4242fc9263534ed420675873e252"
+BEATRICE = REPO_ROOT / "chatterbox" / "voices" / "uk_female_samuel.wav"
+BEATRICE_SHA256 = "24abde8ee35ff4e0be0863675bb6c81311a38c582a99eb237b586a671bbd63bb"
 ARTHUR_TRANSCRIPT = (
     '"I know that," snapped Bertram. "Not that it would make any difference if she stayed," '
     'pursued the relentless George. "She flies higher than the paper trade, my boy." '
@@ -100,6 +102,18 @@ def verify_reference() -> dict:
         "reference_sha256": ARTHUR_SHA256,
         "reference_bytes": ARTHUR.stat().st_size,
         "reference_transcript": ARTHUR_TRANSCRIPT,
+    }
+
+
+def verify_beatrice() -> dict:
+    """Beatrice is the repository's shipped default narrator (uk_female_samuel_nano)."""
+    if sha256_file(BEATRICE) != BEATRICE_SHA256:
+        raise RuntimeError("Beatrice reference is missing, corrupt, or a Git LFS pointer")
+    return {
+        "reference": "Beatrice — the repository's shipped default narrator voice (uk_female_samuel)",
+        "reference_sha256": BEATRICE_SHA256,
+        "reference_bytes": BEATRICE.stat().st_size,
+        "reference_chosen_by": "Dave, 2026-08-28",
     }
 
 

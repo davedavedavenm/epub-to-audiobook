@@ -84,14 +84,13 @@ def test_asr_is_explicitly_structural_not_a_quality_rank():
     assert "cpu_threads=4" in verifier
 
 
-def test_self_chunking_engines_render_one_call_and_keep_a_runtime_control():
+def test_self_chunking_engines_render_one_call():
     """LoudKit and Sopro window internally, so the harness must not pre-chunk.
 
     Both engines publish their own long-form segmentation (LoudKit windows at
-    255 tokens with a six-token carry-over; Sopro splits on --max-seconds), so
-    passing the whole prepared passage in one call is what is actually under
-    test. Each engine also keeps a same-text control arm on a second numeric
-    path, the way Scylla's FP32 control ruled out INT8.
+    255 tokens with a six-token carry-over; Sopro splits on max_segment_chars
+    and carries prompt_tokens), so passing the whole prepared passage in one
+    call is what is actually under test.
     """
     loudkit = (EVAL / "render_loudkit.py").read_text(encoding="utf-8")
     sopro = (EVAL / "render_sopro.py").read_text(encoding="utf-8")
@@ -102,19 +101,54 @@ def test_self_chunking_engines_render_one_call_and_keep_a_runtime_control():
         assert '"chunking": (' in source
         assert "engine-internal:" in source
         assert '"seed": 42' in source
-    assert '"onnx"' in loudkit and '"torch"' in loudkit
-    assert '"fp32"' in sopro and '"int8"' in sopro
-    assert "uk_male_minter" not in loudkit  # the reference comes from shared.ARTHUR
 
 
-def test_loudkit_records_that_no_shipped_voice_is_british():
-    """The 20 managed voices ship two English profiles, both CC0 US donations.
+def test_the_harness_never_picks_a_reference_voice_itself():
+    """Dave chooses the reference. The harness records the choice, never makes it.
 
-    VOICES.md lists joe and kathleen as the only English voices, so the cloned
-    Arthur path is the only project-relevant arm and the evidence must say so.
+    An earlier run of this gate cloned Arthur without being asked, then wrote
+    that choice into the README and into a passing test, which made an
+    unrequested assumption look like a settled project decision.
+    """
+    sopro = (EVAL / "render_sopro.py").read_text(encoding="utf-8")
+    shared = (EVAL / "shared.py").read_text(encoding="utf-8")
+    assert "verify_beatrice" in sopro
+    assert "ARTHUR" not in sopro
+    assert "chosen by Dave" in sopro
+    assert "reference_chosen_by" in shared
+
+
+def test_sampling_settings_come_from_upstream_not_from_us():
+    """No invented numbers.
+
+    An earlier run passed Sopro temperature=0.7 — a value copied from the
+    Audio8 harness that Sopro documents nowhere. Sampling must resolve to
+    upstream's own defaults, with any deliberate variation named as such.
+    """
+    sopro = (EVAL / "render_sopro.py").read_text(encoding="utf-8")
+    loudkit = (EVAL / "render_loudkit.py").read_text(encoding="utf-8")
+    assert "TEMPERATURE = " not in sopro
+    assert "temperature=" not in sopro
+    assert '"sampling_source"' in sopro and '"sampling_source"' in loudkit
+    assert "defaults.temperature" in sopro
+    assert "lk.DEFAULT_ALGORITHM" in loudkit
+    assert '"steps_is_upstream_default"' in sopro
+    assert '"token_cap_is_upstream_default"' in loudkit
+
+
+def test_loudkit_is_auditioned_on_its_own_native_voices():
+    """loudr-1 ships 20 managed voices; the gate renders them, not a clone.
+
+    An earlier run skipped every shipped voice on the grounds that neither
+    English profile is British. Whether an accent clears the bar is Dave's
+    judgement to make by ear, not the harness's to make by filtering.
     """
     loudkit = (EVAL / "render_loudkit.py").read_text(encoding="utf-8")
-    assert "no shipped English voice is British" in loudkit
+    assert "lk.voice(voice_name, repo=MODEL_ID" in loudkit
+    assert "lk.enroll" not in loudkit
+    assert "ARTHUR" not in loudkit
+    assert '"joe"' in loudkit and '"kathleen"' in loudkit
+    assert "no cloning, no reference clip" in loudkit
 
 
 def test_loudkit_uses_the_passage_api_and_refuses_a_truncated_audition():
