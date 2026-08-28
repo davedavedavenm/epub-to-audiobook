@@ -49,21 +49,21 @@ Sources: [Deepgram pricing](https://deepgram.com/pricing), [Deepgram TTS docs](h
 
 ## One-off landscape report — 15 August 2026
 
-### Audio8 TTS Preview 0.6B + ONNX INT4 — **first test priority**
+### Audio8 TTS Preview 0.6B + ONNX INT4 — **tested; continuity repair only**
 
 - Apache-2.0 code and weights; zero-shot cloning; official ONNX Runtime route.
 - Compact CPU evidence: roughly 586 MiB of ONNX files, with first-party Apple M2 memory measurements around 1.0–1.2 GiB for synthesis.
-- Strong fit with the service architecture, but upstream recommends inputs no longer than about 150 characters and publishes no x86 Zorin CPU RTF or audiobook-length result.
-- **Next gate:** authentic Beatrice/Arthur references, raw vs prepared hard text, measured x86 RTF/RSS, then ten-minute and chapter listening only if the short gate passes.
+- The 2026-08-22 four-thread CPU gate measured RTF 2.286–2.322. Dave liked the Arthur voice, but heard drops/fades in both arms and changing pace/tone in the prepared arm. That arm was twelve independent, differently seeded calls with 200 ms joins and three forced mid-sentence boundaries; it is not a viable audiobook path.
+- Dave heard the complete-sentence, fixed-seed, zero-added-silence corrective arm and called it “better.” Three exact source sentences exceed the documented 150-character recommendation. Audio8 is the only survivor of this gate, but that bounded wording is not a long-form pass. **Next gate:** only an explicitly authorised longer continuity test.
 
 Sources: [runtime](https://github.com/Audio8-AI/Audio8_TTS), [weights](https://huggingface.co/Audio8/Audio8-TTS-Preview-0.6b), [ONNX INT4](https://huggingface.co/Audio8/Audio8-TTS-Preview-0.6B-ONNX-INT4).
 
-### ZONOS2 + official GGUF / `zonos2.cpp` — **watch/test after Audio8**
+### ZONOS2 + official GGUF / `zonos2.cpp` — **short voice pass; continuity diagnostic**
 
 - MIT runtime and Apache-2.0 weights; native C++ pipeline, cloning, speaking-rate/emotion/repetition controls.
-- Large 7.6B MoE route; Q4 pipeline is about 5.2 GB. CPU RTF and sustained audiobook behavior remain unproven.
+- Large 7.6B MoE route; Q4 measured RTF 6.562 on the short arm and 7.245 on the full arm. Peak RSS rose from 7.5 to 12.3 GiB.
 - `en_gb` is a text-normalisation locale, not evidence of an authentic British voice.
-- **Next gate:** Q4 vs Q8 blind comparison on authentic regional references, then measured CPU RTF/RSS and long-form controls.
+- Dave called the complete first-paragraph Arthur Q4 clip “really good,” but the same-setting full call dropped 35 final words and lost the Arthur identity. A persistent-server/cached-Arthur repair restored structural coverage, but Dave still heard different voices with Arthur fading in and out; only the underlying/base voice was OK. **Decision:** close the current cloned-Arthur audiobook path. Q8 remains untested and quantisation has not been shown to cause the identity drift.
 
 Sources: [runtime](https://github.com/Zyphra/ZONOS2), [GGUF weights](https://huggingface.co/Zyphra/ZONOS2-GGUF), [native implementation](https://github.com/Zyphra/zonos2.cpp).
 
@@ -139,14 +139,14 @@ Source: [weights, model card, training and validation details](https://huggingfa
 
 Source: [weights, model card and quickstart](https://huggingface.co/laion/moss-voice-profile-loras-500).
 
-### 20 August 2026 — Scylla's Band v2 — **test**
+### 20 August 2026 — Scylla's Band v2 — **tested; reject**
 
 - **Released:** 19 August 2026. Apache-2.0 runtime and weights; commercial use permitted. Training data is not distributed.
 - **Deployment:** first-party ONNX Runtime and LiteRT bundles. Verified model-repository totals are **296.9 MiB for ONNX INT8** and **470.2 MiB for ONNX FP32**.
 - **Capabilities:** managed ten-voice system, long-form planning/chunking, tagged dialogue, affect controls, pronunciation overrides/G2P assets, and public language IDs including `en_gb`.
 - **Important limits:** managed voices rather than arbitrary cloning; each voice has one declared English dialect; British labels and synthetic-training claims are not listening evidence. Upstream itself warns of possible timing/voice drift at stronger conditioning.
-- **Project relevance:** unusually close to the local CPU/ONNX requirement and small enough for a bounded Zorin test. It must still pass the same prepared-text, authentic-accent, join, ten-minute and full-chapter gates before exposure.
-- **Recommended next test:** INT8 vs FP32 on the hard-text corpus using the closest documented British voice, fixed settings, measured cold/warm RTF and RSS; then blind-listen against Nano/Beatrice. Stop after the short gate if voice quality or regional phonetics fail.
+- **Project result, 22 August:** Ink rendered at RTF 0.379 INT8 and 0.626 FP32 on four CPU threads. Dave found both robotic, emotionless and effectively one long sentence despite acceptable pronunciation. The FP32 control reproduces the failure, so quantisation is not the material explanation.
+- **Decision:** stop at the short gate; do not integrate or render a longer Scylla sample.
 
 Sources: [weights/model card](https://huggingface.co/spybyscript/scyllasbandv2), [runtime](https://github.com/lowkeytea/scyllasband), [samples](https://lowkeytea.github.io/scyllasband/).
 
