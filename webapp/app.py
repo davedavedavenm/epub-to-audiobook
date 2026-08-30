@@ -16,6 +16,7 @@ import re
 import sqlite3
 import json
 import shlex
+import time
 from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
@@ -923,6 +924,11 @@ def job_to_dict(row):
     d['sync_error'] = d.get('sync_error') or ''
     if not d.get('job_log_path') and d.get('id'):
         d['job_log_path'] = str(get_job_log_path(d['id']))
+    voice = d.get('voice') or ''
+    if voice.startswith('deepgram_') or d.get('tts_engine') == 'deepgram':
+        pchars = d.get('processed_chars') or 0
+        if pchars > 0:
+            d['spent_cost'] = f"${(pchars / 1000) * 0.030:.2f}"
     return d
 
 
@@ -5290,10 +5296,17 @@ def test_inworld_connection():
         return jsonify({'error': str(e)}), 500
 
 
-def _fetch_deepgram_balance(api_key: str):
-    """Fetch Deepgram account email and credit balance."""
+_DEEPGRAM_BALANCE_CACHE = {}
+
+
+def _fetch_deepgram_balance(api_key: str, force: bool = False):
+    """Fetch Deepgram account email and credit balance with a 30s rate-limit cache."""
     if not api_key:
         return None
+    now = time.time()
+    cached = _DEEPGRAM_BALANCE_CACHE.get(api_key)
+    if not force and cached and (now - cached.get('time', 0) < 30):
+        return cached.get('data')
     try:
         t_resp = requests.get(
             'https://api.deepgram.com/v1/auth/token',
@@ -5310,7 +5323,9 @@ def _fetch_deepgram_balance(api_key: str):
             timeout=10
         )
         if p_resp.status_code != 200:
-            return {'email': email, 'balance': None, 'formatted': None}
+            res = {'email': email, 'balance': None, 'formatted': None}
+            _DEEPGRAM_BALANCE_CACHE[api_key] = {'time': now, 'data': res}
+            return res
 
         projects = p_resp.json().get('projects', [])
         total_balance = 0.0
@@ -5335,13 +5350,17 @@ def _fetch_deepgram_balance(api_key: str):
                         found_balance = True
 
         if found_balance:
-            return {
+            res = {
                 'email': email,
                 'balance': round(total_balance, 2),
                 'formatted': f"${total_balance:.2f} {currency}",
                 'currency': currency
             }
-        return {'email': email, 'balance': None, 'formatted': None}
+            _DEEPGRAM_BALANCE_CACHE[api_key] = {'time': now, 'data': res}
+            return res
+        res = {'email': email, 'balance': None, 'formatted': None}
+        _DEEPGRAM_BALANCE_CACHE[api_key] = {'time': now, 'data': res}
+        return res
     except Exception as e:
         app.logger.warning(f"Error fetching Deepgram balance: {e}")
         return None
