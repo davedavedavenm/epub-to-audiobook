@@ -76,6 +76,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - INWORLD_API_KEY=${INWORLD_API_KEY:-}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
     volumes:
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data/transcripts:/data/transcripts
       - ${STACK_PATH:-/opt/epub-to-audiobook}/data:/data
@@ -477,6 +478,7 @@ services:
       - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_TTS_STYLE=${GEMINI_TTS_STYLE:-}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks
@@ -590,6 +592,7 @@ services:
       - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_TTS_STYLE=${GEMINI_TTS_STYLE:-}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks
