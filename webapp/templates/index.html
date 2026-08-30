@@ -484,10 +484,12 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu" aria-expanded="false" onclick="toggleSidebar()">☰ Menu</button>
             <button class="topbar-home" type="button" onclick="switchTab('library')" aria-label="Go home"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-6h6v6"/></svg> Home</button>
             <div class="page-heading"><h1 class="page-title" id="view-title">Home</h1><p class="page-subtitle" id="view-subtitle">Your books, voice choices and next actions in one place.</p></div>
-        </div>
-        <div class="theme-selector">
-            <button class="theme-btn" id="btn-light" aria-label="Switch to light theme" onclick="setTheme('light')">☀️</button>
-            <button class="theme-btn" id="btn-dark" aria-label="Switch to dark theme" onclick="setTheme('dark')">🌙</button>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div id="topbar-cloud-badges" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:0.8rem;"></div>
+            <div class="theme-selector">
+                <button class="theme-btn" id="btn-light" aria-label="Switch to light theme" onclick="setTheme('light')">☀️</button>
+                <button class="theme-btn" id="btn-dark" aria-label="Switch to dark theme" onclick="setTheme('dark')">🌙</button>
+            </div>
         </div>
     </header>
     <div class="content-body">
@@ -2364,6 +2366,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             const jobs = await resp.json();
             const qstatus = await statusResp.json();
             const active = jobs.filter(j => ['queued', 'converting', 'recovering', 'failed', 'converting PDF', 'converting to audio', 'Kaggle', 'rendering', 'review'].some(s => (j.status || '').includes(s)));
+            if (active.some(j => j.tts_engine === 'deepgram')) {
+                loadCloudStatus().catch(() => {});
+            }
             const badge = document.getElementById('queue-badge');
             if(badge) {
                 badge.textContent = active.length;
@@ -2438,6 +2443,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                             <div class="job-detail-item">Engine <b>${(j.tts_engine || 'unknown').toUpperCase()}</b></div>
                             ${['kokoro','edge','polly'].includes(j.tts_engine || '') ? `<div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>` : ''}
                             <div class="job-detail-item">Range <b>${j.start_chapter || 1} - ${j.end_chapter || 'End'}</b></div>
+                            ${(j.tts_engine === 'deepgram') ? `<div class="job-detail-item" style="color:#10b981;">Credit Remaining <b class="dg-live-balance">${cachedCloudStatus?.deepgram?.formatted || 'Loading...'}</b></div>` : ''}
                             ${(j.tts_engine === 'deepgram' && j.spent_cost) ? `<div class="job-detail-item" style="color:#10b981;">Cost <b>${j.spent_cost}</b></div>` : ''}
                         </div>
                         <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
@@ -3112,6 +3118,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             if (resp.ok) {
                 cachedCloudStatus = await resp.json();
                 const html = buildCloudBadgesHtml(cachedCloudStatus);
+                const topBadges = document.getElementById('topbar-cloud-badges');
+                if (topBadges) {
+                    topBadges.innerHTML = html;
+                }
                 const homeStrip = document.getElementById('home-cloud-strip');
                 const homeBadges = document.getElementById('home-cloud-badges');
                 if (homeStrip && homeBadges) {
@@ -3122,6 +3132,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 if (vBadges) {
                     vBadges.innerHTML = html;
                 }
+                document.querySelectorAll('.dg-live-balance').forEach(el => {
+                    if (cachedCloudStatus?.deepgram?.formatted) {
+                        el.textContent = cachedCloudStatus.deepgram.formatted;
+                    }
+                });
             }
         } catch(e) {}
     }
