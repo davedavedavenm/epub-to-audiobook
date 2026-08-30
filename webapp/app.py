@@ -924,6 +924,8 @@ def job_to_dict(row):
     d['sync_error'] = d.get('sync_error') or ''
     if not d.get('job_log_path') and d.get('id'):
         d['job_log_path'] = str(get_job_log_path(d['id']))
+    if not d.get('tts_engine'):
+        d['tts_engine'] = 'kokoro' if (d.get('voice') or '').startswith(('bm_', 'bf_', 'am_', 'af_')) else ('deepgram' if (d.get('voice') or '').startswith('deepgram_') else 'unknown')
     voice = d.get('voice') or ''
     if voice.startswith('deepgram_') or d.get('tts_engine') == 'deepgram':
         pchars = d.get('processed_chars') or 0
