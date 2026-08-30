@@ -275,7 +275,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | European | Dora | Alex, Santa |
 
 ### Other Voices
-- **Deepgram (cloud Aura-2 & Aura-1):** Orion, Orpheus, Arcas, Pandora, Hyperion, Angus
+- **Deepgram (cloud Aura-2):** Orion, Orpheus, Arcas, Pandora, Hyperion
 - **EdgeTTS:** British/American/Australian incl. Ryan, Sonia, Libby, Ava, Andrew, Brian, Aria, Jenny
 - **Inworld (paid):** Graham, Rupert, Olivia, Blake, Elizabeth, Dennis, Ashley, Luna
 

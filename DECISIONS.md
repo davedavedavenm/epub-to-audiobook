@@ -884,12 +884,13 @@ and WAL/SHM sidecars.
 **Why:** Eliminates intermittent `READONLY` errors when saving Settings after system
 reboots or file permission shifts.
 
-## Deepgram Cloud TTS Integration (Aura-2 & Aura-1) — Active
+## Deepgram Cloud TTS Integration (Aura-2) — Active
 
-Deepgram is integrated as a first-class cloud TTS engine via `tts-proxy`:
-- **Aura-2 Models** (`aura-2-orion-en`, `aura-2-orpheus-en`, `aura-2-arcas-en`, `aura-2-pandora-en`, `aura-2-hyperion-en`): Priced at **$0.030 per 1,000 characters** ($30/1M chars). Expressive neural speech with natural intonation.
-- **Aura-1 Models** (`aura-angus-en`): Priced at **$0.015 per 1,000 characters** ($15/1M chars). Dedicated Irish English documentary-style narrator.
+Deepgram Aura-2 is integrated as a first-class cloud TTS engine via `tts-proxy`:
+- **Aura-2 Models** (`aura-2-orion-en`, `aura-2-orpheus-en`, `aura-2-arcas-en`, `aura-2-pandora-en`, `aura-2-hyperion-en`): Priced at **$0.030 per 1,000 characters** ($30/1M chars). Expressive neural speech with natural intonation, dynamic prosody, and speed control.
+- **Aura-1 Rejection (Angus)**: Evaluated on *Armed Struggle: The Story of the IRA* and canonical samples, then **rejected** for audiobook production by Dave due to monotone/flat delivery across quotes and lack of emotional range or speed parameter support. Aura-1 models are excluded from the product.
 - **Preprocessing Contract**: Bound to the `'explicit'` text normalization profile (expands years, numbers, currency, ordinals, and initialisms like `I.R.A.` and `G.P.O.`; avoids shouty phonetic respellings). Text is chunked at $\le 400$ characters per request at clause/sentence boundaries, joined with 300 ms sentence gaps and 650 ms paragraph gaps.
-- **Audition Previews**: Previews for registered Deepgram voices are pre-generated on canonical `SAMPLE_TEXT` and persisted to `/data/previews/` so the Voice selector plays instantly with zero cold generation.
+- **Audition Previews**: Previews for the 5 registered Aura-2 voices are pre-generated on canonical `SAMPLE_TEXT` and persisted to `/data/previews/` so the Voice selector plays instantly with zero cold generation.
 - **Settings Management**: Users enter their `DEEPGRAM_API_KEY` under **Settings → API Keys** with a live connectivity test endpoint (`/api/settings/test_deepgram`).
+
 

@@ -25,13 +25,13 @@ def test_deepgram_voices_registered():
         'deepgram_orpheus',
         'deepgram_arcas',
         'deepgram_pandora',
-        'deepgram_hyperion',
-        'deepgram_angus'
+        'deepgram_hyperion'
     ]
     for v in expected_voices:
         assert v in VOICES, f"Expected voice {v} in VOICES"
         assert VOICES[v]['engine'] == 'deepgram'
         assert v in DEEPGRAM_VOICE_MAP, f"Expected {v} in DEEPGRAM_VOICE_MAP"
+    assert 'deepgram_angus' not in VOICES
 
 
 def test_deepgram_engine_url():
