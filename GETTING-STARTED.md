@@ -213,6 +213,12 @@ but when you want the best result:
   approved for books. Starting either Compose profile assumes a GPU is already
   attached; it never rents one. See [ENGINES.md](ENGINES.md) for the exact
   rejection boundary, runtime/licence and measured-hour limits.
+- **Deepgram (Aura-2 & Aura-1)** — fast, high-quality cloud neural TTS.
+  Aura-2 voices (**Orion**, **Orpheus**, **Arcas**, **Pandora**, **Hyperion**)
+  deliver natural, expressive narration at $0.030 per 1,000 characters; Aura-1
+  (**Angus**) provides authentic Irish English narration at $0.015 per 1,000
+  characters with steady documentary pacing. Previews are pre-cached out of the
+  box. Enter your API key in **Settings → API Keys** and click **Test Deepgram**.
 - **Gemini 3.1 Flash TTS / Achernar** — accepted opt-in online book narrator.
   Dave heard the exact 10:10 app-path file and called it “one of the best”. The
   integration is deliberately Free Tier only and stops rather than charging or
@@ -226,6 +232,13 @@ Which sounds best depends on the book. Trust your ears. Automated transcription
 can detect missing or repeated speech, but it cannot tell you whether a voice
 is natural, clear or pleasant. More detail: [ENGINES.md](ENGINES.md) and
 [VOICES.md](VOICES.md).
+
+### Enable Deepgram Cloud TTS (Aura-2 & Aura-1)
+
+1. Get an API key from [console.deepgram.com](https://console.deepgram.com/) (new developer accounts receive \$200 in free trial credits).
+2. In the Audiobook Studio web app, open **Settings → API Keys** and paste your key into the **Deepgram API Key** field, then click **Test Deepgram** to verify authentication. (Alternatively, add `DEEPGRAM_API_KEY=...` to your `.env` file).
+3. Click **Save Configuration**.
+4. Open **Voices** to audition the 6 ready presets (**Orion**, **Orpheus**, **Arcas**, **Pandora**, **Hyperion**, and **Angus**), then select your preferred voice when narrating any book in your Library.
 
 ### Enable the accepted free-only Gemini narrator
 

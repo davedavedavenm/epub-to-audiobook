@@ -753,3 +753,10 @@ checked the *artefacts* — not the exit codes — could see them.
 - TADA is therefore **excluded from the default E2E set** and stays behind its
   compose profile. Run it explicitly once #23 is fixed:
   `bash scripts/e2e_proof.sh tada`.
+
+### 2026-08-30 — Deepgram Cloud TTS (Aura-2 & Aura-1) Integration
+- **Engine routing**: `deepgram` routes through `tts-proxy` (`http://tts-proxy:8882/j/{job_id}/v1/audio/speech`), which proxies directly to `https://api.deepgram.com/v1/speak?model={model}&encoding=mp3`.
+- **Voices**: Aura-2 (`deepgram_orion`, `deepgram_orpheus`, `deepgram_arcas`, `deepgram_pandora`, `deepgram_hyperion`) at $0.030/1k chars; Aura-1 (`deepgram_angus`) at $0.015/1k chars.
+- **Preprocessing**: Explicit numeric normalization contract (`text_profile_for_engine('deepgram') == 'explicit'`) with sentence/clause boundary chunking ($\le 400$ chars) and 300 ms/650 ms silence joins.
+- **Operations & Security**: `DEEPGRAM_API_KEY` configured in Settings (or `.env`), verified via `/api/settings/test_deepgram`. Voice auditions pre-cached in `/data/previews/` on `SAMPLE_TEXT` to ensure instant playback.
+
