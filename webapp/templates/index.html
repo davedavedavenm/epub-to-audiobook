@@ -1447,6 +1447,21 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     function localSpeedNote(bookId) {
         const voiceId = document.getElementById('voice-' + bookId)?.value;
         const eng = (voiceId && voices[voiceId]) ? voices[voiceId].engine : null;
+        if (eng === 'deepgram') {
+            return '⚡ Cloud TTS API (Deepgram Aura-2) — High-speed neural speech generated via Deepgram API ($0.030/1k chars), assembled and chapterized on this machine.';
+        }
+        if (eng === 'gemini') {
+            return '⚡ Cloud TTS API (Google Gemini) — Generated via Gemini TTS API, assembled and chapterized on this machine.';
+        }
+        if (eng === 'edge') {
+            return '⚡ Cloud TTS (Microsoft Edge) — Generated via Edge TTS cloud service, assembled locally.';
+        }
+        if (eng === 'inworld') {
+            return '⚡ Cloud TTS API (Inworld AI) — Generated via Inworld API, assembled locally.';
+        }
+        if (eng === 'polly') {
+            return '⚡ Cloud TTS API (AWS Polly) — Generated via Amazon Polly, assembled locally.';
+        }
         const rtf = eng ? ENGINE_RTF_LOCAL[eng] : undefined;
         if (rtf === undefined) {
             return 'Renders on this computer. Free, and this engine is light enough to keep up comfortably.';
