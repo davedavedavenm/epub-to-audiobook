@@ -4884,35 +4884,55 @@ def bookfinder_search():
     try:
         from openbooks_client import search_openbooks_async
         import asyncio
-        results = asyncio.run(search_openbooks_async(query, timeout=12.0))
-        return jsonify({'results': results})
+        results = asyncio.run(search_openbooks_async(query, timeout=30.0))
+        resp = jsonify({'results': results})
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
     except Exception as e:
         app.logger.error(f"BookFinder search error: {e}")
-        return jsonify({'error': str(e), 'results': []}), 500
+        resp = jsonify({'error': str(e), 'results': []})
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp, 500
 
 
-@app.route('/api/bookfinder/grab', methods=['POST'])
+@app.route('/api/bookfinder/grab', methods=['POST', 'OPTIONS'])
 def bookfinder_grab():
     """Download book from OpenBooks, transfer to library, and index."""
+    if request.method == 'OPTIONS':
+        resp = make_response()
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return resp
     data = request.get_json(silent=True) or {}
     command = data.get('command', '').strip()
     title = data.get('title', '').strip()
     author = data.get('author', '').strip()
     if not command:
-        return jsonify({'error': 'No download command provided'}), 400
+        resp = jsonify({'error': 'No download command provided'})
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp, 400
     try:
         from openbooks_client import grab_and_import_book
         res = grab_and_import_book(command, title=title, author=author)
-        return jsonify(res)
+        resp = jsonify(res)
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
     except Exception as e:
         app.logger.error(f"BookFinder grab error: {e}")
-        return jsonify({'error': str(e)}), 500
+        resp = jsonify({'error': str(e)})
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp, 500
 
 
 @app.route('/embed/bookfinder', methods=['GET'])
 def bookfinder_embed():
     """Render standalone BookFinder widget for embedding into Calibre-Web or external dashboards."""
-    return render_template('bookfinder_embed.html')
+    resp = make_response(render_template('bookfinder_embed.html'))
+    resp.headers.pop('X-Frame-Options', None)
+    resp.headers['Content-Security-Policy'] = "frame-ancestors *"
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 
 @app.route('/api/voices/custom', methods=['GET'])
