@@ -20,11 +20,12 @@ jobs:
           cache-dependency-path: |
             webapp/requirements.txt
             gemini/requirements.txt
+            tts_proxy/requirements.txt
 
       - name: Install deps
         run: |
           pip install -q flask requests gunicorn num2words nltk ebooklib \
-            beautifulsoup4 lxml boto3 kaggle pytest
+            beautifulsoup4 lxml boto3 kaggle pytest mutagen edge-tts
           pip install -q -r gemini/requirements.txt
 
       - name: Lint
