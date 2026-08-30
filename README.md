@@ -275,6 +275,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | European | Dora | Alex, Santa |
 
 ### Other Voices
+- **Deepgram (cloud Aura-2 & Aura-1):** Orion, Orpheus, Arcas, Pandora, Hyperion, Angus
 - **EdgeTTS:** British/American/Australian incl. Ryan, Sonia, Libby, Ava, Andrew, Brian, Aria, Jenny
 - **Inworld (paid):** Graham, Rupert, Olivia, Blake, Elizabeth, Dennis, Ashley, Luna
 
@@ -292,7 +293,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `POCKET_URL` | Pocket TTS endpoint (default: `http://pocket-tts:8012/v1`; opt-in CPU profile) |
 | `KITTEN_URL` | KittenTTS endpoint (default: `http://kitten-tts:8013/v1`; opt-in CPU profile) |
 | `GEMINI_TTS_URL` / `GEMINI_API_KEY` | Internal free-only Gemini adapter and key from the dedicated `GEMINI_FREE_PROJECT_ID` whose Plan is Free; after verifying it, set `GEMINI_FREE_PROJECT_CONFIRMED=1` and opt in with `ENABLE_GEMINI_PROFILE=1`. Never commit the key or attach billing. Full procedure: [GEMINI-SETUP.md](GEMINI-SETUP.md). |
-| `TTS_PROXY_URL` | Optional proxy for transcript capture / Edge/Polly/Inworld |
+| `TTS_PROXY_URL` | Optional proxy for transcript capture / Deepgram/Edge/Polly/Inworld |
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | Optional OpenAI-compatible LLM for metadata and chapter classification (deterministic fallback; generated pronunciation rules are off by default). Groq users must choose a current ID from its official model/deprecation pages; see `.env.example`. |
 | `AUDIOBOOKSHELF_DIR` / `AUDIOBOOKSHELF_HOST` / `AUDIOBOOKSHELF_USER` / `AUDIOBOOKSHELF_PORT` | Audiobookshelf rsync sync target |
 | `LIBRARY_DIR` | Folder of ebooks to browse (default: `/mnt/openbooks`) |
@@ -303,7 +304,7 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `ASR_VERIFY` | Structural source/audio comparison (default `1`); detects gross collapse/mismatch, never voice quality |
 | `AUDIO_ASR_VERIFY_ENABLED` | Additional sampled structural ASR check after completion (default `0`) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_WEBHOOK_SECRET` | Telegram notifications and official webhook-secret validation |
-| `INWORLD_API_KEY` / `AWS_*` | Paid engine credentials |
+| `DEEPGRAM_API_KEY` / `INWORLD_API_KEY` / `AWS_*` | Cloud engine credentials |
 
 ## API Endpoints
 

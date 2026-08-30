@@ -1,5 +1,25 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-30 Deepgram Cloud TTS Integration (Aura-2 & Aura-1) — COMPLETED
+>
+> Integrated Deepgram as a first-class cloud TTS engine with UI API key management,
+> `tts-proxy` routing, and pre-cached voice previews:
+>
+> 1. **Aura-2 Voices Registered & Pre-Cached**:
+>    - **Orion** (`deepgram_orion` / `aura-2-orion-en`): Flagship American baritone narrator.
+>    - **Orpheus** (`deepgram_orpheus` / `aura-2-orpheus-en`): Smooth, measured American male narrator.
+>    - **Arcas** (`deepgram_arcas` / `aura-2-arcas-en`): Warm, conversational American male narrator.
+>    - **Pandora** (`deepgram_pandora` / `aura-2-pandora-en`): Articulate British female narrator.
+>    - **Hyperion** (`deepgram_hyperion` / `aura-2-hyperion-en`): Natural Australian male narrator.
+>    - **Angus** (`deepgram_angus` / `aura-angus-en`): Authentic Irish English male narrator (Aura-1).
+> 2. **TTS Pipeline & Preprocessing**:
+>    - Bound to the `'explicit'` text normalization contract (expanding years, currency, numbers, ordinals, and initialisms like `I.R.A.` and `G.P.O.`).
+>    - Sentence/clause chunking ($\le 400$ chars) with narrative silence insertion (300 ms sentence, 650 ms paragraph).
+> 3. **Settings & UI Integration**:
+>    - `DEEPGRAM_API_KEY` setting field and live connectivity test button (`/api/settings/test_deepgram`) in **Settings → API Keys**.
+>    - All 6 canonical previews rendered on `SAMPLE_TEXT` and persisted to `/data/previews/`.
+> 4. **Tests**: All 339 unit & integration tests passing (`pytest tests/`).
+
 > ## 2026-08-28 LoudKit and Sopro CPU auditions — HEARD, both rejected
 >
 > Dave heard eight arms and rejected all of them: **none good enough.** Neither
