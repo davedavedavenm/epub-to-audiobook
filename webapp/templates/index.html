@@ -1005,6 +1005,17 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     let libraryBooks = [];
     let selectedFile = null;
     let currentPreviewPath = null;
+    let selectedLibraryPaths = new Set();
+    let selectedQueueIds = new Set();
+    let selectedHistoryIds = new Set();
+    const openLogs = new Set();
+    let kaggleQuota = null;
+    let currentStudioAudio = null;
+    let currentStudioJobId = null;
+    let currentStudioPlaylist = [];
+    let currentStudioTrackIndex = 0;
+    let currentStudioBookName = '';
+    let historyJobsById = {};
 
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
@@ -1416,7 +1427,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         await fetch('/api/convert', { method: 'POST', body: formData }); switchTab('queue');
     }
 
-    let kaggleQuota = null;
     async function loadKaggleQuota() {
         try { kaggleQuota = await (await fetch('/api/kaggle/quota')).json(); } catch(e) {}
     }
@@ -2161,8 +2171,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         return `<span title="${escapeHtml(j.preprocess_summary)}" style="background:${failed ? 'var(--error)' : 'var(--success)'}; color:#fff; font-size:0.65rem; font-weight:900; padding:3px 10px; border-radius:12px; letter-spacing:0.05em; cursor:help;">PRE ${failed ? '!' : '✓'}</span>`;
     }
 
-    const openLogs = new Set();  // survives the 5s queue re-render
-
     async function toggleLogs(jobId) {
         if(openLogs.has(jobId)) { openLogs.delete(jobId); document.getElementById('logs-' + jobId)?.classList.add('hidden'); return; }
         openLogs.add(jobId);
@@ -2193,8 +2201,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         appAlert({ title: 'Jobs requeued', message: `${(data.queued_ids || []).length} failed job(s) are back in the queue.`, tone: 'info', icon: '✓' });
         loadJobs();
     }
-
-    let selectedQueueIds = new Set();
 
     function toggleSelectAllQueue(checked) {
         document.querySelectorAll('.queue-job-cb').forEach(cb => {
@@ -2502,15 +2508,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         document.querySelectorAll('.qwave.live').forEach(tickWave);
     }
     setInterval(animateWaves, 430);
-
-    let selectedHistoryIds = new Set();
-    let selectedLibraryPaths = new Set();
-    let currentStudioAudio = null;
-    let currentStudioJobId = null;
-    let currentStudioPlaylist = [];
-    let currentStudioTrackIndex = 0;
-    let currentStudioBookName = '';
-    let historyJobsById = {};
 
     function toggleSelectAllHistory(checked) {
         document.querySelectorAll('.history-job-cb').forEach(cb => {
@@ -3119,16 +3116,23 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         } catch(e) {}
     }
 
-    window.onload = async () => {
-        bindPreviewEvents();
-        const storedTheme = localStorage.getItem('audiobook-theme');
-        const theme = storedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        setTheme(theme);
-        await loadEngineHealth(); setInterval(loadEngineHealth, 30000);
-        await loadCloudStatus(); setInterval(loadCloudStatus, 30000);
-        const tab = localStorage.getItem('audiobook-tab') || 'library'; switchTab(tab);
-        const uploadVoice = document.getElementById('upload-voice');
-        if(uploadVoice) { uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural'); syncSpeedField('upload-voice','upload-speed'); }
+    window.onload = () => {
+        try {
+            bindPreviewEvents();
+            const storedTheme = localStorage.getItem('audiobook-theme');
+            const theme = storedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            setTheme(theme);
+            const tab = localStorage.getItem('audiobook-tab') || 'library';
+            switchTab(tab);
+            const uploadVoice = document.getElementById('upload-voice');
+            if(uploadVoice) { uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural'); syncSpeedField('upload-voice','upload-speed'); }
+        } catch(e) {
+            console.error('Initialization error:', e);
+        }
+        loadEngineHealth().catch(console.error);
+        setInterval(loadEngineHealth, 30000);
+        loadCloudStatus().catch(console.error);
+        setInterval(loadCloudStatus, 30000);
         setInterval(() => {
             const qp = document.getElementById('tab-queue');
             if (qp && qp.classList.contains('active')) loadJobs();
