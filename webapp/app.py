@@ -5290,26 +5290,101 @@ def test_inworld_connection():
         return jsonify({'error': str(e)}), 500
 
 
+def _fetch_deepgram_balance(api_key: str):
+    """Fetch Deepgram account email and credit balance."""
+    if not api_key:
+        return None
+    try:
+        t_resp = requests.get(
+            'https://api.deepgram.com/v1/auth/token',
+            headers={'Authorization': f'Token {api_key}', 'User-Agent': 'EpubToAudiobook/1.0'},
+            timeout=10
+        )
+        email = ''
+        if t_resp.status_code == 200:
+            email = t_resp.json().get('email', '')
+
+        p_resp = requests.get(
+            'https://api.deepgram.com/v1/projects',
+            headers={'Authorization': f'Token {api_key}', 'User-Agent': 'EpubToAudiobook/1.0'},
+            timeout=10
+        )
+        if p_resp.status_code != 200:
+            return {'email': email, 'balance': None, 'formatted': None}
+
+        projects = p_resp.json().get('projects', [])
+        total_balance = 0.0
+        currency = 'USD'
+        found_balance = False
+        for p in projects:
+            pid = p.get('project_id')
+            if not pid:
+                continue
+            b_resp = requests.get(
+                f'https://api.deepgram.com/v1/projects/{pid}/balances',
+                headers={'Authorization': f'Token {api_key}', 'User-Agent': 'EpubToAudiobook/1.0'},
+                timeout=10
+            )
+            if b_resp.status_code == 200:
+                b_data = b_resp.json().get('balances', [])
+                for b in b_data:
+                    amt = b.get('amount')
+                    if amt is not None:
+                        total_balance += float(amt)
+                        currency = b.get('units', 'USD').upper()
+                        found_balance = True
+
+        if found_balance:
+            return {
+                'email': email,
+                'balance': round(total_balance, 2),
+                'formatted': f"${total_balance:.2f} {currency}",
+                'currency': currency
+            }
+        return {'email': email, 'balance': None, 'formatted': None}
+    except Exception as e:
+        app.logger.warning(f"Error fetching Deepgram balance: {e}")
+        return None
+
+
 @app.route('/api/settings/test_deepgram', methods=['POST'])
 def test_deepgram_connection():
-    """Test Deepgram API key by calling auth/token endpoint."""
+    """Test Deepgram API key and query credit balance."""
     try:
         data = request.json or {}
         api_key = data.get('api_key') or get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY', '')
         if not api_key:
             return jsonify({'error': 'No Deepgram API key provided'}), 400
-        resp = requests.get(
-            'https://api.deepgram.com/v1/auth/token',
-            headers={'Authorization': f'Token {api_key}', 'User-Agent': 'EpubToAudiobook/1.0'},
-            timeout=15
-        )
-        if resp.status_code == 200:
-            token_data = resp.json()
-            email = token_data.get('email', '')
-            return jsonify({'status': 'success', 'message': f'Connected to Deepgram! ({email})' if email else 'Connected to Deepgram!'})
-        return jsonify({'error': f'Deepgram returned {resp.status_code}: {resp.text[:100]}'}), 400
+        bal_info = _fetch_deepgram_balance(api_key)
+        if bal_info and bal_info.get('email'):
+            email = bal_info['email']
+            fmt = bal_info.get('formatted')
+            if fmt:
+                msg = f"Connected to Deepgram! ({email}) — Credit Balance: {fmt}"
+            else:
+                msg = f"Connected to Deepgram! ({email})"
+            return jsonify({
+                'status': 'success',
+                'message': msg,
+                'email': email,
+                'balance': bal_info.get('balance'),
+                'formatted': fmt
+            })
+        return jsonify({'error': 'Failed to authenticate with Deepgram API'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/deepgram_balance', methods=['GET'])
+def get_deepgram_balance():
+    """Fetch current Deepgram balance for configured API key."""
+    api_key = get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY', '')
+    if not api_key:
+        return jsonify({'configured': False, 'balance': None, 'formatted': None})
+    bal_info = _fetch_deepgram_balance(api_key)
+    if bal_info:
+        return jsonify({'configured': True, **bal_info})
+    return jsonify({'configured': True, 'balance': None, 'formatted': None})
 
 
 @app.route('/api/settings/test_llm', methods=['POST'])
