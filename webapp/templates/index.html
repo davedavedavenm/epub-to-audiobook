@@ -981,6 +981,16 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     const appConfirm = (opts) => _dlgOpen(opts);
     const appAlert = (opts) => _dlgOpen({ ...opts, alertOnly: true, confirmText: opts.confirmText || 'OK' });
 
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     const voices = {{ voices | tojson }};
     let engineHealth = {};   // engine -> bool (true=up); empty until loaded
     // engine -> reason string, for engines that can NEVER work without a
