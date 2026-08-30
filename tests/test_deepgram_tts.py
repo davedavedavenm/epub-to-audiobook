@@ -75,3 +75,15 @@ def test_split_for_deepgram():
     combined = " ".join(chunks)
     assert "Apple was nine weeks from bankruptcy" in combined
     assert "Scott Forstall" in combined
+
+
+def test_deepgram_balance_endpoint(monkeypatch):
+    from app import app
+    client = app.test_client()
+
+    monkeypatch.delenv('DEEPGRAM_API_KEY', raising=False)
+    resp = client.get('/api/settings/deepgram_balance')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['configured'] is False
+
