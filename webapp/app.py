@@ -687,13 +687,12 @@ VOICES = {
     'kitten_kiki': {'name': 'Kiki (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
     'kitten_leo': {'name': 'Leo (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
 
-    # ============ DEEPGRAM (CLOUD AURA-2 & AURA-1) ============
+    # ============ DEEPGRAM (CLOUD AURA-2) ============
     'deepgram_orion': {'name': 'Orion — resonant (Deepgram)', 'accent': 'American', 'gender': 'Male', 'engine': 'deepgram'},
     'deepgram_orpheus': {'name': 'Orpheus — smooth (Deepgram)', 'accent': 'American', 'gender': 'Male', 'engine': 'deepgram'},
     'deepgram_arcas': {'name': 'Arcas — warm (Deepgram)', 'accent': 'American', 'gender': 'Male', 'engine': 'deepgram'},
     'deepgram_pandora': {'name': 'Pandora — articulate (Deepgram)', 'accent': 'British', 'gender': 'Female', 'engine': 'deepgram'},
     'deepgram_hyperion': {'name': 'Hyperion — natural (Deepgram)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'deepgram'},
-    'deepgram_angus': {'name': 'Angus — documentary (Deepgram)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'deepgram'},
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the

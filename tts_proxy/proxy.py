@@ -220,7 +220,6 @@ DEEPGRAM_VOICE_MAP = {
     'deepgram_arcas': 'aura-2-arcas-en',
     'deepgram_pandora': 'aura-2-pandora-en',
     'deepgram_hyperion': 'aura-2-hyperion-en',
-    'deepgram_angus': 'aura-angus-en',
 }
 
 

@@ -1,6 +1,6 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-08-30 Deepgram Cloud TTS Integration (Aura-2 & Aura-1) — COMPLETED
+> ## 2026-08-30 Deepgram Cloud TTS Integration (Aura-2) — COMPLETED
 >
 > Integrated Deepgram as a first-class cloud TTS engine with UI API key management,
 > `tts-proxy` routing, and pre-cached voice previews:
@@ -11,14 +11,15 @@
 >    - **Arcas** (`deepgram_arcas` / `aura-2-arcas-en`): Warm, conversational American male narrator.
 >    - **Pandora** (`deepgram_pandora` / `aura-2-pandora-en`): Articulate British female narrator.
 >    - **Hyperion** (`deepgram_hyperion` / `aura-2-hyperion-en`): Natural Australian male narrator.
->    - **Angus** (`deepgram_angus` / `aura-angus-en`): Authentic Irish English male narrator (Aura-1).
-> 2. **TTS Pipeline & Preprocessing**:
+> 2. **Aura-1 Rejection (Angus)**:
+>    - Angus (`aura-angus-en`) evaluated on Chapter 1 of *Armed Struggle: The Story of the IRA* and rejected by Dave (monotone/flat delivery, no speed control). Excluded from the application.
+> 3. **TTS Pipeline & Preprocessing**:
 >    - Bound to the `'explicit'` text normalization contract (expanding years, currency, numbers, ordinals, and initialisms like `I.R.A.` and `G.P.O.`).
 >    - Sentence/clause chunking ($\le 400$ chars) with narrative silence insertion (300 ms sentence, 650 ms paragraph).
-> 3. **Settings & UI Integration**:
+> 4. **Settings & UI Integration**:
 >    - `DEEPGRAM_API_KEY` setting field and live connectivity test button (`/api/settings/test_deepgram`) in **Settings → API Keys**.
->    - All 6 canonical previews rendered on `SAMPLE_TEXT` and persisted to `/data/previews/`.
-> 4. **Tests**: All 339 unit & integration tests passing (`pytest tests/`).
+>    - All 5 canonical previews rendered on `SAMPLE_TEXT` and persisted to `/data/previews/`.
+> 5. **Tests**: All 339 unit & integration tests passing (`pytest tests/`).
 
 > ## 2026-08-28 LoudKit and Sopro CPU auditions — HEARD, both rejected
 >
