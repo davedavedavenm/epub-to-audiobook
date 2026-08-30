@@ -2416,8 +2416,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     ${chapterProgressText(j) ? `<div class="progress-detail">${chapterProgressText(j)}</div>` : ''}
                     <div class="job-detail-row">
                         <div class="job-detail-item">Narrator <b>${j.voice_name || j.voice}${j.voice2 ? ' + ' + (j.voice2_name || j.voice2) : ''}</b></div>
-                        <div class="job-detail-item">Engine <b>${j.tts_engine.toUpperCase()}</b></div>
-                        ${['kokoro','edge','polly'].includes(j.tts_engine) ? `<div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>` : ''}
+                        <div class="job-detail-item">Engine <b>${(j.tts_engine || 'unknown').toUpperCase()}</b></div>
+                        ${['kokoro','edge','polly'].includes(j.tts_engine || '') ? `<div class="job-detail-item">Speed <b>${j.tts_speed || '1.0'}x</b></div>` : ''}
                         <div class="job-detail-item">Range <b>${j.start_chapter || 1} - ${j.end_chapter || 'End'}</b></div>
                         ${(j.tts_engine === 'deepgram' && j.spent_cost) ? `<div class="job-detail-item" style="color:#10b981;">Cost <b>${j.spent_cost}</b></div>` : ''}
                     </div>
