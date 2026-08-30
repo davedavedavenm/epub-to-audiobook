@@ -3132,9 +3132,10 @@ def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
             f"Container died with {len(existing_files)} chapters done. "
             f"Retrying {len(missing)} missing: {missing}")
 
-        # Restart Kokoro before retries to clear memory leak
-        append_job_log(job_id, "Restarting Kokoro TTS to clear memory before chapter retries")
-        restart_kokoro(label=f"Recovery {job_id}")
+        # Restart Kokoro before retries to clear memory leak (only if Kokoro is used)
+        if job.get('tts_engine') == 'kokoro':
+            append_job_log(job_id, "Restarting Kokoro TTS to clear memory before chapter retries")
+            restart_kokoro(label=f"Recovery {job_id}")
 
         # Build cmd and retry missing chapters
         cmd = build_retry_cmd_from_job(job)
@@ -4872,6 +4873,40 @@ def voices_for_client() -> dict:
         voice_id: {**info, 'preview_cached': _preview_is_cached(voice_id)}
         for voice_id, info in all_voices().items()
     }
+
+
+@app.route('/api/bookfinder/search', methods=['GET'])
+def bookfinder_search():
+    """Search OpenBooks for available books to grab."""
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'results': []})
+    try:
+        from openbooks_client import search_openbooks_async
+        import asyncio
+        results = asyncio.run(search_openbooks_async(query, timeout=12.0))
+        return jsonify({'results': results})
+    except Exception as e:
+        app.logger.error(f"BookFinder search error: {e}")
+        return jsonify({'error': str(e), 'results': []}), 500
+
+
+@app.route('/api/bookfinder/grab', methods=['POST'])
+def bookfinder_grab():
+    """Download book from OpenBooks, transfer to library, and index."""
+    data = request.get_json(silent=True) or {}
+    command = data.get('command', '').strip()
+    title = data.get('title', '').strip()
+    author = data.get('author', '').strip()
+    if not command:
+        return jsonify({'error': 'No download command provided'}), 400
+    try:
+        from openbooks_client import grab_and_import_book
+        res = grab_and_import_book(command, title=title, author=author)
+        return jsonify(res)
+    except Exception as e:
+        app.logger.error(f"BookFinder grab error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/voices/custom', methods=['GET'])
