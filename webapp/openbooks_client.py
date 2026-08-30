@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import subprocess
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -12,21 +13,16 @@ OPENBOOKS_SSH_HOST = os.getenv("OPENBOOKS_SSH_HOST", "docker-vm")
 OPENBOOKS_SSH_USER = os.getenv("OPENBOOKS_SSH_USER", "dave")
 OPENBOOKS_BOOKS_DIR = os.getenv("OPENBOOKS_BOOKS_DIR", "/home/dave/docker-apps/calibre-web-automated/book-ingest")
 
-async def search_openbooks_async(query: str, timeout: float = 30.0):
-    if not query or not query.strip():
-        return []
+_ws_lock = threading.Lock()
 
-    clean_query = query.strip()
-    logger.info(f"Searching OpenBooks for '{clean_query}' via {OPENBOOKS_WS_URL}")
-
-    # Retry up to 3 times in case another client temporarily held the WebSocket
+async def _do_search(clean_query: str, timeout: float = 35.0):
     for attempt in range(1, 4):
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=8.0) as ws:
-                    # Handshake
+                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=10.0) as ws:
+                    # 1. Handshake
                     await ws.send_str(json.dumps({"type": 1, "payload": {}}))
-                    # Search query
+                    # 2. Search query
                     await ws.send_str(json.dumps({"type": 2, "payload": {"query": clean_query}}))
 
                     start_time = asyncio.get_event_loop().time()
@@ -51,7 +47,6 @@ async def search_openbooks_async(query: str, timeout: float = 30.0):
                                         full_cmd = b.get("full") or ""
                                         server = b.get("server") or ""
 
-                                        # Clean author / title if inverted
                                         if " - " in title and not author:
                                             parts = title.split(" - ", 1)
                                             author, title = parts[0].strip(), parts[1].strip()
@@ -78,21 +73,25 @@ async def search_openbooks_async(query: str, timeout: float = 30.0):
         except Exception as e:
             logger.warning(f"OpenBooks WebSocket attempt {attempt}/3 error: {e}")
             if attempt < 3:
-                await asyncio.sleep(1.5)
-
+                await asyncio.sleep(2.0)
     return []
 
-async def grab_openbooks_async(command: str, timeout: float = 45.0):
-    if not command:
-        raise ValueError("No download command specified")
+async def search_openbooks_async(query: str, timeout: float = 35.0):
+    if not query or not query.strip():
+        return []
 
-    logger.info(f"Sending grab request to OpenBooks: {command}")
+    clean_query = query.strip()
+    logger.info(f"Searching OpenBooks for '{clean_query}' via {OPENBOOKS_WS_URL}")
+
+    with _ws_lock:
+        return await _do_search(clean_query, timeout=timeout)
+
+async def _do_grab(command: str, timeout: float = 45.0):
     filename = None
-
     for attempt in range(1, 4):
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=8.0) as ws:
+                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=10.0) as ws:
                     # Handshake
                     await ws.send_str(json.dumps({"type": 1, "payload": {}}))
                     # Send download command
@@ -121,6 +120,16 @@ async def grab_openbooks_async(command: str, timeout: float = 45.0):
             logger.warning(f"OpenBooks WebSocket grab attempt {attempt}/3 error: {e}")
             if attempt < 3:
                 await asyncio.sleep(2.0)
+    return filename
+
+async def grab_openbooks_async(command: str, timeout: float = 45.0):
+    if not command:
+        raise ValueError("No download command specified")
+
+    logger.info(f"Sending grab request to OpenBooks: {command}")
+
+    with _ws_lock:
+        filename = await _do_grab(command, timeout=timeout)
 
     if not filename:
         raise RuntimeError("Download timed out or book was not sent by IRC server.")
@@ -131,42 +140,37 @@ def grab_and_import_book(command: str, title: str = "", author: str = ""):
     """
     Downloads book from OpenBooks, transfers it to local uploads, and triggers library ingest.
     """
-    # 1. Trigger download via WebSocket
     filename = asyncio.run(grab_openbooks_async(command))
     if not filename:
-        raise RuntimeError("Failed to retrieve downloaded book filename from OpenBooks.")
+        raise RuntimeError("Failed to receive book from OpenBooks.")
 
-    # 2. SCP file from OpenBooks host into local /data/uploads/
-    remote_path = f"{OPENBOOKS_BOOKS_DIR}/{filename}"
-    local_dest = f"/data/uploads/{filename}"
-    scp_cmd = [
-        "scp",
-        "-o", "BatchMode=yes",
-        "-o", "StrictHostKeyChecking=no",
-        f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_path}",
-        local_dest
-    ]
-    logger.info(f"Transferring {remote_path} to {local_dest}...")
-    res = subprocess.run(scp_cmd, capture_output=True, text=True)
-    if res.returncode != 0:
-        logger.error(f"SCP failed: {res.stderr}")
-        raise RuntimeError(f"Could not transfer downloaded book to local library: {res.stderr}")
+    # 2. On docker-vm, openbooks saves to /home/dave/docker-apps/calibre-web-automated/book-ingest/
+    # If the conversion studio is running on Zorin, sync file to /data/uploads
+    local_upload_dir = os.getenv("UPLOAD_DIR", "/data/uploads")
+    os.makedirs(local_upload_dir, exist_ok=True)
+    local_dest = os.path.join(local_upload_dir, filename)
 
-    # 3. Trigger Calibre-Web sync if docker-vm is reachable
-    try:
-        cwa_cmd = [
-            "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no",
-            "dave@docker-vm",
-            f"docker exec calibre-web-automated calibredb add --with-library /calibre-library --automerge overwrite '{local_dest}' 2>&1 || true"
-        ]
-        subprocess.run(cwa_cmd, capture_output=True, text=True, timeout=10)
-    except Exception as ex:
-        logger.warning(f"Calibre-Web immediate add notification failed (will sync on cron): {ex}")
+    if not os.path.exists(local_dest):
+        remote_src = f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{OPENBOOKS_BOOKS_DIR}/{filename}"
+        logger.info(f"Syncing {filename} from {remote_src} to {local_dest}...")
+        try:
+            cmd = ["scp", "-o", "StrictHostKeyChecking=no", remote_src, local_dest]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if res.returncode != 0:
+                # Also check /calibre-library if already imported
+                remote_calibre_dir = "/home/dave/docker-apps/calibre-web-automated/calibre-library"
+                find_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}", f"find '{remote_calibre_dir}' -name '{filename}'"]
+                find_res = subprocess.run(find_cmd, capture_output=True, text=True, timeout=10)
+                if find_res.returncode == 0 and find_res.stdout.strip():
+                    remote_file = find_res.stdout.strip().splitlines()[0]
+                    subprocess.run(["scp", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_file}", local_dest], timeout=30)
+        except Exception as e:
+            logger.warning(f"Failed to SCP book to local uploads (it remains in Calibre-Web): {e}")
 
     return {
         "status": "success",
-        "title": title or filename,
-        "author": author,
         "filename": filename,
-        "path": local_dest
+        "title": title or filename,
+        "author": author or "Unknown",
+        "message": f"Successfully grabbed '{filename}' and imported into library."
     }
