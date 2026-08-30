@@ -479,6 +479,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_TTS_STYLE=${GEMINI_TTS_STYLE:-}
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
+      - OPENBOOKS_WS_URL=${OPENBOOKS_WS_URL:-ws://192.168.1.113:6082/ws}
       - UPLOAD_DIR=/data/uploads
       - LIBRARY_DIR=${LIBRARY_DIR:-/mnt/openbooks}
       - OUTPUT_DIR=/data/audiobooks

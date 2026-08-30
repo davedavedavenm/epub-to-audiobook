@@ -4909,6 +4909,12 @@ def bookfinder_grab():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/embed/bookfinder', methods=['GET'])
+def bookfinder_embed():
+    """Render standalone BookFinder widget for embedding into Calibre-Web or external dashboards."""
+    return render_template('bookfinder_embed.html')
+
+
 @app.route('/api/voices/custom', methods=['GET'])
 def list_custom_voices():
     """Reference voices uploaded through the UI."""

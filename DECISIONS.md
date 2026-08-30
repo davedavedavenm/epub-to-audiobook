@@ -14,6 +14,20 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
+## Book Finder & OpenBooks Gateway through Gluetun VPN — Active (2026-08-30)
+
+To provide a seamless, 1-click book search and download capability for non-technical users
+while guaranteeing 100% encrypted VPN egress and zero IRC session lockouts:
+- **Dedicated Service**: OpenBooks runs as `openbooks-vpn` inside `docker-vm`'s `slskd-stack`
+  sharing the `gluetun` network namespace (`network_mode: service:gluetun`). All IRC searches
+  and DCC downloads route through ProtonVPN WireGuard (Sweden) with a firewall killswitch.
+- **Dedicated IRC Identity**: Runs with `--name magnuslib --persist` so background automated
+  queries never collide with or disconnect personal browser sessions.
+- **Direct Library Pipeline**: Books download directly into `/home/dave/docker-apps/calibre-web-automated/book-ingest/`,
+  triggering instant indexing by Calibre-Web and immediate availability in Audiobook Studio.
+- **UI Surfaces**: Accessible via the native Book Finder on the Studio Home tab (`https://audio.magnusfamily.co.uk`)
+  and embedded modal in Calibre-Web (`https://library.magnusfamily.co.uk`).
+
 ## Repo boundary: split by host, not by acquisition method — Active
 
 There is no separate "acquisition" or grey-market repository, and none should be
