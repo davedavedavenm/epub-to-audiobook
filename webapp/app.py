@@ -686,6 +686,14 @@ VOICES = {
     'kitten_hugo': {'name': 'Hugo (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
     'kitten_kiki': {'name': 'Kiki (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
     'kitten_leo': {'name': 'Leo (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+
+    # ============ DEEPGRAM (CLOUD AURA-2 & AURA-1) ============
+    'deepgram_orion': {'name': 'Orion — resonant (Deepgram)', 'accent': 'American', 'gender': 'Male', 'engine': 'deepgram'},
+    'deepgram_orpheus': {'name': 'Orpheus — smooth (Deepgram)', 'accent': 'American', 'gender': 'Male', 'engine': 'deepgram'},
+    'deepgram_arcas': {'name': 'Arcas — warm (Deepgram)', 'accent': 'American', 'gender': 'Male', 'engine': 'deepgram'},
+    'deepgram_pandora': {'name': 'Pandora — articulate (Deepgram)', 'accent': 'British', 'gender': 'Female', 'engine': 'deepgram'},
+    'deepgram_hyperion': {'name': 'Hyperion — natural (Deepgram)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'deepgram'},
+    'deepgram_angus': {'name': 'Angus — documentary (Deepgram)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'deepgram'},
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
@@ -2867,9 +2875,9 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         # Keep this tombstone so an old queued job fails visibly instead of
         # falling through to Kokoro and producing an unwanted audiobook.
         raise ValueError('Piper is retired; choose a currently offered narrator')
-    elif tts_engine in ('inworld', 'edge', 'polly'):
+    elif tts_engine in ('inworld', 'edge', 'polly', 'deepgram'):
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
-        model = 'inworld' if tts_engine == 'inworld' else 'tts-1'
+        model = 'deepgram' if tts_engine == 'deepgram' else ('inworld' if tts_engine == 'inworld' else 'tts-1')
         return url, model
     elif tts_engine == 'chatterbox_nano':
         return CHATTERBOX_NANO_URL, 'tts-1'
@@ -2901,7 +2909,7 @@ def text_profile_for_engine(tts_engine: str) -> str:
     respellings. Keeping this mapping centralized makes preview, first render
     and recovery use the same input contract.
     """
-    if tts_engine in ('pocket', 'kitten', 'gemini'):
+    if tts_engine in ('pocket', 'kitten', 'gemini', 'deepgram'):
         return 'explicit'
     if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
         return 'modern'
@@ -4631,6 +4639,7 @@ def check_engines_health(max_age=20):
     out['edge'] = proxy_up
     out['polly'] = proxy_up and bool(get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID'))
     out['inworld'] = proxy_up and bool(get_setting('INWORLD_API_KEY') or os.environ.get('INWORLD_API_KEY'))
+    out['deepgram'] = proxy_up and bool(get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY'))
     _ENGINE_HEALTH_CACHE['ts'] = now
     _ENGINE_HEALTH_CACHE['data'] = out
     return out
@@ -4644,6 +4653,7 @@ ENGINE_CREDENTIALS = {
     'inworld': ('INWORLD_API_KEY', 'Needs an Inworld API key (Settings → API keys)'),
     'polly': ('AWS_ACCESS_KEY_ID', 'Needs AWS credentials (Settings → API keys)'),
     'gemini': ('GEMINI_API_KEY', 'Needs a key from a dedicated unbilled Google AI Studio Free Tier project'),
+    'deepgram': ('DEEPGRAM_API_KEY', 'Needs a Deepgram API key (Settings → API keys)'),
 }
 
 
@@ -5022,7 +5032,7 @@ def api_settings():
         'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID',
         'LLM_API_KEY', 'TELEGRAM_BOT_TOKEN',
         'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY',
-        'INWORLD_API_KEY', 'KAGGLE_API_TOKEN'
+        'INWORLD_API_KEY', 'DEEPGRAM_API_KEY', 'KAGGLE_API_TOKEN'
     ]
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
@@ -5277,6 +5287,28 @@ def test_inworld_connection():
         if resp.status_code == 200:
             return jsonify({'status': 'success', 'message': 'Inworld TTS connected!'})
         return jsonify({'error': f'Inworld returned {resp.status_code}: {resp.text[:100]}'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/test_deepgram', methods=['POST'])
+def test_deepgram_connection():
+    """Test Deepgram API key by calling auth/token endpoint."""
+    try:
+        data = request.json or {}
+        api_key = data.get('api_key') or get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY', '')
+        if not api_key:
+            return jsonify({'error': 'No Deepgram API key provided'}), 400
+        resp = requests.get(
+            'https://api.deepgram.com/v1/auth/token',
+            headers={'Authorization': f'Token {api_key}', 'User-Agent': 'EpubToAudiobook/1.0'},
+            timeout=15
+        )
+        if resp.status_code == 200:
+            token_data = resp.json()
+            email = token_data.get('email', '')
+            return jsonify({'status': 'success', 'message': f'Connected to Deepgram! ({email})' if email else 'Connected to Deepgram!'})
+        return jsonify({'error': f'Deepgram returned {resp.status_code}: {resp.text[:100]}'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

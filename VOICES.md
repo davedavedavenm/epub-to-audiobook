@@ -283,6 +283,20 @@ The persistent ten-RPD local guard and no-automatic-retry rule remain in force.
 See [GEMINI-SETUP.md](GEMINI-SETUP.md).
 Official source: [Gemini TTS voice options](https://ai.google.dev/gemini-api/docs/speech-generation#voice-options).
 
+### Deepgram Aura-2 & Aura-1 voice catalogue (official, checked 2026-08-30)
+
+Deepgram exposes Aura-2 ($0.030 / 1k chars) and Aura-1 ($0.015 / 1k chars) via `POST https://api.deepgram.com/v1/speak`.
+Pre-cached, registered production voices:
+- **Orion** (`deepgram_orion` / `aura-2-orion-en`): American Male. Flagship deep, resonant, expressive narrator.
+- **Orpheus** (`deepgram_orpheus` / `aura-2-orpheus-en`): American Male. Smooth, measured cadence.
+- **Arcas** (`deepgram_arcas` / `aura-2-arcas-en`): American Male. Warm, natural conversational narrator.
+- **Pandora** (`deepgram_pandora` / `aura-2-pandora-en`): British Female. Articulate, clear prose delivery.
+- **Hyperion** (`deepgram_hyperion` / `aura-2-hyperion-en`): Australian Male. Engaging natural Australian narrator.
+- **Angus** (`deepgram_angus` / `aura-angus-en`): Irish Male (Aura-1). Authentic Irish English accent with steady documentary pacing.
+
+All 6 canonical audition previews are pre-rendered on canonical `SAMPLE_TEXT` and persisted in `/data/previews/deepgram_<voice>.mp3`. Text is processed under the `'explicit'` numeric/initialism profile with $\le 400$-char clause chunking and 300 ms/650 ms silence joins.
+Official source: [Deepgram TTS voice options](https://developers.deepgram.com/docs/tts-models).
+
 ### NVIDIA MagpieTTS Multilingual v2607 presets (official, checked 2026-08-15)
 
 The exact v2607 model ships five baked English speaker IDs: `Aria` (0),

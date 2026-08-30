@@ -214,6 +214,79 @@ async def get_inworld_audio(text: str, voice: str) -> bytes:
     return b''.join(parts)
 
 
+DEEPGRAM_VOICE_MAP = {
+    'deepgram_orion': 'aura-2-orion-en',
+    'deepgram_orpheus': 'aura-2-orpheus-en',
+    'deepgram_arcas': 'aura-2-arcas-en',
+    'deepgram_pandora': 'aura-2-pandora-en',
+    'deepgram_hyperion': 'aura-2-hyperion-en',
+    'deepgram_angus': 'aura-angus-en',
+}
+
+
+def _split_for_deepgram(text: str, max_chars: int = 400) -> list[str]:
+    """Split text into manageable narrative chunks at sentence or clause boundaries."""
+    if len(text) <= max_chars:
+        return [text]
+
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    chunks, current = [], ''
+    for sentence in sentences:
+        if len(sentence) > max_chars:
+            clauses = re.split(r'(?<=[;:\u2014])\s+', sentence)
+            for clause in clauses:
+                if len(current) + len(clause) + 1 <= max_chars:
+                    current = (current + ' ' + clause).strip()
+                else:
+                    if current:
+                        chunks.append(current)
+                    current = clause
+        elif len(current) + len(sentence) + 1 <= max_chars:
+            current = (current + ' ' + sentence).strip()
+        else:
+            if current:
+                chunks.append(current)
+            current = sentence
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+async def _deepgram_chunk(text: str, model_id: str, api_key: str) -> bytes:
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Token {api_key}',
+        'User-Agent': 'EpubToAudiobook/1.0'
+    }
+    url = f"https://api.deepgram.com/v1/speak?model={model_id}&encoding=mp3"
+    payload = {'text': text}
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(url, json=payload, headers=headers)
+    if r.status_code != 200:
+        raise Exception(f"Deepgram API error {r.status_code}: {r.text[:200]}")
+    return r.content
+
+
+async def get_deepgram_audio(text: str, voice: str) -> bytes:
+    api_key = get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY', '')
+    if not api_key:
+        raise Exception("Deepgram API key not configured")
+
+    model_id = DEEPGRAM_VOICE_MAP.get(voice, voice)
+    if model_id.startswith('deepgram_'):
+        model_id = model_id.replace('deepgram_', '')
+    if not model_id.startswith('aura-') and not model_id.startswith('aura-2-'):
+        model_id = 'aura-2-orion-en'
+
+    chunks = _split_for_deepgram(text)
+    parts = []
+    for c in chunks:
+        audio_chunk = await _deepgram_chunk(c, model_id, api_key)
+        parts.append(audio_chunk)
+    return b''.join(parts)
+
+
 @app.post("/j/{job_id}/v1/audio/speech")
 async def audio_speech(job_id: str, request: Request):
     try:
@@ -226,13 +299,21 @@ async def audio_speech(job_id: str, request: Request):
     d = job_dir(job_id)
     chunks_path = d / "chunks.jsonl"
 
-    # Check if this is an Edge voice or specifically requested via engine
+    # Check if this is an Edge, Polly, Inworld, or Deepgram voice
     is_edge = voice.endswith("Neural") or payload.get("model") == "edge"
     is_polly = voice.startswith("polly_") or payload.get("model") == "polly"
     is_inworld = voice.startswith("inworld_") or payload.get("model") == "inworld"
+    is_deepgram = (
+        voice.startswith("deepgram_")
+        or voice.startswith("aura-")
+        or payload.get("model") == "deepgram"
+    )
 
     try:
-        if is_inworld:
+        if is_deepgram:
+            logger.info(f"Processing Deepgram request for voice: {voice}")
+            audio_content = await get_deepgram_audio(text, voice)
+        elif is_inworld:
             logger.info(f"Processing Inworld request for voice: {voice}")
             audio_content = await get_inworld_audio(text, voice)
         elif is_edge:
