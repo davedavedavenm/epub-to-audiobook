@@ -87,3 +87,17 @@ def test_deepgram_balance_endpoint(monkeypatch):
     data = resp.get_json()
     assert data['configured'] is False
 
+
+def test_cloud_status_endpoint():
+    from app import app
+    client = app.test_client()
+
+    resp = client.get('/api/cloud_status')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert 'deepgram' in data
+    assert 'gemini' in data
+    assert 'kaggle' in data
+    assert 'vast' in data
+
+

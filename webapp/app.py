@@ -5387,6 +5387,47 @@ def get_deepgram_balance():
     return jsonify({'configured': True, 'balance': None, 'formatted': None})
 
 
+@app.route('/api/cloud_status', methods=['GET'])
+def get_cloud_status():
+    """Return live balances and limits for cloud/API-keyed engines and renderers."""
+    # Deepgram
+    dg_key = get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY', '')
+    dg_info = _fetch_deepgram_balance(dg_key) if dg_key else None
+
+    # Gemini
+    gemini_key = os.environ.get('GEMINI_API_KEY') or get_setting('GEMINI_API_KEY', '')
+    gemini_enabled = bool(os.environ.get('ENABLE_GEMINI_PROFILE') == '1')
+    gemini_confirmed = bool(os.environ.get('GEMINI_FREE_PROJECT_CONFIRMED') == '1')
+
+    # Kaggle
+    kaggle_user = get_setting('KAGGLE_USERNAME') or os.environ.get('KAGGLE_USERNAME', '')
+
+    # Vast
+    vast_enabled = bool(os.environ.get('GPU_RENDER_ENABLED') == '1')
+
+    return jsonify({
+        'deepgram': {
+            'configured': bool(dg_key),
+            'balance': dg_info.get('balance') if dg_info else None,
+            'formatted': dg_info.get('formatted') if dg_info else None,
+            'email': dg_info.get('email') if dg_info else None
+        },
+        'gemini': {
+            'configured': bool(gemini_key),
+            'enabled': gemini_enabled,
+            'confirmed': gemini_confirmed,
+            'tier': 'Free Tier (10 RPD Cap)' if gemini_confirmed else 'Unconfigured'
+        },
+        'kaggle': {
+            'configured': bool(kaggle_user),
+            'username': kaggle_user
+        },
+        'vast': {
+            'enabled': vast_enabled
+        }
+    })
+
+
 @app.route('/api/settings/test_llm', methods=['POST'])
 def test_llm_connection():
     """Test generic LLM API connection (Z AI, xAI, Groq, OpenAI)."""
