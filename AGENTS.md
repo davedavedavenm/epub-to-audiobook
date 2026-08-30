@@ -40,7 +40,7 @@ If official documentation is missing, disabled, contradictory, or does not
 cover the deployed behaviour, say so explicitly. Do not silently promote a
 blog, search result, community issue, or remembered default to an official fact.
 
-## Current Direction & Doc Map (2026-07)
+## Current Direction & Doc Map (2026-08)
 
 Read these before changing anything TTS- or text-related:
 
@@ -150,11 +150,14 @@ Key facts an agent must know:
 ## MCPProxy / Tool Surfaces
 
 - Use the MCPProxy instance local to where the agent is running. Windows normally uses `http://127.0.0.1:8080/mcp`; `khpi5` uses `http://127.0.0.1:9092` for work started on that host.
-- Discover tools before calling them and use exact `server:tool` names.
+- **Tool discovery is mandatory, not optional.** Do not assume a tool exists or doesn't exist — call `retrieve_tools` on the local MCPProxy at the moment you need a capability. Use exact `server:tool` names and verify the server name before every call, especially before any write.
 - Use `win-filesystem` / local shell for repo edits and local checks.
 - Use SSH for deployment host checks when the task targets a remote stack.
 - Nango surfaces are not primary for this repo. If notifications or external service proofs are needed, pick the project-appropriate email/calendar/Telegram/WhatsApp surface explicitly and avoid Callout/Clean Bean Stripe or Cloudflare surfaces unless the task names them.
 - Appwrite is not part of this repo.
+
+### Signed-in Edge Browser (Windows MCPProxy only)
+For authenticated-browser tasks (the webapp UI, Audiobookshelf at `192.168.1.113:13378`, signed-in sites), use the MCPProxy upstream `playwright-edge` — Microsoft's official Playwright Extension attached to the live Edge `Default` profile (`David M` / `davidm@live.co.uk`). **This route exists only on the Windows MCPProxy (`http://127.0.0.1:8080/mcp`) — khpi5 has no signed-in browser route.** Never use Edge debugging mode, port 9222, or profile clones. Canonical runbook: `C:\Users\Dave\repos\windows\mcpproxy\signed-in-edge-automation.md`; prove health with `Test-SignedInEdgeAutomation.ps1 -RequireLiveProof` before first use (operational, full gate + authenticated identity readback verified 2026-08-30).
 
 ## Core Rules
 
