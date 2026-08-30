@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find &amp; Grab Books</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #f97316;
+            --accent-hover: #ea580c;
+            --border: rgba(255, 255, 255, 0.1);
+            --success: #10b981;
+            --error: #ef4444;
+            --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--sans);
+            background: transparent;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            overflow-x: hidden;
+        }
+        .widget-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .widget-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .widget-badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 7px;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+        .widget-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .search-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .search-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus {
+            border-color: var(--accent);
+        }
+        .search-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .search-btn:hover {
+            background: var(--accent-hover);
+        }
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .results-tray {
+            margin-top: 14px;
+            display: none;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .dismiss-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            cursor: pointer;
+        }
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .result-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            gap: 12px;
+        }
+        .result-info {
+            min-width: 0;
+            flex: 1;
+        }
+        .result-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .result-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .grab-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .grab-btn:hover {
+            background: var(--accent-hover);
+        }
+        .grab-btn:disabled {
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-box">
+        <div class="widget-header">
+            <div>
+                <div class="widget-title">
+                    <span>🔍 Find &amp; Grab New Books</span>
+                    <span class="widget-badge">1-Click Add</span>
+                </div>
+                <div class="widget-subtitle">Search millions of ebooks online. Added straight to Calibre library.</div>
+            </div>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="q" class="search-input" placeholder="Type book title or author (e.g. Stephen King, Sally Rooney, Dune)..." onkeydown="if(event.key==='Enter') searchBooks()">
+            <button class="search-btn" id="sbtn" onclick="searchBooks()">Search</button>
+        </div>
+        <div class="results-tray" id="tray">
+            <div class="results-header">
+                <span id="stat">Searching…</span>
+                <button class="dismiss-btn" onclick="document.getElementById('tray').style.display='none'">Dismiss</button>
+            </div>
+            <div class="results-list" id="list"></div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        async function searchBooks() {
+            const query = document.getElementById('q').value.trim();
+            if (!query) return;
+
+            const tray = document.getElementById('tray');
+            const stat = document.getElementById('stat');
+            const list = document.getElementById('list');
+            const btn = document.getElementById('sbtn');
+
+            tray.style.display = 'block';
+            stat.innerHTML = '⏳ Searching library servers for <b>"' + escapeHtml(query) + '"</b>…';
+            list.innerHTML = '';
+            btn.disabled = true;
+            btn.textContent = 'Searching…';
+
+            try {
+                const resp = await fetch('/api/bookfinder/search?q=' + encodeURIComponent(query));
+                const data = await resp.json();
+                btn.disabled = false;
+                btn.textContent = 'Search';
+
+                if (!data.results || data.results.length === 0) {
+                    stat.innerHTML = 'No matching books found for <b>"' + escapeHtml(query) + '"</b>.';
+                    return;
+                }
+
+                stat.innerHTML = 'Found <b>' + data.results.length + '</b> matches:';
+                list.innerHTML = data.results.slice(0, 15).map((b, idx) => `
+                    <div class="result-card">
+                        <div class="result-info">
+                            <div class="result-title">${escapeHtml(b.title)}</div>
+                            <div class="result-meta">${escapeHtml(b.author)} · <b>${escapeHtml(b.format)}</b> ${b.size ? '· ' + escapeHtml(b.size) : ''}</div>
+                        </div>
+                        <button class="grab-btn" id="gbtn-${idx}" onclick="grabBook('${escapeHtml(b.command).replace(/'/g, "\\'")}', '${escapeHtml(b.title).replace(/'/g, "\\'")}', '${escapeHtml(b.author).replace(/'/g, "\\'")}', ${idx})">
+                            📥 Grab
+                        </button>
+                    </div>
+                `).join('');
+            } catch(e) {
+                btn.disabled = false;
+                btn.textContent = 'Search';
+                stat.innerHTML = '<span style="color:var(--error);">Search failed: ' + escapeHtml(e.message || String(e)) + '</span>';
+            }
+        }
+
+        async function grabBook(command, title, author, idx) {
+            const btn = document.getElementById('gbtn-' + idx);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ Grabbing…';
+                btn.style.background = '#64748b';
+            }
+
+            try {
+                const resp = await fetch('/api/bookfinder/grab', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ command, title, author })
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.status === 'success') {
+                    if (btn) {
+                        btn.textContent = '✓ Added!';
+                        btn.style.background = 'var(--success)';
+                    }
+                    // Notify parent if inside an iframe
+                    try {
+                        window.parent.postMessage({ type: 'book_grabbed', title: title }, '*');
+                    } catch(e) {}
+                } else {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '❌ Retry';
+                        btn.style.background = 'var(--error)';
+                    }
+                    alert(data.error || 'Could not grab book.');
+                }
+            } catch(e) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '❌ Retry';
+                    btn.style.background = 'var(--error)';
+                }
+                alert(e.message || 'Error occurred while grabbing book.');
+            }
+        }
+    </script>
+</body>
+</html>

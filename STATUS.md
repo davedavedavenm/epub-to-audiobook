@@ -1,5 +1,21 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-08-30 1-Click Book Finder Widget & Gluetun VPN Gateway — COMPLETED
+>
+> 1. **Dedicated OpenBooks Gateway on Docker-VM (`openbooks-vpn`)**:
+>    - Deployed `evanbuss/openbooks:latest` routed through **Gluetun (ProtonVPN WireGuard - Sweden)**.
+>    - All IRC book queries and downloads exit via encrypted VPN with zero ISP/IP exposure.
+>    - Eliminates single-user browser lockouts by using a dedicated service nick (`magnuslib`).
+> 2. **1-Click Book Finder in Webapp & Calibre-Web**:
+>    - Native search & grab widget on Home/Library tab connecting to `ws://192.168.1.113:6082/ws`.
+>    - Standalone `/embed/bookfinder` widget modal embedded into Calibre-Web (`library.magnusfamily.co.uk`).
+>    - One-click grab downloads directly to `/home/dave/docker-apps/calibre-web-automated/book-ingest/` and auto-indexes into Calibre and Audiobook Studio.
+> 3. **Live Deepgram Credit Telemetry**:
+>    - Added live credit remaining pill (`$194.61 USD`) to active converting job cards and topbar navigation across all screens.
+> 4. **Calibre-Web Deduplication & MOBI Reader Support**:
+>    - Cleaned and merged 13 duplicate book entries in Calibre database.
+>    - Automated MOBI to EPUB conversion for in-browser reader support.
+
 > ## 2026-08-30 Deepgram Cloud TTS Integration (Aura-2) — COMPLETED
 >
 > Integrated Deepgram as a first-class cloud TTS engine with UI API key management,
