@@ -501,6 +501,14 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <button class="quick-action" type="button" onclick="switchTab('articles')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14v18H5z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg><span><strong>Narrate an article</strong><span>Paste a public web link</span></span></button>
                     <button class="quick-action" type="button" onclick="switchTab('voices')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V6a3 3 0 0 1 6 0v12"/><path d="M5 12a7 7 0 0 0 14 0M12 19v3"/></svg><span><strong>Listen to voices</strong><span>Preview before you commit</span></span></button>
                 </div>
+                <div id="home-cloud-strip" style="display:none; margin-top:20px; padding:12px 18px; border-radius:12px; background:var(--bg-element); border:1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
+                            ⚡ Accounts &amp; Limits
+                        </div>
+                        <div id="home-cloud-badges" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:0.83rem;"></div>
+                    </div>
+                </div>
             </section>
             <div class="card">
                 <div class="library-heading"><div><h2>Your library</h2><p>Books already available to preview or narrate.</p></div></div>
@@ -1675,7 +1683,20 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
 
-        container.innerHTML = numericCard + blindCard + cpuCard + compareCard + cloneCard + engines.map(engine => {
+        const cloudStrip = `
+            <div class="card" id="voices-cloud-strip" style="margin-bottom:32px; padding:14px 20px; background:var(--bg-element); border:1px solid var(--border); border-radius:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
+                        ⚡ Accounts &amp; Limits
+                    </div>
+                    <div id="voices-cloud-badges" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:0.83rem;">
+                        ${buildCloudBadgesHtml(cachedCloudStatus)}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = cloudStrip + numericCard + blindCard + cpuCard + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
             return `
@@ -3035,7 +3056,44 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         setTimeout(() => { btn.textContent = original; btn.style.borderColor = ''; btn.style.color = ''; btn.disabled = false; }, 3000);
     }
 
-    function escapeHtml(str) { if(!str) return ''; const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+    let cachedCloudStatus = null;
+
+    function buildCloudBadgesHtml(status) {
+        if (!status) return '<span style="color:var(--text-secondary);">Loading accounts…</span>';
+        const badges = [];
+        if (status.deepgram && status.deepgram.configured) {
+            const bal = status.deepgram.formatted || 'Connected';
+            badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(16,185,129,0.12); color:#10b981; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span>Deepgram: ${escapeHtml(bal)}</span>`);
+        }
+        if (status.gemini && status.gemini.configured) {
+            badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(59,130,246,0.12); color:#3b82f6; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#3b82f6;"></span>Gemini TTS: ${escapeHtml(status.gemini.tier)}</span>`);
+        }
+        if (status.kaggle && status.kaggle.configured) {
+            badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(168,85,247,0.12); color:#a855f7; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#a855f7;"></span>Kaggle: ~30h/wk Free GPU</span>`);
+        }
+        badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(100,116,139,0.12); color:var(--text-secondary); font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#64748b;"></span>Local: CPU Default (Free)</span>`);
+        return badges.join(' ');
+    }
+
+    async function loadCloudStatus() {
+        try {
+            const resp = await fetch('/api/cloud_status');
+            if (resp.ok) {
+                cachedCloudStatus = await resp.json();
+                const html = buildCloudBadgesHtml(cachedCloudStatus);
+                const homeStrip = document.getElementById('home-cloud-strip');
+                const homeBadges = document.getElementById('home-cloud-badges');
+                if (homeStrip && homeBadges) {
+                    homeStrip.style.display = 'block';
+                    homeBadges.innerHTML = html;
+                }
+                const vBadges = document.getElementById('voices-cloud-badges');
+                if (vBadges) {
+                    vBadges.innerHTML = html;
+                }
+            }
+        } catch(e) {}
+    }
 
     window.onload = async () => {
         bindPreviewEvents();
@@ -3043,6 +3101,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const theme = storedTheme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
         setTheme(theme);
         await loadEngineHealth(); setInterval(loadEngineHealth, 30000);
+        await loadCloudStatus(); setInterval(loadCloudStatus, 30000);
         const tab = localStorage.getItem('audiobook-tab') || 'library'; switchTab(tab);
         const uploadVoice = document.getElementById('upload-voice');
         if(uploadVoice) { uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural'); syncSpeedField('upload-voice','upload-speed'); }
