@@ -512,6 +512,30 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     </div>
                 </div>
             </section>
+            <section class="card" style="margin-bottom: 24px; padding: 24px; border: 1px solid var(--accent); background: linear-gradient(135deg, rgba(0, 180, 216, 0.04) 0%, rgba(0, 119, 182, 0.02) 100%);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                    <div>
+                        <h2 style="font-family: var(--sans); font-size: 1.3rem; font-weight: 800; margin: 0 0 4px; display: flex; align-items: center; gap: 8px;">
+                            <span>🔍 Find &amp; Grab New Books</span>
+                            <span style="font-size: 0.72rem; font-weight: 800; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;">1-Click Add</span>
+                        </h2>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Search millions of ebooks online. Grab any title and start narrating or reading immediately.</p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="bookfinder-query" class="input-control" style="flex: 1; font-size: 0.95rem; padding: 12px 16px; border-radius: 8px;"
+                           placeholder="Type book title or author (e.g. Stephen King, Sally Rooney, Dune)..."
+                           onkeydown="if(event.key==='Enter') executeBookSearch()">
+                    <button class="btn btn-primary" id="bookfinder-search-btn" style="padding: 12px 24px; font-weight: 700; font-size: 0.95rem;" onclick="executeBookSearch()">Search</button>
+                </div>
+                <div id="bookfinder-results-tray" class="hidden" style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div id="bookfinder-status" style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">Searching…</div>
+                        <button class="btn" style="font-size: 0.75rem; padding: 4px 10px;" onclick="closeBookSearch()">Dismiss</button>
+                    </div>
+                    <div id="bookfinder-results-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto;"></div>
+                </div>
+            </section>
             <div class="card">
                 <div class="library-heading"><div><h2>Your library</h2><p>Books already available to preview or narrate.</p></div></div>
                 <div style="display:flex; gap:12px; align-items:center; margin-bottom:24px;">
@@ -1398,6 +1422,120 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 </div>
             `;
         }).join('');
+    }
+
+    async function executeBookSearch() {
+        const input = document.getElementById('bookfinder-query');
+        const query = input?.value.trim();
+        if (!query) return;
+
+        const tray = document.getElementById('bookfinder-results-tray');
+        const status = document.getElementById('bookfinder-status');
+        const list = document.getElementById('bookfinder-results-list');
+        const btn = document.getElementById('bookfinder-search-btn');
+
+        tray.classList.remove('hidden');
+        status.innerHTML = `<span style="display:inline-flex; align-items:center; gap:8px;">⏳ Searching library servers for <b>"${escapeHtml(query)}"</b>…</span>`;
+        list.innerHTML = '';
+        btn.disabled = true;
+        btn.textContent = 'Searching…';
+
+        try {
+            const resp = await fetch('/api/bookfinder/search?q=' + encodeURIComponent(query));
+            const data = await resp.json();
+            btn.disabled = false;
+            btn.textContent = 'Search';
+
+            if (!data.results || data.results.length === 0) {
+                status.innerHTML = `No matching books found for <b>"${escapeHtml(query)}"</b>. Try another title or author.`;
+                return;
+            }
+
+            status.innerHTML = `Found <b>${data.results.length}</b> matches for <b>"${escapeHtml(query)}"</b>:`;
+            list.innerHTML = data.results.slice(0, 15).map((b, idx) => `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; margin:0; border-radius:10px; background:var(--bg-element); border:1px solid var(--border);">
+                    <div style="display:flex; gap:14px; align-items:center; min-width:0;">
+                        <div style="font-size:1.6rem; opacity:0.85;">📖</div>
+                        <div style="min-width:0;">
+                            <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(b.title)}</div>
+                            <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">
+                                ${escapeHtml(b.author)} · <span style="font-weight:700; color:var(--accent);">${escapeHtml(b.format)}</span> ${b.size ? '· ' + escapeHtml(b.size) : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="grab-btn-${idx}" style="font-size:0.82rem; padding:8px 16px; white-space:nowrap;"
+                            onclick="grabBookOnline('${escapeHtml(b.command).replace(/'/g, "\\'")}', '${escapeHtml(b.title).replace(/'/g, "\\'")}', '${escapeHtml(b.author).replace(/'/g, "\\'")}', ${idx})">
+                        📥 Grab Book
+                    </button>
+                </div>
+            `).join('');
+        } catch(e) {
+            btn.disabled = false;
+            btn.textContent = 'Search';
+            status.innerHTML = `<span style="color:var(--error);">Search error: ${escapeHtml(e.message || String(e))}</span>`;
+        }
+    }
+
+    function closeBookSearch() {
+        document.getElementById('bookfinder-results-tray')?.classList.add('hidden');
+    }
+
+    async function grabBookOnline(command, title, author, idx) {
+        const btn = document.getElementById('grab-btn-' + idx);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Grabbing…';
+            btn.style.background = 'var(--text-secondary)';
+        }
+
+        try {
+            const resp = await fetch('/api/bookfinder/grab', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ command, title, author })
+            });
+            const data = await resp.json();
+
+            if (resp.ok && data.status === 'success') {
+                if (btn) {
+                    btn.innerHTML = '✓ In Library!';
+                    btn.style.background = 'var(--success)';
+                    btn.style.borderColor = 'var(--success)';
+                    btn.style.color = '#fff';
+                }
+                appAlert({
+                    title: 'Book Added to Library',
+                    message: `"${title}" has been downloaded and added to your collection!`,
+                    tone: 'info',
+                    icon: '✓'
+                });
+                loadLibrary();
+            } else {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '❌ Retry Grab';
+                    btn.style.background = '';
+                }
+                appAlert({
+                    title: 'Grab Failed',
+                    message: data.error || 'Could not download the book from the server.',
+                    tone: 'danger',
+                    icon: '⚠'
+                });
+            }
+        } catch(e) {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '❌ Retry Grab';
+                btn.style.background = '';
+            }
+            appAlert({
+                title: 'Error',
+                message: e.message || 'Network error occurred while grabbing book.',
+                tone: 'danger',
+                icon: '⚠'
+            });
+        }
     }
 
     async function previewBook(elOrPath, chapterIndex = null) {
