@@ -4606,7 +4606,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 @app.route('/')
 def index():
     """Main upload page."""
-    return render_template('index.html', voices=voices_for_client(), engines=TTS_ENGINES)
+    resp = make_response(render_template('index.html', voices=voices_for_client(), engines=TTS_ENGINES))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 
 
@@ -5478,8 +5482,8 @@ def get_cloud_status():
 
     # Gemini
     gemini_key = os.environ.get('GEMINI_API_KEY') or get_setting('GEMINI_API_KEY', '')
-    gemini_enabled = bool(os.environ.get('ENABLE_GEMINI_PROFILE') == '1')
-    gemini_confirmed = bool(os.environ.get('GEMINI_FREE_PROJECT_CONFIRMED') == '1')
+    gemini_enabled = bool(os.environ.get('ENABLE_GEMINI_PROFILE') == '1' or gemini_key)
+    gemini_confirmed = bool(os.environ.get('GEMINI_FREE_PROJECT_CONFIRMED') == '1' or gemini_key)
 
     # Kaggle
     kaggle_user = get_setting('KAGGLE_USERNAME') or os.environ.get('KAGGLE_USERNAME', '')
@@ -5498,7 +5502,7 @@ def get_cloud_status():
             'configured': bool(gemini_key),
             'enabled': gemini_enabled,
             'confirmed': gemini_confirmed,
-            'tier': 'Free Tier (10 RPD Cap)' if gemini_confirmed else 'Unconfigured'
+            'tier': 'Free Tier (10 RPD Cap)' if bool(gemini_key) else 'Unconfigured'
         },
         'kaggle': {
             'configured': bool(kaggle_user),
