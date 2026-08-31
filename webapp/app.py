@@ -28,7 +28,7 @@ from qa_report import merge_qa_reports, read_qa_report, write_qa_report_atomic
 from chapters import list_renderable_chapters, body_end_index
 import guard
 
-from flask import Flask, render_template, request, jsonify, send_file, Response, url_for
+from flask import Flask, render_template, request, jsonify, send_file, Response, url_for, make_response
 import requests
 
 # Telegram notification settings
