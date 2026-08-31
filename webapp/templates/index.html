@@ -1242,6 +1242,12 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     // cosyvoice joins the list 2026-07-25: its inference_zero_shot takes a real
     // speed factor, now plumbed through cosyvoice/server.py.
     const SPEED_ENGINES = ['kokoro', 'edge', 'polly', 'cosyvoice'];
+    function engineOfVoice(voiceId) {
+        return (voiceId && voices[voiceId]) ? voices[voiceId].engine : null;
+    }
+    function speedSupported(eng) {
+        return SPEED_ENGINES.includes(eng);
+    }
     function updateRenderOptions(bookId) {
         const vs = document.getElementById('voice-' + bookId);
         const container = document.getElementById('rt-row-' + bookId);
