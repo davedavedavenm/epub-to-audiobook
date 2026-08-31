@@ -1242,8 +1242,69 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     // cosyvoice joins the list 2026-07-25: its inference_zero_shot takes a real
     // speed factor, now plumbed through cosyvoice/server.py.
     const SPEED_ENGINES = ['kokoro', 'edge', 'polly', 'cosyvoice'];
-    function speedSupported(engine) { return SPEED_ENGINES.includes(engine); }
-    function engineOfVoice(voiceId) { return (voices[voiceId] || {}).engine; }
+    function updateRenderOptions(bookId) {
+        const vs = document.getElementById('voice-' + bookId);
+        const container = document.getElementById('rt-row-' + bookId);
+        if (!vs || !container) return;
+        const voiceId = vs.value;
+        const eng = (voiceId && voices[voiceId]) ? voices[voiceId].engine : null;
+        const isCloud = ['deepgram', 'gemini', 'edge', 'inworld', 'polly', 'elevenlabs', 'openai'].includes(eng);
+        const hid = document.getElementById('rt-' + bookId);
+
+        if (isCloud) {
+            let engTitle = 'Cloud API';
+            let engSub = 'Fast cloud synthesis · Assembled locally';
+            if (eng === 'deepgram') {
+                engTitle = 'Deepgram Cloud API';
+                engSub = 'Aura-2 · $0.030/1k chars · Fast neural';
+            } else if (eng === 'gemini') {
+                engTitle = 'Google Gemini API';
+                engSub = 'Cloud neural TTS · Assembled locally';
+            } else if (eng === 'edge') {
+                engTitle = 'Microsoft Edge Cloud';
+                engSub = 'Free cloud service · High quality';
+            } else if (eng === 'polly') {
+                engTitle = 'Amazon Polly API';
+                engSub = 'AWS neural TTS · Assembled locally';
+            } else if (eng === 'inworld') {
+                engTitle = 'Inworld AI API';
+                engSub = 'Character cloud TTS · Assembled locally';
+            } else if (eng === 'elevenlabs') {
+                engTitle = 'ElevenLabs API';
+                engSub = 'Ultra-realistic voice cloning';
+            } else if (eng === 'openai') {
+                engTitle = 'OpenAI TTS API';
+                engSub = 'High quality neural speech';
+            }
+
+            container.innerHTML = `
+                <div class="rt-opt on" data-rt="local" style="grid-column: 1 / -1;" onclick="pickRender('${bookId}',this)">
+                    <span class="rt-badge">Direct API</span>
+                    <div class="rt-t">${engTitle}</div>
+                    <div class="rt-s">${engSub}</div>
+                </div>
+            `;
+            if (hid) hid.value = 'local';
+        } else {
+            const isHeavy = eng === 'chatterbox' || eng === 'tada';
+            const curr = hid ? hid.value : (isHeavy ? 'kaggle' : 'local');
+            container.innerHTML = `
+                <div class="rt-opt ${curr === 'local' ? 'on' : ''}" data-rt="local" onclick="pickRender('${bookId}',this)">
+                    ${!isHeavy ? '<span class="rt-badge">Recommended</span>' : ''}
+                    <div class="rt-t">This machine</div>
+                    <div class="rt-s">free · no quota</div>
+                </div>
+                <div class="rt-opt cloud ${curr === 'kaggle' ? 'on' : ''}" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
+                    ${isHeavy ? '<span class="rt-badge">Recommended</span>' : ''}
+                    <div class="rt-t">Kaggle GPU</div>
+                    <div class="rt-s">free · gpu · weekly quota</div>
+                </div>
+            `;
+            if (hid && !hid.value) hid.value = isHeavy ? 'kaggle' : 'local';
+        }
+        renderTargetNote(bookId, hid ? hid.value : 'local');
+    }
+
     // Grey out + annotate a speed input based on the currently-selected voice.
     function syncSpeedField(voiceSelectId, speedInputId) {
         const vs = document.getElementById(voiceSelectId);
@@ -1258,8 +1319,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         // The local-render note quotes a per-engine speed, so it has to follow
         // the voice choice — otherwise it keeps quoting the previous engine.
         const bookId = voiceSelectId.replace(/^voice-/, '');
-        const rt = document.getElementById('rt-' + bookId);
-        if (rt && rt.value === 'local') renderTargetNote(bookId, 'local');
+        updateRenderOptions(bookId);
     }
 
     async function previewWorkspaceVoice(bookId, btn) {
@@ -1382,7 +1442,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                                 <div class="conv-step-label">Convert</div>
                                 <div class="render-pick">
                                     <label class="setup-label" style="display:block; margin-bottom:9px;">Render on</label>
-                                    <div class="rt-row">
+                                    <div class="rt-row" id="rt-row-${bookId}">
                                         <div class="rt-opt on" data-rt="local" onclick="pickRender('${bookId}',this)">
                                             <span class="rt-badge">Recommended</span>
                                             <div class="rt-t">This machine</div><div class="rt-s">free · no quota</div>
@@ -1608,10 +1668,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const voiceId = document.getElementById('voice-' + bookId)?.value;
         const eng = (voiceId && voices[voiceId]) ? voices[voiceId].engine : null;
         if (eng === 'deepgram') {
-            return '⚡ Cloud TTS API (Deepgram Aura-2) — High-speed neural speech generated via Deepgram API ($0.030/1k chars), assembled and chapterized on this machine.';
+            return '⚡ Cloud TTS API (Deepgram Aura-2) — High-speed neural speech generated via Deepgram API ($0.030/1k chars), assembled and chapterized locally.';
         }
         if (eng === 'gemini') {
-            return '⚡ Cloud TTS API (Google Gemini) — Generated via Gemini TTS API, assembled and chapterized on this machine.';
+            return '⚡ Cloud TTS API (Google Gemini) — Generated via Gemini TTS API, assembled and chapterized locally.';
         }
         if (eng === 'edge') {
             return '⚡ Cloud TTS (Microsoft Edge) — Generated via Edge TTS cloud service, assembled locally.';
@@ -1621,6 +1681,12 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         if (eng === 'polly') {
             return '⚡ Cloud TTS API (AWS Polly) — Generated via Amazon Polly, assembled locally.';
+        }
+        if (eng === 'elevenlabs') {
+            return '⚡ Cloud TTS API (ElevenLabs) — Generated via ElevenLabs API, assembled locally.';
+        }
+        if (eng === 'openai') {
+            return '⚡ Cloud TTS API (OpenAI) — Generated via OpenAI API, assembled locally.';
         }
         const rtf = eng ? ENGINE_RTF_LOCAL[eng] : undefined;
         if (rtf === undefined) {
@@ -1667,7 +1733,25 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         // Explicit confirmation — a conversion is a long job, never start one by surprise.
         const voiceName = el.closest('.production-workspace')?.querySelector('#voice-' + bookId)?.selectedOptions[0]?.text || voice;
-        const where = { local: 'this computer (free, slower)', kaggle: 'free Kaggle GPU' }[renderTarget] || renderTarget;
+        const eng = (voices[voice] || {}).engine;
+        let where = 'this computer (free, local)';
+        if (renderTarget === 'kaggle') {
+            where = 'free Kaggle GPU';
+        } else if (eng === 'deepgram') {
+            where = 'Deepgram Cloud API ($0.030/1k chars)';
+        } else if (eng === 'gemini') {
+            where = 'Google Gemini Cloud API';
+        } else if (eng === 'edge') {
+            where = 'Microsoft Edge Cloud TTS (free)';
+        } else if (eng === 'polly') {
+            where = 'Amazon Polly Cloud API';
+        } else if (eng === 'inworld') {
+            where = 'Inworld AI Cloud API';
+        } else if (eng === 'elevenlabs') {
+            where = 'ElevenLabs Cloud API';
+        } else if (eng === 'openai') {
+            where = 'OpenAI Cloud API';
+        }
         if (!await appConfirm({
             title: 'Start narrating this book?',
             message: 'This creates an audiobook and can take a while. You can watch progress or cancel it any time from the Queue tab.',
