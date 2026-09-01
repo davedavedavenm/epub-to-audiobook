@@ -15,11 +15,11 @@ OPENBOOKS_BOOKS_DIR = os.getenv("OPENBOOKS_BOOKS_DIR", "/home/dave/docker-apps/c
 
 _ws_lock = threading.Lock()
 
-async def _do_search(clean_query: str, timeout: float = 35.0):
-    for attempt in range(1, 4):
+async def _do_search(clean_query: str, timeout: float = 20.0):
+    for attempt in range(1, 3):
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=10.0) as ws:
+                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=6.0) as ws:
                     # 1. Handshake
                     await ws.send_str(json.dumps({"type": 1, "payload": {}}))
                     # 2. Search query
@@ -32,7 +32,7 @@ async def _do_search(clean_query: str, timeout: float = 35.0):
                             logger.warning(f"OpenBooks search timed out after {timeout}s for '{clean_query}'")
                             break
                         try:
-                            msg = await asyncio.wait_for(ws.receive(), timeout=remaining)
+                            msg = await asyncio.wait_for(ws.receive(), timeout=min(remaining, 15.0))
                             if msg.type == aiohttp.WSMsgType.TEXT:
                                 data = json.loads(msg.data)
                                 if data.get("type") == 2:  # Search Results
@@ -71,12 +71,12 @@ async def _do_search(clean_query: str, timeout: float = 35.0):
                         except asyncio.TimeoutError:
                             break
         except Exception as e:
-            logger.warning(f"OpenBooks WebSocket attempt {attempt}/3 error: {e}")
-            if attempt < 3:
-                await asyncio.sleep(2.0)
+            logger.warning(f"OpenBooks WebSocket attempt {attempt}/2 error: {e}")
+            if attempt < 2:
+                await asyncio.sleep(1.0)
     return []
 
-async def search_openbooks_async(query: str, timeout: float = 35.0):
+async def search_openbooks_async(query: str, timeout: float = 20.0):
     if not query or not query.strip():
         return []
 
@@ -86,12 +86,12 @@ async def search_openbooks_async(query: str, timeout: float = 35.0):
     with _ws_lock:
         return await _do_search(clean_query, timeout=timeout)
 
-async def _do_grab(command: str, timeout: float = 45.0):
+async def _do_grab(command: str, timeout: float = 35.0):
     filename = None
-    for attempt in range(1, 4):
+    for attempt in range(1, 3):
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=10.0) as ws:
+                async with session.ws_connect(OPENBOOKS_WS_URL, timeout=8.0) as ws:
                     # Handshake
                     await ws.send_str(json.dumps({"type": 1, "payload": {}}))
                     # Send download command
@@ -103,7 +103,7 @@ async def _do_grab(command: str, timeout: float = 45.0):
                         if remaining <= 0:
                             break
                         try:
-                            msg = await asyncio.wait_for(ws.receive(), timeout=remaining)
+                            msg = await asyncio.wait_for(ws.receive(), timeout=min(remaining, 25.0))
                             if msg.type == aiohttp.WSMsgType.TEXT:
                                 data = json.loads(msg.data)
                                 if data.get("type") == 3:  # Book file received
@@ -117,12 +117,12 @@ async def _do_grab(command: str, timeout: float = 45.0):
             if filename:
                 break
         except Exception as e:
-            logger.warning(f"OpenBooks WebSocket grab attempt {attempt}/3 error: {e}")
-            if attempt < 3:
-                await asyncio.sleep(2.0)
+            logger.warning(f"OpenBooks WebSocket grab attempt {attempt}/2 error: {e}")
+            if attempt < 2:
+                await asyncio.sleep(1.0)
     return filename
 
-async def grab_openbooks_async(command: str, timeout: float = 45.0):
+async def grab_openbooks_async(command: str, timeout: float = 35.0):
     if not command:
         raise ValueError("No download command specified")
 
@@ -136,36 +136,42 @@ async def grab_openbooks_async(command: str, timeout: float = 45.0):
 
     return filename
 
+def _bg_sync_to_studio(filename: str):
+    """Background helper to sync grabbed book from docker-vm to Audiobook Studio uploads."""
+    local_upload_dir = os.getenv("UPLOAD_DIR", "/data/uploads")
+    os.makedirs(local_upload_dir, exist_ok=True)
+    local_dest = os.path.join(local_upload_dir, filename)
+
+    if os.path.exists(local_dest):
+        return
+
+    remote_src = f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{OPENBOOKS_BOOKS_DIR}/{filename}"
+    logger.info(f"Background syncing {filename} from {remote_src} to {local_dest}...")
+    try:
+        cmd = ["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no", remote_src, local_dest]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if res.returncode != 0:
+            remote_calibre_dir = "/home/dave/docker-apps/calibre-web-automated/calibre-library"
+            find_cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}", f"find '{remote_calibre_dir}' -name '{filename}'"]
+            find_res = subprocess.run(find_cmd, capture_output=True, text=True, timeout=8)
+            if find_res.returncode == 0 and find_res.stdout.strip():
+                remote_file = find_res.stdout.strip().splitlines()[0]
+                subprocess.run(["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_file}", local_dest], timeout=10)
+    except Exception as e:
+        logger.warning(f"Background SCP skipped or timed out (book safely ingested into Calibre-Web): {e}")
+
 def grab_and_import_book(command: str, title: str = "", author: str = ""):
     """
-    Downloads book from OpenBooks, transfers it to local uploads, and triggers library ingest.
+    Downloads book from OpenBooks directly into book-ingest (auto-indexed by Calibre-Web)
+    and asynchronously syncs to local conversion uploads.
     """
     filename = asyncio.run(grab_openbooks_async(command))
     if not filename:
         raise RuntimeError("Failed to receive book from OpenBooks.")
 
-    # 2. On docker-vm, openbooks saves to /home/dave/docker-apps/calibre-web-automated/book-ingest/
-    # If the conversion studio is running on Zorin, sync file to /data/uploads
-    local_upload_dir = os.getenv("UPLOAD_DIR", "/data/uploads")
-    os.makedirs(local_upload_dir, exist_ok=True)
-    local_dest = os.path.join(local_upload_dir, filename)
-
-    if not os.path.exists(local_dest):
-        remote_src = f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{OPENBOOKS_BOOKS_DIR}/{filename}"
-        logger.info(f"Syncing {filename} from {remote_src} to {local_dest}...")
-        try:
-            cmd = ["scp", "-o", "StrictHostKeyChecking=no", remote_src, local_dest]
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            if res.returncode != 0:
-                # Also check /calibre-library if already imported
-                remote_calibre_dir = "/home/dave/docker-apps/calibre-web-automated/calibre-library"
-                find_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}", f"find '{remote_calibre_dir}' -name '{filename}'"]
-                find_res = subprocess.run(find_cmd, capture_output=True, text=True, timeout=10)
-                if find_res.returncode == 0 and find_res.stdout.strip():
-                    remote_file = find_res.stdout.strip().splitlines()[0]
-                    subprocess.run(["scp", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_file}", local_dest], timeout=30)
-        except Exception as e:
-            logger.warning(f"Failed to SCP book to local uploads (it remains in Calibre-Web): {e}")
+    # Kick off background sync to conversion studio uploads without blocking the HTTP response
+    sync_thread = threading.Thread(target=_bg_sync_to_studio, args=(filename,), daemon=True)
+    sync_thread.start()
 
     return {
         "status": "success",
