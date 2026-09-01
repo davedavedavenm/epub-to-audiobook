@@ -84,33 +84,36 @@ if os.path.exists(USERMGMT_FILE):
     with open(USERMGMT_FILE, "r", encoding="utf-8") as f:
         usermgmt = f.read()
     new_rp_func = """def load_user_from_reverse_proxy_header(req):
-    \"\"\"Load user from reverse proxy / Cloudflare Access header.\"\"\"
-    cf_email = req.headers.get('Cf-Access-Authenticated-User-Email')
+    \"\"\"Load user from Cloudflare Access header (Admin for Dave, Family/Guest for family members).\"\"\"
+    cf_email = req.headers.get('Cf-Access-Authenticated-User-Email') or req.headers.get('Remote-Email') or req.headers.get('Remote-User')
     if cf_email and cf_email.strip():
-        cf_email = cf_email.strip()
-        user = ub.session.query(ub.User).filter(func.lower(ub.User.email) == cf_email.lower()).first()
-        if user:
-            return user
-        user = ub.session.query(ub.User).filter(func.lower(ub.User.name) == cf_email.lower()).first()
-        if user:
-            return user
-        prefix = cf_email.split('@')[0].lower()
-        user = ub.session.query(ub.User).filter(func.lower(ub.User.name) == prefix).first()
-        if user:
-            return user
-    rp_header_name = getattr(config, 'config_reverse_proxy_login_header_name', None) or 'Remote-User'
-    for h in [rp_header_name, 'Remote-User', 'X-Forwarded-User', 'X-Remote-User', 'Remote-Email']:
-        if not h:
-            continue
-        rp_header_username = req.headers.get(h)
-        if rp_header_username and rp_header_username.strip():
-            rp_header_username = rp_header_username.strip()
-            user = ub.session.query(ub.User).filter(
-                (func.lower(ub.User.name) == rp_header_username.lower()) |
-                (func.lower(ub.User.email) == rp_header_username.lower())
+        cf_email = cf_email.strip().lower()
+        # 1. Dave -> Admin User
+        if cf_email in ['david@davidmagnus.co.uk', 'dave']:
+            admin_user = ub.session.query(ub.User).filter(
+                (func.lower(ub.User.email) == 'david@davidmagnus.co.uk') |
+                (func.lower(ub.User.name) == 'admin') |
+                (func.lower(ub.User.name) == 'dave')
             ).first()
-            if user:
-                return user
+            if admin_user:
+                return admin_user
+
+        # 2. Match exact user by email/name if one exists
+        user = ub.session.query(ub.User).filter(
+            (func.lower(ub.User.email) == cf_email) |
+            (func.lower(ub.User.name) == cf_email)
+        ).first()
+        if user:
+            return user
+
+        # 3. Family Member -> Return 'family' user (role: 478, non-admin)
+        family_user = ub.session.query(ub.User).filter(
+            (func.lower(ub.User.name) == 'family') |
+            (ub.User.id == 4)
+        ).first()
+        if family_user:
+            return family_user
+
     return None"""
     old_rp_pattern = re.compile(r'def load_user_from_reverse_proxy_header\(req\):.*?return None', re.DOTALL)
     if old_rp_pattern.search(usermgmt):
