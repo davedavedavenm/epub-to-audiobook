@@ -10,7 +10,6 @@ Comprehensive patch for Calibre-Web:
 
 import os
 import re
-import sys
 
 LAYOUT_FILE = "/app/calibre-web-automated/cps/templates/layout.html"
 INDEX_FILE = "/app/calibre-web-automated/cps/templates/index.html"
