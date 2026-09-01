@@ -9,15 +9,19 @@
 > 2. **Cloudflare Zero Trust Header SSO (Passwordless Admin)**:
 >    - Configured `Cf-Access-Authenticated-User-Email` reverse proxy header authentication for `david@davidmagnus.co.uk`.
 >    - Automatic passwordless Admin authentication when accessing via Cloudflare Access.
-> 3. **Full Family Access (Passwordless Guest Role)**:
->    - Configured default `Guest` role to `510` (full read, download, grab, edit, and delete permissions without login).
-> 4. **1-Year Persistent Sessions ("Remember Me")**:
+> 3. **Strict Login Wall Enforced (`config_anonbrowse = 0`)**:
+>    - Anonymous guest browsing disabled. Any private window or unauthenticated visitor is strictly redirected to `/login`.
+>    - Cloudflare Access auto-authenticates `david@davidmagnus.co.uk` seamlessly as Admin.
+> 4. **Audiobookshelf Domain SSO & Auto-Registration**:
+>    - Configured Google/Cloudflare OpenID Connect on `abs.magnusfamily.co.uk` with `authOpenIDAutoRegister = true` and `authOpenIDMatchExistingBy = "email"`.
+>    - Eliminated private IP Error 400 callback failures.
+> 5. **1-Year Persistent Sessions ("Remember Me")**:
 >    - Set `REMEMBER_COOKIE_DURATION` and `PERMANENT_SESSION_LIFETIME` to 365 days with automatic token refresh on each request.
-> 5. **Library Auto-Deduplication & Smart Ingest Merging**:
+> 6. **Library Auto-Deduplication & Smart Ingest Merging**:
 >    - Cleared duplicate groups down to 190 unique titles using `highest_quality_format` strategy.
 >    - Enabled `auto_ingest_automerge = 'ignore'` and `duplicate_auto_resolve_enabled = 1` for permanent silent background deduplication.
-> 6. **Live Verification via Signed-in Edge (`playwright-edge` MCP)**:
->    - Validated live on Edge `library.magnusfamily.co.uk` and `Audiobook Studio` (`192.168.1.41:8881`).
+> 7. **Live Verification via Signed-in Edge (`playwright-edge` MCP)**:
+>    - Validated live on Edge `library.magnusfamily.co.uk` and `abs.magnusfamily.co.uk`.
 
 > ## 2026-08-30 1-Click Book Finder Widget & Gluetun VPN Gateway — COMPLETED
 >
