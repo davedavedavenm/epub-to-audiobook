@@ -1,16 +1,22 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-09-01 Calibre-Web Mobile UI Overhaul & 1-Click Grab Experience — COMPLETED
+> ## 2026-09-01 Calibre-Web Mobile UI, Zero Trust SSO & Auto-Deduplication — COMPLETED
 >
 > 1. **Mobile Navbar & Floating Action Button (FAB)**:
 >    - Added prominent `⚡ Grab Book` badge button directly into the mobile header navbar next to search/profile.
 >    - Added fixed `⚡ Grab Book` Floating Action Button (FAB) on mobile viewports for 1-tap capture anywhere across the library.
 >    - Automated auto-hide of FAB when search modal opens.
-> 2. **Pagination Encoding Fix**:
->    - Corrected double-UTF-8 decoding defect (`ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`) to standard HTML `&hellip;` (`…`).
-> 3. **Non-Intrusive Mobile Sort Bar**:
->    - Transformed bulky multi-row dark sorting overlay into a compact, single-row horizontal scrolling bar leaving book covers fully visible.
-> 4. **Live Verification via Signed-in Edge (`playwright-edge` MCP)**:
+> 2. **Cloudflare Zero Trust Header SSO (Passwordless Admin)**:
+>    - Configured `Cf-Access-Authenticated-User-Email` reverse proxy header authentication for `david@davidmagnus.co.uk`.
+>    - Automatic passwordless Admin authentication when accessing via Cloudflare Access.
+> 3. **Full Family Access (Passwordless Guest Role)**:
+>    - Configured default `Guest` role to `510` (full read, download, grab, edit, and delete permissions without login).
+> 4. **1-Year Persistent Sessions ("Remember Me")**:
+>    - Set `REMEMBER_COOKIE_DURATION` and `PERMANENT_SESSION_LIFETIME` to 365 days with automatic token refresh on each request.
+> 5. **Library Auto-Deduplication & Smart Ingest Merging**:
+>    - Cleared duplicate groups down to 190 unique titles using `highest_quality_format` strategy.
+>    - Enabled `auto_ingest_automerge = 'ignore'` and `duplicate_auto_resolve_enabled = 1` for permanent silent background deduplication.
+> 6. **Live Verification via Signed-in Edge (`playwright-edge` MCP)**:
 >    - Validated live on Edge `library.magnusfamily.co.uk` and `Audiobook Studio` (`192.168.1.41:8881`).
 
 > ## 2026-08-30 1-Click Book Finder Widget & Gluetun VPN Gateway — COMPLETED
