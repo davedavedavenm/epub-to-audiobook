@@ -1,5 +1,18 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-01 Calibre-Web Mobile UI Overhaul & 1-Click Grab Experience — COMPLETED
+>
+> 1. **Mobile Navbar & Floating Action Button (FAB)**:
+>    - Added prominent `⚡ Grab Book` badge button directly into the mobile header navbar next to search/profile.
+>    - Added fixed `⚡ Grab Book` Floating Action Button (FAB) on mobile viewports for 1-tap capture anywhere across the library.
+>    - Automated auto-hide of FAB when search modal opens.
+> 2. **Pagination Encoding Fix**:
+>    - Corrected double-UTF-8 decoding defect (`ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`) to standard HTML `&hellip;` (`…`).
+> 3. **Non-Intrusive Mobile Sort Bar**:
+>    - Transformed bulky multi-row dark sorting overlay into a compact, single-row horizontal scrolling bar leaving book covers fully visible.
+> 4. **Live Verification via Signed-in Edge (`playwright-edge` MCP)**:
+>    - Validated live on Edge `library.magnusfamily.co.uk` and `Audiobook Studio` (`192.168.1.41:8881`).
+
 > ## 2026-08-30 1-Click Book Finder Widget & Gluetun VPN Gateway — COMPLETED
 >
 > 1. **Dedicated OpenBooks Gateway on Docker-VM (`openbooks-vpn`)**:
