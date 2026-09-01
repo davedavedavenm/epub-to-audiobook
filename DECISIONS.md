@@ -14,6 +14,18 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
+## Cloudflare Zero Trust Access & Role-Based SSO for Library & Audiobookshelf — Active (2026-09-01)
+
+To provide frictionless, passwordless single sign-on while enforcing perimeter zero-trust security and role-based permissions:
+- **Perimeter Security**: `library.magnusfamily.co.uk` and `abs.magnusfamily.co.uk` are routed exclusively via Cloudflare Argo Tunnel on `PiHole KH` (`b499f04b-96f4-4f4d-aaba-67468e2f92c1`) with Orange Cloud proxying. Unauthenticated traffic is challenged at the Cloudflare edge.
+- **Allowed Access**: Restricted to the `magfam` Access Group (`e47f9ac4-c275-4cee-8b46-e549b1724447`) + `david@davidmagnus.co.uk` with Google SSO and Email PIN identity providers.
+- **Role Enforcement**:
+  - **Dave (`david@davidmagnus.co.uk`)**: Full **Admin** privileges on Calibre-Web (`role: 479`) and **Root Admin** on Audiobookshelf (`type: root`).
+  - **Family Members**: Standard **Guest / Listener** privileges on Calibre-Web (`role: 478`) and Audiobookshelf (`type: user`) with reading/streaming/downloading access, isolated playback timestamps/bookmarks, and zero server admin controls.
+- **Zero Local Passwords & OAuth Friction**: Native header authentication resolves `Cf-Access-Authenticated-User-Email` and boots client tokens directly into browser storage without local password prompts or OAuth redirect mismatch errors.
+
+---
+
 ## Book Finder & OpenBooks Gateway through Gluetun VPN — Active (2026-08-30)
 
 To provide a seamless, 1-click book search and download capability for non-technical users
