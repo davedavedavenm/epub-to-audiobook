@@ -55,7 +55,8 @@ Read these before changing anything TTS- or text-related:
 | [TTS-LANDSCAPE-2026-07.md](TTS-LANDSCAPE-2026-07.md) | Mid-2026 state-of-the-art review: new engines, cost updates, what to evaluate next. |
 | [ENGINES.md](ENGINES.md) | Official engine facts + listening outcomes — the baseline for all engine claims. |
 | [VOICES.md](VOICES.md) | **Read before ANY voice or accent work.** Listening verdicts, exact rejection boundaries, the corrected `cfg_weight` interpretation, and wrong turns already taken. |
-| [PLAN-V5.md](PLAN-V5.md) | **Current forward plan** (2026-07-27): automatic re-render, article RSS + Telegram capture, Chatterbox V3. |
+| [PLAN-V6.md](PLAN-V6.md) | **Current forward plan** (2026-09-02): Smart Library — WhatsApp book bot, auto-series completion, AI library curator, family wishlists. |
+| [PLAN-V5.md](PLAN-V5.md) | Previous forward plan (2026-07-27): automatic re-render, article RSS + Telegram capture, Chatterbox V3. |
 | [PLAN.md](PLAN.md) | Superseded. Historical forward plan. |
 | [GPU-SAFETY.md](GPU-SAFETY.md) | **READ FIRST for any GPU work.** Default-local rules; how to not drain the Vast balance. |
 | [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) | Vast.ai RTX 3060 batch pattern + operational steps. |
