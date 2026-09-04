@@ -1,0 +1,14 @@
+# OpenBooks request allowlist
+#
+# This file gates which "Wanted" items are allowed to trigger OpenBooks requests.
+# It prevents the monitor from requesting everything in LazyLibrarian.
+#
+# Format:
+# - Blank lines and lines starting with '#' are ignored
+# - 're:<regex>' for advanced patterns (case-insensitive)
+# - Otherwise, tokens separated by | , ; / must all appear in "<title> <author>"
+#   Example: "frankenstein|shelley"
+#
+# Suggested public-domain test:
+frankenstein|shelley
+
