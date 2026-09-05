@@ -1961,7 +1961,20 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
 
-        container.innerHTML = cloudStrip + numericCard + blindCard + cpuCard + compareCard + cloneCard + engines.map(engine => {
+        const archiveCard = `
+            <details class="card" style="margin-top:40px; margin-bottom:24px; border-color:var(--border);">
+                <summary style="cursor:pointer; font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
+                    📁 Historical A/B Auditions &amp; Research Archive
+                </summary>
+                <div style="margin-top:24px;">
+                    ${numericCard}
+                    ${blindCard}
+                    ${cpuCard}
+                </div>
+            </details>
+        `;
+
+        container.innerHTML = cloudStrip + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
             return `
@@ -1993,7 +2006,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 <div style="font-size:.85rem; color:var(--ink-3); padding:6px 0 2px;">
                     These voices are intentionally absent from the pickers until their persisted samples are ready. A Play button never starts a cold synthesis job.
                 </div>
-            </div>` : '') + unconfiguredSection;
+            </div>` : '') + unconfiguredSection + archiveCard;
         loadCloneList();
         syncPreviewUi();
     }

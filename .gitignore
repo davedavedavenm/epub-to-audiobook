@@ -33,6 +33,7 @@ _tmp_*
 
 # local runtime artifacts
 jobs.db
+*.epub
 *_tts.epub
 docker-compose.override.yml.bak*
 piper/config/

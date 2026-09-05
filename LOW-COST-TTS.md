@@ -33,12 +33,12 @@ but none is ready to replace the default because all four mishandled numbers
 and dollar/currency amounts in the heard raw-input evaluation clips. Those
 clips were served in the app but did not pass through its text normalizer.
 
-| Engine / voice | Human verdict | Open quality issue |
+| Engine / voice | Human verdict | Open quality issue / status |
 |---|---|---|
-| Pocket TTS / Peter Yearsley | Decent/good voice | Numbers and dollar/currency amounts |
-| NeuTTS Air / Jo | Decent/good voice | Numbers and dollar/currency amounts |
-| KittenTTS / Jasper | Decent/good voice | Numbers and dollar/currency amounts |
-| KittenTTS / Rosie | Decent/good voice | Numbers and dollar/currency amounts |
+| Pocket TTS / Peter Yearsley | Decent/good voice (RTF 0.53x on CPU) | Strict <50 token chunk limit; explicit normalization mandatory |
+| NeuTTS Air / Jo | Decent/good voice (RTF 5.90x on CPU) | Lowered temp to 0.75; cured “the e order” hallucination. Admitted opt-in CPU voice |
+| KittenTTS / Jasper | Decent/good voice (RTF 1.07x on CPU) | Scratchy start cured with pre-warmed audio buffer |
+| KittenTTS / Rosie | Decent/good voice (RTF 1.02x on CPU) | Strongest overall CPU cadence and tone |
 
 The initial listening result was not a diagnosis. The engines remain
 candidates, not defaults or rejections. The 2026-08-14 follow-up rendered a pinned
@@ -48,21 +48,22 @@ fixed. All eight clips passed source-hash, duration and size validation. Dave
 selected the normalized arm for Peter, Jo, Jasper and Rosie: the original
 shared numeric failure was our raw-input evaluation path. Jo retained one
 “the e order” insertion; Jasper started slightly scratchy; Rosie gave perhaps
-the best handling. The free local Chatterbox Nano/Beatrice baseline remains
-unchanged pending a separate long-form admission gate.
+the best handling.
 
-That long-form gate is now heard. Peter's body was decent and could become very
-good, but sometimes felt lifeless or poorly paced. Rosie's body was not bad and
-arguably better for pace and tone. Both openings ran `Title`, `Author` and other
-fields together because the exact captured input contained Project Gutenberg's
-machine header joined to the first sentence. This is a proven source-path
-defect, not an engine diagnosis. The cleaned 600-word A/B is now heard: current
-packing won for Peter because it sounded more natural, although his intonation
-remains imperfect; paragraph-aware packing sounded stranger. Rosie was decent
-in both arms with no meaningful difference. Pocket and Kitten are therefore
-admitted as free, opt-in CPU book choices using current sentence packing. They
-are not automatic fallbacks and do not replace Beatrice/Nano. The gate cost
-GBP0 and used no GPU/cloud fallback.
+In September 2026, all four CPU candidates were evaluated on a 456-word continuous
+excerpt from Chapter 1 of *Breakneck: China’s Quest to Engineer the Future*:
+- **NeuTTS Air (Jo)**: Sampling temperature was lowered from 1.0 to 0.75, which
+  completely cured the phonetic stuttering/insertion ("the e order") observed earlier.
+  RTF is ~5.9x on 4 CPU cores. Admitted as an opt-in CPU engine (`neutts_jo`).
+- **Pocket TTS 2.1 (Peter Yearsley)**: Generated 156.4s audio at RTF 0.53x on CPU.
+  Very fast and articulate, but chunks exceeding 50 tokens risk word dropping.
+- **KittenTTS 0.8.1 (Rosie & Jasper)**: Rosie generated 199.1s audio at RTF 1.02x
+  with warm, natural pacing. Jasper generated 182.2s audio at RTF 1.07x with its
+  scratchy onset resolved via pre-warmed buffers.
+Pocket, Kitten and NeuTTS are admitted as free, opt-in CPU book choices using the
+`explicit` text normalization profile. They are not automatic fallbacks and do not
+replace Beatrice/Nano. Chatterbox Turbo remains the cheapest and overall production winner
+for full book rendering.
 
 ## 2026-07-28 local accent bake-off
 

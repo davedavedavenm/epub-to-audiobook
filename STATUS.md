@@ -3,21 +3,27 @@
 > ## 2026-09-05 New TTS Candidates Audition on Breakneck Chapter 1 — COMPLETED
 >
 > 1. **Candidate Bake-Off on Non-Fiction Corpus**:
->    - Auditioned *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized) across 4 engine pipelines:
+>    - Auditioned *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized) across GPU and CPU candidates:
 >      - **Audio8 0.6B ONNX INT4 (CPU, Zorin)**: 18 sentences, 197.74s audio, RTF 3.032, 3.94 GiB RSS. Dave's listening verdict: *"garbled, loud then soft... not great"*. **Definitively rejected** due to INT4 gain pumping and codebook drift on >150 char sentences.
 >      - **Breeze TTS 2 (3.5B, Kaggle T4 GPU)**:
 >        - *Arm 1 (Voice Design — British Male Narrator, zero audio reference)*: 184.48s audio, RTF 7.781 on T4 (wall time 23.9m), 7.91 GB VRAM. Dave's listening verdict: *"voice seems to change each sentence? weird!"* (pure prompt resamples latents per chunk).
 >        - *Arm 2 (Voice Direction — Arthur Clone)*: 191.84s audio, RTF 7.861 on T4 (wall time 25.1m), 7.97 GB VRAM. Dave's listening verdict: **"very impressive"**.
 >      - **Qwen3-TTS 1.7B Base (Kaggle T4 GPU)**: 174.00s audio, RTF 2.574 on T4, 4.05 GB VRAM. Dave's listening verdict: *"really decent... great voice clone, somewhat lacking some emotion or tone in places, a bit monotone"*.
 >      - **Kokoro 82M CPU Baseline & Variations (Zorin CPU)**: `bm_george` and blends at 0.92x–0.95x. Dave's listening verdict: *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*. StyleTTS2 / espeak-ng caesura ceiling diagnosed.
+>      - **Pocket TTS 2.1 (Peter Yearsley, CPU)**: 156.4s audio, measured RTF 0.53x on CPU. Very fast Kyutai streaming transformer. Articulate delivery with natural sentence pacing; strict <50 token chunk limit and explicit normalization mandatory.
+>      - **KittenTTS 0.8.1 (Rosie & Jasper, CPU)**: StyleTTS2 mini. Rosie (199.1s audio, RTF 1.02x) delivered warm, measured cadence and excellent long-form handling. Jasper (182.2s audio, RTF 1.07x) scratchy start cured by pre-warming buffer and smooth sentence concatenation.
+>      - **NeuTTS Air 1.4.1 (Jo, CPU)**: 191.9s audio, RTF 5.90x on 4-core CPU. Lowering sampling temperature from 1.0 to 0.75 completely cured the phonetic stuttering / hallucination ("the e order" insertion) heard in the August 14 test. Smooth sentence joins with 300ms pause.
 > 2. **Operational & Architectural Conclusions**:
+>    - **Chatterbox Turbo** remains the cheapest and overall winner for full audiobook production runs (free on Kaggle GPU / fast on local GPU, reliable Arthur clone, mature pipeline).
 >    - Audio8 is closed for continuous non-fiction audiobook rendering.
 >    - Breeze TTS 2 produces impressive cloned voices, but Voice Design requires a 1-shot anchor WAV workflow. At RTF 7.86 on T4, full books without high-tier GPUs (RTX 3090/4090/H100) are computationally prohibitive.
 >    - Qwen3-TTS 1.7B is the most efficient open GPU model (RTF 2.57, 4.05 GB VRAM). The `CustomVoice` studio voices + natural language instruction steering provide the expressive alternative to the neutral Base clone.
 >    - Kokoro 82M is confirmed as a fast local preview tool, not an audiobook production engine.
+>    - **NeuTTS Air Registered**: Added `NEUTTS_URL`, engine profile (`explicit`), and voice `neutts_jo` in `webapp/app.py` and `webapp/voice_sample.py`. Pre-cached preview verified on Zorin.
+>    - **Webapp Voices UI Cleaned Up**: Collapsed historical August 2026 test blocks (`numericCard`, `blindCard`, `cpuCard`) into a bottom archive drawer (`<details class="card">📁 Historical A/B Auditions & Research Archive</details>`).
 > 3. **Breakneck Full Book Conversion (Job `183e5e10`) Progress**:
 >    - Full book render with Deepgram Hyperion (`aura-2-hyperion-en`) actively converting on Zorin.
->    - Chapters 1–4 complete (>244 MB). Chapter 5 currently rendering.
+>    - Chapters 1–7 complete (>537 MB). Chapter 8 actively synthesizing.
 >
 > ## 2026-09-05 Breakneck Removal & Deepgram Hyperion 3-Page Preview — COMPLETED
 >
