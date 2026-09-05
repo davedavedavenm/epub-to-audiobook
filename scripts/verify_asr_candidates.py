@@ -49,10 +49,10 @@ def main():
         if not audio_path.exists():
             print(f"Skipping {label} (missing {audio_path.name})")
             continue
-        print(f"\n==========================================")
+        print("\n==========================================")
         print(f"Verifying: {label}")
         print(f"File: {audio_path.name} ({audio_path.stat().st_size:,} bytes)")
-        print(f"==========================================")
+        print("==========================================")
         segments, info = model.transcribe(str(audio_path), beam_size=5)
         asr_segments = list(segments)
         asr_text = " ".join([seg.text.strip() for seg in asr_segments])
