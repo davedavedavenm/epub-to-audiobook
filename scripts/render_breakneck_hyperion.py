@@ -7,7 +7,6 @@ PCM WAV concatenation, encodes 192k MP3s with ID3 metadata, builds an M4B,
 runs Whisper ASR verification, and registers a completed job in jobs.db.
 """
 
-import hashlib
 import io
 import json
 import os
@@ -16,7 +15,6 @@ import shutil
 import sqlite3
 import subprocess
 import sys
-import tempfile
 import time
 import wave
 import zipfile
@@ -363,7 +361,7 @@ def main():
 
     print("\n=== SUCCESS ===")
     print(f"Output directory: {out_dir}")
-    print(f"Files:")
+    print("Files:")
     for f in sorted(out_dir.iterdir()):
         print(f"  {f.name} ({f.stat().st_size:,} bytes)")
 
