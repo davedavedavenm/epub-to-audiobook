@@ -14,6 +14,27 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
+## September 2026 TTS Engine Audition: Audio8 rejected; Breeze TTS 2 & Qwen3-TTS evaluated — Active (2026-09-05)
+
+Audition of *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized) across Audio8, Breeze TTS 2, Qwen3-TTS, and Kokoro:
+
+- **Audio8 0.6B ONNX INT4 is rejected for continuous audiobook narration.**
+  The August 2026 gate left Audio8 bounded ("better" on 9 short sentences). On this continuous non-fiction passage (18 complete sentences, 197.74s audio), Dave heard volume pumping ("garbled, loud then soft... not great") and garbled speech. Upstream's documented design envelope is strictly optimized for prompts <150 characters. Beyond this length, INT4 codebook drift and local gain scaling produce severe speech garbling. Audio8 is formally removed from application consideration.
+- **Breeze TTS 2 (3.5B) Voice Direction is "very impressive", but Voice Design requires a 1-shot anchor workflow.**
+  Dave heard two arms on Kaggle T4 GPU:
+  - *Voice Design* (pure text prompt "British male narrator", zero reference audio) failed sentence-to-sentence continuity: *"voice seems to change each sentence? weird!"* Pure text prompt generation resamples a new speaker latent per chunk. The required pattern is: design once on a 15s reference prompt, save the WAV, and pass that WAV as reference into Voice Direction for subsequent chunks.
+  - *Voice Direction* (Arthur clone): Dave heard: **"very impressive"**.
+  - *Operational & License Boundary*: 7.12 GiB weights, 7.97 GB VRAM, measured RTF 7.86 on T4 GPU (~25 mins for 3 mins of audio without FlashAttention). Renders on budget hardware are computationally prohibitive for full books. Governed by BreezeBlue Non-Commercial License (commercial audiobook use requires separate written agreement).
+- **Qwen3-TTS 1.7B Base is an efficient zero-shot clone; CustomVoice provides expressive studio narration.**
+  Evaluated on Kaggle T4 GPU (Arthur clone, 174s audio, measured RTF 2.57, 4.05 GB VRAM). Dave heard: *"really decent... great voice clone, somewhat lacking some emotion or tone in places, a bit monotone"*.
+  - Highly efficient on budget/free GPUs (fits in 4 GB VRAM, 3x faster than Breeze 2).
+  - The zero-shot Base clone replicates speaker timbre faithfully but retains a neutral narrative delivery. For expressive non-fiction and dialogue, the `Qwen3-TTS-12Hz-1.7B-CustomVoice` route (9 studio voices including `ryan`, `aiden`, `uncle_fu`, `vivian`) with natural language instruction steering is the intended expressive path.
+- **Kokoro 82M CPU baseline ceiling confirmed.**
+  Evaluated standard `bm_george` and best-practice blends (George/Lewis blends at 0.92x–0.95x speed). Dave heard: *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*.
+  StyleTTS2 82M lacks an autoregressive language model backbone. Its `espeak-ng` phonemizer inserts caesuras at compound noun boundaries. Speed adjustments and voice blending soften phonetic edges but cannot fix semantic prosody. Kokoro remains a fast preview tool, not an audiobook production engine.
+
+---
+
 ## Cloudflare Zero Trust Access & Role-Based SSO for Library & Audiobookshelf — Active (2026-09-01)
 
 To provide frictionless, passwordless single sign-on while enforcing perimeter zero-trust security and role-based permissions:
@@ -90,10 +111,11 @@ addresses, internal ports — in configuration and environment, never hardcoded 
 application code. Every such value committed now is one more thing to find and
 strip later.
 
-## August 2026 CPU new-engine gate: Scylla rejected; Audio8 and ZONOS2 remain bounded — Active
+## August 2026 CPU new-engine gate: Scylla rejected; Audio8 (rejected 2026-09-05) and ZONOS2 bounded — Superseded in part
 
 Do not register Audio8, Scylla's Band v2 or ZONOS2 as application engines from
-the 2026-08-22 audition.
+the 2026-08-22 audition. (Audio8 subsequently ran its longer non-fiction gate on
+2026-09-05 and was definitively rejected; see the September 2026 decision above.)
 
 - **Scylla v2 / Ink is rejected for production in both ONNX INT8 and FP32.**
   Dave heard the same robotic, emotionless, effectively one-long-sentence
@@ -108,7 +130,8 @@ the 2026-08-22 audition.
   subsequently “better” by ear. Audio8 therefore remains the only survivor of
   this gate, but “better” is not an unqualified continuity or long-form pass.
   Three corrective calls also exceeded upstream's recommended 150 characters.
-  Do not register it before an explicitly accepted longer gate.
+  *(Update 2026-09-05: on full chapter audition, Audio8 failed with volume pumping
+  and speech garbling on sentences >150 chars; formally rejected).*
 - **ZONOS2 Q4 passes only the bounded first-paragraph voice audition.** Dave
   called that clip really good. The same settings in one full-passage call
   dropped the last 35 words and lost the Arthur identity, so it fails sustained
@@ -121,8 +144,8 @@ the 2026-08-22 audition.
   limit and quantisation has not been shown to cause the identity drift.
 
 Listening establishes these outcomes, not their model-side root causes. Keep
-Audio8 and ZONOS2 out of the product. Only Audio8 is eligible for an explicitly
-authorised longer gate; ZONOS2's current cloned-narrator path is closed.
+Audio8, Scylla, and ZONOS2 out of the product. Both Audio8 and ZONOS2 cloned-narrator
+paths are closed.
 
 ---
 

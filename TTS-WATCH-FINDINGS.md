@@ -49,12 +49,12 @@ Sources: [Deepgram pricing](https://deepgram.com/pricing), [Deepgram TTS docs](h
 
 ## One-off landscape report — 15 August 2026
 
-### Audio8 TTS Preview 0.6B + ONNX INT4 — **tested; continuity repair only**
+### Audio8 TTS Preview 0.6B + ONNX INT4 — **tested; continuity repair only (Update 2026-09-05: rejected)**
 
 - Apache-2.0 code and weights; zero-shot cloning; official ONNX Runtime route.
 - Compact CPU evidence: roughly 586 MiB of ONNX files, with first-party Apple M2 memory measurements around 1.0–1.2 GiB for synthesis.
 - The 2026-08-22 four-thread CPU gate measured RTF 2.286–2.322. Dave liked the Arthur voice, but heard drops/fades in both arms and changing pace/tone in the prepared arm. That arm was twelve independent, differently seeded calls with 200 ms joins and three forced mid-sentence boundaries; it is not a viable audiobook path.
-- Dave heard the complete-sentence, fixed-seed, zero-added-silence corrective arm and called it “better.” Three exact source sentences exceed the documented 150-character recommendation. Audio8 is the only survivor of this gate, but that bounded wording is not a long-form pass. **Next gate:** only an explicitly authorised longer continuity test.
+- Dave heard the complete-sentence, fixed-seed, zero-added-silence corrective arm and called it “better.” Three exact source sentences exceed the documented 150-character recommendation. *(Update 05 September 2026: tested on continuous 456-word non-fiction chapter; Dave rejected with volume pumping and garbled speech on sentences >150 chars. Formally rejected for audiobooks).*
 
 Sources: [runtime](https://github.com/Audio8-AI/Audio8_TTS), [weights](https://huggingface.co/Audio8/Audio8-TTS-Preview-0.6b), [ONNX INT4](https://huggingface.co/Audio8/Audio8-TTS-Preview-0.6B-ONNX-INT4).
 
@@ -84,6 +84,32 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 05 September 2026 — Audio8 TTS Preview 0.6B ONNX INT4 — **tested; rejected for audiobooks**
+- **What was tested:** Full non-fiction chapter passage from *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized across 18 complete sentences). Synthesized on Zorin i5-12400 CPU (4 threads, RTF 3.032, peak RSS 3.94 GiB).
+- **Listening Verdict:** Dave rejected: *"garbled, loud then soft... not great"*.
+- **Diagnosis:** Audio8's architecture is explicitly optimized for short prompts (<150 characters). On continuous multi-sentence passages with longer clauses, INT4 codebook drift and local gain scaling fail severely, causing volume pumping and garbled phonemes.
+- **Decision:** Formally rejected and closed for continuous audiobook narration. See `DECISIONS.md`.
+- First-party links: [runtime](https://github.com/Audio8-AI/Audio8_TTS), [ONNX INT4](https://huggingface.co/Audio8/Audio8-TTS-Preview-0.6B-ONNX-INT4).
+
+### 05 September 2026 — Breeze TTS 2 (3.5B) — **tested; Voice Direction impressive, Voice Design drift, compute-heavy**
+- **What was tested:** Evaluated on Kaggle Tesla T4 GPU (`davedavedavedavenm/breeze2-breakneck-audition`) across two arms on *Breakneck* Chapter 1 (456 words):
+  1. *Voice Design* (pure text prompt "British male narrator", zero audio reference): 17 chunks, 184.48s audio, RTF 7.781 on T4 (wall time 23.9m), 7.91 GB VRAM. Dave's listening verdict: *"voice seems to change each sentence? weird!"*. Cause: prompt-based voice design resamples speaker latents per chunk. Proper pattern requires generating a 15s reference WAV once, then using Voice Direction.
+  2. *Voice Direction* (Arthur clone): 17 chunks, 191.84s audio, RTF 7.861 on T4 (wall time 25.1m), 7.97 GB VRAM. Dave's listening verdict: **"very impressive"**.
+- **Hardware & License Bounds:** Compute requirement is extreme without FlashAttention (RTF ~7.8 on T4; ~25 mins compute for 3 mins audio). Prohibitive for full-book batching on budget GPUs. Weights governed by BreezeBlue Non-Commercial License.
+- First-party links: [runtime](https://github.com/breezeblue-ai/breeze-tts), [model](https://huggingface.co/BreezeBlue/Breeze-TTS-2).
+
+### 05 September 2026 — Qwen3-TTS 1.7B Base & CustomVoice — **tested; Base monotone, CustomVoice studio path**
+- **What was tested:** Base 1.7B zero-shot Arthur clone evaluated on Kaggle Tesla T4 GPU (`davedavedavedavenm/qwen3-breakneck-audition`) on *Breakneck* Chapter 1 (456 words across 17 chunks, 174.00s audio).
+- **Capacity & Efficiency:** Measured **RTF 2.57**, peak VRAM **4.05 GB** (3x faster than Breeze 2, half the memory; comfortably fits in budget/free T4s).
+- **Listening Verdict:** Dave heard: *"really decent... great voice clone, somewhat lacking some emotion or tone in places, a bit monotone"*.
+- **Path Forward:** The Base zero-shot clone faithfully copies acoustic timbre but delivers flat prosody. `Qwen3-TTS-12Hz-1.7B-CustomVoice` (with 9 studio speakers including `ryan`, `aiden`, `uncle_fu`, `vivian`) adds natural-language instruction steering (`instruct`) for expressive narration.
+- First-party links: [runtime](https://github.com/QwenLM/Qwen3-TTS), [Base](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base), [CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice).
+
+### 05 September 2026 — Kokoro 82M (v0.19) CPU — **tested; caesura/prosody ceiling diagnosed**
+- **What was tested:** Baseline `bm_george` and 5 best-practice variations (George/Lewis blends, speed adjustments at 0.92x–0.95x) on Zorin CPU on *Breakneck* Chapter 1.
+- **Listening Verdict:** Dave heard: *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*.
+- **Diagnosis:** StyleTTS2 82M lacks an autoregressive language model backbone. `espeak-ng` phonemizer inserts caesuras at compound noun boundaries. Speed adjustments and voice blending soften phonetic edges but cannot fix semantic prosody. Kokoro remains a fast preview tool (RTF 0.32 on CPU), not an audiobook production engine.
+
 ### 27 August 2026 — Sopro v2 (sopro-v2-turbo) — **tested and rejected by ear**
 
 - **Released:** open-weight code and the `sopro-v2-turbo` checkpoint landed 25 August 2026, with active stream-gate hardening commits on 27 August. Code and model weights are Apache-2.0; commercial audiobook use is permitted without a separate licence.
@@ -98,7 +124,7 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 Sources: [runtime/code](https://github.com/samuel-vitorino/sopro), [weights/model card](https://huggingface.co/samuel-vitorino/sopro-v2-turbo), [blog](https://research.haloneuro.ai/posts/sopro-v2).
 
-### 26 August 2026 — Breeze TTS 2 — **watch**
+### 26 August 2026 — Breeze TTS 2 — **watch (Update 2026-09-05: tested; see Watch log above)**
 
 - **Released:** official PyTorch inference code and usable model weights landed on 25 August 2026. Code is Apache-2.0, but the weights, derivatives and self-hosted outputs use the BreezeBlue Research and Non-Commercial License; commercial audiobooks require separate written permission.
 - **What is new:** a bilingual English/Chinese open-weight model with reference-based voice cloning/direction, reference-free voice design, natural-language pace/style control, inline vocal events and streaming inference. The shipped checkpoint components total about 7.65 GB (7.12 GiB).

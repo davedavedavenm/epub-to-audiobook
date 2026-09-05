@@ -1,5 +1,24 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-05 New TTS Candidates Audition on Breakneck Chapter 1 — COMPLETED
+>
+> 1. **Candidate Bake-Off on Non-Fiction Corpus**:
+>    - Auditioned *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized) across 4 engine pipelines:
+>      - **Audio8 0.6B ONNX INT4 (CPU, Zorin)**: 18 sentences, 197.74s audio, RTF 3.032, 3.94 GiB RSS. Dave's listening verdict: *"garbled, loud then soft... not great"*. **Definitively rejected** due to INT4 gain pumping and codebook drift on >150 char sentences.
+>      - **Breeze TTS 2 (3.5B, Kaggle T4 GPU)**:
+>        - *Arm 1 (Voice Design — British Male Narrator, zero audio reference)*: 184.48s audio, RTF 7.781 on T4 (wall time 23.9m), 7.91 GB VRAM. Dave's listening verdict: *"voice seems to change each sentence? weird!"* (pure prompt resamples latents per chunk).
+>        - *Arm 2 (Voice Direction — Arthur Clone)*: 191.84s audio, RTF 7.861 on T4 (wall time 25.1m), 7.97 GB VRAM. Dave's listening verdict: **"very impressive"**.
+>      - **Qwen3-TTS 1.7B Base (Kaggle T4 GPU)**: 174.00s audio, RTF 2.574 on T4, 4.05 GB VRAM. Dave's listening verdict: *"really decent... great voice clone, somewhat lacking some emotion or tone in places, a bit monotone"*.
+>      - **Kokoro 82M CPU Baseline & Variations (Zorin CPU)**: `bm_george` and blends at 0.92x–0.95x. Dave's listening verdict: *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*. StyleTTS2 / espeak-ng caesura ceiling diagnosed.
+> 2. **Operational & Architectural Conclusions**:
+>    - Audio8 is closed for continuous non-fiction audiobook rendering.
+>    - Breeze TTS 2 produces impressive cloned voices, but Voice Design requires a 1-shot anchor WAV workflow. At RTF 7.86 on T4, full books without high-tier GPUs (RTX 3090/4090/H100) are computationally prohibitive.
+>    - Qwen3-TTS 1.7B is the most efficient open GPU model (RTF 2.57, 4.05 GB VRAM). The `CustomVoice` studio voices + natural language instruction steering provide the expressive alternative to the neutral Base clone.
+>    - Kokoro 82M is confirmed as a fast local preview tool, not an audiobook production engine.
+> 3. **Breakneck Full Book Conversion (Job `183e5e10`) Progress**:
+>    - Full book render with Deepgram Hyperion (`aura-2-hyperion-en`) actively converting on Zorin.
+>    - Chapters 1–4 complete (>244 MB). Chapter 5 currently rendering.
+>
 > ## 2026-09-05 Breakneck Removal & Deepgram Hyperion 3-Page Preview — COMPLETED
 >
 > 1. **Complete Removal of Prior Breakneck Audiobook**:
