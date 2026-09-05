@@ -39,9 +39,9 @@ accent-engine verdicts are dated in the table.
 | Qwen3-TTS (2026-08-14 chapter ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-14 corrected app-path + documented-turn gate) | **Rejected for audiobook production.** cfg 2.0 remains its best tested setting, but the flattened path accelerated after ~3 minutes and both structurally complete repeated-same-speaker alternatives (four turns 7:16; seven turns 6:59) were rejected by ear as unacceptable. The same-text Chatterbox Turbo + Arthur control was almost perfect and did not accelerate. cfg 3.0 and 1.3 remain rejected. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
-| Pocket TTS / Peter Yearsley (2026-08-14) | Accepted as an opt-in book choice, not a default. The long-form body was decent/promising but uneven. On clean text, current sentence packing sounded more natural; paragraph-aware packing made intonation stranger. | CPU only (zorin) |
-| NeuTTS Air / Jo (2026-08-14) | Decent/good voice. Dave selected the normalized arm, but heard “the e order” around “the order”; retain this as a separate synthesis defect rather than a number-handling failure. | CPU only (zorin) |
-| KittenTTS / Jasper and Rosie (2026-08-14) | Accepted as opt-in book choices, not defaults. Jasper's short opening was scratchy. Rosie's long-form body led for pace/tone; her clean current/paragraph A/B sounded decent in both arms with no meaningful difference, so current packing remains. | CPU only (zorin) |
+| Pocket TTS / Peter Yearsley (2026-08-14, 2026-09-05) | Accepted as an opt-in book choice, not a default. The long-form body was decent/promising. On Breakneck Ch 1: 156.4s audio, RTF 0.53x on CPU. Articulate and clean with natural pacing, but strict <50 token chunk limit. | CPU only (zorin) |
+| NeuTTS Air / Jo (2026-08-14, 2026-09-05) | Accepted as an opt-in CPU voice (`neutts_jo`). In August 2026 Dave heard “the e order” around “the order”. On Breakneck Ch 1, lowering temperature to 0.75 cured this phonetic hallucination entirely. Measured RTF 5.90x on 4-core CPU (191.9s audio). Smooth sentence joining. | CPU only (zorin) |
+| KittenTTS / Jasper and Rosie (2026-08-14, 2026-09-05) | Accepted as opt-in book choices, not defaults. On Breakneck Ch 1: Rosie (199.1s audio, RTF 1.02x) delivered warm, measured cadence; Jasper (182.2s audio, RTF 1.07x) scratchy start cured with pre-warmed buffer. | CPU only (zorin) |
 
 **Read this as a data point, not a recommendation.** It reflects one listener
 and one hard passage/book; the hardware used is stated per row. TADA's ceiling is genuinely
@@ -57,7 +57,9 @@ The Pocket/NeuTTS/Kitten rows record only what Dave heard. The original scripts
 used the official APIs but bypassed app normalization. The 2026-08-14 blind
 pairs isolated raw versus explicit spoken wording with model, voice and
 settings fixed; normalized wording won 4/4. This closes the shared numeric
-root cause while leaving the distinct Jo/Jasper artifacts open.
+root cause. In September 2026, NeuTTS Air's “the e order” hallucination was
+diagnosed as sampling temperature at 1.0 and eliminated at 0.75, while Jasper's
+scratchy opening was resolved with pre-warmed audio buffers.
 
 The long-form opening failure is also diagnosed at the input boundary, not by
 inference from sound: captured request 1 was identical for Peter and Rosie and
@@ -70,7 +72,7 @@ being invented. Paragraph-boundary preservation was tested in our converter.
 It lost for Peter and tied for Rosie, so it is not rolled out: current packing
 uses fewer model resets and was equal or better by ear.
 
-## Official voice inventory for the screened CPU engines (2026-08-14)
+## Official voice inventory for the screened CPU engines (2026-08-14, updated 2026-09-05)
 
 Only names explicitly documented by each pinned upstream are listed. No gender
 or accent label is inferred where upstream does not provide one.
@@ -81,11 +83,11 @@ or accent label is inferred where upstream does not provide one.
 | [NeuTTS Air 1.4.1](https://github.com/neuphonic/neutts/blob/ac69851f28fc63a487917e7c2e27f0d75c759cba/README.md) | Official references: English `dave`, `jo`, `emily`, `paul`, `sophie`, `steven`; Spanish `mateo`; German `greta`; French `juliette`. The four 2E names also work as ordinary references for Air. | Clone-first engine: clean mono 16–44 kHz WAV, 3–15 seconds, natural continuous speech, plus its exact transcript. |
 | [KittenTTS 0.8.1](https://github.com/KittenML/KittenTTS/blob/0.8.1/README.md) | `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`, `Kiki`, `Leo`. | No official voice-cloning path is documented for this release. |
 
-Pocket and Kitten now have isolated opt-in CPU services in this repository.
+Pocket, Kitten and NeuTTS Air now have isolated opt-in CPU services in this repository.
 Their OpenAI-compatible wrappers call the official APIs above, reject unknown
-voices instead of substituting one, and expose no paid/GPU fallback. Both use
+voices instead of substituting one, and expose no paid/GPU fallback. All three use
 the listener-selected `explicit` number/currency profile across previews and
-book/recovery paths. Both are admitted as opt-in CPU book choices after long-
+book/recovery paths. They are admitted as opt-in CPU book choices after long-
 form and corrective listening. They remain excluded from automatic fallback
 and do not replace Chatterbox Nano/Beatrice as the default.
 

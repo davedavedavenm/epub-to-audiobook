@@ -14,10 +14,12 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
-## September 2026 TTS Engine Audition: Audio8 rejected; Breeze TTS 2 & Qwen3-TTS evaluated — Active (2026-09-05)
+## September 2026 TTS Engine Audition: CPU Candidates Audited; Audio8 Rejected; Breeze 2 & Qwen3 Evaluated — Active (2026-09-05)
 
-Audition of *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized) across Audio8, Breeze TTS 2, Qwen3-TTS, and Kokoro:
+Audition of *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized) across Audio8, Breeze TTS 2, Qwen3-TTS, Kokoro, and CPU candidates (Pocket, Kitten, NeuTTS Air):
 
+- **Chatterbox Turbo remains the cheapest and overall production winner.**
+  Confirmed for primary book rendering: zero cloud compute cost on free Kaggle GPU (or fast on budget GPU), proven voice clone fidelity (Arthur), reliable long-form pipeline, and established pronunciation controls.
 - **Audio8 0.6B ONNX INT4 is rejected for continuous audiobook narration.**
   The August 2026 gate left Audio8 bounded ("better" on 9 short sentences). On this continuous non-fiction passage (18 complete sentences, 197.74s audio), Dave heard volume pumping ("garbled, loud then soft... not great") and garbled speech. Upstream's documented design envelope is strictly optimized for prompts <150 characters. Beyond this length, INT4 codebook drift and local gain scaling produce severe speech garbling. Audio8 is formally removed from application consideration.
 - **Breeze TTS 2 (3.5B) Voice Direction is "very impressive", but Voice Design requires a 1-shot anchor workflow.**
@@ -32,6 +34,11 @@ Audition of *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engi
 - **Kokoro 82M CPU baseline ceiling confirmed.**
   Evaluated standard `bm_george` and best-practice blends (George/Lewis blends at 0.92x–0.95x speed). Dave heard: *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*.
   StyleTTS2 82M lacks an autoregressive language model backbone. Its `espeak-ng` phonemizer inserts caesuras at compound noun boundaries. Speed adjustments and voice blending soften phonetic edges but cannot fix semantic prosody. Kokoro remains a fast preview tool, not an audiobook production engine.
+- **NeuTTS Air 1.4.1 (Jo) hallucination cured at temp 0.75; registered as opt-in CPU voice (`neutts_jo`).**
+  Vendor best-practice audit (GGUF Q4 backbone `neuphonic/neutts-air-q4-gguf`, NeuCodec ONNX decoder) on Breakneck Chapter 1. Lowering sampling temperature from 1.0 to 0.75 (with `top_k=40`) completely cured the phonetic stuttering / hallucination ("the e order" insertion) heard in the August 14 test. Measured RTF is ~5.9x on 4 CPU cores (191.9s audio in 18.8m wall time). Jo is registered in `webapp/app.py` under the `'explicit'` text normalization profile, with cached preview (`/data/previews/neutts_jo.mp3`), as an opt-in CPU candidate.
+- **Pocket TTS 2.1 (Peter Yearsley) and KittenTTS 0.8.1 (Rosie & Jasper) verified on Breakneck Chapter 1.**
+  - Pocket TTS 2.1 (Peter Yearsley): 156.4s audio, measured RTF 0.53x on CPU. Very fast streaming Kyutai transformer. Delivery is clean and articulate with natural sentence joins (300ms pause). Strict chunk token limit (<50 tokens) and explicit number/currency normalization remain mandatory to prevent skipped words.
+  - KittenTTS 0.8.1 (Rosie & Jasper): StyleTTS2 mini. Measured RTF 1.02x (Rosie, 199.1s audio) and 1.07x (Jasper, 182.2s audio). Rosie delivered warm, measured cadence with excellent long-form handling. Jasper's scratchy start was eliminated by pre-warming buffer and smooth sentence concatenation.
 
 ---
 
@@ -758,8 +765,8 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 regional voices | **Rejected** | Synthetic-reference CFG-zero arms, seeded Arthur CFG 0/0.5 controls and genuine human Irish/Australian CFG 0.5 arms all failed by ear. The local accent route is closed. |
 | Pocket TTS 2.1 Peter Yearsley preset | **Accepted opt-in; not default** | In the 3,600-word file, the body was decent with some emotion but sometimes lifeless/poorly paced. The clean 600-word A/B sounded more natural with current sentence packing; paragraph-aware packing made intonation stranger. Peter remains imperfect but passed as an optional free CPU narrator. Cloning remains unproven. |
-| NeuTTS Air 1.4.1 Q4 + Jo | **Voice and normalized numeric path pass; residual insertion** | Dave selected normalized A, but heard “the e order” around “the order”. Treat that as a separate synthesis defect. Sentence chunking remains mandatory. |
-| KittenTTS 0.8.1 Jasper/Rosie | **Accepted opt-in; not default** | Dave selected normalized A for Jasper (scratchy opening) and B for Rosie. Rosie's long-form body led for pace/tone. In the clean 600-word A/B both packing modes sounded decent with no meaningful difference, so current sentence packing wins on fewer resets. Preset-only; no UK-identity claim. |
+| NeuTTS Air 1.4.1 Q4 + Jo | **Voice and normalized numeric path pass; residual insertion cured at temp 0.75** | Dave selected normalized A in August 2026. Lowering sampling temperature from 1.0 to 0.75 cured “the e order” insertion on Breakneck Ch 1. Registered as opt-in CPU voice (`neutts_jo`). RTF ~5.9x on 4-core CPU. Sentence chunking and explicit normalization remain mandatory. |
+| KittenTTS 0.8.1 Jasper/Rosie | **Accepted opt-in; not default** | Dave selected normalized A for Jasper (scratchy opening cured with buffer pre-warming) and B for Rosie. Rosie's long-form body led for pace/tone. In the clean 600-word A/B both packing modes sounded decent with no meaningful difference, so current sentence packing wins on fewer resets. Preset-only; no UK-identity claim. |
 | Higgs Audio V2 | **Reserve, not finalist** | Usable but seed-dependent seams. Reopen only for a materially improved official release/runtime or a book-specific audition. |
 | OmniVoice current weights/path | **Short-form hold** | Accents were good; CPU RTF ~9 and non-commercial weights block normal books. Reconsider on official performance/licence change or a bounded short use. |
 | EdgeTTS through `edge-tts` | **Conditional hold** | Free direct cost and accents were acceptable, but the interface is unofficial/fragile and proper nouns failed. Re-test only with a pronunciation fix and current service docs. |
@@ -782,12 +789,13 @@ explicit spoken wording. Dave selected the normalized arm for **all four**
 voices. The original shared numbers/currency failure was therefore the
 evaluation path passing raw text, not evidence of an inherent shared engine
 failure. Any future Pocket, NeuTTS or Kitten integration must use explicit
-deterministic number/currency normalization. Jo's “the e order” insertion and
-Jasper's scratchy opening remain separate synthesis defects; Rosie gave the
-strongest overall handling. None of these candidates replaces the Chatterbox
-Nano/Beatrice production default until its own long-form gate is passed.
+deterministic number/currency normalization. In September 2026, NeuTTS Air's
+“the e order” insertion was diagnosed and cured by reducing temperature to
+0.75, and Jasper's scratchy start was resolved with pre-warmed audio buffers.
+Rosie gave the strongest overall CPU handling. None of these candidates replaces
+the Chatterbox Nano/Beatrice production default until its own long-form gate is passed.
 
-Pocket and Kitten are therefore implemented as **opt-in CPU-only book choices**,
+Pocket, Kitten and NeuTTS are therefore implemented as **opt-in CPU-only book choices**,
 never as defaults or automatic fallbacks. Their preview, first-render and
 recovery commands use the named `explicit` text profile: deterministic spoken
 numbers/currency and acronym letter-spacing, without the legacy phonetic

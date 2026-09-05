@@ -97,9 +97,11 @@ def test_cpu_candidates_use_measured_explicit_text_profile():
 def test_cpu_candidate_catalogues_match_official_lists():
     pocket = [key for key, value in appmod.VOICES.items() if value['engine'] == 'pocket']
     kitten = [key for key, value in appmod.VOICES.items() if value['engine'] == 'kitten']
+    neutts = [key for key, value in appmod.VOICES.items() if value['engine'] == 'neutts']
     assert len(pocket) == 21
     assert len(kitten) == 8
     assert 'pocket_peter_yearsley' in pocket
+    assert 'neutts_jo' in neutts
     assert {'kitten_bella', 'kitten_jasper', 'kitten_luna', 'kitten_bruno',
             'kitten_rosie', 'kitten_hugo', 'kitten_kiki', 'kitten_leo'} == set(kitten)
 
@@ -114,7 +116,7 @@ def test_gemini_catalogue_contains_all_30_official_presets():
 
 
 def test_explicit_candidate_previews_use_explicit_numeric_profile():
-    for engine in ('pocket', 'kitten', 'gemini'):
+    for engine in ('pocket', 'kitten', 'gemini', 'neutts'):
         out = appmod._preview_text_for(engine)
         assert '$1.2' not in out
         assert 'one point two billion dollars' in out
