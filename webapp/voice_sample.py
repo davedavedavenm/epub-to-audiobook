@@ -31,7 +31,7 @@ SAMPLE_TEXT = (
 from lexicon import SEED_PRONUNCIATION as SAMPLE_LEXICON  # noqa: E402
 
 MODERN_ENGINES = ("chatterbox", "tada")
-EXPLICIT_ENGINES = ("pocket", "kitten", "gemini", "deepgram", "neutts")
+EXPLICIT_ENGINES = ("pocket", "kitten", "gemini", "deepgram")
 
 
 def sample_text_for(engine: str) -> str:
