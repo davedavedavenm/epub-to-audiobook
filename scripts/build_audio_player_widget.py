@@ -20,6 +20,7 @@ def main():
     kitten_rosie_b64 = to_b64(OUTPUT_DIR / "kitten_breakneck_ch1_rosie.mp3")
     kitten_jasper_b64 = to_b64(OUTPUT_DIR / "kitten_breakneck_ch1_jasper.mp3")
     neutts_jo_b64 = to_b64(OUTPUT_DIR / "neutts_breakneck_ch1_jo.mp3")
+    neutts_jo_v2_b64 = to_b64(OUTPUT_DIR / "neutts_breakneck_ch1_jo_v2.mp3")
 
     # 2. GPU Candidates (Breakneck Ch.1 456 words)
     breeze_design_b64 = to_b64(OUTPUT_DIR / "breeze_voice_design_uk_male.mp3")
@@ -92,13 +93,23 @@ def main():
         <audio controls preload="metadata" class="w-full h-8" src="data:audio/mp3;base64,{kitten_jasper_b64}"></audio>
       </div>
 
-      <!-- NeuTTS Air: Jo -->
-      <div class="space-y-1 p-2 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+      <!-- NeuTTS Air: Jo v2 Repaired -->
+      <div class="space-y-1 p-2 rounded-lg bg-[var(--background)] border-2 border-emerald-500/30">
         <div class="flex items-center justify-between text-xs">
-          <span class="font-medium text-[var(--foreground)]">🎙️ NeuTTS Air 1.4.1 — Jo</span>
+          <span class="font-medium text-[var(--foreground)]">✨ 🎙️ NeuTTS Air 1.4.1 — Jo (v2 Repaired)</span>
+          <span class="text-emerald-500 font-mono font-semibold">3:02 • CPU RTF 2.25x</span>
+        </div>
+        <p class="text-[10px] text-[var(--muted-foreground)]">Fixed: phoneme patch replaces 'ðɪʲ' with neutral 'ðə' (curing "the 'e' airport" / "the 'e' order") + sentence packing stabilizes pitch & tone.</p>
+        <audio controls preload="metadata" class="w-full h-8" src="data:audio/mp3;base64,{neutts_jo_v2_b64}"></audio>
+      </div>
+
+      <!-- NeuTTS Air: Jo v1 Baseline -->
+      <div class="space-y-1 p-2 rounded-lg bg-[var(--background)] border border-[var(--border)] opacity-80">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-medium text-[var(--foreground)]">🎙️ NeuTTS Air 1.4.1 — Jo (v1 Baseline)</span>
           <span class="text-[var(--muted-foreground)] font-mono">3:12 • CPU RTF 5.90x</span>
         </div>
-        <p class="text-[10px] text-[var(--muted-foreground)]">GGUF Q4 + NeuCodec. Corrected temperature (0.75 vs 1.0 stutter) & natural sentence joins.</p>
+        <p class="text-[10px] text-[var(--muted-foreground)]">Initial baseline: isolated single sentences (contained "the 'e' airport" palatal glide glitch).</p>
         <audio controls preload="metadata" class="w-full h-8" src="data:audio/mp3;base64,{neutts_jo_b64}"></audio>
       </div>
     </div>
