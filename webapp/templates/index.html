@@ -1792,86 +1792,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const cmpA = online[0] || allIds[0] || '';
         const cmpB = online[1] || online[0] || allIds[1] || cmpA;
         const uncachedConfigured = Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine) && v.preview_cached !== true);
-        const blindCard = `
-            <div class="card" id="blind-listening-test" style="margin-bottom:32px; border-color:color-mix(in srgb,var(--accent) 48%,var(--border));">
-                <p class="home-eyebrow">Listening decision · 13 August 2026</p>
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap;">
-                    <div style="max-width:720px;">
-                        <h2 style="margin:0; font-size:1.45rem; letter-spacing:-.025em;">VibeVoice: cfg 2.0 selected</h2>
-                        <p style="margin:9px 0 0; color:var(--text-secondary); line-height:1.6;">Dave selected B as substantially clearer and otherwise excellent, with one short garble after “romantic felicity”. A was rejected as muffled and distant. The clips remain here as the audible record; the isolated B defect still needs an app-path check before VibeVoice becomes a production default.</p>
-                    </div>
-                    <span class="li-tag done">B selected</span>
-                </div>
-                <div class="compare-grid">
-                    <div class="compare-cell">
-                        <div class="compare-label"><span class="compare-tag">A</span><span>Rejected · cfg 3.0 · 1:33</span></div>
-                        <audio controls preload="metadata" src="/api/sample/vibe_blind_A.mp3" aria-label="Play rejected VibeVoice cfg 3.0 clip"></audio>
-                    </div>
-                    <div class="compare-cell">
-                        <div class="compare-label"><span class="compare-tag b">B</span><span>Selected · cfg 2.0 · 1:39</span></div>
-                        <audio controls preload="metadata" src="/api/sample/vibe_blind_B.mp3" aria-label="Play selected VibeVoice cfg 2.0 clip"></audio>
-                    </div>
-                </div>
-            </div>
-        `;
-        const numericCard = `
-            <div class="card" id="cpu-numeric-ab" style="margin-bottom:32px; border-color:color-mix(in srgb,var(--accent) 58%,var(--border));">
-                <p class="home-eyebrow">Listening decision · 14 August 2026</p>
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap;">
-                    <div style="max-width:780px;">
-                        <h2 style="margin:0; font-size:1.45rem; letter-spacing:-.025em;">Numbers and currency: the raw-input evaluation was at fault</h2>
-                        <p style="margin:9px 0 0; color:var(--text-secondary); line-height:1.65;">The app-normalized arm won for all four voices. The earlier clips bypassed our text preparation, so they did not prove an engine limitation. Peter passed cleanly; Jo retained one “the e order” insertion; Jasper began slightly scratchy; Rosie gave perhaps the best handling of the content. Those residual artifacts remain separate quality evidence.</p>
-                    </div>
-                    <span class="li-tag done">Normalized won 4/4</span>
-                </div>
-                <details style="margin-top:18px; color:var(--text-secondary); line-height:1.65;">
-                    <summary style="cursor:pointer; color:var(--text-primary); font-weight:700;">Show the test script</summary>
-                    <p style="margin:10px 0 0;">In 1997, annual revenue was $1.2 billion, while costs reached £24.6 million. The next offer was $33.50, followed by £57.25 and €1,250.75. Between 2001 and 2007, headcount rose from 3,400 to 230,000. The 21st invoice added a 12.5% fee. The order was worth $50 million. Chapter 3 compares a valuation of £33 billion with 71% growth.</p>
-                </details>
-                <h3 style="margin:24px 0 4px; font-size:1.05rem;">Pocket TTS · Peter Yearsley</h3>
-                <div class="compare-grid" style="margin-top:10px;">
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">A</span><span>Selected · normalized</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_pocket_peter_a.mp3" aria-label="Play selected normalized Peter test"></audio></div>
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">B</span><span>Raw symbols and digits</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_pocket_peter_b.mp3" aria-label="Play raw-input Peter test"></audio></div>
-                </div>
-                <h3 style="margin:24px 0 4px; font-size:1.05rem;">NeuTTS Air · Jo</h3>
-                <div class="compare-grid" style="margin-top:10px;">
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">A</span><span>Selected · normalized · one insertion</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_neutts_jo_a.mp3" aria-label="Play selected normalized Jo test with one insertion"></audio></div>
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">B</span><span>Raw symbols and digits</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_neutts_jo_b.mp3" aria-label="Play raw-input Jo test"></audio></div>
-                </div>
-                <h3 style="margin:24px 0 4px; font-size:1.05rem;">KittenTTS · Jasper</h3>
-                <div class="compare-grid" style="margin-top:10px;">
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">A</span><span>Selected · normalized · scratchy start</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_kitten_jasper_a.mp3" aria-label="Play selected normalized Jasper test with scratchy opening"></audio></div>
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">B</span><span>Raw symbols and digits</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_kitten_jasper_b.mp3" aria-label="Play raw-input Jasper test"></audio></div>
-                </div>
-                <h3 style="margin:24px 0 4px; font-size:1.05rem;">KittenTTS · Rosie</h3>
-                <div class="compare-grid" style="margin-top:10px;">
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">A</span><span>Raw symbols and digits</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_kitten_rosie_a.mp3" aria-label="Play raw-input Rosie test"></audio></div>
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">B</span><span>Selected · normalized · strongest handling</span></div><audio controls preload="metadata" src="/api/sample/cpu_numeric_kitten_rosie_b.mp3" aria-label="Play selected normalized Rosie test"></audio></div>
-                </div>
-            </div>
-        `;
-        const cpuCard = `
-            <div class="card" id="cpu-listening-tests" style="margin-bottom:32px;">
-                <p class="home-eyebrow">Free · local CPU auditions</p>
-                <div style="max-width:760px;">
-                    <h2 style="margin:0; font-size:1.35rem; letter-spacing:-.025em;">New engines you can hear before we integrate them</h2>
-                    <p style="margin:9px 0 0; color:var(--text-secondary); line-height:1.6;">These are real rendered clips, not availability claims. They run without paid compute, but remain evaluation candidates: listening here does not enable an engine or change the default narrator.</p>
-                </div>
-                <div class="compare-grid">
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">CPU</span><span>Pocket TTS · Peter Yearsley</span></div><audio controls preload="metadata" src="/api/sample/cpu_pocket_peter_yearsley.mp3" aria-label="Play Pocket TTS Peter Yearsley audition"></audio></div>
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">CPU</span><span>NeuTTS Air · Jo</span></div><audio controls preload="metadata" src="/api/sample/cpu_neutts_jo.mp3" aria-label="Play NeuTTS Air Jo audition"></audio></div>
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag">CPU</span><span>KittenTTS · Jasper</span></div><audio controls preload="metadata" src="/api/sample/cpu_kitten_jasper.mp3" aria-label="Play KittenTTS Jasper audition"></audio></div>
-                    <div class="compare-cell"><div class="compare-label"><span class="compare-tag b">CPU</span><span>KittenTTS · Rosie</span></div><audio controls preload="metadata" src="/api/sample/cpu_kitten_rosie.mp3" aria-label="Play KittenTTS Rosie audition"></audio></div>
-                </div>
-                <div style="margin-top:26px; padding-top:22px; border-top:1px solid var(--border);">
-                    <h3 style="margin:0 0 12px; font-size:1.08rem;">Official voice inventory</h3>
-                    <p style="margin:0 0 14px; color:var(--text-secondary); line-height:1.6;">Names come from the pinned upstream documentation. Only Peter, Jo, Jasper and Rosie are currently cached here; the remaining names are not Play buttons yet.</p>
-                    <p style="margin:0 0 10px; line-height:1.6;"><strong>Pocket TTS — English:</strong> alba, anna, azelma, bill_boerst, caro_davy, charles, cosette, eponine, eve, fantine, george, jane, jean, javert, marius, mary, michael, paul, peter_yearsley, stuart_bell, vera.<br><strong>Other catalogue languages:</strong> giovanni (Italian), lola (Spanish), juergen (German), rafael (Portuguese), estelle (French). Pocket also accepts a supplied WAV reference.</p>
-                    <p style="margin:0 0 10px; line-height:1.6;"><strong>NeuTTS references:</strong> dave, jo, emily, paul, sophie, steven (English); mateo (Spanish); greta (German); juliette (French). A clean custom 3–15 second WAV plus exact transcript can create another voice.</p>
-                    <p style="margin:0; line-height:1.6;"><strong>KittenTTS presets:</strong> Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo. This release has no officially documented cloning path.</p>
-                </div>
-            </div>
-        `;
         const compareCard = `
             <div class="card" style="margin-bottom:32px;">
                 <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px; flex-wrap:wrap;">
@@ -1961,19 +1881,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
 
-        const archiveCard = `
-            <details class="card" style="margin-top:40px; margin-bottom:24px; border-color:var(--border);">
-                <summary style="cursor:pointer; font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-secondary);">
-                    📁 Historical A/B Auditions &amp; Research Archive
-                </summary>
-                <div style="margin-top:24px;">
-                    ${numericCard}
-                    ${blindCard}
-                    ${cpuCard}
-                </div>
-            </details>
-        `;
-
         container.innerHTML = cloudStrip + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
@@ -2006,7 +1913,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 <div style="font-size:.85rem; color:var(--ink-3); padding:6px 0 2px;">
                     These voices are intentionally absent from the pickers until their persisted samples are ready. A Play button never starts a cold synthesis job.
                 </div>
-            </div>` : '') + unconfiguredSection + archiveCard;
+            </div>` : '') + unconfiguredSection;
         loadCloneList();
         syncPreviewUi();
     }
