@@ -12,10 +12,7 @@ Outputs WAV, 128k MP3, and JSON evidence.
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
-import shutil
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]

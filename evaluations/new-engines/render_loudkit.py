@@ -26,7 +26,6 @@ from __future__ import annotations
 import dataclasses
 import os
 import time
-from pathlib import Path
 
 from shared import OUTPUT, corpus, finish
 
