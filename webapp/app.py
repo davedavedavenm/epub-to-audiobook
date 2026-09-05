@@ -3282,13 +3282,23 @@ def _abs_auth_failed(job_id, where, status):
         append_job_log(job_id, msg)
 
 
+_last_abs_rescan_time = 0.0
+
+
 def _trigger_abs_rescan(job_id: str | None = None):
     """Trigger an Audiobookshelf library rescan via the ABS API.
 
     Ensures chapter metadata is regenerated after files are synced, and is the
-    only thing that prunes items whose files have gone. Failures never affect
-    job status — but they are no longer silent.
+    only thing that prunes items whose files have gone. Debounced to 5 seconds
+    to prevent concurrent scan race conditions in ABS (#38 follow-up).
     """
+    global _last_abs_rescan_time
+    now = time.time()
+    if now - _last_abs_rescan_time < 5.0:
+        app.logger.info("ABS rescan debounced (already triggered within last 5 seconds)")
+        return True
+    _last_abs_rescan_time = now
+
     url, token = _abs_credentials()
     if not token:
         if job_id:
@@ -3320,6 +3330,14 @@ def _trigger_abs_rescan(job_id: str | None = None):
             app.logger.info(f"ABS: Triggered rescan for library '{lib['name']}': {scan_resp.status_code}")
             if job_id:
                 append_job_log(job_id, f"ABS rescan triggered for library '{lib['name']}'")
+
+        # After scan is triggered, wait briefly for ABS to complete its scan and automatically
+        # purge any ghost duplicate items flagged isMissing due to inotify/API scanner races (#38)
+        def _delayed_purge():
+            time.sleep(5)
+            abs_purge_missing_items(job_id=job_id)
+
+        threading.Thread(target=_delayed_purge, daemon=True).start()
         return True
     except Exception as e:
         app.logger.warning(f"ABS rescan failed (non-fatal): {e}")
@@ -3625,8 +3643,21 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
         cmd = ['rsync', '-av', '-s',
                '--exclude', '*.epub',
                '--exclude', '_presync_gate.json',
-               '--exclude', '_verification/',
-               '-e', rsync_ssh, f'{source_dir}/', f"{target}:{dest_path}/"]
+               '--exclude', '_verification/']
+
+        has_m4b = any(source_dir.glob('*.m4b'))
+        if has_m4b:
+            # When an M4B container is produced, the deliverable is the single M4B
+            # containing all audio and embedded chapter markers. Shipping working MP3s
+            # alongside the M4B causes ABS to index two copies of the audio in the same
+            # book, doubling the track count and duration (#38 follow-up).
+            cmd.extend(['--exclude', '*.mp3'])
+            # Prune any previous working chapter MP3s on the remote side if an M4B is present
+            remote_cleanup = f"rm -f -- {shlex.quote(dest_path)}/*.mp3"
+            subprocess.run(['ssh', *ssh_args, target, remote_cleanup],
+                           capture_output=True, timeout=15)
+
+        cmd.extend(['-e', rsync_ssh, f'{source_dir}/', f"{target}:{dest_path}/"])
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             err = (result.stderr or result.stdout or '').strip()
@@ -3636,29 +3667,13 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             return False
 
         if job_id:
-            delivered_audio = len([p for p in source_dir.glob('*.mp3') if p.is_file()])
+            delivered_audio = 1 if has_m4b else len([p for p in source_dir.glob('*.mp3') if p.is_file()])
             update_job(job_id, sync_status='ok', sync_file_count=delivered_audio,
                        sync_timestamp=datetime.now().isoformat())
             append_job_log(job_id, "Sync ok")
 
-            # Automatically trigger library scan in ABS
-            abs_url = get_setting('ABS_API_URL') or ABS_API_URL
-            abs_token = get_setting('ABS_API_TOKEN') or ABS_API_TOKEN
-            if abs_url and abs_token:
-                try:
-                    # 1. Get libraries
-                    resp = requests.get(f"{abs_url.rstrip('/')}/api/libraries",
-                                        headers={'Authorization': f'Bearer {abs_token}'},
-                                        timeout=10)
-                    if resp.status_code == 200:
-                        libs = resp.json().get('libraries', [])
-                        # 2. Trigger scan for each library (usually just one main one)
-                        for lib in libs:
-                            scan_url = f"{abs_url.rstrip('/')}/api/libraries/{lib['id']}/scan"
-                            requests.post(scan_url, headers={'Authorization': f'Bearer {abs_token}'}, timeout=10)
-                        append_job_log(job_id, f"Triggered ABS scan for {len(libs)} libraries")
-                except Exception as e:
-                    app.logger.warning(f"Failed to trigger ABS scan: {e}")
+            # Trigger unified, debounced library rescan and automatic ghost purge
+            _trigger_abs_rescan(job_id)
 
         return True
     except Exception as e:

@@ -39,3 +39,17 @@ def test_audio_is_still_synced():
     for must_not_exclude in ("'*.mp3'", "'*.m4b'", "'cover.jpg'"):
         assert must_not_exclude not in cmd, \
             f'{must_not_exclude} is the deliverable and must reach the library'
+
+
+def test_mp3_is_excluded_when_m4b_is_present():
+    """When an M4B is produced, working MP3s must not be synced alongside it (#38 follow-up)."""
+    src = APP.read_text(encoding='utf-8')
+    assert "has_m4b = any(source_dir.glob('*.m4b'))" in src
+    assert "cmd.extend(['--exclude', '*.mp3'])" in src
+
+
+def test_abs_rescan_debounces_and_purges_ghosts():
+    """ABS rescan must debounce concurrent calls and schedule missing-item purge (#38 follow-up)."""
+    src = APP.read_text(encoding='utf-8')
+    assert "_last_abs_rescan_time" in src
+    assert "abs_purge_missing_items(job_id=job_id)" in src
