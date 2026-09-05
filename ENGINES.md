@@ -27,13 +27,16 @@ accent-engine verdicts are dated in the table.
 | Deepgram Aura-2 (2026-08-30) | **Accepted cloud TTS engine.** Aura-2 (`orion`, `orpheus`, `arcas`, `pandora`, `hyperion`) provides expressive, natural narration ($0.030/1k chars) with dynamic prosody and speed support. Preprocessed under explicit numeric/acronym contract with sentence-level clause chunking ($\le 400$ chars) and 300 ms/650 ms silence joins. Aura-1 (`angus`) was evaluated and **rejected** due to flat/monotone delivery and lack of speed controls. | Deepgram REST API (`/v1/speak`) |
 | IndexTTS-2.5 / Arthur focused gate (2026-08-15) | **Rejected for production.** Both original arms garbled at exact upstream 200 ms joins, and our explicit path mishandled `1.5`. A one-job follow-up used complete-sentence calls, said “one point five”, and removed the repeatable corruption, but Dave still found its timing/pacing poor and much less natural than Gemini Zephyr or Chatterbox. | Kaggle Tesla T4, free compute |
 | NVIDIA MagpieTTS Multilingual v2607 raw NeMo path (2026-08-15) | **Capacity passed / quality rejected.** Every exact short arm had a shared defect around five seconds and was poor; the 9:14 John arm had the same clipping/cut class. Accents and tone were good, but reliability failed. The timing aligns with the first automatic stateful sentence boundary. One focused hosted-NIM PCM request remains a root-cause diagnostic, not an integration gate. | Free Kaggle Tesla T4 |
-| Audio8 TTS Preview 0.6B ONNX INT4 / Arthur (2026-08-22) | **Only survivor; longer approval open.** The first prepared arm's fade/tone/speed defects came from twelve independent differently seeded calls, 200 ms joins and three mid-sentence cuts. Dave heard the corrective 82.709 s exact-word arm—nine complete sentences, one seed, no added silence—and called it “better.” That establishes material improvement, not an unqualified continuity or long-form pass. Three calls exceed upstream's 150-character recommendation. | Ryzen 9 8945HS CPU, four threads |
+| Audio8 TTS Preview 0.6B ONNX INT4 / Arthur (2026-09-05 gate) | **Rejected for continuous narration:** On the 456-word Breakneck Chapter 1 passage (18 complete sentences, 197.74s audio), Dave heard volume pumping ("garbled, loud then soft... not great") and garbled speech. Sentences >150 chars cause severe INT4 codebook drift and local gain scaling failure. | CPU only (zorin, i5-12400 / Ryzen 9, 4 threads, RTF ~2.3–3.0) |
+| Breeze TTS 2 (3.5B) (2026-09-05 gate) | **Voice Direction accepted by ear ("very impressive"); Voice Design rejected for unanchored multi-chunk rendering:** Arthur clone was "very impressive". Pure prompt Voice Design resampled a new speaker latent per sentence ("voice seems to change each sentence? weird!"). Upstream requires generating a 15s reference anchor WAV first. Heavy compute (measured RTF 7.86 on T4 GPU, 7.97 GB VRAM); non-commercial research license. | Kaggle Tesla T4 |
+| Qwen3-TTS 1.7B Base & CustomVoice (2026-09-05 gate) | **Arthur clone "really decent" but monotone; CustomVoice studio path.** Dave's verdict: "great voice clone, somewhat lacking some emotion or tone in places, a bit monotone". Measured RTF 2.57, 4.05 GB VRAM on T4 (fastest/most efficient GPU candidate). For expressive narration, `Qwen3-TTS-12Hz-1.7B-CustomVoice` studio voices (`ryan`, `aiden`, etc.) with natural language instruction steering provide dynamic prosody. | Kaggle Tesla T4 |
+| Kokoro 82M (v0.19) George / Blends (2026-09-05 gate) | **Decent but stilted; caesura/prosody ceiling.** Dave's verdict on Breakneck Ch1: "decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted". StyleTTS2 lacks language model context; `espeak-ng` pauses at compound noun boundaries. Fast preview tool (RTF 0.32 on CPU), not production audiobook narrator. | CPU only (zorin, i5-12400) |
 | Scylla's Band v2 / Ink (2026-08-22) | **Rejected at the short gate.** Both ONNX INT8 and FP32 sounded robotic and emotionless, with acceptable pronunciation but effectively one-long-sentence delivery. The same defect in full precision means quantisation is not the material explanation. | Ryzen 9 8945HS CPU, four threads |
 | ZONOS2 Q4_K / Arthur (2026-08-22) | **Base voice OK / cloned narrator rejected.** The 19.888 s first paragraph was “really good,” but the full pass dropped words and lost Arthur. A persistent-server/cached-Arthur/fixed-setting repair restored structural coverage; Dave still heard different voices with Arthur fading in and out. This closes the current cloned-Arthur audiobook path. Q8 is untested and quantisation has not been shown to cause the drift. | CPU-only WSL, four cores; prior measured 7.5 GiB short / 12.3 GiB full peak RSS |
 | LoudKit 0.1.0 / loudr-1, native `joe` and `kathleen` (2026-08-28) | **Rejected.** Heard on both shipped English voices at upstream defaults on the ONNX CPU path (RTF 1.261 / 1.263, ~3.2–3.3 GiB peak working set), and earlier on a cloned reference across ONNX and PyTorch. Dave rejected every arm. Separately measured: the shipped ONNX export is static at a 255-token window, which caused the trimmed tails and one dropped sentence; at 512 tokens on PyTorch the cap clears and all 13 chunks are clean, but ONNX refuses the wider window and PyTorch is RTF 6.96. | Ryzen 9 8945HS CPU, four threads |
 | Sopro v2 turbo 120M / Beatrice (2026-08-28) | **Rejected.** Heard at upstream defaults (RTF 0.738, 1,031 MiB peak working set) and at solver `steps 16` (RTF 1.622). Both arms share an identical token stream — `steps` drives only the acoustic decoder — so the solver default was not the limit. Ships no native voices: `--ref` is required and the model repository contains no profiles, so it is cloning-only and cannot be auditioned on native voices. | Ryzen 9 8945HS CPU, four threads |
 | MOSS-TTS Local Transformer v1.5 (2026-07-29) | Short hard-text clip was **10/10**, but audiobook result is below Vibe/Qwen. The original 105-chunk chapter sounded sentence-stitched; both true single-pass attempts collapsed after ~2.5 min. A corrective 13-section/no-added-silence render was complete but still had audible joins, weaker expression and off pacing. “Not horrible,” but not a finalist. (`v1.5` is the release version, not a 1.5B parameter count.) | Kaggle P100 |
-| Qwen3-TTS (2026-08-14 final ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
+| Qwen3-TTS (2026-08-14 chapter ranking) | Full 6,166-word chapter **“really good”** and audiobook-listenable throughout. Strongest long-form consistency result; 33:03, RTF 2.056, structural ASR similarity 0.9848. Current full-precision long-form leader, not the system default. | Kaggle P100 |
 | VibeVoice 1.5B (2026-08-14 corrected app-path + documented-turn gate) | **Rejected for audiobook production.** cfg 2.0 remains its best tested setting, but the flattened path accelerated after ~3 minutes and both structurally complete repeated-same-speaker alternatives (four turns 7:16; seven turns 6:59) were rejected by ear as unacceptable. The same-text Chatterbox Turbo + Arthur control was almost perfect and did not accelerate. cfg 3.0 and 1.3 remain rejected. | Kaggle P100 |
 | Higgs Audio V2/3B (2026-07-29) | Both repeat-seed renders were listenable: seed 12345 “pretty good”; 54321 also good but felt clipped/joined in several places. Seed-dependent seam stability keeps it behind Vibe/Qwen despite excellent pronunciation. | Kaggle P100 + HF Space |
 | Pocket TTS / Peter Yearsley (2026-08-14) | Accepted as an opt-in book choice, not a default. The long-form body was decent/promising but uneven. On clean text, current sentence packing sounded more natural; paragraph-aware packing made intonation stranger. | CPU only (zorin) |
@@ -400,8 +403,54 @@ Sources: [hexgrad/kokoro](https://github.com/hexgrad/kokoro) ·
   modest CPU. The OpenAI-compatible layer (incl. `speed`) is provided by
   Kokoro-FastAPI — `speed` IS honored on this engine.
 - Best used with the FULL legacy normalization path (numbers/abbrev spelling)
-  — it does not read raw numerals/symbols as well as LLM-based engines
-  [unverified — established practice].
+  — it does not read raw numerals/symbols as well as LLM-based engines.
+- **Audition Verdict & Prosody Ceiling (2026-09-05):** Tested standard `bm_george`
+  and blends (George+Lewis at 0.92x–0.95x speed) on *Breakneck* Chapter 1. Dave heard:
+  *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*.
+  StyleTTS2 82M lacks an autoregressive language model backbone. The underlying
+  `espeak-ng` phonemizer inserts caesuras at compound noun boundaries. Speed adjustments
+  and voice blending soften phonetic edges but cannot fix semantic prosody. Kokoro remains
+  a fast preview tool (RTF 0.32 on CPU), not an audiobook production engine.
+
+## Breeze TTS 2 (3.5B)
+
+Sources: [breezeblue-ai/breeze-tts](https://github.com/breezeblue-ai/breeze-tts) ·
+[BreezeBlue/Breeze-TTS-2](https://huggingface.co/BreezeBlue/Breeze-TTS-2)
+
+- Official PyTorch release (August 2026); Apache-2.0 code, weights under BreezeBlue
+  Research and Non-Commercial License (commercial audiobook use requires written permission).
+- Checkpoint components total ~7.65 GB (7.12 GiB BF16 weights). Measured VRAM peak
+  is **7.97 GB** in eager mode on Kaggle T4.
+- **API Contract:** Calling `prepare_inputs` requires keyword-only arguments:
+  `prepare_inputs(text, ..., guidance_scale=4.0, guidance_scale_ref=None, guidance_scale_ins=None)`.
+- **Modes:**
+  - *Voice Direction (zero-shot cloning):* Auditioned on Arthur clone across 17 chunks
+    (191.84s audio). Dave's listening verdict: **"very impressive"**.
+  - *Voice Design (prompt-driven, reference-free):* Pure text prompt ("British male narrator")
+    resamples a fresh speaker latent on every invocation, causing sentence-to-sentence
+    identity drift: *"voice seems to change each sentence? weird!"*. The documented pattern
+    for sustained narration is: generate a 15s reference prompt once -> save WAV -> use that
+    WAV as the reference anchor in Voice Direction for remaining text.
+- **Compute Ceiling:** Measured **RTF 7.86** on Tesla T4 (~25 minutes wall time for 3 minutes
+  of finished audio without FlashAttention). Renders on budget hardware are computationally
+  prohibitive for full books.
+
+## Qwen3-TTS 1.7B (Base & CustomVoice)
+
+Sources: [QwenLM/Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS) ·
+[Qwen/Qwen3-TTS-12Hz-1.7B-Base](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base) ·
+[Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice)
+
+- Apache-2.0 code and weights. Dual architecture:
+  - `Base`: 1.7B zero-shot voice cloning from 3-10s reference audio.
+  - `CustomVoice`: 1.7B studio voice model with 9 built-in speakers (`ryan`, `aiden`,
+    `uncle_fu`, `vivian`, etc.) supporting natural-language emotion and prosody steering
+    via `instruct` parameter.
+- **Measured Capacity:** Measured on Kaggle Tesla T4: **RTF 2.57**, peak VRAM **4.05 GB**
+  (3x faster than Breeze 2 with half the memory footprint).
+- **Audition Verdict (2026-09-05):** Base Arthur clone evaluated on *Breakneck* Chapter 1
+  (174s audio). Dave heard: *"really decent... great voice clone, somewhat lacking some emotion or tone in places, a bit monotone"*.
+  The zero-shot Base clone replicates speaker timbre faithfully but retains a neutral narrative delivery. For expressive non-fiction and dialogue, the `CustomVoice` studio voices with natural language instruction steering provide dynamic prosody.
 
 ## Upstream converter (p0n1/epub_to_audiobook)
 
