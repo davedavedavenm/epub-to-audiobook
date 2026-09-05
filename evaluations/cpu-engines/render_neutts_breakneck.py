@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -29,6 +30,17 @@ print("Loading Jo reference codes and transcript...")
 ref_codes = torch.load("/upstream/samples/jo.pt", map_location="cpu")
 ref_text = Path("/upstream/samples/jo.txt").read_text().strip()
 
+# Patch phonemizer to eliminate espeak-ng palatal glide insertion ('the e airport' / 'the e order')
+orig_clean = tts.phonemizer.clean
+
+
+def custom_clean(phonemes: str) -> str:
+    cleaned = orig_clean(phonemes)
+    return cleaned.replace("ðɪʲ", "ðə")
+
+
+tts.phonemizer.clean = custom_clean
+
 text = TEXT_FILE.read_text(encoding="utf-8").strip()
 paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
 marker = "\ue000"
@@ -45,11 +57,30 @@ def split_sentences(p: str) -> list[str]:
     ]
 
 
+def pack_sentences(sents: list[str], max_words: int = 45) -> list[str]:
+    packed = []
+    curr = []
+    curr_w = 0
+    for s in sents:
+        w = len(s.split())
+        if curr and (curr_w + w > max_words):
+            packed.append(" ".join(curr))
+            curr = [s]
+            curr_w = w
+        else:
+            curr.append(s)
+            curr_w += w
+    if curr:
+        packed.append(" ".join(curr))
+    return packed
+
+
 chunks = []
 for p_idx, p in enumerate(paragraphs, 1):
     sents = split_sentences(p)
-    for s_idx, s in enumerate(sents):
-        is_last_in_para = s_idx == len(sents) - 1
+    packed_sents = pack_sentences(sents, max_words=45) if p_idx > 1 else sents
+    for s_idx, s in enumerate(packed_sents):
+        is_last_in_para = s_idx == len(packed_sents) - 1
         is_chapter_title = p_idx == 1 and s_idx == 0
         chunks.append({
             "text": s,
@@ -85,13 +116,15 @@ full_audio = np.concatenate(rendered_segments)
 wav_out = OUT_DIR / "neutts_breakneck_ch1_jo.wav"
 sf.write(str(wav_out), full_audio, 24000)
 
-mp3_out = OUT_DIR / "neutts_breakneck_ch1_jo.mp3"
+mp3_out = OUT_DIR / "neutts_breakneck_ch1_jo_v2.mp3"
 subprocess.run([
     "ffmpeg", "-y", "-v", "error",
     "-i", str(wav_out),
     "-b:a", "192k",
     str(mp3_out),
 ], check=True)
+# Also overwrite main neutts_breakneck_ch1_jo.mp3 with this repaired version
+shutil.copyfile(mp3_out, OUT_DIR / "neutts_breakneck_ch1_jo.mp3")
 wav_out.unlink(missing_ok=True)
 
 total_audio_dur = len(full_audio) / 24000
