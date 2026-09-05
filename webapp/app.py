@@ -78,7 +78,6 @@ QWEN3_URL = os.environ.get('QWEN3_URL', 'http://qwen3-tts:8011/v1')
 POCKET_URL = os.environ.get('POCKET_URL', 'http://pocket-tts:8012/v1')
 KITTEN_URL = os.environ.get('KITTEN_URL', 'http://kitten-tts:8013/v1')
 GEMINI_TTS_URL = os.environ.get('GEMINI_TTS_URL', 'http://gemini-tts:8014/v1')
-NEUTTS_URL = os.environ.get('NEUTTS_URL', 'http://neutts-tts:8015/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
 PREVIEWS_DIR = Path(os.environ.get('PREVIEWS_DIR', '/data/previews'))
@@ -468,12 +467,6 @@ TTS_ENGINES = {
         'description': 'Opt-in Developer API preview; stops on free quota and never falls back to paid',
         'url_env': 'GEMINI_TTS_URL',
         'default_url': 'http://gemini-tts:8014/v1'
-    },
-    'neutts': {
-        'name': 'NeuTTS Air',
-        'description': 'Opt-in free CPU candidate; Jo reference voice with GGML Q4 backbone',
-        'url_env': 'NEUTTS_URL',
-        'default_url': 'http://neutts-tts:8015/v1'
     }
 }
 
@@ -694,7 +687,6 @@ VOICES = {
     'kitten_hugo': {'name': 'Hugo (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
     'kitten_kiki': {'name': 'Kiki (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
     'kitten_leo': {'name': 'Leo (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
-    'neutts_jo': {'name': 'Jo (NeuTTS Air — heard)', 'accent': 'British', 'gender': 'Female', 'engine': 'neutts'},
 
     # ============ DEEPGRAM (CLOUD AURA-2) ============
     'deepgram_orion': {'name': 'Orion — resonant (Deepgram)', 'accent': 'American', 'gender': 'Male', 'engine': 'deepgram'},
@@ -2599,7 +2591,7 @@ def get_voice_preview(voice_id: str) -> Path:
             part.write_bytes(proc.stdout)
             os.replace(part, preview_path)
         elif engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
-                        'pocket', 'kitten', 'neutts'):
+                        'pocket', 'kitten'):
             # Direct preview from an isolated local engine service.
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
             # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
@@ -2611,7 +2603,6 @@ def get_voice_preview(voice_id: str) -> Path:
                     else GEMINI_TTS_URL if engine == 'gemini'
                     else POCKET_URL if engine == 'pocket'
                     else KITTEN_URL if engine == 'kitten'
-                    else NEUTTS_URL if engine == 'neutts'
                     else TADA_URL if engine == 'tada'
                     else CHATTERBOX_NANO_URL if engine == 'chatterbox_nano'
                     else CHATTERBOX_URL)
@@ -2909,8 +2900,6 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         return POCKET_URL, 'pocket-tts-2.1'
     elif tts_engine == 'kitten':
         return KITTEN_URL, 'KittenML/kitten-tts-mini-0.8'
-    elif tts_engine == 'neutts':
-        return NEUTTS_URL, 'neuphonic/neutts-air-q4-gguf'
     elif tts_engine == 'gemini':
         return GEMINI_TTS_URL, 'gemini-3.1-flash-tts-preview'
     else:
@@ -2921,13 +2910,13 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
 def text_profile_for_engine(tts_engine: str) -> str:
     """Return the measured preprocessing contract for an engine family.
 
-    Pocket, Kitten and NeuTTS won their controlled A/B only when numbers/currency were
+    Pocket and Kitten won their controlled A/B only when numbers/currency were
     spoken explicitly. They must not inherit the raw-number modern profile,
     while their neural frontends also must not receive legacy phonetic
     respellings. Keeping this mapping centralized makes preview, first render
     and recovery use the same input contract.
     """
-    if tts_engine in ('pocket', 'kitten', 'neutts', 'gemini', 'deepgram'):
+    if tts_engine in ('pocket', 'kitten', 'gemini', 'deepgram'):
         return 'explicit'
     if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
         return 'modern'
@@ -4368,7 +4357,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 append_job_log(job_id,
                                f"NOTE: speed {tts_speed}x requested, but Gemini pacing is "
                                f"pinned by the heard style prompt; the request remains at 1.0x.")
-            elif tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten', 'neutts'):
+            elif tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten'):
                 cmd.extend(['--speed', str(tts_speed)])
                 append_job_log(job_id,
                                f"NOTE: speed {tts_speed}x requested, but {tts_engine} has no "
@@ -7888,7 +7877,7 @@ def _cache_voice_batch(voice_ids):
     delay = float(os.environ.get('VOICE_CACHE_DELAY', '5'))
     health = check_engines_health(max_age=0)
     allowed = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada',
-                         'pocket', 'kitten', 'neutts'})
+                         'pocket', 'kitten'})
     for voice_id in voice_ids:
         info = all_voices().get(voice_id, {})
         engine = info.get('engine', 'kokoro')
@@ -7935,7 +7924,7 @@ def _cache_all_voices_background():
     # free local production families. Other previews remain explicit user
     # actions, where failures/cost are visible rather than hidden at boot.
     auto_cache_engines = frozenset({'kokoro', 'chatterbox', 'chatterbox_nano', 'tada',
-                                    'pocket', 'kitten', 'neutts'})
+                                    'pocket', 'kitten'})
     health = check_engines_health(max_age=0)
     cacheable = [voice_id for voice_id, info in all_voices().items()
                  if info.get('engine', 'kokoro') in auto_cache_engines
