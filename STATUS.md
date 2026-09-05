@@ -12,18 +12,20 @@
 >      - **Kokoro 82M CPU Baseline & Variations (Zorin CPU)**: `bm_george` and blends at 0.92x–0.95x. Dave's listening verdict: *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*. StyleTTS2 / espeak-ng caesura ceiling diagnosed.
 >      - **Pocket TTS 2.1 (Peter Yearsley, CPU)**: 156.4s audio, measured RTF 0.53x on CPU. Very fast Kyutai streaming transformer. Articulate delivery with natural sentence pacing; strict <50 token chunk limit and explicit normalization mandatory.
 >      - **KittenTTS 0.8.1 (Rosie & Jasper, CPU)**: StyleTTS2 mini. Rosie (199.1s audio, RTF 1.02x) delivered warm, measured cadence and excellent long-form handling. Jasper (182.2s audio, RTF 1.07x) scratchy start cured by pre-warming buffer and smooth sentence concatenation.
->      - **NeuTTS Air 1.4.1 (Jo, CPU)**: 191.9s audio, RTF 5.90x on 4-core CPU. Lowering sampling temperature from 1.0 to 0.75 completely cured the phonetic stuttering / hallucination ("the e order" insertion) heard in the August 14 test. Smooth sentence joins with 300ms pause.
+>      - **NeuTTS Air 1.4.1 (Jo, CPU)**: 182.3s audio, RTF 2.25x (packed) / 5.90x (unpacked) on 4-core CPU. **Definitively rejected**: Dave identified three disqualifying failures on Breakneck Ch 1: (1) Voice is General American (`en-us`), failing the UK narrator standard; (2) `espeak-ng` palatal glides (`ʲ`, U+02B2) are misdecoded by NeuTTS's acoustic token decoder as explicit audible "ee" syllables (*"the-e-airport"*, *"I-e often"*, *"v-e-s"*); (3) Lacks abbreviation handling, spelling out `vs.` literally as *"v s"*.
 > 2. **Operational & Architectural Conclusions**:
 >    - **Chatterbox Turbo** remains the cheapest and overall winner for full audiobook production runs (free on Kaggle GPU / fast on local GPU, reliable Arthur clone, mature pipeline).
->    - Audio8 is closed for continuous non-fiction audiobook rendering.
+>    - Audio8 and NeuTTS Air are formally closed and rejected for audiobook rendering.
 >    - Breeze TTS 2 produces impressive cloned voices, but Voice Design requires a 1-shot anchor WAV workflow. At RTF 7.86 on T4, full books without high-tier GPUs (RTX 3090/4090/H100) are computationally prohibitive.
 >    - Qwen3-TTS 1.7B is the most efficient open GPU model (RTF 2.57, 4.05 GB VRAM). The `CustomVoice` studio voices + natural language instruction steering provide the expressive alternative to the neutral Base clone.
 >    - Kokoro 82M is confirmed as a fast local preview tool, not an audiobook production engine.
->    - **NeuTTS Air Registered**: Added `NEUTTS_URL`, engine profile (`explicit`), and voice `neutts_jo` in `webapp/app.py` and `webapp/voice_sample.py`. Pre-cached preview verified on Zorin.
->    - **Webapp Voices UI Cleaned Up**: Collapsed historical August 2026 test blocks (`numericCard`, `blindCard`, `cpuCard`) into a bottom archive drawer (`<details class="card">📁 Historical A/B Auditions & Research Archive</details>`).
-> 3. **Breakneck Full Book Conversion (Job `183e5e10`) Progress**:
->    - Full book render with Deepgram Hyperion (`aura-2-hyperion-en`) actively converting on Zorin.
->    - Chapters 1–7 complete (>537 MB). Chapter 8 actively synthesizing.
+>    - **Pocket TTS 2.1 & KittenTTS 0.8.1 Confirmed**: Pocket (Peter Yearsley) and Kitten (Rosie, Jasper) are the accepted free CPU-only opt-in book choices under the `explicit` normalization profile.
+>    - **Webapp Voices UI Cleaned Up**: Purged historical August 2026 test cards (`numericCard`, `blindCard`, `cpuCard`, `archiveCard`) from `webapp/templates/index.html`.
+> 3. **Breakneck Full Book Conversion (Job `183e5e10`) — 100% COMPLETED**:
+>    - Full book render with Deepgram Hyperion (`aura-2-hyperion-en`) completed on Zorin.
+>    - All 8 chapters synthesized (76,897 words, 513.7 minutes / 8.56 hours of audio).
+>    - M4B containerization verified: wrote `Breakneck.m4b` (267.3 MB, AAC 64k, embedded chapter markers).
+>    - Automatically synced to Audiobookshelf (`http://192.168.1.113:13378`) with successful library rescans (HTTP 200).
 >
 > ## 2026-09-05 Breakneck Removal & Deepgram Hyperion 3-Page Preview — COMPLETED
 >

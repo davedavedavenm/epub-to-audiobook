@@ -36,7 +36,7 @@ clips were served in the app but did not pass through its text normalizer.
 | Engine / voice | Human verdict | Open quality issue / status |
 |---|---|---|
 | Pocket TTS / Peter Yearsley | Decent/good voice (RTF 0.53x on CPU) | Strict <50 token chunk limit; explicit normalization mandatory |
-| NeuTTS Air / Jo | Decent/good voice (RTF 5.90x on CPU) | Lowered temp to 0.75; cured “the e order” hallucination. Admitted opt-in CPU voice |
+| NeuTTS Air / Jo | **Rejected** (American `en-us`, phoneme glide defects) | Auditioned on Breakneck Ch 1; rejected by Dave for American accent, intrusive "ee" glides (*"I-e often"*, *"the-e-airport"*), and abbreviation spellout (`vs.` -> "v s"). |
 | KittenTTS / Jasper | Decent/good voice (RTF 1.07x on CPU) | Scratchy start cured with pre-warmed audio buffer |
 | KittenTTS / Rosie | Decent/good voice (RTF 1.02x on CPU) | Strongest overall CPU cadence and tone |
 
@@ -50,20 +50,22 @@ shared numeric failure was our raw-input evaluation path. Jo retained one
 “the e order” insertion; Jasper started slightly scratchy; Rosie gave perhaps
 the best handling.
 
-In September 2026, all four CPU candidates were evaluated on a 456-word continuous
+In September 2026, CPU candidates were evaluated on a 456-word continuous
 excerpt from Chapter 1 of *Breakneck: China’s Quest to Engineer the Future*:
-- **NeuTTS Air (Jo)**: Sampling temperature was lowered from 1.0 to 0.75, which
-  completely cured the phonetic stuttering/insertion ("the e order") observed earlier.
-  RTF is ~5.9x on 4 CPU cores. Admitted as an opt-in CPU engine (`neutts_jo`).
+- **NeuTTS Air (Jo)**: **Formally rejected.** Auditioning on continuous text revealed
+  critical defects: American accent (`en-us`, no British presets), severe acoustic token
+  decoder bug causing intrusive "ee" syllables on espeak palatal glides (*"I-e often"*,
+  *"the-e-airport"*, *"v-e-s"*), lack of abbreviation handling (`vs.` pronounced as "v s"),
+  and slow CPU RTF (2.25x–5.90x).
 - **Pocket TTS 2.1 (Peter Yearsley)**: Generated 156.4s audio at RTF 0.53x on CPU.
   Very fast and articulate, but chunks exceeding 50 tokens risk word dropping.
 - **KittenTTS 0.8.1 (Rosie & Jasper)**: Rosie generated 199.1s audio at RTF 1.02x
   with warm, natural pacing. Jasper generated 182.2s audio at RTF 1.07x with its
   scratchy onset resolved via pre-warmed buffers.
-Pocket, Kitten and NeuTTS are admitted as free, opt-in CPU book choices using the
-`explicit` text normalization profile. They are not automatic fallbacks and do not
-replace Beatrice/Nano. Chatterbox Turbo remains the cheapest and overall production winner
-for full book rendering.
+Pocket and Kitten are admitted as free, opt-in CPU book choices using the
+`explicit` text normalization profile. NeuTTS Air is rejected. They are not automatic
+fallbacks and do not replace Beatrice/Nano. Chatterbox Turbo remains the cheapest and
+overall production winner for full book rendering.
 
 ## 2026-07-28 local accent bake-off
 
