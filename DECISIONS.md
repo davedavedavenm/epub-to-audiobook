@@ -34,11 +34,16 @@ Audition of *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engi
 - **Kokoro 82M CPU baseline ceiling confirmed.**
   Evaluated standard `bm_george` and best-practice blends (George/Lewis blends at 0.92x–0.95x speed). Dave heard: *"decent, a little stilted... pacing is super weird? 'rug... shops' in almost all of them. like, a weird pause? the fable voice sounds so robotic, the other kokoro voices are better but sound stilted"*.
   StyleTTS2 82M lacks an autoregressive language model backbone. Its `espeak-ng` phonemizer inserts caesuras at compound noun boundaries. Speed adjustments and voice blending soften phonetic edges but cannot fix semantic prosody. Kokoro remains a fast preview tool, not an audiobook production engine.
-- **NeuTTS Air 1.4.1 (Jo) hallucination cured at temp 0.75; registered as opt-in CPU voice (`neutts_jo`).**
-  Vendor best-practice audit (GGUF Q4 backbone `neuphonic/neutts-air-q4-gguf`, NeuCodec ONNX decoder) on Breakneck Chapter 1. Lowering sampling temperature from 1.0 to 0.75 (with `top_k=40`) completely cured the phonetic stuttering / hallucination ("the e order" insertion) heard in the August 14 test. Measured RTF is ~5.9x on 4 CPU cores (191.9s audio in 18.8m wall time). Jo is registered in `webapp/app.py` under the `'explicit'` text normalization profile, with cached preview (`/data/previews/neutts_jo.mp3`), as an opt-in CPU candidate.
+- **NeuTTS Air 1.4.1 is rejected for audiobook production.**
+  Auditioned on *Breakneck* Chapter 1 across both single-sentence and sentence-packed configurations. Dave rejected the engine on multiple critical flaws:
+  - *Accent & Regionality*: Upstream's shipped voice "Jo" (`jo.pt` + `jo.txt`) and backbone mapping is hardcoded to `en-us` (General American). Upstream ships no calibrated British reference voice. This fails the repository's UK narrator standard.
+  - *Defective Phoneme Tokenization*: `espeak-ng` outputs palatal glides (`ʲ`, Unicode U+02B2) across common English vowel-to-vowel transitions (e.g. `ðɪʲ` in *"the airport"*, `aɪʲ` in *"I often"*, and `vˌiːʲˈɛs` in *"vs."*). NeuTTS's acoustic token decoder misinterprets `ʲ` as an explicit vocalized vowel syllable, introducing audible, intrusive "ee" stutters (*"the-e-airport"*, *"I-e often"*, *"v-e-s"*).
+  - *No Abbreviation Normalization*: The engine lacks text preprocessing and spells out standard abbreviations like `vs.` literally as *"v s"*.
+  - *Compute Inefficiency & Token Cap*: Measured RTF on CPU is **2.25x** even with paragraph packing (and **5.90x** unpacked), making it 4x–7x slower than Pocket TTS (0.53x) and KittenTTS (1.02x). Upstream hardcodes a 2048-token context cap (~28s audio per call) with no native long-form support.
+  NeuTTS Air is formally removed from application consideration.
 - **Pocket TTS 2.1 (Peter Yearsley) and KittenTTS 0.8.1 (Rosie & Jasper) verified on Breakneck Chapter 1.**
   - Pocket TTS 2.1 (Peter Yearsley): 156.4s audio, measured RTF 0.53x on CPU. Very fast streaming Kyutai transformer. Delivery is clean and articulate with natural sentence joins (300ms pause). Strict chunk token limit (<50 tokens) and explicit number/currency normalization remain mandatory to prevent skipped words.
-  - KittenTTS 0.8.1 (Rosie & Jasper): StyleTTS2 mini. Measured RTF 1.02x (Rosie, 199.1s audio) and 1.07x (Jasper, 182.2s audio). Rosie delivered warm, measured cadence with excellent long-form handling. Jasper's scratchy start was eliminated by pre-warming buffer and smooth sentence concatenation.
+  - KittenTTS 0.8.1 (Rosie & Jasper): StyleTTS2 mini. Measured RTF 1.02x (Rosie, 199.1s audio) and 1.07x (Jasper, 182.2s audio). Rosie delivered warm, measured cadence with excellent long-form handling. Jasper's scratchy start was eliminated by pre-warming buffer and smooth sentence concatenation. Pocket and Kitten remain the accepted free CPU-only opt-in narrators.
 
 ---
 
@@ -765,7 +770,7 @@ materially different controlled listening hypothesis. See `ENGINES.md` and
 | TADA-1B | **Keep / opt-in** | Works free on local CPU or Kaggle; high naturalness but residual pacing/control issues. Not rejected. |
 | Chatterbox Multilingual V3 regional voices | **Rejected** | Synthetic-reference CFG-zero arms, seeded Arthur CFG 0/0.5 controls and genuine human Irish/Australian CFG 0.5 arms all failed by ear. The local accent route is closed. |
 | Pocket TTS 2.1 Peter Yearsley preset | **Accepted opt-in; not default** | In the 3,600-word file, the body was decent with some emotion but sometimes lifeless/poorly paced. The clean 600-word A/B sounded more natural with current sentence packing; paragraph-aware packing made intonation stranger. Peter remains imperfect but passed as an optional free CPU narrator. Cloning remains unproven. |
-| NeuTTS Air 1.4.1 Q4 + Jo | **Voice and normalized numeric path pass; residual insertion cured at temp 0.75** | Dave selected normalized A in August 2026. Lowering sampling temperature from 1.0 to 0.75 cured “the e order” insertion on Breakneck Ch 1. Registered as opt-in CPU voice (`neutts_jo`). RTF ~5.9x on 4-core CPU. Sentence chunking and explicit normalization remain mandatory. |
+| NeuTTS Air 1.4.1 Q4 + Jo | **Rejected for audiobook production** | Evaluated on Breakneck Ch 1. Shipped voice Jo is American (`en-us`), not British. Spells out abbreviations (`vs.` -> "v s"). Intrusive acoustic token decoder defect on `espeak-ng` palatal glides (`ʲ`, U+02B2) creates audible "ee" stutters across common transitions (*"the-e-airport"*, *"I-e often"*, *"v-e-s"*). High CPU RTF (2.25x–5.9x). Formally rejected. |
 | KittenTTS 0.8.1 Jasper/Rosie | **Accepted opt-in; not default** | Dave selected normalized A for Jasper (scratchy opening cured with buffer pre-warming) and B for Rosie. Rosie's long-form body led for pace/tone. In the clean 600-word A/B both packing modes sounded decent with no meaningful difference, so current sentence packing wins on fewer resets. Preset-only; no UK-identity claim. |
 | Higgs Audio V2 | **Reserve, not finalist** | Usable but seed-dependent seams. Reopen only for a materially improved official release/runtime or a book-specific audition. |
 | OmniVoice current weights/path | **Short-form hold** | Accents were good; CPU RTF ~9 and non-commercial weights block normal books. Reconsider on official performance/licence change or a bounded short use. |
@@ -786,16 +791,13 @@ official API. They were served by the app, but did **not** use the app's text
 normalizer; earlier “app-path clip” wording was incorrect. The 2026-08-14
 follow-up held model, voice and settings fixed and changed only raw versus
 explicit spoken wording. Dave selected the normalized arm for **all four**
-voices. The original shared numbers/currency failure was therefore the
-evaluation path passing raw text, not evidence of an inherent shared engine
-failure. Any future Pocket, NeuTTS or Kitten integration must use explicit
-deterministic number/currency normalization. In September 2026, NeuTTS Air's
-“the e order” insertion was diagnosed and cured by reducing temperature to
-0.75, and Jasper's scratchy start was resolved with pre-warmed audio buffers.
-Rosie gave the strongest overall CPU handling. None of these candidates replaces
-the Chatterbox Nano/Beatrice production default until its own long-form gate is passed.
+voices. In September 2026, NeuTTS Air was auditioned on Breakneck Ch 1 and
+formally rejected due to American accent (`en-us`), phonetic decoder glides
+(*"I-e often"*, *"the-e-airport"*), abbreviation failure (`vs.` -> "v s"), and
+slow CPU RTF (2.25x). Jasper's scratchy start on KittenTTS was resolved with
+pre-warmed audio buffers, and Rosie gave the strongest overall CPU handling.
 
-Pocket, Kitten and NeuTTS are therefore implemented as **opt-in CPU-only book choices**,
+Pocket and Kitten are therefore the only admitted **opt-in CPU-only book choices**,
 never as defaults or automatic fallbacks. Their preview, first-render and
 recovery commands use the named `explicit` text profile: deterministic spoken
 numbers/currency and acronym letter-spacing, without the legacy phonetic

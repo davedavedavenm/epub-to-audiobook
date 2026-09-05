@@ -505,15 +505,14 @@ definitions exist.
 | KittenTTS 0.8.1 | `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`, `Kiki`, `Leo`. | Fixed preset list; no officially documented cloning path. |
 
 Source details and exact upstream links are maintained in `ENGINES.md`.
-The app registers 21 English Pocket presets, eight Kitten presets, and NeuTTS Air (`neutts_jo`)
-behind opt-in CPU profiles. It does not expose a cold Play button: each voice
-becomes audition-ready only after its persisted preview is non-trivial.
-Peter, Jasper, Rosie and Jo are the CPU voices with a human listening verdict.
-In September 2026, all four were auditioned on the continuous 456-word Breakneck Chapter 1 corpus:
+The app registers 21 English Pocket presets and eight Kitten presets behind opt-in CPU profiles.
+It does not expose a cold Play button: each voice becomes audition-ready only after its persisted preview is non-trivial.
+Peter, Jasper and Rosie are the accepted CPU voices with a positive human listening verdict.
+In September 2026, candidates were auditioned on the continuous 456-word Breakneck Chapter 1 corpus:
 - **Pocket TTS 2.1 (Peter Yearsley)**: RTF 0.53x on CPU. Articulate and clean delivery with natural sentence pacing; strict <50 token chunk limit.
 - **KittenTTS 0.8.1 (Rosie & Jasper)**: Rosie (RTF 1.02x) led for warm, measured long-form cadence. Jasper (RTF 1.07x) scratchy start was cured by pre-warming audio buffers.
-- **NeuTTS Air 1.4.1 (Jo)**: RTF 5.90x on 4-core CPU. Lowering sampling temperature from 1.0 to 0.75 eliminated the phonetic stuttering / hallucination ("the e order" insertion) heard in the August 14 test. Smooth sentence joins with 300ms pause.
-All four use the `explicit` number/currency profile. They remain opt-in CPU choices while Beatrice/Nano remains the default.
+- **NeuTTS Air 1.4.1 (Jo)**: **Rejected.** Dave rejected Jo due to American accent (`en-us`, no British presets), severe acoustic token decoder defect vocalizing `espeak-ng` palatal glides (`ʲ`) into intrusive "ee" syllables (*"I-e often"*, *"the-e-airport"*, *"v-e-s"*), lack of abbreviation handling (`vs.` -> "v s"), and slow CPU RTF (2.25x–5.90x).
+Pocket and Kitten use the `explicit` number/currency profile. They remain opt-in CPU choices while Beatrice/Nano remains the default.
 
 Dave's latest grading, 2026-07-28, supersedes the provisional Piper verdict:
 most current Piper outputs sound bad, their accents are not authentic enough,
