@@ -1,5 +1,20 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-05 Breakneck Removal & Deepgram Hyperion 3-Page Preview — COMPLETED
+>
+> 1. **Complete Removal of Prior Breakneck Audiobook**:
+>    - Deleted the app-generated *Breakneck* library item (`9476cd4e-1ce3-43cf-91a6-01ab00e93669`) from Audiobookshelf via API (`DELETE /api/items/{id}`).
+>    - Removed the entire directory `/opt/stacks/audiobookshelf/audiobooks/Dan Wang/Breakneck - Chinas Quest to Engineer the Future` and parent folder from `docker-vm`.
+>    - Rescanned Audiobookshelf library (item count updated 24 → 23; zero *Breakneck* matches).
+>    - Purged stale TOC cache from Zorin.
+> 2. **Deepgram Hyperion 3-Page Previews Rendered & Verified**:
+>    - Synthesized the first 3 print pages of both candidate opening sections of Dan Wang's *Breakneck* using Deepgram Aura-2 **Hyperion** (`deepgram_hyperion` / `aura-2-hyperion-en`):
+>      - **Track 1 (Prologue / Introduction)**: Pages ix–xi (902 words, 6.24 mins, 95.0% Faster-Whisper ASR similarity).
+>      - **Track 2 (First Proper Chapter)**: Chapter 1: Engineers vs. Lawyers, Pages 1–3 (861 words, 6.49 mins, 91.7% Faster-Whisper ASR similarity).
+>    - Built a single chaptered M4B with embedded cover art: `Breakneck (Pages 1-3 Preview).m4b` (12.73 mins, 8.89 MB).
+>    - Registered job `breaknec` in `jobs.db` with status `completed`. Available live in the web app player and history at `http://192.168.1.41:8881`.
+>    - Verified all endpoints with `curl -I`: HTTP 200 OK for inline streaming and ZIP download.
+>
 > ## 2026-09-01 Calibre-Web Mobile UI, Zero Trust SSO & Auto-Deduplication — COMPLETED
 >
 > 1. **Mobile Navbar & Floating Action Button (FAB)**:

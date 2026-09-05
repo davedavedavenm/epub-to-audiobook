@@ -523,7 +523,10 @@ make that search incomplete rather than proof that no release exists. Dave
 rejected both Kokoro/Fable renders: jobs `592af51b` and `59d36718` are absent
 from the app and live ABS shelf. *Bond King* remains Audiobook Wanted; if no
 acquired version appears, Dave will explicitly choose the next engine/voice.
-*Breakneck* remains a generated fallback and Wanted.
+On 2026-09-05, the older *Breakneck* generated audiobook fallback was completely removed
+from Audiobookshelf and host storage at Dave's request; *Breakneck* remains Wanted.
+Preview clips of the first 3 pages (both Introduction and Chapter 1) were rendered
+using Deepgram Hyperion.
 
 ## Narrator and engine are one selection — Active
 
