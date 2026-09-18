@@ -20,6 +20,15 @@ def to_b64(path: Path) -> str:
 def build_player():
     candidates = [
         {
+            "id": "armed_struggle_breeze_cillian_irish",
+            "badge": "NEW ☘️: Breeze 2 Cillian Murphy (Studio Irish Narration)",
+            "sub": "Modal L4 GPU • Cloned Broadcast Studio Audio • 192k MP3",
+            "file": OUT_DIR / "armed_struggle_breeze_cillian_irish_mastered.mp3",
+            "desc": "<strong>Authentic Studio Irish Voice:</strong> Sourced from broadcast studio interview discussing literature and storytelling.<br/><strong>Text:</strong> First Dáil excerpt with raw Irish proper nouns (<code>Dáil Éireann</code>, <code>Cathal Brugha</code>, <code>Sinn Féin</code>) + hyphenated years + question uptalk.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128.",
+            "theme": "emerald",
+            "icon": "☘️"
+        },
+        {
             "id": "armed_struggle_breeze_liam_llm_norm",
             "badge": "NEW 🇮🇪: Breeze 2 Liam (Armed Struggle - LLM Phonetics & Years)",
             "sub": "Modal L4 GPU • Cloned Liam (VCTK p374) • LLM Irish Phonetics • 192k MP3",
@@ -165,7 +174,11 @@ def build_player():
         size_kb = round(fpath.stat().st_size / 1024, 1)
         theme = c["theme"]
         
-        if theme == "indigo":
+        if theme == "emerald":
+            border_cls = "border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent"
+            text_cls = "text-emerald-600 dark:text-emerald-400"
+            badge_cls = "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+        elif theme == "indigo":
             border_cls = "border-indigo-500/40 bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-transparent"
             text_cls = "text-indigo-600 dark:text-indigo-400"
             badge_cls = "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300"
@@ -213,7 +226,7 @@ def build_player():
     <div class="border-b border-[var(--border)] pb-3 flex items-center justify-between">
       <div>
         <h2 class="text-base font-bold tracking-tight text-[var(--foreground)]">Top-Tier Modal GPU Audiobook Auditions</h2>
-        <p class="text-xs text-[var(--muted-foreground)]">Breakneck Ch.1 (Full Excerpt) • Modal Cloud GPU Production Runs</p>
+        <p class="text-xs text-[var(--muted-foreground)]">Armed Struggle (First Dáil Excerpt) • Authentic Irish Voice Auditions</p>
       </div>
       <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">Modal GPU Live</span>
     </div>
