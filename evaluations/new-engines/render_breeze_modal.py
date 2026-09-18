@@ -87,11 +87,15 @@ class BreezeProducer:
 
         print(f"Synthesizing {len(chunks)} chunks with Breeze 2 Voice Direction ({voice_id})...")
         for idx, c in enumerate(chunks, 1):
+            chunk_instruction = instruction
+            # Steer rhetorical questions with quizzical uptalk / rising pitch contour
+            if c.strip().endswith("?") or "wondering" in c.lower() or "beating heart" in c.lower():
+                chunk_instruction = instruction + " Deliver with a quizzical, skeptical tone, raising your pitch in an inquisitive uptalk at the end of the question."
             print(f"[{idx}/{len(chunks)}] ({len(c)} chars): {c[:60]}...")
             req = {
                 "id": f"chunk-{idx}",
                 "text": c,
-                "instruction": instruction,
+                "instruction": chunk_instruction,
                 "speaker": "S0",
                 "ref_audio_path": ref_path,
                 "ref_text": ref_text,
@@ -177,14 +181,14 @@ def main(voice: str = "all"):
     text_file = root / "fixtures" / "breakneck_ch1_2pages_norm.txt"
     text = text_file.read_text(encoding="utf-8")
 
-    # Split into clean sentence chunks
-    protected = text
+    # Ensure quotes with questions get their own sentence boundary
+    protected = text.replace("wondering, “", "wondering:\n“")
     marker = "\ue000"
     for abbrev in ("Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "St.", "vs."):
         protected = protected.replace(abbrev, abbrev[:-1] + marker)
     chunks = [
         item.replace(marker, ".").strip()
-        for item in re.split(r"(?<=[.!?])\s+", protected)
+        for item in re.split(r"(?<=[.!?\n])\s+", protected)
         if item.strip()
     ]
 
@@ -212,6 +216,27 @@ def main(voice: str = "all"):
             "instruction": "Read in an intelligent, warm British accent at a measured, engaging pace for an analytical non-fiction audiobook."
         },
         {
+            "id": "tadhg",
+            "name": "Tadhg Hynes (Irish Male)",
+            "wav_file": root / "chatterbox" / "voices" / "tadhg_hynes.wav",
+            "ref_text": (
+                "crib framing and copseware manufacturer in general, opposite where the wagon sheds where Marty had deposited her spars. "
+                "Here Winterborne had remained after the girls had booked a departure to see that the wagon loads were properly made up. "
+                "Winterborne was connected with the Melbury family in various ways."
+            ),
+            "instruction": "Read in a warm, melodic, intelligent Irish accent with measured, engaging pacing for an analytical non-fiction audiobook."
+        },
+        {
+            "id": "liam_au",
+            "name": "Liam (Australian Male)",
+            "wav_file": root / "chatterbox" / "voices" / "vctk_australian_m_p374.wav",
+            "ref_text": (
+                "We also need a small plastic snake and a big toy frog for the kids. She can scoop these things into three red bags "
+                "and we will go meet her Wednesday at the train station. When the sunlight strikes, raindrops"
+            ),
+            "instruction": "Read in a clear, natural, engaging Australian accent at a steady, thoughtful pace for an analytical non-fiction audiobook."
+        },
+        {
             "id": "yearsley",
             "name": "Yearsley (UK Male Baritone)",
             "wav_file": root / "chatterbox" / "voices" / "uk_male_yearsley.wav",
@@ -220,6 +245,16 @@ def main(voice: str = "all"):
                 "especially as she was staying with friends in the country just then. Before the first gloss was off my new mourning, I was"
             ),
             "instruction": "Read in a deep, distinguished British baritone accent with a measured, authoritative cadence for an analytical non-fiction audiobook."
+        },
+        {
+            "id": "siobhan",
+            "name": "Siobhan (Irish Female)",
+            "wav_file": root / "chatterbox" / "voices" / "vctk_irish_f_p288.wav",
+            "ref_text": (
+                "We also need a small plastic snake and a big toy frog for the kids. She can scoop these things into three red bags "
+                "and we will go meet her Wednesday at the train station. When the sunlight strikes raindrops in the air, they act as a prism and form a"
+            ),
+            "instruction": "Read in a clear, articulate, musical Irish accent with thoughtful pacing for an analytical non-fiction audiobook."
         },
     ]
 

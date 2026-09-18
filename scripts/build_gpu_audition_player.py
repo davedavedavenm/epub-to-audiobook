@@ -56,6 +56,33 @@ def build_player():
             "icon": "✨"
         },
         {
+            "id": "breeze_tadhg_mastered",
+            "badge": "NEW: Breeze TTS 2 (3.5B) Tadhg Hynes (Irish Male)",
+            "sub": "Modal L4 GPU • Cloned Irish LibriVox Narrator • 192k MP3",
+            "file": OUT_DIR / "breakneck_ch1_breeze_tadhg_modal_mastered.mp3",
+            "desc": "<strong>Voice:</strong> Authentic Irish male narrator Tadhg Hynes (<code>tadhg_hynes.wav</code>) steered with melodic, intelligent Voice Direction.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "theme": "cyan",
+            "icon": "🍀"
+        },
+        {
+            "id": "breeze_liam_au_mastered",
+            "badge": "NEW: Breeze TTS 2 (3.5B) Liam (Australian Male)",
+            "sub": "Modal L4 GPU • Cloned Australian Speaker (VCTK p374) • 192k MP3",
+            "file": OUT_DIR / "breakneck_ch1_breeze_liam_au_modal_mastered.mp3",
+            "desc": "<strong>Voice:</strong> Authentic Australian male speaker (<code>vctk_australian_m_p374.wav</code>) steered with natural, thoughtful Voice Direction.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "theme": "cyan",
+            "icon": "🦘"
+        },
+        {
+            "id": "breeze_yearsley_mastered",
+            "badge": "NEW: Breeze TTS 2 (3.5B) Yearsley (UK Male Baritone)",
+            "sub": "Modal L4 GPU • Cloned British Baritone • 192k MP3",
+            "file": OUT_DIR / "breakneck_ch1_breeze_yearsley_modal_mastered.mp3",
+            "desc": "<strong>Voice:</strong> Deep, distinguished British gentleman narrator Yearsley (<code>uk_male_yearsley.wav</code>) steered with authoritative cadence.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "theme": "cyan",
+            "icon": "🎩"
+        },
+        {
             "id": "breeze_arthur_raw",
             "badge": "Breeze TTS 2 (3.5B) Arthur (Pure Raw)",
             "sub": "Modal L4 GPU • Direct Model Output • 192k MP3",
