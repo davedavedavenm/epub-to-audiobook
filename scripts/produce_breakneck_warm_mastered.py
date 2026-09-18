@@ -135,3 +135,28 @@ def clean_epub_dropcaps(html_text: str) -> str:
         flags=re.IGNORECASE
     )
     return cleaned
+
+
+@app.local_entrypoint()
+def main():
+    import json
+    from pathlib import Path
+
+    script = [
+        {"speaker": "Announcer", "voice": "am_fenrir", "speed": 0.95, "pause_after_ms": 1500, "text": "Chapter One. Engineers versus Lawyers."},
+        {"speaker": "Narrator", "voice": "am_michael", "speed": 1.0, "pause_after_ms": 350, "text": "Silicon Valley can be an amazingly drab place. The peninsula south of San Francisco has natural beauty, with rolling hills and coastal views, but you strain to see them beyond so many corporate parking lots. Mountain View and Menlo Park are bizarrely full of rug shops, so when I walk through the towns that host the headquarters of AI leaders and some of the richest companies in the world, I often find myself wondering,"},
+        {"speaker": "Thought", "voice": "am_fenrir", "speed": 0.95, "pause_after_ms": 500, "text": "“This is the beating heart of our technologically accelerating civilization?”"},
+        {"speaker": "Narrator", "voice": "am_michael", "speed": 1.0, "pause_after_ms": 350, "text": "Each time I flew from California to Hong Kong or Shanghai, I felt almost unnerved to encounter functional infrastructure. Going from the airport into a subway (rather than an Uber) is an outstanding way to be welcomed to Asia. I would take a moment to savor a clean station, brightly lit, with trains running every few minutes, which would drop me off at a downtown filled with vibrant commercial areas — another feature that San Francisco lacks. Life in the Bay Area, an economic dynamo in America’s richest state, can feel awfully dysfunctional. San Francisco has been unable to serve its homeless population, and even many wealthy people have to keep a generator for their extraordinarily expensive houses because the state can’t keep the lights on."},
+        {"speaker": "Narrator", "voice": "am_michael", "speed": 1.0, "pause_after_ms": 350, "text": "The contradiction of the Bay Area, this red hot center of corporate value creation that is surrounded by dysfunction, fuels the inquiry of this book. When I departed from Silicon Valley for China in twenty seventeen, it felt clear that the United States had lost something special over the past four decades. While China was building the future, America had become physically static, its innovations mostly bound up in the virtual and financial worlds."},
+        {"speaker": "Narrator", "voice": "am_michael", "speed": 1.0, "pause_after_ms": 350, "text": "Looking at these two countries, I came to realize the inadequacy of twentieth century labels like capitalist, socialist, or, worst of all, neoliberal. They are no longer up to the task of helping us understand the world, if they ever were. Capitalist America intrudes upon the free market with a dense program of regulation and taxation while providing substantial (albeit imperfect) redistributive policies. Socialist China detains union organizers, levies light taxes, and provides a threadbare social safety net. The greatest trick that the Communist Party ever pulled off is masquerading as leftist. While Xi Jinping and the rest of the Politburo mouth Marxist pieties, the state is enacting a right wing agenda that Western conservatives would salivate over: administering limited welfare, erecting enormous barriers to immigration, and enforcing traditional gender roles — where men have to be macho and women have to bear their children."},
+        {"speaker": "Thesis", "voice": "am_fenrir", "speed": 0.95, "pause_after_ms": 1000, "text": "China is an engineering state, which can’t stop itself from building, facing off against America’s lawyerly society, which blocks everything it can."}
+    ]
+
+    print("Submitting multi-voice production job to Modal T4 GPU...")
+    res = WarmMasteredProducer().produce.remote(script)
+
+    out_dir = Path(__file__).resolve().parents[1] / "evaluations" / "new-engines" / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_mp3 = out_dir / "breakneck_ch1_warm_mastered.mp3"
+    out_mp3.write_bytes(res["mp3_bytes"])
+    print(f"Mastered MP3 saved to {out_mp3} ({len(res['mp3_bytes']):,} bytes, {res['duration']}s audio in {res['gpu_time']}s GPU compute)")

@@ -16,6 +16,9 @@ def to_b64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("ascii")
 
 def main():
+    # 0. Featured Production Winner (Breakneck Ch.1 456 words)
+    warm_mastered_b64 = to_b64(OUTPUT_DIR / "breakneck_ch1_warm_mastered.mp3")
+
     # 1. Free CPU Candidates (Breakneck Ch.1 456 words)
     pocket_peter_b64 = to_b64(OUTPUT_DIR / "pocket_breakneck_ch1_peter.mp3")
     kitten_rosie_b64 = to_b64(OUTPUT_DIR / "kitten_breakneck_ch1_rosie.mp3")
@@ -52,9 +55,25 @@ def main():
     <div class="border-b border-[var(--border)] pb-2 flex items-center justify-between">
       <div>
         <h3 class="font-semibold text-base">Breakneck Ch.1 Audition Suite</h3>
-        <p class="text-xs text-[var(--muted-foreground)]">Compare Free CPU Candidates vs GPU Front-Runners (456 Words)</p>
+        <p class="text-xs text-[var(--muted-foreground)]">Compare Production Winner vs GPU & CPU Candidates (456 Words)</p>
       </div>
       <span class="text-xs px-2 py-0.5 rounded bg-[var(--accent)] text-[var(--accent-foreground)] font-mono">Verified Audio</span>
+    </div>
+
+    <!-- Section 0: Production Winner (Featured) -->
+    <div class="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-500/40 space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm">🏆</span>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Production Winner: Multi-Voice + Broadcast Mastering</h4>
+        </div>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-semibold">3:15 • Modal T4 GPU</span>
+      </div>
+      <p class="text-[11px] text-[var(--foreground)] leading-relaxed">
+        <strong>Screenplay Casting:</strong> Author analysis (<code class="text-[10px] bg-[var(--muted)] px-1 py-0.5 rounded">am_michael</code> @ 1.0x) + Announcements/Quotes/Thesis (<code class="text-[10px] bg-[var(--muted)] px-1 py-0.5 rounded">am_fenrir</code> baritone @ 0.95x).<br/>
+        <strong>FFmpeg Mastering Chain:</strong> +2.2 dB @ 250Hz Warmth EQ + -3.5 dB @ 7.2kHz De-Esser + EBU R128 (-20 LUFS).
+      </p>
+      <audio controls preload="metadata" class="w-full h-8" src="data:audio/mp3;base64,{warm_mastered_b64}"></audio>
     </div>
 
     <!-- Section: Free CPU Candidates -->
