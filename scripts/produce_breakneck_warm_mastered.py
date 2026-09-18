@@ -12,8 +12,6 @@ Pipeline verified by ear on Dan Wang's Breakneck:
 """
 
 import modal
-import os
-import json
 import subprocess
 import time
 import re
@@ -141,7 +139,6 @@ def clean_epub_dropcaps(html_text: str) -> str:
 
 @app.local_entrypoint()
 def main():
-    import json
     from pathlib import Path
 
     script = [

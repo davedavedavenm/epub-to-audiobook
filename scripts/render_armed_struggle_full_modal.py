@@ -16,11 +16,9 @@ Pipeline Overview:
 """
 
 import modal
-import os
 import re
 import sys
 import time
-import json
 import subprocess
 from pathlib import Path
 
@@ -83,8 +81,6 @@ class FullBookBreezeProducer:
         from breeze_infer.templates import get_template, prepare_inputs
         import numpy as np
         import soundfile as sf
-        import time
-        import re
 
         chapter_id = item["chapter_id"]
         title = item["title"]
