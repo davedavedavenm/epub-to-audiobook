@@ -653,6 +653,16 @@ VOICES = {
     'uk_male_minter_vibevoice': {'name': 'Arthur — VibeVoice (quality finalist)', 'accent': 'British', 'gender': 'Male', 'engine': 'vibevoice'},
     'uk_male_minter_qwen3': {'name': 'Arthur — Qwen3-TTS (consistency finalist)', 'accent': 'British', 'gender': 'Male', 'engine': 'qwen3'},
 
+    # ============ TOP-TIER MODAL GPU VOICES (2026 AUDITION WINNERS) ============
+    # Pre-rendered on Modal GPU with broadcast mastering (-20 LUFS) and cached in PREVIEWS_DIR.
+    'breeze_cillian_irish': {'name': 'Cillian Murphy (Irish Studio, Breeze 2)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'breeze'},
+    'qwen3_aiden': {'name': 'Aiden (Expressive Non-Fiction, Qwen3-TTS)', 'accent': 'American', 'gender': 'Male', 'engine': 'qwen3'},
+    'breeze_liam_au': {'name': 'Liam (Australian / Irish, Breeze 2)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'breeze'},
+    'breeze_karen_savage': {'name': 'Karen Savage (Classic British Female, Breeze 2)', 'accent': 'British', 'gender': 'Female', 'engine': 'breeze'},
+    'breeze_arthur': {'name': 'Arthur (Distinguished British Male, Breeze 2)', 'accent': 'British', 'gender': 'Male', 'engine': 'breeze'},
+    'breeze_adrian': {'name': 'Adrian Praetzellis (Scholarly British, Breeze 2)', 'accent': 'British', 'gender': 'Male', 'engine': 'breeze'},
+    'breeze_tadhg_clean': {'name': 'Tadhg Hynes (Restored Irish Male, Breeze 2)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'breeze'},
+
     # ============ FREE CPU CANDIDATES (OFFICIAL CATALOGUES) ============
     # Pocket's upstream catalogue does not publish reliable accent/gender
     # metadata for every preset, so do not infer it from a name. Peter, Jasper
@@ -2507,10 +2517,9 @@ def get_voice_preview(voice_id: str) -> Path:
     engine = voice_info.get('engine', 'kokoro')
     ptext = _preview_text_for(engine)
 
-    # CosyVoice is GPU-only (Kaggle-render): its previews are pre-rendered and
-    # dropped into PREVIEWS_DIR, never generated on this box. If it isn't cached
-    # there's nothing to serve locally — don't fall through and mis-generate.
-    if engine == 'cosyvoice':
+    # GPU-only engines (Kaggle/Modal render): previews are pre-rendered and
+    # dropped into PREVIEWS_DIR, never generated on this CPU box.
+    if engine in ('cosyvoice', 'breeze'):
         return preview_path if preview_path.exists() else None
 
     try:
