@@ -20,6 +20,33 @@ def to_b64(path: Path) -> str:
 def build_player():
     candidates = [
         {
+            "id": "tough_irish_breeze_cillian",
+            "badge": "🇮🇪 NEW: Breeze 2 — Cillian Murphy (Studio Dry & Seed-Locked)",
+            "sub": "Modal L4 GPU • Cloned Cillian Murphy • Seed 42 • Guidance 2.5 • 192k MP3",
+            "file": OUT_DIR / "tough_irish_breeze_cillian_mastered.mp3",
+            "desc": "<strong>Acoustic Enhancements:</strong> Close-mic dry reference (<code>cillian_irish_dry.wav</code>) with room slap-back and 250Hz boxy resonance removed via spectral denoising + EQ notch. Locked <code>seed=42</code> across all chunks (eliminating timbre/accent drift sentence-to-sentence) and calibrated guidance scale to 2.5 (eliminating diffusion warble on dates/numbers).<br/><strong>Tough Irish Challenge:</strong> Tested on <em>Taoiseach, Tánaiste, Pádraig Pearse, Seán MacDiarmada, Dáil Éireann, Eamon de Valera, Priomh-Aire, Cathal Brugha, Cumann na mBan, Dún Laoghaire, Portlaoise, Ruairí Ó Brádaigh, Sinn Féin</em>.",
+            "theme": "emerald",
+            "icon": "☘️"
+        },
+        {
+            "id": "tough_irish_qwen_cillian",
+            "badge": "🎙️ NEW: Qwen3-TTS 1.7B Base — Cillian Murphy (Zero-Shot Clone)",
+            "sub": "Modal L4 GPU • Zero-Shot Cloned Cillian Murphy • 192k MP3",
+            "file": OUT_DIR / "tough_irish_qwen_cillian_mastered.mp3",
+            "desc": "<strong>Direct Engine Comparison:</strong> Cillian's dry voice cloned directly into Qwen3-TTS 1.7B Base model using full voice prompt (audio + transcript). Tests Qwen's transformer flow-matching on Irish phonetics and room acoustics with Cillian's timbre.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "theme": "indigo",
+            "icon": "🎭"
+        },
+        {
+            "id": "tough_irish_qwen_aiden",
+            "badge": "🎙️ NEW: Qwen3-TTS 1.7B CustomVoice — Aiden (Dynamic Emotion)",
+            "sub": "Modal L4 GPU • Studio Speaker Aiden • Scene-by-Scene Emotion Steering • 192k MP3",
+            "file": OUT_DIR / "tough_irish_qwen_aiden_mastered.mp3",
+            "desc": "<strong>Aiden on Tough Irish Words:</strong> Studio speaker Aiden guided by per-sentence emotive steering (solemn gravitas, narrative tension, skeptical rising uptalk). Compare pronunciation of Cathal Brugha, Dáil Éireann, and Sinn Féin against Cillian's native Irish clones.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "theme": "indigo",
+            "icon": "🎙️"
+        },
+        {
             "id": "armed_struggle_breeze_cillian_irish",
             "badge": "NEW ☘️: Breeze 2 Cillian Murphy (Studio Irish Narration)",
             "sub": "Modal L4 GPU • Cloned Broadcast Studio Audio • 192k MP3",
