@@ -16,11 +16,11 @@ import time
 import subprocess
 from pathlib import Path
 
-app = modal.App("homelab-breeze2-arthur-breakneck")
+app = modal.App("homelab-breeze2-voices-breakneck")
 
 image = (
     modal.Image.debian_slim(python_version="3.10")
-    .apt_install("git", "ffmpeg", "libsndfile1")
+    .apt_install("git", "ffmpeg", "libsndfile1", "sox", "libsox-fmt-all")
     .pip_install(
         "soundfile>=0.13",
         "huggingface_hub[cli]>=0.25",
@@ -37,11 +37,12 @@ image = (
     )
 )
 
-@app.cls(image=image, gpu="L4", timeout=900, scaledown_window=2)
-class BreezeArthurProducer:
+@app.cls(image=image, gpu="L4", timeout=1200, scaledown_window=180)
+class BreezeProducer:
     @modal.enter()
     def setup(self):
         import sys
+        from pathlib import Path
         if "/root/breeze-tts" not in sys.path:
             sys.path.insert(0, "/root/breeze-tts")
         from breeze_infer.runtime import load_runtime, resolve_device, update_generation_config_for_breeze
@@ -49,7 +50,7 @@ class BreezeArthurProducer:
 
         print("Loading Breeze TTS 2 (3.5B) into GPU memory...")
         self.tokenizer, self.model, self.audio_tokenizer = load_runtime(
-            "/root/breeze-model",
+            Path("/root/breeze-model"),
             device=resolve_device(),
             attn_implementation="sdpa",
         )
@@ -66,7 +67,7 @@ class BreezeArthurProducer:
         print(f"Breeze TTS 2 runtime ready (Sample Rate: {self.sample_rate}Hz)!")
 
     @modal.method()
-    def synthesize(self, chunks: list[str], ref_wav_bytes: bytes, ref_text: str, instruction: str) -> dict:
+    def synthesize(self, voice_id: str, chunks: list[str], ref_wav_bytes: bytes, ref_text: str, instruction: str) -> dict:
         import sys
         if "/root/breeze-tts" not in sys.path:
             sys.path.insert(0, "/root/breeze-tts")
@@ -76,7 +77,7 @@ class BreezeArthurProducer:
         import soundfile as sf
         import time
 
-        ref_path = "/tmp/arthur_ref.wav"
+        ref_path = f"/tmp/{voice_id}_ref.wav"
         with open(ref_path, "wb") as f:
             f.write(ref_wav_bytes)
 
@@ -84,7 +85,7 @@ class BreezeArthurProducer:
         pieces = []
         sr = self.sample_rate
 
-        print(f"Synthesizing {len(chunks)} chunks with Breeze 2 Voice Direction (Arthur)...")
+        print(f"Synthesizing {len(chunks)} chunks with Breeze 2 Voice Direction ({voice_id})...")
         for idx, c in enumerate(chunks, 1):
             print(f"[{idx}/{len(chunks)}] ({len(c)} chars): {c[:60]}...")
             req = {
@@ -95,7 +96,7 @@ class BreezeArthurProducer:
                 "ref_audio_path": ref_path,
                 "ref_text": ref_text,
             }
-            set_all_seeds(42)
+            set_all_seeds(42 + idx)
             inputs = prepare_inputs(
                 self.tokenizer,
                 self.audio_tokenizer,
@@ -109,7 +110,7 @@ class BreezeArthurProducer:
 
             audio_parts = []
             for audio_chunk in self.runtime.iter_audio_chunks(
-                inputs, request_id=f"chunk-{idx}", seed=42
+                inputs, request_id=f"chunk-{idx}", seed=42 + idx
             ):
                 audio_parts.append(audio_chunk.audio)
 
@@ -122,12 +123,12 @@ class BreezeArthurProducer:
         full_audio = np.concatenate(pieces)
         duration_sec = round(len(full_audio) / sr, 2)
         gpu_time = round(time.time() - t0, 2)
-        print(f"Generated {duration_sec}s audio in {gpu_time}s GPU compute!")
+        print(f"[{voice_id}] Generated {duration_sec}s audio in {gpu_time}s GPU compute!")
 
-        raw_wav = "/tmp/breeze_raw.wav"
-        mastered_wav = "/tmp/breeze_mastered.wav"
-        raw_mp3 = "/tmp/breeze_raw.mp3"
-        mastered_mp3 = "/tmp/breeze_mastered.mp3"
+        raw_wav = f"/tmp/{voice_id}_raw.wav"
+        mastered_wav = f"/tmp/{voice_id}_mastered.wav"
+        raw_mp3 = f"/tmp/{voice_id}_raw.mp3"
+        mastered_mp3 = f"/tmp/{voice_id}_mastered.mp3"
 
         sf.write(raw_wav, full_audio, sr)
 
@@ -138,7 +139,7 @@ class BreezeArthurProducer:
             raw_mp3
         ], check=True)
 
-        # 2. Mastered MP3
+        # 2. Mastered MP3 (Warmth EQ + De-Esser + EBU R128 Loudnorm)
         af_filters = (
             "equalizer=f=250:width_type=o:width=1.2:g=2.2,"
             "highshelf=f=7200:gain=-3.5:width=1.0,"
@@ -171,22 +172,10 @@ class BreezeArthurProducer:
 
 
 @app.local_entrypoint()
-def main():
+def main(voice: str = "all"):
     root = Path(__file__).resolve().parents[2]
     text_file = root / "fixtures" / "breakneck_ch1_2pages_norm.txt"
     text = text_file.read_text(encoding="utf-8")
-
-    ref_wav_file = root / "chatterbox" / "voices" / "uk_male_minter.wav"
-    assert ref_wav_file.exists(), f"Missing reference WAV: {ref_wav_file}"
-    ref_wav_bytes = ref_wav_file.read_bytes()
-
-    ref_text = (
-        '"I know that," snapped Bertram. "Not that it would make any difference if she stayed," '
-        'pursued the relentless George. "She flies higher than the paper trade, my boy." '
-        '"Hang her!" said Bertram. "It would make it more interesting for me," I ventured to observe.'
-    )
-
-    instruction = "Read in an intelligent, clear British accent at a measured, engaging pace for an analytical non-fiction audiobook."
 
     # Split into clean sentence chunks
     protected = text
@@ -199,19 +188,74 @@ def main():
         if item.strip()
     ]
 
-    print(f"Submitting Breeze 2 Arthur production job ({len(chunks)} chunks) to Modal L4 GPU...")
-    res = BreezeArthurProducer().synthesize.remote(chunks, ref_wav_bytes, ref_text, instruction)
+    all_voices = [
+        {
+            "id": "arthur",
+            "name": "Arthur (UK Male)",
+            "wav_file": root / "chatterbox" / "voices" / "uk_male_minter.wav",
+            "ref_text": (
+                '"I know that," snapped Bertram. "Not that it would make any difference if she stayed," '
+                'pursued the relentless George. "She flies higher than the paper trade, my boy." '
+                '"Hang her!" said Bertram. "It would make it more interesting for me," I ventured to observe.'
+            ),
+            "instruction": "Read in an intelligent, clear British accent at a measured, engaging pace for an analytical non-fiction audiobook."
+        },
+        {
+            "id": "beatrice",
+            "name": "Beatrice (UK Female)",
+            "wav_file": root / "chatterbox" / "voices" / "uk_female_samuel.wav",
+            "ref_text": (
+                "Letter the second: Laura to Isabel. Although I cannot agree with you in supposing that "
+                "I shall never again be exposed to misfortunes as unmerited as those I have already experienced, "
+                "yet to avoid the imputation of obstinacy"
+            ),
+            "instruction": "Read in an intelligent, warm British accent at a measured, engaging pace for an analytical non-fiction audiobook."
+        },
+        {
+            "id": "yearsley",
+            "name": "Yearsley (UK Male Baritone)",
+            "wav_file": root / "chatterbox" / "voices" / "uk_male_yearsley.wav",
+            "ref_text": (
+                "will say, Yes, when you say, Will you? But, as I say, my legacy almost put Mildred out of my head, "
+                "especially as she was staying with friends in the country just then. Before the first gloss was off my new mourning, I was"
+            ),
+            "instruction": "Read in a deep, distinguished British baritone accent with a measured, authoritative cadence for an analytical non-fiction audiobook."
+        },
+    ]
 
+    if voice != "all":
+        targets = [v for v in all_voices if v["id"] == voice.lower()]
+        if not targets:
+            raise ValueError(f"Unknown voice '{voice}'. Choose from: {[v['id'] for v in all_voices]}")
+    else:
+        targets = all_voices
+
+    producer = BreezeProducer()
     out_dir = root / "evaluations" / "new-engines" / "output"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    raw_path = out_dir / "breakneck_ch1_breeze_arthur_modal_raw.mp3"
-    mastered_path = out_dir / "breakneck_ch1_breeze_arthur_modal_mastered.mp3"
+    print(f"\n==========================================")
+    print(f"Breeze TTS 2 Modal Production Runner")
+    print(f"Voices to synthesize: {[v['name'] for v in targets]}")
+    print(f"Total Chunks: {len(chunks)} ({len(text)} chars)")
+    print(f"==========================================\n")
 
-    raw_path.write_bytes(res["raw_bytes"])
-    mastered_path.write_bytes(res["mastered_bytes"])
+    for v in targets:
+        v_id = v["id"]
+        v_name = v["name"]
+        print(f"\n>>> Processing {v_name} ({v_id})...")
+        assert v["wav_file"].exists(), f"Missing WAV: {v['wav_file']}"
+        wav_bytes = v["wav_file"].read_bytes()
 
-    print(f"\nSUCCESS!")
-    print(f"Raw MP3: {raw_path} ({len(res['raw_bytes']):,} bytes)")
-    print(f"Mastered MP3: {mastered_path} ({len(res['mastered_bytes']):,} bytes)")
-    print(f"Audio Duration: {res['duration']}s | GPU Wall Time: {res['gpu_time']}s")
+        res = producer.synthesize.remote(v_id, chunks, wav_bytes, v["ref_text"], v["instruction"])
+
+        raw_path = out_dir / f"breakneck_ch1_breeze_{v_id}_modal_raw.mp3"
+        mastered_path = out_dir / f"breakneck_ch1_breeze_{v_id}_modal_mastered.mp3"
+
+        raw_path.write_bytes(res["raw_bytes"])
+        mastered_path.write_bytes(res["mastered_bytes"])
+
+        print(f"✓ {v_name} Finished!")
+        print(f"  Raw: {raw_path} ({len(res['raw_bytes']):,} bytes)")
+        print(f"  Mastered: {mastered_path} ({len(res['mastered_bytes']):,} bytes)")
+        print(f"  Duration: {res['duration']}s | GPU Time: {res['gpu_time']}s")
