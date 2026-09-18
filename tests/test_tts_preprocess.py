@@ -164,6 +164,20 @@ def test_sanitize_does_not_remove_similarly_named_publisher_content():
     assert 'The real book begins.' in out
 
 
+def test_sanitize_dropcap_stitching():
+    html = '''<html><body>
+    <p><span class="dropcap">E</span>ach time I see a headline...</p>
+    <p><span class="drop-cap">T</span> he next morning arrived.</p>
+    <p><span class="lettrine">W</span>henever they met,</p>
+    <p><span>O</span> nce upon a time</p>
+    </body></html>'''
+    out = tp.sanitize_html(html)
+    assert 'Each time I see a headline' in out
+    assert 'The next morning arrived' in out
+    assert 'Whenever they met' in out
+    assert 'Once upon a time' in out
+
+
 # --- End to end text pipeline ---
 
 def test_pipeline_endnote_and_numbers():

@@ -210,6 +210,31 @@ def _attr_tokens(tag, name):
     return set(str(val).split())
 
 
+def stitch_epub_dropcaps(html_text: str) -> str:
+    """Stitch drop-cap single-letter spans back to the subsequent word before stripping tags.
+
+    EPUB formatters frequently wrap chapter opening letters in drop-cap spans:
+        <p><span class="dropcap">E</span>ach time I see a headline...</p>
+    When tags are stripped or converted to text, this can leave whitespace ("E ach"),
+    causing the phonemizer to pronounce a stuttered opening ("E... ach").
+    """
+    # 1. Target explicit dropcap / initial / lettrine spans
+    cleaned = re.sub(
+        r'<([a-z0-9]+)[^>]*class=[\'"][^\'"]*(?:drop[-_]?cap|lettrine|initial|first[-_]?letter)[^\'"]*[\'"][^>]*>([A-Za-z])</\1>\s*([A-Za-z]+)',
+        r'\2\3',
+        html_text,
+        flags=re.IGNORECASE
+    )
+    # 2. Generic single-letter tag followed by whitespace and word fragment
+    cleaned = re.sub(
+        r'<([a-z0-9]+)[^>]*>([A-Za-z])</\1>\s+([a-z]{2,})',
+        r'\2\3',
+        cleaned,
+        flags=re.IGNORECASE
+    )
+    return cleaned
+
+
 def sanitize_html(html: str) -> str:
     """Structurally remove non-book apparatus from one HTML document.
 
@@ -218,6 +243,7 @@ def sanitize_html(html: str) -> str:
     only removes elements that are unambiguously generated boilerplate, note
     markers, or note bodies.
     """
+    html = stitch_epub_dropcaps(html)
     soup = BeautifulSoup(html, 'lxml')
 
     # 1. Project Gutenberg's generated catalogue/download wrapper.  The nested
