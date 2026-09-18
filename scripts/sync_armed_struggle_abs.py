@@ -4,9 +4,7 @@ to Audiobookshelf on docker-vm, preserving Dave's exact listening progress.
 """
 
 import os
-import sys
 import json
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -154,8 +152,8 @@ def main():
     new_ch2_start = chapters_meta[2]["start"]
     new_ch2_dur = chapter_durations[2]
     new_current_time = round(new_ch2_start + (0.28975 * new_ch2_dur), 2)
-    print(f"\n>>> Recalibrating listening progress:")
-    print(f"    Original position: 7,723.6s (28.97% into Chapter 2: Two New States)")
+    print("\n>>> Recalibrating listening progress:")
+    print("    Original position: 7,723.6s (28.97% into Chapter 2: Two New States)")
     print(f"    New Chapter 2 start: {new_ch2_start}s, duration: {new_ch2_dur}s")
     print(f"    Recalibrated position: {new_current_time}s ({new_current_time/60:.1f} min)")
 
