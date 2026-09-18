@@ -47,8 +47,35 @@ def build_player():
             "icon": "✨"
         },
         {
+            "id": "breeze_karen_mastered",
+            "badge": "NEW UK FEMALE: Breeze TTS 2 Karen Savage (Mastered)",
+            "sub": "Modal L4 GPU • Cloned Karen Savage (Jane Austen Narrator) • 192k MP3",
+            "file": OUT_DIR / "breakneck_ch1_breeze_karen_modal_mastered.mp3",
+            "desc": "<strong>Voice:</strong> Articulate, expressive British female narrator Karen Savage (<code>karen_savage.wav</code>) with pristine wideband studio clarity.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "theme": "cyan",
+            "icon": "👑"
+        },
+        {
+            "id": "breeze_tadhg_clean_mastered",
+            "badge": "NEW IRISH MALE: Breeze TTS 2 Tadhg Hynes (Studio Restored)",
+            "sub": "Modal L4 GPU • Denoised Reference + Air & Presence Mastering • 192k MP3",
+            "file": OUT_DIR / "breakneck_ch1_breeze_tadhg_clean_modal_mastered.mp3",
+            "desc": "<strong>Restoration:</strong> Spectral denoising (<code>afftdn</code>) + 600Hz boxy resonance cut on reference + Air EQ mastering to eliminate telephone effect.<br/><strong>Prosody:</strong> Inquisitive uptalk on rhetorical questions.",
+            "theme": "cyan",
+            "icon": "🍀"
+        },
+        {
+            "id": "breeze_adrian_mastered",
+            "badge": "NEW UK MALE: Breeze TTS 2 Adrian Praetzellis (Mastered)",
+            "sub": "Modal L4 GPU • Cloned British Conversational Scholar • 192k MP3",
+            "file": OUT_DIR / "breakneck_ch1_breeze_adrian_modal_mastered.mp3",
+            "desc": "<strong>Voice:</strong> Warm, scholarly British male narrator Adrian Praetzellis (<code>adrian_praetzellis.wav</code>) with high presence and thoughtful cadence.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "theme": "cyan",
+            "icon": "🎓"
+        },
+        {
             "id": "breeze_beatrice_mastered",
-            "badge": "NEW: Breeze TTS 2 (3.5B) Beatrice (Mastered)",
+            "badge": "Breeze TTS 2 (3.5B) Beatrice (Mastered)",
             "sub": "Modal L4 GPU • Cloned Beatrice + Voice Direction • 192k MP3",
             "file": OUT_DIR / "breakneck_ch1_breeze_beatrice_modal_mastered.mp3",
             "desc": "<strong>Voice:</strong> British female narrator Beatrice (<code>uk_female_samuel.wav</code>) steered with Voice Direction.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
@@ -57,12 +84,12 @@ def build_player():
         },
         {
             "id": "breeze_tadhg_mastered",
-            "badge": "NEW: Breeze TTS 2 (3.5B) Tadhg Hynes (Irish Male)",
-            "sub": "Modal L4 GPU • Cloned Irish LibriVox Narrator • 192k MP3",
+            "badge": "Breeze TTS 2 (3.5B) Tadhg Hynes (Original LibriVox - Phone Sound)",
+            "sub": "Modal L4 GPU • Cloned Original Unfiltered LibriVox WAV • 192k MP3",
             "file": OUT_DIR / "breakneck_ch1_breeze_tadhg_modal_mastered.mp3",
-            "desc": "<strong>Voice:</strong> Authentic Irish male narrator Tadhg Hynes (<code>tadhg_hynes.wav</code>) steered with melodic, intelligent Voice Direction.<br/><strong>Mastering:</strong> Warmth EQ + De-Esser + EBU R128 (-20 LUFS).",
+            "desc": "<strong>Comparison:</strong> The original un-denoised reference showing the boxy telephone artifact from LibriVox mic frequency response.",
             "theme": "cyan",
-            "icon": "🍀"
+            "icon": "📞"
         },
         {
             "id": "breeze_liam_au_mastered",

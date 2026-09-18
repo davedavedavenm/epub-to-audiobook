@@ -67,7 +67,16 @@ class BreezeProducer:
         print(f"Breeze TTS 2 runtime ready (Sample Rate: {self.sample_rate}Hz)!")
 
     @modal.method()
-    def synthesize(self, voice_id: str, chunks: list[str], ref_wav_bytes: bytes, ref_text: str, instruction: str) -> dict:
+    def synthesize(
+        self,
+        voice_id: str,
+        chunks: list[str],
+        ref_wav_bytes: bytes,
+        ref_text: str,
+        instruction: str,
+        denoise_ref: bool = False,
+        eq_profile: str = "warmth"
+    ) -> dict:
         import sys
         if "/root/breeze-tts" not in sys.path:
             sys.path.insert(0, "/root/breeze-tts")
@@ -76,10 +85,24 @@ class BreezeProducer:
         import numpy as np
         import soundfile as sf
         import time
+        import re
 
         ref_path = f"/tmp/{voice_id}_ref.wav"
-        with open(ref_path, "wb") as f:
+        raw_ref_path = f"/tmp/{voice_id}_raw_ref.wav"
+        with open(raw_ref_path, "wb") as f:
             f.write(ref_wav_bytes)
+
+        if denoise_ref:
+            print(f"[{voice_id}] Denoising reference audio and removing boxy telephone resonance...")
+            # afftdn removes room hiss; equalizer dips 600Hz boxiness; highshelf restores air
+            ref_filter = "afftdn=nf=-35,equalizer=f=600:width_type=o:width=1.5:g=-4.0,highshelf=f=5500:gain=+4.0:width=1.0"
+            subprocess.run([
+                "ffmpeg", "-y", "-i", raw_ref_path,
+                "-af", ref_filter,
+                ref_path
+            ], check=True)
+        else:
+            ref_path = raw_ref_path
 
         t0 = time.time()
         pieces = []
@@ -88,9 +111,12 @@ class BreezeProducer:
         print(f"Synthesizing {len(chunks)} chunks with Breeze 2 Voice Direction ({voice_id})...")
         for idx, c in enumerate(chunks, 1):
             chunk_instruction = instruction
-            # Steer rhetorical questions with quizzical uptalk / rising pitch contour
-            if c.strip().endswith("?") or "wondering" in c.lower() or "beating heart" in c.lower():
-                chunk_instruction = instruction + " Deliver with a quizzical, skeptical tone, raising your pitch in an inquisitive uptalk at the end of the question."
+            # Robust question detection: ends in '?' or contains a question before closing quote
+            if re.search(r'\?[’”"\'\s]*$', c):
+                chunk_instruction = instruction + " Deliver with an inquisitive, engaging cadence, lifting your pitch in a natural rising inflection at the end of the question."
+            elif c.strip().startswith(('“', '"')) and c.strip().endswith(('”', '"')):
+                chunk_instruction = instruction + " Deliver as direct spoken speech with natural expressive phrasing."
+
             print(f"[{idx}/{len(chunks)}] ({len(c)} chars): {c[:60]}...")
             req = {
                 "id": f"chunk-{idx}",
@@ -143,12 +169,20 @@ class BreezeProducer:
             raw_mp3
         ], check=True)
 
-        # 2. Mastered MP3 (Warmth EQ + De-Esser + EBU R128 Loudnorm)
-        af_filters = (
-            "equalizer=f=250:width_type=o:width=1.2:g=2.2,"
-            "highshelf=f=7200:gain=-3.5:width=1.0,"
-            "loudnorm=I=-20:TP=-2:LRA=11"
-        )
+        # 2. Mastered MP3 (Warmth EQ / Air EQ + De-Esser + EBU R128 Loudnorm)
+        if eq_profile == "air":
+            af_filters = (
+                "equalizer=f=200:width_type=o:width=1.0:g=-1.0,"
+                "equalizer=f=3500:width_type=o:width=1.2:g=1.5,"
+                "highshelf=f=8000:gain=2.0:width=1.0,"
+                "loudnorm=I=-20:TP=-2:LRA=11"
+            )
+        else:
+            af_filters = (
+                "equalizer=f=250:width_type=o:width=1.2:g=2.2,"
+                "highshelf=f=7200:gain=-3.5:width=1.0,"
+                "loudnorm=I=-20:TP=-2:LRA=11"
+            )
         subprocess.run([
             "ffmpeg", "-y", "-i", raw_wav,
             "-af", af_filters,
@@ -181,10 +215,10 @@ def main(voice: str = "all"):
     text_file = root / "fixtures" / "breakneck_ch1_2pages_norm.txt"
     text = text_file.read_text(encoding="utf-8")
 
-    # Ensure quotes with questions get their own sentence boundary
-    protected = text.replace("wondering, “", "wondering:\n“")
+    # Robust quotation clause splitting: isolate dialogue/thought quotes
+    protected = re.sub(r'([,;:—])\s*([“"][^”"]+[?!”"])', r'\1\n\2', text)
     marker = "\ue000"
-    for abbrev in ("Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "St.", "vs."):
+    for abbrev in ("Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "St.", "vs.", "e.g.", "i.e."):
         protected = protected.replace(abbrev, abbrev[:-1] + marker)
     chunks = [
         item.replace(marker, ".").strip()
@@ -194,6 +228,56 @@ def main(voice: str = "all"):
 
     all_voices = [
         {
+            "id": "karen",
+            "name": "Karen Savage (UK Female)",
+            "wav_file": root / "chatterbox" / "voices" / "karen_savage.wav",
+            "ref_text": (
+                "Those who best knew the easiness of his temper, whether he might not spend the remainder of his days at Netherfield, "
+                "and leave the next generation to purchase. His sisters were anxious for his having an estate of his own, "
+                "but though he was now only established as a tenant, Miss Bingley was by no means unwilling to preside at his table,"
+            ),
+            "instruction": "Read in an articulate, expressive British female accent with warm, engaging pacing for a narrative non-fiction audiobook.",
+            "denoise_ref": False,
+            "eq_profile": "warmth"
+        },
+        {
+            "id": "yearsley",
+            "name": "Peter Yearsley (UK Male Baritone)",
+            "wav_file": root / "chatterbox" / "voices" / "uk_male_yearsley.wav",
+            "ref_text": (
+                "will say, Yes, when you say, Will you? But, as I say, my legacy almost put Mildred out of my head, "
+                "especially as she was staying with friends in the country just then. Before the first gloss was off my new mourning, I was"
+            ),
+            "instruction": "Read in a deep, distinguished British baritone accent with a measured, authoritative cadence for an analytical non-fiction audiobook.",
+            "denoise_ref": False,
+            "eq_profile": "warmth"
+        },
+        {
+            "id": "adrian",
+            "name": "Adrian Praetzellis (UK Male Conversational)",
+            "wav_file": root / "chatterbox" / "voices" / "adrian_praetzellis.wav",
+            "ref_text": (
+                "she took hold of both hands at once. The next moment they were dancing round in a ring. This seemed quite natural, "
+                "she remembered afterwards, and she was not even surprised to hear music playing. It seemed to come from the tree under which they were dancing, and it"
+            ),
+            "instruction": "Read in a warm, scholarly, conversational British male accent with natural, thoughtful cadence for an analytical non-fiction audiobook.",
+            "denoise_ref": False,
+            "eq_profile": "warmth"
+        },
+        {
+            "id": "tadhg_clean",
+            "name": "Tadhg Hynes (Irish Male - Studio Restored)",
+            "wav_file": root / "chatterbox" / "voices" / "tadhg_hynes.wav",
+            "ref_text": (
+                "crib framing and copseware manufacturer in general, opposite where the wagon sheds where Marty had deposited her spars. "
+                "Here Winterborne had remained after the girls had booked a departure to see that the wagon loads were properly made up. "
+                "Winterborne was connected with the Melbury family in various ways."
+            ),
+            "instruction": "Read in a warm, melodic, intelligent Irish accent with measured, engaging pacing for an analytical non-fiction audiobook.",
+            "denoise_ref": True,
+            "eq_profile": "air"
+        },
+        {
             "id": "arthur",
             "name": "Arthur (UK Male)",
             "wav_file": root / "chatterbox" / "voices" / "uk_male_minter.wav",
@@ -202,7 +286,9 @@ def main(voice: str = "all"):
                 'pursued the relentless George. "She flies higher than the paper trade, my boy." '
                 '"Hang her!" said Bertram. "It would make it more interesting for me," I ventured to observe.'
             ),
-            "instruction": "Read in an intelligent, clear British accent at a measured, engaging pace for an analytical non-fiction audiobook."
+            "instruction": "Read in an intelligent, clear British accent at a measured, engaging pace for an analytical non-fiction audiobook.",
+            "denoise_ref": False,
+            "eq_profile": "warmth"
         },
         {
             "id": "beatrice",
@@ -213,18 +299,9 @@ def main(voice: str = "all"):
                 "I shall never again be exposed to misfortunes as unmerited as those I have already experienced, "
                 "yet to avoid the imputation of obstinacy"
             ),
-            "instruction": "Read in an intelligent, warm British accent at a measured, engaging pace for an analytical non-fiction audiobook."
-        },
-        {
-            "id": "tadhg",
-            "name": "Tadhg Hynes (Irish Male)",
-            "wav_file": root / "chatterbox" / "voices" / "tadhg_hynes.wav",
-            "ref_text": (
-                "crib framing and copseware manufacturer in general, opposite where the wagon sheds where Marty had deposited her spars. "
-                "Here Winterborne had remained after the girls had booked a departure to see that the wagon loads were properly made up. "
-                "Winterborne was connected with the Melbury family in various ways."
-            ),
-            "instruction": "Read in a warm, melodic, intelligent Irish accent with measured, engaging pacing for an analytical non-fiction audiobook."
+            "instruction": "Read in an intelligent, warm British accent at a measured, engaging pace for an analytical non-fiction audiobook.",
+            "denoise_ref": False,
+            "eq_profile": "warmth"
         },
         {
             "id": "liam_au",
@@ -234,27 +311,9 @@ def main(voice: str = "all"):
                 "We also need a small plastic snake and a big toy frog for the kids. She can scoop these things into three red bags "
                 "and we will go meet her Wednesday at the train station. When the sunlight strikes, raindrops"
             ),
-            "instruction": "Read in a clear, natural, engaging Australian accent at a steady, thoughtful pace for an analytical non-fiction audiobook."
-        },
-        {
-            "id": "yearsley",
-            "name": "Yearsley (UK Male Baritone)",
-            "wav_file": root / "chatterbox" / "voices" / "uk_male_yearsley.wav",
-            "ref_text": (
-                "will say, Yes, when you say, Will you? But, as I say, my legacy almost put Mildred out of my head, "
-                "especially as she was staying with friends in the country just then. Before the first gloss was off my new mourning, I was"
-            ),
-            "instruction": "Read in a deep, distinguished British baritone accent with a measured, authoritative cadence for an analytical non-fiction audiobook."
-        },
-        {
-            "id": "siobhan",
-            "name": "Siobhan (Irish Female)",
-            "wav_file": root / "chatterbox" / "voices" / "vctk_irish_f_p288.wav",
-            "ref_text": (
-                "We also need a small plastic snake and a big toy frog for the kids. She can scoop these things into three red bags "
-                "and we will go meet her Wednesday at the train station. When the sunlight strikes raindrops in the air, they act as a prism and form a"
-            ),
-            "instruction": "Read in a clear, articulate, musical Irish accent with thoughtful pacing for an analytical non-fiction audiobook."
+            "instruction": "Read in a clear, natural, engaging Australian accent at a steady, thoughtful pace for an analytical non-fiction audiobook.",
+            "denoise_ref": False,
+            "eq_profile": "warmth"
         },
     ]
 
@@ -282,7 +341,15 @@ def main(voice: str = "all"):
         assert v["wav_file"].exists(), f"Missing WAV: {v['wav_file']}"
         wav_bytes = v["wav_file"].read_bytes()
 
-        res = producer.synthesize.remote(v_id, chunks, wav_bytes, v["ref_text"], v["instruction"])
+        res = producer.synthesize.remote(
+            v_id,
+            chunks,
+            wav_bytes,
+            v["ref_text"],
+            v["instruction"],
+            denoise_ref=v.get("denoise_ref", False),
+            eq_profile=v.get("eq_profile", "warmth")
+        )
 
         raw_path = out_dir / f"breakneck_ch1_breeze_{v_id}_modal_raw.mp3"
         mastered_path = out_dir / f"breakneck_ch1_breeze_{v_id}_modal_mastered.mp3"
