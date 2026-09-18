@@ -3,10 +3,11 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 
+import os
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "evaluations" / "new-engines" / "output"
 KOKORO_DIR = OUTPUT_DIR / "kokoro_variations"
-ARTIFACT_DIR = Path(r"C:\Users\Dave\.gemini\antigravity\brain\e7f9f1a0-6096-4e36-a931-750eafb29d67")
+ARTIFACT_DIR = Path(os.environ.get("ARTIFACT_DIR", r"C:\Users\Dave\.gemini\antigravity\brain\80b2c9a1-325c-4570-bb9b-ec2788501a75"))
 TARGET_HTML = ARTIFACT_DIR / "candidate_audio_player.html"
 
 def to_b64(path: Path) -> str:
