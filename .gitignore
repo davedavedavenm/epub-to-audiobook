@@ -44,3 +44,5 @@ output/
 scratch/
 evaluations/cpu-engines/output/
 evaluations/new-engines/output/
+
+fixtures/armed_struggle_chapters/

@@ -30,7 +30,7 @@ SAMPLE_TEXT = (
 # keep only the acronym letter-spacing class.
 from lexicon import SEED_PRONUNCIATION as SAMPLE_LEXICON  # noqa: E402
 
-MODERN_ENGINES = ("chatterbox", "tada")
+MODERN_ENGINES = ("chatterbox", "tada", "breeze", "qwen3")
 EXPLICIT_ENGINES = ("pocket", "kitten", "gemini", "deepgram")
 
 
