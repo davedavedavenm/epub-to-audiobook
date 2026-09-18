@@ -14,6 +14,37 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
+## September 2026 Modal GPU Bake-Off: Multi-Voice Casting & Broadcast Mastering Filter Chain Accepted; Fish Speech 2.0 Audited; Long-Form Pacing Settled — Active (2026-09-18)
+
+Comprehensive audition across *Breakneck: China’s Quest to Engineer the Future* (2-page excerpt and full 2,135-word / 14.6-minute Introduction) on Modal Cloud GPUs (Tesla T4, L4, A10G) testing Deepgram Aura-2, Chatterbox Turbo, Qwen3-TTS, F5-TTS, Fish Speech 2.0 (S2 Pro), and multi-voice Kokoro with automated broadcast mastering:
+
+- **Multi-Voice Non-Fiction Casting & Broadcast Mastering is the clear production winner.**
+  Dave's listening verdict: **"production value is clearly the winner here"**.
+  - *Casting Architecture*: Dividing non-fiction prose into an editorial screenplay avoids the fatigue of single-voice monoculture. Author analytical narrative is cast to `am_michael` (calm, intelligent, measured non-fiction cadence at 1.0x), while quoted historical material, macro questions, and core thesis statements are cast to `am_fenrir` (deep resonant baritone at 0.95x with 500ms pauses).
+  - *Automated Broadcast Mastering Chain (FFmpeg)*:
+    1. **Warmth EQ**: `equalizer=f=250:width_type=o:width=1.2:g=2.2` (+2.2 dB at 250 Hz restores human chest body and condenser mic proximity).
+    2. **Dynamic De-Esser**: `highshelf=f=7200:gain=-3.5:width=1.0` (-3.5 dB above 7.2 kHz tames digital sibilance, harsh 's' and 't' transients).
+    3. **Loudness Normalization**: `loudnorm=I=-20:TP=-2:LRA=11` (strict EBU R128 -20 LUFS integrated loudness, -2 dB True Peak ceiling — commercial Audible/ACX standard).
+  - Solves the synthetic high-frequency tinniness of small models without requiring massive diffusion runtimes.
+  - *Performance & Cloud Economics*: Rendered 14 minutes, 35 seconds of continuous mastered audio in 49.03s on Modal T4 GPU (RTF: 0.056x, ~18x faster than real-time). Total spend was $0.06 per chapter, 100% absorbed by Modal's $30/month free credit tier ($0.00 billed).
+
+- **Fish Speech 2.0 (S2 Pro) Flagship (4.4B Dual-AR) Audited & Bounded.**
+  Deployed on Modal Nvidia A10G GPU (24GB VRAM) using official weights (`fishaudio/s2-pro` Dual-AR + 44.1kHz DAC `codec.pth`). Dave heard: *"either the cloning hurt, or you didn't follow each engine's specific protocols for cloning, or whatever... but fish was a bit disappointing? does it not have native voices?"*
+  - *Prompt Prosody Transfer Failure*: Dual-Autoregressive transformers attend heavily to prompt acoustic dynamics. Conditioning on theatrical dialogue (`uk_male_minter.wav` Arthur: *"snapped Bertram... Hang her!"*) transfers erratic pitch jumps, clipped stops, and theatrical shouting directly into serious non-fiction narrative.
+  - *Zero Native Voices*: Fish Speech open-weights has **no hardcoded native curated voices** (unlike Kokoro or ElevenLabs). It is purely a zero-shot prompt-conditioned cloner; omitting prompt audio produces pseudo-random acoustic timbres.
+  - *Requirement*: If used, Fish Speech requires a perfectly flat, clean, non-theatrical studio prompt in the target accent and genre.
+
+- **Deepgram Aura-2 Pandora (`aura-2-pandora-en`) Pause Calibration Settled.**
+  Deepgram Pandora delivered outstanding British female RP audio on *Breakneck*. However, raw text input caused breathless run-on delivery between numeric abbreviations (e.g. *"three hundred and eighty-eight B.C. and before"*). Preprocessing must insert explicit punctuation (em-dash `—` or period) after acronyms and abbreviations to enforce natural breathing pauses.
+
+- **Long-Form Preprocessing & Pacing Rules Settled (from 14.6m Render).**
+  Listening to the complete 2,135-word Introduction revealed two critical pipeline defects:
+  1. *EPUB Drop-Cap Span Stitching*: EPUB files frequently wrap chapter opening letters in drop-cap spans (e.g. `<span class="dropcap">E</span>ach`). Naive regex tag stripping (`<[^>]+>`) leaves whitespace (`"E ach"`), causing the phonemizer to pronounce *"E... ach"*, garbling the opening word. Preprocessing must merge single-letter drop-cap spans back to the root word prior to tag stripping.
+  2. *Section Announcement Silence Buffering*: Title and chapter announcements require an explicit **1.5s–2.0s** silence buffer (not 700ms) to prevent feeling like a breathless run-on sentence before the narrative begins.
+  3. *Secondary Voice Rotation Frequency*: In a 2,100-word chapter, assigning the secondary voice strictly to explicit quotes resulted in it speaking only twice across 15 minutes. To sustain dynamic interplay, the secondary voice should also voice section headings, epigraphs, and contrasting perspective blocks.
+
+---
+
 ## September 2026 TTS Engine Audition: CPU Candidates Audited; Audio8 Rejected; Breeze 2 & Qwen3 Evaluated — Active (2026-09-05)
 
 Audition of *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized) across Audio8, Breeze TTS 2, Qwen3-TTS, Kokoro, and CPU candidates (Pocket, Kitten, NeuTTS Air):

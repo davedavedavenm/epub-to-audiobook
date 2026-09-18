@@ -1,5 +1,32 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-18 Cloud GPU Audition, Multi-Voice Directed Casting & Broadcast Mastering Pipeline — COMPLETED
+>
+> 1. **Multi-Voice Non-Fiction Casting & Broadcast Mastering (Clear Winner by Ear)**:
+>    - Auditioned multi-voice directed non-fiction screenplay vs single-voice monoculture on *Breakneck*:
+>      - Primary analytical narration: `am_michael` (warm conversational cadence, 1.0x).
+>      - Quoted material, hedge fund macro questions, and core thesis statements: `am_fenrir` (deep resonant baritone, 0.95x with 500ms pauses).
+>      - Automated FFmpeg Broadcast Mastering Filter:
+>        - +2.2 dB Warmth EQ at 250 Hz (restores human chest body and condenser proximity).
+>        - -3.5 dB Dynamic De-Esser at 7.2 kHz (tames digital sibilance, harsh 's'/'t' transients).
+>        - EBU R128 Loudness Normalization (-20 LUFS integrated, -2 dB True Peak ceiling).
+>      - Dave's listening verdict: **"production value is clearly the winner here"**.
+>    - Full 2,135-word / 14.6-minute Introduction production synthesized in 49.03s on Modal T4 GPU (RTF 0.056x, ~$0.06/chapter, 100% absorbed by free credits).
+>
+> 2. **Fish Speech 2.0 (S2 Pro 4.4B Dual-AR) Audited on Modal A10G**:
+>    - Tested official `fishaudio/s2-pro` Dual-AR + 44.1kHz DAC codec with Arthur reference audio (`uk_male_minter.wav`).
+>    - Dave's listening verdict: *"fish was a bit disappointing? does it not have native voices?"*.
+>    - Architectural finding: The open-weights model has **no hardcoded native voices** (pure zero-shot prompt-conditioned cloner). Autoregressive attention strongly couples to prompt dynamics: theatrical dialogue reference clips transfer erratic stops, pitch jumps, and shouting into serious non-fiction prose.
+>
+> 3. **Deepgram Aura-2 Pandora (`aura-2-pandora-en`) Evaluated & Pause-Calibrated**:
+>    - Tested British female RP on *Breakneck*. High studio acoustic fidelity.
+>    - Settled pause calibration contract: numeric abbreviations (e.g. "B.C.") require explicit punctuation (em-dash `—` or period) to enforce breath pauses before joining clauses.
+>
+> 4. **Long-Form Preprocessing & Pacing Diagnostics Settled**:
+>    - *Drop-Cap Garbled First Word Fix*: Preprocessing must merge drop-cap spans (`<span class="dropcap">E</span>ach` -> `Each`) before tag stripping. Naive stripping produced `"E ach"` (*"E... ach"*).
+>    - *Section Heading Silence Buffer*: Heading announcements require **1.5s–2.0s** silence buffer (not 700ms) to prevent feeling like a breathless run-on sentence.
+>    - *Secondary Voice Rotation Frequency*: In long chapters, secondary voice must be assigned to section breaks, epigraphs, and contrasting perspective blocks, not solely rare explicit quotes, to sustain active multi-voice interplay.
+>
 > ## 2026-09-05 New TTS Candidates Audition on Breakneck Chapter 1 — COMPLETED
 >
 > 1. **Candidate Bake-Off on Non-Fiction Corpus**:

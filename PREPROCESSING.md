@@ -57,6 +57,56 @@ correctly discarded. The QA layer's value on modern engines is catching
 
 ---
 
+## ⚠️ EPUB Drop-Cap Span Stitching: The "Garbled First Word" Bug (2026-09-18)
+
+In the 14.6-minute *Breakneck* Introduction listen, Dave noted:
+> *"the 2nd narrator is great, but first word was garbled..."*
+
+**Root Cause**: EPUB formatters style the first letter of a chapter as a decorative drop cap, wrapping the initial letter in a dedicated span:
+```html
+<p><span class="dropcap">E</span>ach time I see a headline...</p>
+```
+When standard HTML tag removal (`re.sub(r'<[^>]+>', ' ', html)`) runs, it replaces the `</span>` tag with a space. This converts `<span class="dropcap">E</span>ach` into `"E ach"`. The TTS phonemizer reads the single isolated letter `"E"` followed by a pause and the fragment `"ach"`, producing a garbled, stuttered opening word (*"E... ach"*).
+
+**Mandatory Preprocessing Fix**:
+Before stripping HTML tags, stitch drop-cap spans back to their root word:
+```python
+def stitch_epub_dropcaps(html_text: str) -> str:
+    # Target explicit dropcap spans
+    cleaned = re.sub(
+        r'<span[^>]*class=["\'][^"\']*dropcap[^"\']*["\'][^>]*>([A-Za-z])</span>\s*([a-z]+)',
+        r'\1\2',
+        html_text,
+        flags=re.IGNORECASE
+    )
+    # Generic single-letter tag followed by whitespace and root word
+    cleaned = re.sub(
+        r'<([a-z]+)[^>]*>([A-Za-z])</\1>\s+([a-z]{2,})',
+        r'\2\3',
+        cleaned,
+        flags=re.IGNORECASE
+    )
+    return cleaned
+```
+
+---
+
+## ⚠️ Section & Chapter Heading Silence Contract: Preventing Run-On Openings (2026-09-18)
+
+In the *Breakneck* Introduction listen, Dave noted:
+> *"no spacing between the intro / name etc it was just one run on sentence."*
+
+**Root Cause**: While paragraph joins use standard 350ms pauses, title, author, and chapter heading announcements (`"Breakneck... By Dan Wang... Introduction"`) require a substantial structural pause. A standard 700ms pause is perceived by listeners as a single hurried run-on sentence.
+
+**Mandatory Pacing Contract**:
+- **Between Title & Author**: 1,000 ms.
+- **Between Chapter Heading & Body Text**: **1,500 ms – 2,000 ms**.
+- **Between Sections / Major Breaks**: 1,000 ms.
+- **Between Body Paragraphs**: 350 ms – 400 ms.
+- **Before & After Block Quotes**: 500 ms – 600 ms.
+
+---
+
 ## ⚠️ Read this first: two hard-won lessons (2026-07-14)
 
 ### 1. A comma is a pause. This one bug caused two wrong conclusions.
