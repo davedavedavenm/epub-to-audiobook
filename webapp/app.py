@@ -467,6 +467,12 @@ TTS_ENGINES = {
         'description': 'Opt-in Developer API preview; stops on free quota and never falls back to paid',
         'url_env': 'GEMINI_TTS_URL',
         'default_url': 'http://gemini-tts:8014/v1'
+    },
+    'breeze': {
+        'name': 'Breeze 2 (3.5B Studio Clones)',
+        'description': 'High-fidelity studio voice cloning and Irish historical narration on Modal Serverless GPU',
+        'url_env': 'MODAL_BREEZE_URL',
+        'default_url': 'http://modal-breeze:8015/v1'
     }
 }
 
@@ -7793,9 +7799,7 @@ def convert_from_library():
         engine_fallback_note = None
         health = check_engines_health()
         # A stopped local CUDA service says nothing about Kaggle availability.
-        # Cloud-capable engines are validated by convert_book_kaggle against its
-        # own template registry and credentials; rejecting here made Cosy/new
-        # finalist voices impossible to queue for Kaggle.
+        # Cloud-capable engines are validated against their own credentials.
         if render_target != 'kaggle' and health.get(tts_engine) is False:
             # Opt-in failover: if the caller allows it, substitute the next
             # healthy engine (voice remapped) so the book still runs. Default
