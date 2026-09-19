@@ -30,3 +30,4 @@ edge-tts==7.2.8
 # authoritative for naturalness, accent, prosody and pronunciation. The ~140MB
 # model downloads once and caches.
 faster-whisper==1.1.1
+modal==1.5.5
