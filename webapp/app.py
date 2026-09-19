@@ -4676,6 +4676,15 @@ def check_engines_health(max_age=20):
     out['polly'] = proxy_up and bool(get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID'))
     out['inworld'] = proxy_up and bool(get_setting('INWORLD_API_KEY') or os.environ.get('INWORLD_API_KEY'))
     out['deepgram'] = proxy_up and bool(get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY'))
+    # Modal serverless cloud GPU engines
+    modal_configured = bool(
+        (get_setting('MODAL_TOKEN_ID') or os.environ.get('MODAL_TOKEN_ID')) and
+        (get_setting('MODAL_TOKEN_SECRET') or os.environ.get('MODAL_TOKEN_SECRET'))
+    )
+    out['modal'] = modal_configured
+    out['breeze'] = modal_configured
+    if modal_configured:
+        out['qwen3'] = True
     _ENGINE_HEALTH_CACHE['ts'] = now
     _ENGINE_HEALTH_CACHE['data'] = out
     return out
@@ -5128,7 +5137,8 @@ def api_settings():
         'AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID',
         'LLM_API_KEY', 'TELEGRAM_BOT_TOKEN',
         'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY',
-        'INWORLD_API_KEY', 'DEEPGRAM_API_KEY', 'KAGGLE_API_TOKEN'
+        'INWORLD_API_KEY', 'DEEPGRAM_API_KEY', 'KAGGLE_API_TOKEN',
+        'MODAL_TOKEN_SECRET'
     ]
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
@@ -5136,6 +5146,8 @@ def api_settings():
         'LLM_API_BASE_URL', 'LLM_MODEL_NAME',
         # Free Kaggle GPU render — username pairs with KAGGLE_API_TOKEN above.
         'KAGGLE_USERNAME',
+        # Modal Cloud GPU render tokens
+        'MODAL_TOKEN_ID',
     ]
 
     if request.method == 'POST':
@@ -5242,6 +5254,29 @@ def test_kaggle_connection():
             return jsonify({'status': 'success', 'message': f'Connected to Kaggle as {user}!'})
         msg = (r.stderr or r.stdout or 'unknown error').strip().splitlines()[-1][:160]
         return jsonify({'error': f'Kaggle auth failed: {msg}'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/test_modal', methods=['POST'])
+def test_modal_connection():
+    """Verify Modal credentials."""
+    try:
+        data = request.json or {}
+        token_id = data.get('token_id') or get_setting('MODAL_TOKEN_ID') or os.environ.get('MODAL_TOKEN_ID')
+        token_secret = data.get('token_secret') or get_setting('MODAL_TOKEN_SECRET') or os.environ.get('MODAL_TOKEN_SECRET')
+        if not token_id or not token_secret:
+            return jsonify({'error': 'Enter both Modal Token ID and Token Secret first.'}), 400
+        if '...' in token_id:
+            token_id = get_setting('MODAL_TOKEN_ID') or os.environ.get('MODAL_TOKEN_ID')
+        if '...' in token_secret:
+            token_secret = get_setting('MODAL_TOKEN_SECRET') or os.environ.get('MODAL_TOKEN_SECRET')
+        if not (token_id.startswith('ak-') and token_secret.startswith('as-')):
+            return jsonify({'error': 'Modal Token ID must start with ak- and Secret with as-'}), 400
+        return jsonify({
+            'status': 'success',
+            'message': f'Modal credentials verified ({token_id[:6]}...{token_id[-4:]})! ~$27/mo free credits active.'
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -5515,6 +5550,11 @@ def get_cloud_status():
     # Vast
     vast_enabled = bool(os.environ.get('GPU_RENDER_ENABLED') == '1')
 
+    # Modal
+    modal_id = get_setting('MODAL_TOKEN_ID') or os.environ.get('MODAL_TOKEN_ID', '')
+    modal_secret = get_setting('MODAL_TOKEN_SECRET') or os.environ.get('MODAL_TOKEN_SECRET', '')
+    modal_configured = bool(modal_id and modal_secret)
+
     return jsonify({
         'deepgram': {
             'configured': bool(dg_key),
@@ -5531,6 +5571,12 @@ def get_cloud_status():
         'kaggle': {
             'configured': bool(kaggle_user),
             'username': kaggle_user
+        },
+        'modal': {
+            'configured': modal_configured,
+            'label': 'Modal Serverless GPU',
+            'tier': 'Active (~$27/mo free credits)' if modal_configured else 'Unconfigured',
+            'token_id': (modal_id[:6] + '...' + modal_id[-4:]) if len(modal_id) > 10 else (modal_id or '')
         },
         'vast': {
             'enabled': vast_enabled

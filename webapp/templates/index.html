@@ -682,6 +682,29 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <h3 style="margin:0; font-family:var(--serif);">Serverless Cloud GPU — Modal</h3>
+                            <span style="font-size:0.75rem; background:rgba(139,92,246,0.15); color:#a78bfa; padding:2px 8px; border-radius:4px; font-weight:700;">~$27/mo Free Tier</span>
+                        </div>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            Offload voice rendering to Modal serverless GPUs (NVIDIA A100 / L4 / T4). Powers high-quality neural models like <strong>Breeze 2</strong> (3.5B autoregressive studio cloner) and <strong>Qwen3-TTS</strong> with zero local GPU requirements. Get your Token ID and Secret from <a href="https://modal.com/settings" target="_blank" style="color:var(--accent);">modal.com/settings</a>.
+                        </p>
+                        <div style="display:flex; gap:16px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label for="set-MODAL_TOKEN_ID" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Modal Token ID (ak-...)</label>
+                                <input type="text" id="set-MODAL_TOKEN_ID" class="input-control" style="margin-top:8px;" placeholder="ak-...">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
+                            <div style="flex:1;">
+                                <label for="set-MODAL_TOKEN_SECRET" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Modal Token Secret (as-...)</label>
+                                <input type="password" id="set-MODAL_TOKEN_SECRET" class="input-control" style="margin-top:8px;" placeholder="as-...">
+                            </div>
+                            <button class="btn" style="height:48px;" onclick="testSetting('modal', this)">Test Connection</button>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top:0; font-family:var(--serif);">Audiobookshelf Sync</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Automatically send finished audiobooks directly to your Audiobookshelf server. 
@@ -1032,7 +1055,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     // optional local CUDA service is not running. Disabling their <option>
     // based only on local health made the cloud path impossible to choose.
     const KAGGLE_GPU_ENGINES = ['cosyvoice', 'vibevoice', 'qwen3', 'chatterbox', 'tada'];
-    function engineSelectable(e) { return engineUp(e) || KAGGLE_GPU_ENGINES.includes(e); }
+    const MODAL_GPU_ENGINES = ['breeze', 'qwen3'];
+    function engineSelectable(e) { return engineUp(e) || KAGGLE_GPU_ENGINES.includes(e) || MODAL_GPU_ENGINES.includes(e); }
     function engineConfigured(e) { return !engineUnconfigured[e]; }
     // Voices we are willing to offer as a choice at all.
     function selectableVoices() {
@@ -1181,6 +1205,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             });
             btn.textContent = 'Saved!';
             btn.style.backgroundColor = 'var(--success)';
+            loadCloudStatus().catch(console.error);
+            loadEngineHealth().catch(console.error);
             setTimeout(() => { btn.textContent = 'Save Configuration'; btn.style.backgroundColor = ''; btn.disabled = false; }, 2000);
         } catch(e) { btn.textContent = 'Error'; btn.disabled = false; }
     }
@@ -1335,11 +1361,14 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     }
 
     const ENGINE_LABELS = {
+        'breeze': 'BREEZE 2 (Modal Serverless GPU — Studio Clones)',
+        'qwen3': 'QWEN3-TTS (Modal Serverless GPU — Emotive)',
         'chatterbox_nano': 'CHATTERBOX NANO (Fast CPU — Default)',
         'chatterbox': 'CHATTERBOX TURBO (Heavy — Needs GPU)',
         'kokoro': 'KOKORO TTS (Neural)',
         'edge': 'EDGE TTS (Cloud)',
-        'tada': 'TADA (Natural GPU)'
+        'tada': 'TADA (Natural GPU)',
+        'cosyvoice': 'COSYVOICE 3 (Kaggle GPU)'
     };
     function buildVoiceOptions(selectedId) {
         const usable = selectableVoices();
@@ -1347,10 +1376,23 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         return engines.map(engine => {
             const up = engineUp(engine);
             const selectable = engineSelectable(engine);
+            const isModal = MODAL_GPU_ENGINES.includes(engine);
+            const isKaggle = KAGGLE_GPU_ENGINES.includes(engine);
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const baseLabel = ENGINE_LABELS[engine] || (engine.toUpperCase() + ' ENGINE');
-            const label = baseLabel + (up ? '' : (selectable ? ' — KAGGLE GPU' : ' — OFFLINE'));
-            return `<optgroup label="${label}">${engineVoices.map(([id, v]) => `<option value="${id}" ${selectable ? '' : 'disabled'} ${id === selectedId && selectable ? 'selected' : ''}>${v.name} (${v.accent})${up ? '' : (selectable ? ' — Kaggle GPU' : ' — offline')}</option>`).join('')}</optgroup>`;
+            let groupLabel = baseLabel;
+            let optSuffix = '';
+            if (isModal) {
+                groupLabel = baseLabel + (selectable ? ' — MODAL GPU' : ' — OFFLINE (Add Modal Token)');
+                optSuffix = ' — Modal GPU';
+            } else if (isKaggle && !up) {
+                groupLabel = baseLabel + (selectable ? ' — KAGGLE GPU' : ' — OFFLINE');
+                optSuffix = ' — Kaggle GPU';
+            } else if (!up) {
+                groupLabel = baseLabel + ' — OFFLINE';
+                optSuffix = ' — offline';
+            }
+            return `<optgroup label="${groupLabel}">${engineVoices.map(([id, v]) => `<option value="${id}" ${selectable ? '' : 'disabled'} ${id === selectedId && selectable ? 'selected' : ''}>${v.name} (${v.accent})${optSuffix}</option>`).join('')}</optgroup>`;
         }).join('');
     }
 
@@ -1884,15 +1926,32 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         container.innerHTML = cloudStrip + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
+            const isModal = MODAL_GPU_ENGINES.includes(engine);
+            const isKaggle = KAGGLE_GPU_ENGINES.includes(engine);
+            let headerBadge = '';
+            if (isModal) {
+                if (up) {
+                    headerBadge = '<span style="color:#a78bfa; font-size:0.8rem; font-weight:700; background:rgba(139,92,246,0.15); padding:2px 8px; border-radius:12px; margin-left:8px;">● MODAL CLOUD GPU ACTIVE (~$27/mo free)</span>';
+                } else {
+                    headerBadge = '<span style="color:#f59e0b; font-size:0.8rem; font-weight:600; margin-left:8px;">● MODAL CLOUD GPU — configure Token in Settings</span>';
+                }
+            } else if (isKaggle && !up) {
+                headerBadge = '<span style="color:#a855f7; font-size:0.8rem; font-weight:700; background:rgba(168,85,247,0.12); padding:2px 8px; border-radius:12px; margin-left:8px;">● KAGGLE FREE GPU (~30h/wk)</span>';
+            } else if (!up) {
+                headerBadge = '<span style="color:var(--error); font-size:0.8rem; margin-left:8px;">● OFFLINE — service not running</span>';
+            } else {
+                headerBadge = '<span style="color:var(--success); font-size:0.8rem; margin-left:8px;">● READY</span>';
+            }
+            const engineTitle = ENGINE_LABELS[engine] || (engine.toUpperCase() + ' ENGINE');
             return `
-                <div class="engine-section" style="${up ? '' : 'opacity:0.45;'}">
-                    <div class="engine-header">${engine.toUpperCase()} ENGINE ${up ? '' : '<span style="color:var(--error); font-size:0.8rem;">● OFFLINE — service not running</span>'}</div>
+                <div class="engine-section" style="${(up || isModal || isKaggle) ? '' : 'opacity:0.45;'}">
+                    <div class="engine-header">${engineTitle} ${headerBadge}</div>
                     <div class="voices-grid">
                         ${engineVoices.map(([id, v]) => `
                             <div class="voice-card" id="vc-${id}">
                                 <div>
                                     <div class="voice-name">${escapeHtml(v.name)}</div>
-                                    <div class="voice-meta">${v.accent} - ${v.gender}</div>
+                                    <div class="voice-meta">${v.accent} · ${v.gender}${isModal ? ' · <span style="background:rgba(139,92,246,0.18); color:#a78bfa; padding:1px 6px; border-radius:4px; font-size:0.72rem; font-weight:700;">MODAL GPU</span>' : ''}</div>
                                     <div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div>
                                     <div class="paused-badge">Paused</div>
                                     <div class="loading-badge">Loading cached sample…</div>
@@ -3214,6 +3273,12 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             } else if(type === 'kaggle') {
                 endpoint = '/api/settings/test_kaggle';
                 payload = { username: document.getElementById('set-KAGGLE_USERNAME').value, token: document.getElementById('set-KAGGLE_API_TOKEN').value };
+            } else if(type === 'modal') {
+                endpoint = '/api/settings/test_modal';
+                payload = {
+                    token_id: document.getElementById('set-MODAL_TOKEN_ID').value,
+                    token_secret: document.getElementById('set-MODAL_TOKEN_SECRET').value
+                };
             }
             const resp = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
             const data = await resp.json();
@@ -3255,6 +3320,13 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         if (status.kaggle && status.kaggle.configured) {
             badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(168,85,247,0.12); color:#a855f7; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#a855f7;"></span>Kaggle: ~30h/wk Free GPU</span>`);
+        }
+        if (status.modal) {
+            if (status.modal.configured) {
+                badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.15); color:#a78bfa; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa;"></span>Modal: ~$27/mo Free GPU</span>`);
+            } else {
+                badges.push(`<a href="#settings" onclick="switchTab('settings')" style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.08); color:#a78bfa; font-weight:600; text-decoration:none;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa; opacity:0.6;"></span>Modal: ~$27/mo Free GPU (Configure)</a>`);
+            }
         }
         badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(100,116,139,0.12); color:var(--text-secondary); font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#64748b;"></span>Local: CPU Default (Free)</span>`);
         return badges.join(' ');
