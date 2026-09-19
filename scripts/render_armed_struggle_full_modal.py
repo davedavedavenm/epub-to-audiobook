@@ -44,7 +44,7 @@ image = (
 )
 
 
-@app.cls(image=image, gpu="L4", timeout=3600, scaledown_window=2)
+@app.cls(image=image, gpu="L4", timeout=14400, scaledown_window=2)
 class FullBookBreezeProducer:
     @modal.enter()
     def setup(self):
@@ -119,23 +119,48 @@ class FullBookBreezeProducer:
                     "ref_audio_path": ref_path,
                     "ref_text": ref_text,
                 }
-                set_all_seeds(LOCKED_SEED)
-                inputs = prepare_inputs(
-                    self.tokenizer,
-                    self.audio_tokenizer,
-                    self.model,
-                    [req],
-                    get_template("ref_edit_tata"),
-                    guidance_scale=2.5,
-                    guidance_scale_ref=None,
-                    guidance_scale_ins=None,
-                )
+                try:
+                    set_all_seeds(LOCKED_SEED)
+                    inputs = prepare_inputs(
+                        self.tokenizer,
+                        self.audio_tokenizer,
+                        self.model,
+                        [req],
+                        get_template("ref_edit_tata"),
+                        guidance_scale=2.5,
+                        guidance_scale_ref=None,
+                        guidance_scale_ins=None,
+                    )
 
-                audio_parts = []
-                for chunk in self.runtime.iter_audio_chunks(
-                    inputs, request_id=f"{chapter_id}-p{p_idx}-s{s_idx}", seed=LOCKED_SEED
-                ):
-                    audio_parts.append(chunk.audio)
+                    audio_parts = []
+                    for chunk in self.runtime.iter_audio_chunks(
+                        inputs, request_id=f"{chapter_id}-p{p_idx}-s{s_idx}", seed=LOCKED_SEED
+                    ):
+                        audio_parts.append(chunk.audio)
+                    del inputs
+                except Exception as exc:
+                    print(f"Warning: sentence {s_idx} in paragraph {p_idx} failed with {exc}; retrying with clean cache...")
+                    import torch
+                    torch.cuda.empty_cache()
+                    set_all_seeds(LOCKED_SEED)
+                    inputs = prepare_inputs(
+                        self.tokenizer,
+                        self.audio_tokenizer,
+                        self.model,
+                        [req],
+                        get_template("ref_edit_tata"),
+                        guidance_scale=1.5,
+                    )
+                    audio_parts = []
+                    for chunk in self.runtime.iter_audio_chunks(
+                        inputs, request_id=f"{chapter_id}-p{p_idx}-s{s_idx}", seed=LOCKED_SEED
+                    ):
+                        audio_parts.append(chunk.audio)
+                    del inputs
+
+                if sentence_count % 25 == 0:
+                    import torch
+                    torch.cuda.empty_cache()
 
                 if audio_parts:
                     pieces.append(np.concatenate(audio_parts))
@@ -223,6 +248,16 @@ def check_credit_headroom(min_headroom_usd: float = 2.0) -> bool:
 
 @app.local_entrypoint()
 def main():
+    # Prevent Windows from sleeping during long batch render
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+            ctypes.windll.kernel32.SetThreadExecutionState(0x80000001)
+            print("[SYSTEM] Windows Sleep Prevention Active (ES_CONTINUOUS | ES_SYSTEM_REQUIRED).")
+        except Exception:
+            pass
+
     root = Path(__file__).resolve().parents[1]
     chapters_dir = root / "fixtures" / "armed_struggle_chapters"
     out_dir = root / "output" / "armed_struggle_cillian"
