@@ -50,19 +50,22 @@ def main():
         print(f"Directory {audio_dir} does not exist yet.")
         return
 
-    # Check that all 11 chapters exist
-    missing = [fname for fname, _ in chapters_def if not (audio_dir / fname).exists()]
-    if missing:
-        print(f"Chapters not yet finished: {missing}")
-        print("Waiting for full render to complete before packaging M4B and syncing.")
+    # Filter for currently available completed chapters
+    available_chapters = [(fname, title) for fname, title in chapters_def if (audio_dir / fname).exists()]
+    if not available_chapters:
+        print("No completed chapter MP3s found in", audio_dir)
         return
+
+    print(f"Packaging {len(available_chapters)} completed chapters for Audiobookshelf:")
+    for fname, title in available_chapters:
+        print(f"  - {fname}")
 
     # 1. Calculate exact chapter timings
     chapters_meta = []
     current_time = 0.0
     chapter_durations = {}
 
-    for idx, (fname, title) in enumerate(chapters_def):
+    for idx, (fname, title) in enumerate(available_chapters):
         fpath = audio_dir / fname
         dur = get_mp3_duration(fpath)
         chapter_durations[idx] = dur
@@ -76,7 +79,7 @@ def main():
         current_time = end_time
 
     total_duration = round(current_time, 3)
-    print(f"Total new audiobook duration: {total_duration:,} seconds ({total_duration/3600:.2f} hours)")
+    print(f"Total synced audiobook duration: {total_duration:,} seconds ({total_duration/3600:.2f} hours)")
 
     # 2. Build metadata.json
     metadata = {
@@ -113,7 +116,7 @@ def main():
     m4b_path = audio_dir / "Armed Struggle.m4b"
     concat_list = audio_dir / "concat_list.txt"
     with open(concat_list, "w", encoding="utf-8") as f:
-        for fname, _ in chapters_def:
+        for fname, _ in available_chapters:
             p = (audio_dir / fname).resolve()
             f.write(f"file '{str(p).replace(chr(92), '/')}'\n")
 
@@ -150,16 +153,18 @@ def main():
     print("✓ Files copied to Audiobookshelf directory!")
 
     # 5. Calculate Dave's updated listening position
-    # Old stats:
-    #   Old Ch 2 start: 6201.552, old duration: 5253.12
-    #   Old currentTime: 7723.646 -> 1522.094s into Ch 2 (ratio: 0.28975)
-    new_ch2_start = chapters_meta[2]["start"]
-    new_ch2_dur = chapter_durations[2]
-    new_current_time = round(new_ch2_start + (0.28975 * new_ch2_dur), 2)
-    print("\n>>> Recalibrating listening progress:")
-    print("    Original position: 7,723.6s (28.97% into Chapter 2: Two New States)")
-    print(f"    New Chapter 2 start: {new_ch2_start}s, duration: {new_ch2_dur}s")
-    print(f"    Recalibrated position: {new_current_time}s ({new_current_time/60:.1f} min)")
+    ch2_idx = next((i for i, (fn, _) in enumerate(available_chapters) if "10 - Two New States" in fn), None)
+    if ch2_idx is not None:
+        new_ch2_start = chapters_meta[ch2_idx]["start"]
+        new_ch2_dur = chapter_durations[ch2_idx]
+        new_current_time = round(new_ch2_start + (0.28975 * new_ch2_dur), 2)
+        print("\n>>> Recalibrating listening progress:")
+        print("    Original position: 7,723.6s (28.97% into Chapter 2: Two New States)")
+        print(f"    New Chapter 2 start: {new_ch2_start}s, duration: {new_ch2_dur}s")
+        print(f"    Recalibrated position: {new_current_time}s ({new_current_time/60:.1f} min)")
+    else:
+        new_current_time = 0.0
+        print("\n>>> Chapter 2 not yet synced; progress initialized to 0.0s.")
 
     # Update SQLite database on docker-vm
     sql_cmd = (
