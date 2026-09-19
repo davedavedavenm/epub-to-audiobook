@@ -328,6 +328,14 @@ def main():
     producer = FullBookBreezeProducer()
 
     for ch_idx, (cid, title) in enumerate(chapters, 1):
+        bill = get_billing_summary()
+        if bill:
+            print(f"\n[BILLING CHECK] Metered Spend: ${bill['metered']:.2f} | Remaining Free Credit: ${bill['remaining']:.2f}")
+            if bill["remaining"] < 2.00:
+                print(f"\n[SAFETY HALT] Remaining free credit (${bill['remaining']:.2f}) reached the $2.00 safety floor.")
+                print("Stopping render queue to guarantee ZERO out-of-pocket charges.")
+                break
+
         mp3_path = out_dir / f"{title}.mp3"
         if mp3_path.exists() and mp3_path.stat().st_size > 50000:
             print(f"\n[{ch_idx}/{len(chapters)}] [BANKED] Chapter already completed: {title}.mp3 ({mp3_path.stat().st_size:,} bytes)")
