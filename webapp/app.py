@@ -473,6 +473,18 @@ TTS_ENGINES = {
         'description': 'High-fidelity studio voice cloning and Irish historical narration on Modal Serverless GPU',
         'url_env': 'MODAL_BREEZE_URL',
         'default_url': 'http://modal-breeze:8015/v1'
+    },
+    'cosyvoice': {
+        'name': 'CosyVoice 3 (0.5B)',
+        'description': 'Ultra-efficient flow-matching voice cloning on Modal GPU (RTF ~0.15)',
+        'url_env': 'MODAL_COSYVOICE_URL',
+        'default_url': 'http://modal-cosyvoice:8016/v1'
+    },
+    'f5tts': {
+        'name': 'F5-TTS (300M)',
+        'description': 'Lightweight non-autoregressive flow-matching voice cloning on Modal GPU (RTF ~0.10)',
+        'url_env': 'MODAL_F5TTS_URL',
+        'default_url': 'http://modal-f5tts:8017/v1'
     }
 }
 
@@ -2525,7 +2537,7 @@ def get_voice_preview(voice_id: str) -> Path:
 
     # GPU-only engines (Kaggle/Modal render): previews are pre-rendered and
     # dropped into PREVIEWS_DIR, never generated on this CPU box.
-    if engine in ('cosyvoice', 'breeze'):
+    if engine in ('cosyvoice', 'breeze', 'f5tts'):
         return preview_path if preview_path.exists() else None
 
     try:
@@ -4691,6 +4703,8 @@ def check_engines_health(max_age=20):
     out['breeze'] = modal_configured
     if modal_configured:
         out['qwen3'] = True
+        out['cosyvoice'] = True
+        out['f5tts'] = True
     _ENGINE_HEALTH_CACHE['ts'] = now
     _ENGINE_HEALTH_CACHE['data'] = out
     return out
