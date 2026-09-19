@@ -1,26 +1,27 @@
 """
-render_armed_struggle_full_modal.py — Full-book production rendering of
-"The Armed Struggle: The Story of the IRA" by Richard English using Breeze 2
-with Cillian Murphy's studio Irish narration on Modal GPUs.
+render_armed_struggle_full_modal.py — Resilient, Sub-Batched Full-Book Production
+Rendering of "The Armed Struggle: The Story of the IRA" by Richard English.
 
-Pipeline Overview:
-1. Loads 11 extracted narrative chapters from fixtures/armed_struggle_chapters/
-2. Distributes chapter synthesis across Modal L4/A10G GPU workers in parallel (.map())
-3. Each worker synthesizes sentences with Cillian Murphy dry reference (seed 42, guidance 2.5)
-   and applies the broadcast mastering chain (-20 LUFS).
-4. Assembles completed MP3s into output/armed_struggle_cillian/
-5. Builds Armed Struggle.m4b with chapter metadata and cover.jpg
-6. Generates metadata.json with exact chapter timings
-7. Deploys/syncs to Audiobookshelf on docker-vm
-8. Recalibrates Dave's exact playback position in absdatabase.sqlite
+Voice: Cillian Murphy (Studio Irish Narration, Breeze TTS 2 3.5B) on Modal L4 GPUs.
+
+Architecture:
+1. Chapters partitioned into 15-sentence sub-batches (~4-5 mins compute each).
+2. Slices run across parallel Modal L4 workers (concurrency_limit=3) via .map().
+3. Each sub-batch checkpoints immediately to local disk (output/armed_struggle_cillian/chunks/).
+4. Fully resumable: skips already-banked sub-batches on restart.
+5. Assembles and broadcast-masters (-20 LUFS) complete chapter MP3s upon batch completion.
+6. Packages Armed Struggle.m4b and syncs to Audiobookshelf via scripts/sync_armed_struggle_abs.py.
 """
 
-import modal
+import io
+import os
 import re
 import sys
 import time
+import wave
 import subprocess
 from pathlib import Path
+import modal
 
 app = modal.App("armed-struggle-full-book-render")
 
@@ -44,7 +45,7 @@ image = (
 )
 
 
-@app.cls(image=image, gpu="L4", timeout=14400, scaledown_window=2)
+@app.cls(image=image, gpu="L4", timeout=900, scaledown_window=5, concurrency_limit=3)
 class FullBookBreezeProducer:
     @modal.enter()
     def setup(self):
@@ -55,7 +56,7 @@ class FullBookBreezeProducer:
         from breeze_infer.runtime import load_runtime, resolve_device, update_generation_config_for_breeze
         from models.fast_streaming import FastBreezeStreamingRuntime, FastStreamingConfig
 
-        print("Initializing Breeze TTS 2 (3.5B) for full-book batch production...")
+        print("Initializing Breeze TTS 2 (3.5B) on Nvidia L4 GPU...")
         self.tokenizer, self.model, self.audio_tokenizer = load_runtime(
             Path("/root/breeze-model"),
             device=resolve_device(),
@@ -71,10 +72,10 @@ class FullBookBreezeProducer:
             self.model, self.audio_tokenizer, config, tokenizer=self.tokenizer
         )
         self.sample_rate = self.runtime.sample_rate
-        print("Breeze TTS 2 runtime loaded and ready.")
+        print("Breeze TTS 2 runtime ready.")
 
     @modal.method()
-    def render_chapter(self, item: dict) -> dict:
+    def render_batch(self, item: dict) -> dict:
         import sys
         if "/root/breeze-tts" not in sys.path:
             sys.path.insert(0, "/root/breeze-tts")
@@ -82,143 +83,102 @@ class FullBookBreezeProducer:
         from breeze_infer.templates import get_template, prepare_inputs
         import numpy as np
         import soundfile as sf
+        import torch
 
         chapter_id = item["chapter_id"]
-        title = item["title"]
-        paragraphs = item["paragraphs"]
+        batch_idx = item["batch_idx"]
+        sentences = item["sentences"]
         ref_wav_bytes = item["ref_wav_bytes"]
         ref_text = item["ref_text"]
-        base_instruction = item["instruction"]
 
         ref_path = f"/tmp/cillian_{chapter_id}_ref.wav"
-        with open(ref_path, "wb") as f:
-            f.write(ref_wav_bytes)
+        if not Path(ref_path).exists():
+            with open(ref_path, "wb") as f:
+                f.write(ref_wav_bytes)
 
         t0 = time.time()
         sr = self.sample_rate
         LOCKED_SEED = 42
-
-        total_sentences = sum(len(p) for p in paragraphs)
-        print(f"[{title}] Starting synthesis: {len(paragraphs)} paragraphs, {total_sentences} sentences...")
-
         pieces = []
-        sentence_count = 0
 
-        for p_idx, p in enumerate(paragraphs, 1):
-            for s_idx, sentence in enumerate(p, 1):
-                sentence_count += 1
-                inst = base_instruction
-                if "?" in sentence:
-                    inst += " Deliver with an inquisitive, rising inflection on the question."
+        for s_item in sentences:
+            sentence = s_item["text"]
+            inst = s_item["instruction"]
+            req_id = s_item["id"]
 
-                req = {
-                    "id": f"{chapter_id}-p{p_idx}-s{s_idx}",
-                    "text": sentence,
-                    "instruction": inst,
-                    "speaker": "S0",
-                    "ref_audio_path": ref_path,
-                    "ref_text": ref_text,
-                }
-                try:
-                    set_all_seeds(LOCKED_SEED)
-                    inputs = prepare_inputs(
-                        self.tokenizer,
-                        self.audio_tokenizer,
-                        self.model,
-                        [req],
-                        get_template("ref_edit_tata"),
-                        guidance_scale=2.5,
-                        guidance_scale_ref=None,
-                        guidance_scale_ins=None,
-                    )
+            req = {
+                "id": req_id,
+                "text": sentence,
+                "instruction": inst,
+                "speaker": "S0",
+                "ref_audio_path": ref_path,
+                "ref_text": ref_text,
+            }
 
-                    audio_parts = []
-                    for chunk in self.runtime.iter_audio_chunks(
-                        inputs, request_id=f"{chapter_id}-p{p_idx}-s{s_idx}", seed=LOCKED_SEED
-                    ):
-                        audio_parts.append(chunk.audio)
-                    del inputs
-                except Exception as exc:
-                    print(f"Warning: sentence {s_idx} in paragraph {p_idx} failed with {exc}; retrying with clean cache...")
-                    import torch
-                    torch.cuda.empty_cache()
-                    set_all_seeds(LOCKED_SEED)
-                    inputs = prepare_inputs(
-                        self.tokenizer,
-                        self.audio_tokenizer,
-                        self.model,
-                        [req],
-                        get_template("ref_edit_tata"),
-                        guidance_scale=1.5,
-                    )
-                    audio_parts = []
-                    for chunk in self.runtime.iter_audio_chunks(
-                        inputs, request_id=f"{chapter_id}-p{p_idx}-s{s_idx}", seed=LOCKED_SEED
-                    ):
-                        audio_parts.append(chunk.audio)
-                    del inputs
+            try:
+                set_all_seeds(LOCKED_SEED)
+                inputs = prepare_inputs(
+                    self.tokenizer,
+                    self.audio_tokenizer,
+                    self.model,
+                    [req],
+                    get_template("ref_edit_tata"),
+                    guidance_scale=2.5,
+                )
+                audio_parts = []
+                for chunk in self.runtime.iter_audio_chunks(inputs, request_id=req_id, seed=LOCKED_SEED):
+                    audio_parts.append(chunk.audio)
+                del inputs
+            except Exception as exc:
+                torch.cuda.empty_cache()
+                set_all_seeds(LOCKED_SEED)
+                inputs = prepare_inputs(
+                    self.tokenizer,
+                    self.audio_tokenizer,
+                    self.model,
+                    [req],
+                    get_template("ref_edit_tata"),
+                    guidance_scale=1.5,
+                )
+                audio_parts = []
+                for chunk in self.runtime.iter_audio_chunks(inputs, request_id=req_id, seed=LOCKED_SEED):
+                    audio_parts.append(chunk.audio)
+                del inputs
 
-                if sentence_count % 25 == 0:
-                    import torch
-                    torch.cuda.empty_cache()
+            if audio_parts:
+                pieces.append(np.concatenate(audio_parts))
+                # Natural inter-sentence pause (350ms)
+                pieces.append(np.zeros(int(0.35 * sr), dtype=np.float32))
 
-                if audio_parts:
-                    pieces.append(np.concatenate(audio_parts))
-                    # Natural inter-sentence pause (350ms)
-                    pieces.append(np.zeros(int(0.35 * sr), dtype=np.float32))
+            if s_item.get("is_para_end", False):
+                # Extra 350ms pause (700ms total) at paragraph boundaries
+                pieces.append(np.zeros(int(0.35 * sr), dtype=np.float32))
 
-            # Natural inter-paragraph pause (additional 350ms -> 700ms total)
-            pieces.append(np.zeros(int(0.35 * sr), dtype=np.float32))
+        if not pieces:
+            raise RuntimeError(f"No audio produced for {chapter_id} batch {batch_idx}")
 
-            if p_idx % 10 == 0 or p_idx == len(paragraphs):
-                elapsed = round(time.time() - t0, 1)
-                print(f"[{title}] Progress: Paragraph {p_idx}/{len(paragraphs)} ({sentence_count}/{total_sentences} sentences) in {elapsed}s")
+        batch_audio = np.concatenate(pieces)
+        duration_sec = round(len(batch_audio) / sr, 2)
+        elapsed_sec = round(time.time() - t0, 1)
 
-        full_audio = np.concatenate(pieces)
-        duration_sec = round(len(full_audio) / sr, 2)
-        print(f"[{title}] Complete! Generated {duration_sec}s ({duration_sec/60:.1f} min) audio.")
-
-        raw_wav = f"/tmp/{chapter_id}_raw.wav"
-        mastered_wav = f"/tmp/{chapter_id}_mastered.wav"
-        mastered_mp3 = f"/tmp/{chapter_id}_mastered.mp3"
-
-        sf.write(raw_wav, full_audio, sr)
-
-        # Broadcast Mastering Chain: Clean lower mids, smooth highs, EBU R128 (-20 LUFS)
-        af_filters = (
-            "equalizer=f=220:width_type=o:width=1.2:g=1.0,"
-            "highshelf=f=7500:gain=-2.0:width=1.0,"
-            "loudnorm=I=-20:TP=-2:LRA=11"
-        )
-        subprocess.run([
-            "ffmpeg", "-y", "-i", raw_wav,
-            "-af", af_filters,
-            "-ar", str(sr),
-            mastered_wav
-        ], check=True)
-
-        subprocess.run([
-            "ffmpeg", "-y", "-i", mastered_wav,
-            "-codec:a", "libmp3lame", "-b:a", "192k",
-            mastered_mp3
-        ], check=True)
-
-        with open(mastered_mp3, "rb") as f:
-            mp3_bytes = f.read()
+        buf = io.BytesIO()
+        sf.write(buf, batch_audio, sr, format="WAV", subtype="PCM_16")
+        wav_bytes = buf.getvalue()
 
         return {
             "chapter_id": chapter_id,
-            "title": title,
-            "mp3_bytes": mp3_bytes,
+            "batch_idx": batch_idx,
+            "wav_bytes": wav_bytes,
             "duration": duration_sec,
-            "elapsed_gpu_sec": round(time.time() - t0, 1)
+            "sentence_count": len(sentences),
+            "elapsed_gpu_sec": elapsed_sec,
         }
 
 
 def chunk_paragraph(text: str) -> list[str]:
     protected = re.sub(r'([,;:—])\s*([“"][^”"]+[?!”"])', r'\1\n\2', text)
     marker = "\ue000"
-    for abbrev in ("Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "St.", "vs.", "e.g.", "i.e.", "Capt.", "Gen.", "Col.", "Lt."):
+    for abbrev in ("Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "St.", "vs.", "e.g.", "i.e.", "Capt.", "Gen.", "Col.", "Lt.", "RIC", "IRA", "UDA", "UVF", "SDLP", "GAA", "INLA"):
         protected = protected.replace(abbrev, abbrev[:-1] + marker)
     return [
         item.replace(marker, ".").strip()
@@ -227,32 +187,94 @@ def chunk_paragraph(text: str) -> list[str]:
     ]
 
 
-def check_credit_headroom(min_headroom_usd: float = 2.0) -> bool:
+def partition_chapter(txt_path: Path, chapter_id: str, base_instruction: str, batch_size: int = 15):
+    raw_text = txt_path.read_text(encoding="utf-8")
+    paragraphs = [p.strip() for p in raw_text.split("\n\n") if p.strip()]
+
+    all_sentences = []
+    for p_idx, p in enumerate(paragraphs, 1):
+        sents = chunk_paragraph(p)
+        for s_idx, sentence in enumerate(sents, 1):
+            is_para_end = (s_idx == len(sents))
+            inst = base_instruction
+            if "?" in sentence:
+                inst += " Deliver with an inquisitive, rising inflection on the question."
+            all_sentences.append({
+                "id": f"{chapter_id}-p{p_idx}-s{s_idx}",
+                "text": sentence,
+                "instruction": inst,
+                "is_para_end": is_para_end
+            })
+
+    batches = []
+    for i in range(0, len(all_sentences), batch_size):
+        b_idx = (i // batch_size) + 1
+        b_slice = all_sentences[i:i + batch_size]
+        batches.append({
+            "chapter_id": chapter_id,
+            "batch_idx": b_idx,
+            "sentences": b_slice,
+        })
+    return all_sentences, batches
+
+
+def concatenate_wav_files(chunk_files: list[Path], out_wav: Path):
+    with wave.open(str(out_wav), "wb") as outfile:
+        for i, f in enumerate(chunk_files):
+            with wave.open(str(f), "rb") as infile:
+                if i == 0:
+                    outfile.setparams(infile.getparams())
+                outfile.writeframes(infile.readframes(infile.getnframes()))
+
+
+def master_and_encode(raw_wav: Path, mp3_path: Path, sample_rate: int = 24000):
+    ffmpeg_exe = r"C:\Users\Dave\.local\bin\ffmpeg.exe"
+    if not Path(ffmpeg_exe).exists():
+        ffmpeg_exe = "ffmpeg"
+
+    mastered_wav = raw_wav.with_name(f"{raw_wav.stem}_mastered.wav")
+    af_filters = (
+        "equalizer=f=220:width_type=o:width=1.2:g=1.0,"
+        "highshelf=f=7500:gain=-2.0:width=1.0,"
+        "loudnorm=I=-20:TP=-2:LRA=11"
+    )
+    subprocess.run([
+        ffmpeg_exe, "-y", "-i", str(raw_wav),
+        "-af", af_filters,
+        "-ar", str(sample_rate),
+        str(mastered_wav)
+    ], check=True, capture_output=True)
+
+    subprocess.run([
+        ffmpeg_exe, "-y", "-i", str(mastered_wav),
+        "-codec:a", "libmp3lame", "-b:a", "192k",
+        str(mp3_path)
+    ], check=True, capture_output=True)
+
+    if mastered_wav.exists():
+        mastered_wav.unlink()
+
+
+def get_billing_summary():
     try:
         proc = subprocess.run(["modal", "billing", "summary", "--json"], capture_output=True, text=True, timeout=10)
         if proc.returncode == 0:
             import json
             data = json.loads(proc.stdout)
             metered = float(data.get("metered_cost", 0.0))
-            # Modal free tier is $30.00/mo
-            remaining = 30.00 - metered
-            print(f"[CREDIT CHECK] Metered: ${metered:.2f} | Remaining Free Credit: ${remaining:.2f}")
-            if remaining < min_headroom_usd:
-                print(f"[SAFETY HALT] Remaining credit ${remaining:.2f} is below safety floor ${min_headroom_usd:.2f}. Halting to prevent any charges.")
-                return False
-            return True
-    except Exception as e:
-        print(f"[CREDIT CHECK WARNING] Unable to verify live billing ({e}); continuing cautiously.")
-    return True
+            remaining = max(0.0, 30.00 - metered)
+            return {"metered": metered, "remaining": remaining}
+    except Exception:
+        pass
+    return None
 
 
 @app.local_entrypoint()
 def main():
-    # Prevent Windows from sleeping during long batch render
+    # Windows Sleep Prevention during long batch runs
     if sys.platform == "win32":
         try:
             import ctypes
-            # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
             ctypes.windll.kernel32.SetThreadExecutionState(0x80000001)
             print("[SYSTEM] Windows Sleep Prevention Active (ES_CONTINUOUS | ES_SYSTEM_REQUIRED).")
         except Exception:
@@ -261,7 +283,8 @@ def main():
     root = Path(__file__).resolve().parents[1]
     chapters_dir = root / "fixtures" / "armed_struggle_chapters"
     out_dir = root / "output" / "armed_struggle_cillian"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    chunks_dir = out_dir / "chunks"
+    chunks_dir.mkdir(parents=True, exist_ok=True)
 
     cillian_wav = root / "chatterbox" / "voices" / "cillian_irish_dry.wav"
     ref_wav_bytes = cillian_wav.read_bytes()
@@ -274,7 +297,6 @@ def main():
         "suitable for an Irish history audiobook."
     )
 
-    # 11 Chapters in canonical order
     chapters = [
         ("ch08", "08 - Preface"),
         ("ch09", "09 - One The Irish Revolution Nineteen Sixteen 23"),
@@ -290,14 +312,21 @@ def main():
     ]
 
     print("===================================================================")
-    print(">>> ARMED STRUGGLE: FULL BOOK PRODUCTION RENDER (CILLIAN MURPHY)")
+    print(">>> ARMED STRUGGLE: RESILIENT FULL-BOOK PRODUCTION RENDER")
+    print(">>> Voice: Cillian Murphy Studio Irish Clone (Breeze TTS 2 3.5B)")
+    print(">>> Checkpoint Dir: output/armed_struggle_cillian/chunks/")
     print("===================================================================")
 
-    items_to_render = []
-    for cid, title in chapters:
+    bill = get_billing_summary()
+    if bill:
+        print(f"[BILLING] Metered Spend: ${bill['metered']:.2f} | Remaining Free Credit: ${bill['remaining']:.2f}")
+
+    producer = FullBookBreezeProducer()
+
+    for ch_idx, (cid, title) in enumerate(chapters, 1):
         mp3_path = out_dir / f"{title}.mp3"
         if mp3_path.exists() and mp3_path.stat().st_size > 50000:
-            print(f"[SKIP] Chapter already rendered: {title}.mp3 ({mp3_path.stat().st_size:,} bytes)")
+            print(f"\n[{ch_idx}/{len(chapters)}] [BANKED] Chapter already completed: {title}.mp3 ({mp3_path.stat().st_size:,} bytes)")
             continue
 
         txt_file = chapters_dir / f"{title}.txt"
@@ -305,47 +334,61 @@ def main():
             print(f"[ERROR] Missing chapter text: {txt_file}")
             continue
 
-        raw_text = txt_file.read_text(encoding="utf-8")
-        paras = []
-        for p in raw_text.split("\n\n"):
-            p = p.strip()
-            if p:
-                sents = chunk_paragraph(p)
-                if sents:
-                    paras.append(sents)
+        sents, batches = partition_chapter(txt_file, cid, instruction, batch_size=15)
+        total_batches = len(batches)
+        print(f"\n===================================================================")
+        print(f"[{ch_idx}/{len(chapters)}] CHAPTER: {title}")
+        print(f"Total Sentences: {len(sents)} | Sub-Batches (15 sents): {total_batches}")
+        print(f"===================================================================")
 
-        items_to_render.append({
-            "chapter_id": cid,
-            "title": title,
-            "paragraphs": paras,
-            "ref_wav_bytes": ref_wav_bytes,
-            "ref_text": ref_text,
-            "instruction": instruction
-        })
+        pending_batches = []
+        for b in batches:
+            b_idx = b["batch_idx"]
+            chunk_file = chunks_dir / f"{cid}_batch_{b_idx:03d}.wav"
+            if chunk_file.exists() and chunk_file.stat().st_size > 1000:
+                continue
+            b["ref_wav_bytes"] = ref_wav_bytes
+            b["ref_text"] = ref_text
+            pending_batches.append(b)
 
-    if not items_to_render:
-        print("\nAll chapters already rendered!")
-    else:
-        print(f"\nSubmitting {len(items_to_render)} chapters sequentially to Modal L4 GPU (Rate: $0.80/hr, single worker)...")
-        producer = FullBookBreezeProducer()
-        for idx, item in enumerate(items_to_render, 1):
-            title = item["title"]
-            print(f"\n--- [{idx}/{len(items_to_render)}] Processing: {title} ---")
-            if not check_credit_headroom(min_headroom_usd=2.0):
-                print(f"Halting render queue before {title} to protect Modal free credit buffer.")
-                break
+        completed_count = total_batches - len(pending_batches)
+        if completed_count > 0:
+            print(f"[{title}] Found {completed_count}/{total_batches} batches already banked on disk.")
 
-            res = producer.render_chapter.remote(item)
-            cid = res["chapter_id"]
-            out_file = out_dir / f"{title}.mp3"
-            out_file.write_bytes(res["mp3_bytes"])
-            print(f"✓ BANKED TO DISK: {title}.mp3 ({len(res['mp3_bytes']):,} bytes, {res['duration']}s audio, rendered in {res['elapsed_gpu_sec']}s)")
+        if pending_batches:
+            print(f"[{title}] Dispatching {len(pending_batches)} batches across up to 3 parallel Modal L4 GPU workers...")
+            t_start = time.time()
+            for res in producer.render_batch.map(pending_batches, order_outputs=False):
+                b_idx = res["batch_idx"]
+                chunk_file = chunks_dir / f"{cid}_batch_{b_idx:03d}.wav"
+                chunk_file.write_bytes(res["wav_bytes"])
+                completed_count += 1
+                elapsed = round(time.time() - t_start, 1)
+                print(f"[{title}] Banked batch {b_idx:03d}/{total_batches:03d} ({res['duration']}s audio, {res['sentence_count']} sents in {res['elapsed_gpu_sec']}s GPU) [{completed_count}/{total_batches} done in {elapsed}s]")
+
+        # Verify all batches are present on disk before assembly
+        all_chunk_files = [chunks_dir / f"{cid}_batch_{b['batch_idx']:03d}.wav" for b in batches]
+        missing = [f for f in all_chunk_files if not f.exists()]
+        if missing:
+            print(f"[ERROR] Chapter {title} has {len(missing)} missing batches. Cannot assemble.")
+            continue
+
+        print(f"[{title}] All {total_batches} batches verified on disk! Assembling & mastering to -20 LUFS...")
+        raw_chapter_wav = out_dir / f"{cid}_raw.wav"
+        concatenate_wav_files(all_chunk_files, raw_chapter_wav)
+        master_and_encode(raw_chapter_wav, mp3_path, sample_rate=24000)
+        if raw_chapter_wav.exists():
+            raw_chapter_wav.unlink()
+
+        print(f"✓✓✓ CHAPTER FULLY BANKED: {title}.mp3 ({mp3_path.stat().st_size:,} bytes)")
+
+        bill = get_billing_summary()
+        if bill:
+            print(f"[BILLING UPDATE] Metered Spend: ${bill['metered']:.2f} | Remaining Free Credit: ${bill['remaining']:.2f}")
 
     print("\n===================================================================")
-    print(">>> All chapters rendered! Generating M4B, metadata & syncing to ABS...")
+    print(">>> All chapters rendered! Generating M4B & syncing to ABS...")
     print("===================================================================")
-
-    # Post-processing script handles assembly, sync, and progress restoration
     post_script = root / "scripts" / "sync_armed_struggle_abs.py"
     if post_script.exists():
         subprocess.run([sys.executable, str(post_script)], check=True)

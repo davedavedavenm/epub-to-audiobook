@@ -31,7 +31,7 @@ The stack today:
 | **CWA** (Calibre-Web Automated) | docker-vm | Ebook library, auto-ingest via inotify, format conversion |
 | **Audiobookshelf** | docker-vm | Audiobook server + mobile apps |
 | **OpenBooks + qBittorrent** | docker-vm (Gluetun VPN) | Book acquisition |
-| **epub-to-audiobook** | zorin | TTS conversion pipeline (Chatterbox Nano, TADA) |
+| **epub-to-audiobook** | zorin / modal | TTS conversion pipeline (Chatterbox Nano local; Breeze 2, Qwen3, F5-TTS, CosyVoice 3 on Modal cloud GPU) |
 | **n8n** | n8n-vm | Workflow automation, WhatsApp integration |
 | **Synology NAS** | Spain (nas-wg) | Bulk book archive (audiobooks, ebooks) |
 | **Pangolin + Cloudflare** | hetzner / khpi5 | Reverse proxy, SSO, family access |

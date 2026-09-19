@@ -28,10 +28,10 @@ measured on 2026-07-24:
    acronyms, units; weak only on insider British surnames (Featherstonehaugh →
    read literally) and spaced phone numbers. **GPU-only**: RTF ~0.85 on a
    T4/P100, but on CPU it is ~10–50× realtime AND produces malformed audio
-   (Kaggle Xeon test) — so it is a **Kaggle-render engine**, never a local
-   Zorin service. Full webapp render integration is the remaining build; the
-   standalone kernel (`scripts/kaggle/build_chapter_kernel.py`) renders whole
-   chapters today.
+   (Kaggle Xeon test). **September 2026 update**: Now containerized on Modal Cloud GPU
+   (`evaluations/new-engines/render_tough_irish_cosyvoice.py`) with `wetext` pure-Python
+   frontend, bi-streaming zero-shot voice cloning, and broadcast mastering (-20 LUFS).
+   Runs alongside F5-TTS (300M, RTF 0.577 on T4) on serverless per-second compute.
 
 That July statement is retained as history, not current operational guidance.
 

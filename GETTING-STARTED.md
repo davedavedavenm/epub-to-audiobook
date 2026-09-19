@@ -206,13 +206,17 @@ but when you want the best result:
   gates passed for optional use; current sentence packing remains because it
   beat/tied paragraph-aware packing. Neither replaces Beatrice/Nano or becomes
   an automatic fallback. Every offered preset is cached before it appears.
-- **Qwen3-TTS / VibeVoice GPU candidates** — GPU-only local profiles or
-  explicit free-Kaggle render targets. Qwen is the current full-precision
-  long-form leader. The tested VibeVoice cfg-2 single-pass path opened very
-  well but progressively accelerated after about three minutes and is not
-  approved for books. Starting either Compose profile assumes a GPU is already
-  attached; it never rents one. See [ENGINES.md](ENGINES.md) for the exact
-  rejection boundary, runtime/licence and measured-hour limits.
+- **Modal Cloud GPU Engines (Breeze TTS 2, Qwen3-TTS, F5-TTS, CosyVoice 3)** — on-demand,
+  serverless cloud GPU narration powered by Modal. Includes **Cillian Murphy Irish Studio Clone**
+  (`breeze_cillian_irish`, the definitive Irish history narration winner), **Aiden** (`qwen3_aiden`,
+  for expressive English non-fiction), **F5-TTS** (300M ultra-fast flow matching), and
+  **CosyVoice 3** (0.5B multilingual bi-streaming diffusion). Previews are pre-cached in the app.
+  Requires `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` in `.env`. Runs on per-second compute
+  with zero idle billing ($30/month free credit allowance).
+- **Qwen3-TTS / VibeVoice Local GPU profiles** — GPU-only local Docker profiles or
+  explicit free-Kaggle render targets. Qwen is the full-precision consistency leader.
+  Starting either Compose profile assumes a local CUDA GPU is attached. See [ENGINES.md](ENGINES.md)
+  for exact facts.
 - **Deepgram (Aura-2)** — fast, high-quality cloud neural TTS.
   Aura-2 voices (**Orion**, **Orpheus**, **Arcas**, **Pandora**, **Hyperion**)
   deliver natural, expressive narration at $0.030 per 1,000 characters.

@@ -23,6 +23,13 @@
 >    - Resolved `ruff check` lint failures in `.github/workflows/ci.yml` (removed unused imports, f-string artifacts).
 >    - All 344 unit tests pass cleanly, and GitHub Actions CI workflow is 100% green.
 >
+> 4. **New Engine Auditions on Modal GPU: F5-TTS (300M) & CosyVoice 3 (0.5B)**:
+>    - Deployed `SWivid/F5-TTS` (300M non-autoregressive flow matching) and `Fun-CosyVoice3-0.5B-2512` (0.5B flow matching + Qwen2 LLM conditioning) on Modal GPU (Tesla T4).
+>    - Auditioned on `fixtures/tough_irish_words.txt` (Pádraig Pearse, Seán MacDiarmada, First Dáil Éireann, Cathal Brugha, Cumann na mBan, Dún Laoghaire, Portlaoise, Taoiseach, Tánaiste, Ruairí Ó Brádaigh, Sinn Féin) using Cillian Murphy studio dry reference (`cillian_irish_dry.wav`).
+>    - **F5-TTS Capacity & Performance**: Generated 58.46s audio in **33.71s GPU compute** (RTF: **0.577**, ~1.7x faster than real-time on budget T4). Total compute cost: **~$0.005** (half a cent). File saved and broadcast-mastered (-20 LUFS) at `evaluations/new-engines/output/tough_irish_f5tts_cillian_mastered.mp3`.
+>    - **CosyVoice 3 Architecture**: Official `FunAudioLLM/CosyVoice` with `wetext` pure-Python text normalization (bypassing slow `pynini` builds). Bi-streaming low-latency architecture.
+>    - Multi-app concurrency verified: evaluations ran cleanly in parallel cloud containers without disturbing in-flight full-book production render (`armed-struggle-full-book-render`).
+>
 > ## 2026-09-18 Cloud GPU Audition, Multi-Voice Directed Casting & Broadcast Mastering Pipeline — COMPLETED
 >
 > 1. **Multi-Voice Non-Fiction Casting & Broadcast Mastering (Clear Winner by Ear)**:

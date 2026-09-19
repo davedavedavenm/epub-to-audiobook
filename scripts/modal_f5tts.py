@@ -36,7 +36,7 @@ class F5TTSProducer:
         from f5_tts.api import F5TTS
 
         print(f"Loading F5-TTS on {torch.cuda.get_device_name(0)}...")
-        self.f5 = F5TTS(model_type="F5-TTS")
+        self.f5 = F5TTS(device="cuda")
         self.sample_rate = 24000
         print("F5-TTS model loaded and ready.")
 

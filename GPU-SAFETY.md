@@ -57,3 +57,10 @@ balance in minutes by leaving an instance running.**
   instance-create call.
 - Keep the default OFF in every layer: DB setting, env var, UI control.
 - Never add an "auto-enable GPU when queue is long" path at all.
+
+## Modal Serverless Safety Discipline (September 2026)
+
+- **Per-second billing, zero idle bleed**: Unlike persistent VMs (Vast.ai) which bill while stopped or idle, Modal functions bill strictly while code runs and automatically scale down to zero (`scaledown_window=2`).
+- **Hard function timeouts**: Always configure explicit `timeout=14400` (or appropriate per-job limit) to prevent runaway worker billing if a model hangs.
+- **Explicit user trigger**: Cloud GPU jobs (Breeze 2, Qwen3, F5-TTS) must be explicitly triggered by user request; background batches must remain local CPU by default.
+

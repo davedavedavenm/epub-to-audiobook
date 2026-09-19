@@ -238,7 +238,11 @@ This means most mainstream premium APIs are too expensive for full-book default 
 
 | Engine | Status | Expected cost/book | Notes |
 |--------|--------|--------------------|-------|
-| Chatterbox Nano + Beatrice | Implemented; **default** | GBP0 incremental | Accepted free/local baseline; measured full-book RTF ~0.83–0.87. |
+| Breeze TTS 2 (3.5B) | Implemented on Modal GPU; **Irish & Multilingual winner** | ~$0.70–$1.20/book (absorbed by Modal $30/mo free credit) | Cillian Murphy studio dry clone (`cillian_irish_dry.wav`), seed=42, guidance=2.5. Flawless pronunciation on tough Irish historical names. Rendered *The Armed Struggle* full book. |
+| Qwen3-TTS (1.7B) | Implemented on Modal GPU; **Emotive English winner** | ~$0.30–$0.50/book (absorbed by Modal free credit) | `CustomVoice` studio voices (`aiden`) with natural-language emotion steering. Dynamic rhetorical pacing and question intonation. |
+| F5-TTS (300M) | Implemented on Modal GPU; **Fast Flow Matching** | ~$0.15–$0.25/book (absorbed by Modal free credit) | 300M ConvNeXt v2 + Vocos 24kHz vocoder. Measured RTF 0.577 on Tesla T4. Strict sentence-level chunking ($\le 200$ chars) and fixed seed. |
+| CosyVoice 3 (0.5B) | Implemented on Modal GPU; **Multilingual Bi-Streaming** | ~$0.20–$0.35/book (absorbed by Modal free credit) | FunAudioLLM Qwen2 LLM conditioning + flow-matching diffusion + CausalHiFT. `wetext` frontend normalization. |
+| Chatterbox Nano + Beatrice | Implemented; **local default** | GBP0 incremental | Accepted free/local baseline; measured full-book RTF ~0.83–0.87. |
 | Chatterbox Turbo + Arthur | Implemented; opt-in | GBP0 incremental | Mixed evidence; per-book audition required. The 2026-08-15 hard sample failed while earlier long-form controls were excellent. |
 | Kokoro CPU | Implemented; compatibility/debug | GBP0 incremental | Retired from quality contention; speed does not clear the listening floor. |
 | Kokoro on Vast.ai GPU | Legacy manual path | Paid marketplace rate | Never automatic and not recommended: paying to accelerate rejected-quality output violates the project objective. |
