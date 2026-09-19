@@ -30,7 +30,8 @@ image = (
     .pip_install(
         "soundfile>=0.13",
         "huggingface_hub[cli]>=0.25",
-        "transformers>=4.45",
+        "transformers>=4.50.0,<5.0.0",
+        "qwen-tts==0.1.1",
         "accelerate",
         "scipy",
         "torch",
