@@ -45,7 +45,7 @@ image = (
 )
 
 
-@app.cls(image=image, gpu="L4", timeout=900, scaledown_window=5, max_containers=3)
+@app.cls(image=image, gpu="L4", timeout=2400, scaledown_window=5, max_containers=3)
 class FullBookBreezeProducer:
     @modal.enter()
     def setup(self):
@@ -348,28 +348,31 @@ def main():
         print(f"Total Sentences: {len(sents)} | Sub-Batches (15 sents): {total_batches}")
         print(f"===================================================================")
 
-        pending_batches = []
-        for b in batches:
-            b_idx = b["batch_idx"]
-            chunk_file = chunks_dir / f"{cid}_batch_{b_idx:03d}.wav"
-            if chunk_file.exists() and chunk_file.stat().st_size > 1000:
-                continue
-            b["ref_wav_bytes"] = ref_wav_bytes
-            b["ref_text"] = ref_text
-            pending_batches.append(b)
+        for pass_num in range(1, 3):
+            pending_batches = []
+            for b in batches:
+                b_idx = b["batch_idx"]
+                chunk_file = chunks_dir / f"{cid}_batch_{b_idx:03d}.wav"
+                if chunk_file.exists() and chunk_file.stat().st_size > 1000:
+                    continue
+                b["ref_wav_bytes"] = ref_wav_bytes
+                b["ref_text"] = ref_text
+                pending_batches.append(b)
 
-        completed_count = total_batches - len(pending_batches)
-        if completed_count > 0:
-            print(f"[{title}] Found {completed_count}/{total_batches} batches already banked on disk.")
+            if not pending_batches:
+                break
 
-        if pending_batches:
-            print(f"[{title}] Dispatching {len(pending_batches)} batches across up to 3 parallel Modal L4 GPU workers...")
+            completed_count = total_batches - len(pending_batches)
+            print(f"[{title}] (Pass {pass_num}) Dispatching {len(pending_batches)} batches across up to 3 parallel Modal L4 GPU workers ({completed_count}/{total_batches} already on disk)...")
             t_start = time.time()
-            for res in producer.render_batch.map(pending_batches, order_outputs=False):
+            for res in producer.render_batch.map(pending_batches, order_outputs=False, return_exceptions=True):
+                if isinstance(res, Exception):
+                    print(f"[{title}] [WARN] Sub-batch exception: {res}")
+                    continue
                 b_idx = res["batch_idx"]
                 chunk_file = chunks_dir / f"{cid}_batch_{b_idx:03d}.wav"
                 chunk_file.write_bytes(res["wav_bytes"])
-                completed_count += 1
+                completed_count = sum(1 for b in batches if (chunks_dir / f"{cid}_batch_{b['batch_idx']:03d}.wav").exists())
                 elapsed = round(time.time() - t_start, 1)
                 print(f"[{title}] Banked batch {b_idx:03d}/{total_batches:03d} ({res['duration']}s audio, {res['sentence_count']} sents in {res['elapsed_gpu_sec']}s GPU) [{completed_count}/{total_batches} done in {elapsed}s]")
 
