@@ -38,7 +38,7 @@ image = (
     )
     .run_commands(
         "git clone https://github.com/breezeblue-ai/breeze-tts.git /root/breeze-tts",
-        "huggingface-cli download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
+        "hf download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
     )
 )
 

@@ -9,8 +9,6 @@ Model Architecture:
 """
 
 import modal
-import os
-import subprocess
 
 app = modal.App("homelab-fireredtts3-eval")
 
@@ -21,7 +19,7 @@ image = (
     .run_commands(
         "git clone https://github.com/FireRedTeam/FireRedTTS3.git /root/FireRedTTS3",
         "cd /root/FireRedTTS3 && uv pip install -r requirements.txt --system",
-        "huggingface-cli download FireRedTeam/FireRedTTS3 --local-dir /root/pretrained_models"
+        "hf download FireRedTeam/FireRedTTS3 --local-dir /root/pretrained_models"
     )
 )
 
@@ -42,7 +40,6 @@ class FireRedEngine:
     def synthesize(self, text: str, ref_wav_bytes: bytes, prompt_text: str) -> dict:
         import time
         import io
-        import numpy as np
         import soundfile as sf
         import torchaudio
         import torch

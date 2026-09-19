@@ -10,7 +10,6 @@ Synthesizes the First Dail excerpt from Armed Struggle: The Story of the IRA:
 """
 
 import modal
-import os
 import re
 import time
 import subprocess
@@ -33,7 +32,7 @@ image = (
     )
     .run_commands(
         "git clone https://github.com/breezeblue-ai/breeze-tts.git /root/breeze-tts",
-        "huggingface-cli download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
+        "hf download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
     )
 )
 
@@ -75,7 +74,6 @@ class CillianBreezeProducer:
         from breeze_infer.templates import get_template, prepare_inputs
         import numpy as np
         import soundfile as sf
-        import time
         import re
 
         ref_path = "/tmp/cillian_ref.wav"

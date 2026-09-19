@@ -28,7 +28,7 @@ image = (
     .run_commands(
         "git clone https://github.com/fishaudio/fish-speech.git /root/fish-speech",
         "cd /root/fish-speech && uv pip install -e . --system",
-        "huggingface-cli download fishaudio/s2-pro --local-dir /root/checkpoints/s2-pro"
+        "hf download fishaudio/s2-pro --local-dir /root/checkpoints/s2-pro"
     )
 )
 
@@ -36,8 +36,6 @@ image = (
 class FishSpeechS2Engine:
     @modal.enter()
     def setup(self):
-        import os
-        import glob
         import sys
         import subprocess
 
@@ -64,8 +62,6 @@ class FishSpeechS2Engine:
     @modal.method()
     def synthesize(self, text: str, ref_wav_bytes: bytes, prompt_text: str) -> dict:
         import time
-        import os
-        import subprocess
         import shutil
 
         work_dir = "/tmp/fish_s2_run"

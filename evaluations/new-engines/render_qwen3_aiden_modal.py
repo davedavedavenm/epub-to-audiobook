@@ -11,7 +11,6 @@ Outputs:
 """
 
 import modal
-import os
 import re
 import time
 import subprocess
@@ -57,7 +56,6 @@ class Qwen3AidenProducer:
     def synthesize(self, chunks: list[str], instruct: str) -> dict:
         import numpy as np
         import soundfile as sf
-        import time
 
         full_chunks = []
         sr = 24000
@@ -163,7 +161,7 @@ def main():
     raw_path.write_bytes(res["raw_bytes"])
     mastered_path.write_bytes(res["mastered_bytes"])
 
-    print(f"\nSUCCESS!")
+    print("\nSUCCESS!")
     print(f"Raw MP3: {raw_path} ({len(res['raw_bytes']):,} bytes)")
     print(f"Mastered MP3: {mastered_path} ({len(res['mastered_bytes']):,} bytes)")
     print(f"Audio Duration: {res['duration']}s | GPU Wall Time: {res['gpu_time']}s")
