@@ -124,6 +124,8 @@ class FullBookBreezeProducer:
                     [req],
                     get_template("ref_edit_tata"),
                     guidance_scale=2.5,
+                    guidance_scale_ref=None,
+                    guidance_scale_ins=None,
                 )
                 audio_parts = []
                 for chunk in self.runtime.iter_audio_chunks(inputs, request_id=req_id, seed=LOCKED_SEED):
@@ -139,6 +141,8 @@ class FullBookBreezeProducer:
                     [req],
                     get_template("ref_edit_tata"),
                     guidance_scale=1.5,
+                    guidance_scale_ref=None,
+                    guidance_scale_ins=None,
                 )
                 audio_parts = []
                 for chunk in self.runtime.iter_audio_chunks(inputs, request_id=req_id, seed=LOCKED_SEED):
