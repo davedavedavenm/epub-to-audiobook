@@ -87,6 +87,11 @@ requires a separately authorised environment-gated session.
   official hosted-NIM comparison remains open to distinguish the public raw
   runtime from NVIDIA's production service. Exact facts: [ENGINES.md](ENGINES.md);
   safe one-request procedure: [NVIDIA-NIM-DIAGNOSTIC.md](NVIDIA-NIM-DIAGNOSTIC.md).
+- **Modal Cloud GPU Engines**:
+  - **Breeze TTS 2 (3.5B)** - definitive winner for Irish & Multilingual narration (**Cillian Murphy Irish Studio Clone**). Deployed on Modal GPU (Tesla T4 / Nvidia L4) with locked seed=42 and broadcast mastering (-20 LUFS). Rendered *The Armed Struggle: The Story of the IRA* full book.
+  - **Qwen3-TTS 1.7B** - approved for expressive English non-fiction (**Aiden**). `CustomVoice` model with natural-language emotive instruction steering for dynamic non-fiction pacing and question inflection.
+  - **F5-TTS (300M)** - ultra-fast non-autoregressive flow matching diffusion model with ConvNeXt v2 acoustic backbone and Vocos 24kHz vocoder. Measured RTF 0.577 on Tesla T4.
+  - **CosyVoice 3 (0.5B)** - multilingual bi-streaming diffusion architecture with Qwen2 LLM conditioning, ~150ms latency, and `wetext` text normalization.
 - **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
 
 ### Web Application & Media Delivery

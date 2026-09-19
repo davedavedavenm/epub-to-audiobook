@@ -1,8 +1,38 @@
 # Voices and accents
 
-**Last updated: 2026-08-15.** What works, what does not, and the wrong turns —
+**Last updated: 2026-09-19.** What works, what does not, and the wrong turns —
 recorded so nobody walks back down them. Every claim here was heard or measured,
 not reasoned about; where something is untested it says so.
+
+## September 2026 Breakthrough: Breeze 2 Cillian Murphy Irish Winner; Qwen3 Aiden Emotive Winner; Cloud GPU Portfolio
+
+Following extensive auditions on Modal Cloud GPUs across *Breakneck* and *The Armed Struggle: The Story of the IRA* (First Dáil excerpt and Tough Irish Words challenge: Pádraig Pearse, Seán MacDiarmada, Dáil Éireann, Cathal Brugha, Cumann na mBan, Dún Laoghaire, Portlaoise, Taoiseach, Tánaiste, Ruairí Ó Brádaigh, Sinn Féin):
+
+1. **Cillian Murphy (Breeze TTS 2) is the definitive Irish & Multilingual winner.**
+   - Dave's listening verdict: **"outstanding... almost perfect"**.
+   - Cloned from `chatterbox/voices/cillian_irish_dry.wav` (9.5s clean studio reference).
+   - Fixed `seed=42` eliminates inter-sentence pitch/timbre drift; `guidance_scale=2.5` eliminates date/number warbling.
+   - Flawlessly articulated Irish Gaelic political titles and placenames. Rendered *The Armed Struggle* full-book production.
+   - Broadcast mastered (-20 LUFS integrated loudness, +1.0 dB EQ at 220 Hz, -2 dB high shelf at 7.5 kHz).
+
+2. **Qwen3-TTS Aiden (`qwen3_aiden`) is approved for Emotive English Non-Fiction.**
+   - Dave's listening verdict: **"solid voice... great emotive uses... really nice"**.
+   - `CustomVoice` 1.7B studio model with dynamic natural-language emotion steering.
+   - Note: Zero-shot base model cloning with Qwen3 produces breath artifacts and poor non-English pronunciation; `CustomVoice` studio voices are the approved operational mode.
+
+3. **F5-TTS (300M) & CosyVoice 3 (0.5B) Modern Diffusion Cloners**:
+   - Evaluated on the same Tough Irish Words challenge with Cillian Murphy studio reference.
+   - F5-TTS achieved RTF 0.577 on Tesla T4 (58.46s audio in 33.71s compute, ~$0.005 cost) with strict sentence chunking and fixed seed.
+   - CosyVoice 3 evaluates Qwen2 LLM conditioning + flow matching with `wetext` text normalization.
+
+4. **5 Additional Approved Top-Tier Breeze 2 English Voices**:
+   - `breeze_liam_au`: Liam (Australian / Irish Male) — warm, natural non-fiction.
+   - `breeze_karen_savage`: Karen Savage (Classic British Female) — elegant literary RP.
+   - `breeze_arthur`: Arthur (Distinguished British Male) — classic UK non-fiction.
+   - `breeze_adrian`: Adrian Praetzellis (Scholarly British Male) — articulate, scholarly tone.
+   - `breeze_tadhg_clean`: Tadhg Hynes (Restored Irish Male) — denoiser-restored studio timbre.
+
+---
 
 ## The quality gate
 

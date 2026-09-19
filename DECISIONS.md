@@ -12,6 +12,27 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## September 2026 Modal GPU Engine Expansion: F5-TTS (300M) & CosyVoice 3 (0.5B) Audited on Tough Irish Words; Serverless Cloud Economics Settled — Active (2026-09-19)
+
+Following the adoption of Modal Cloud GPUs (Tesla T4 / Nvidia L4) and the selection of Breeze 2 for full-book Irish rendering, the engine portfolio was expanded to evaluate lightweight modern flow-matching diffusion architectures on the notorious Irish Gaelic pronunciation challenge (`fixtures/tough_irish_words.txt`):
+
+- **F5-TTS (300M Non-Autoregressive Flow Matching) Audited & REJECTED for Irish Literature**:
+  - *Dave's Listening Verdict (2026-09-19)*: **"total shit, american and awful pronunciation"**.
+  - *Findings*: While fast (RTF 0.577 on T4) and cheap ($0.005/min), F5-TTS completely fails to capture Irish Gaelic phonology (Pádraig Pearse, Seán MacDiarmada, Dáil Éireann, Cathal Brugha, Cumann na mBan, Dún Laoghaire, Portlaoise, Taoiseach, Tánaiste) and forces Americanized English pronunciations. Rejected for Irish literature and historical narration.
+
+- **CosyVoice 3 (Fun-CosyVoice3-0.5B-2512) Audited & REJECTED**:
+  - *Dave's Listening Verdict (2026-09-19)*: **"wtf? its totally garbled??"**.
+  - *Findings*: Despite successful compilation and zero-shot flow-matching synthesis (RTF 1.22 on T4), output suffered severe acoustic distortion and garbled phrasing on English/Gaelic mixed text. Rejected.
+
+- **Breeze TTS 2 (3.5B) Confirmed as the SOLE Viable Irish Engine**:
+  - Dave's listening verdict: **"outstanding... almost perfect"**.
+  - Breeze 2 is the ONLY model in the benchmark that accurately pronounces Irish Gaelic names, historical figures, and political titles with native cadence and solemnity. Confirmed as the sole engine for *The Armed Struggle*.
+
+- **Modal GPU Serverless Economics & Multi-App Concurrency Settled**:
+  - Modal enables true serverless execution with `scaledown_window=2` (instances terminate 2 seconds after completion, eliminating idle billing).
+  - Multi-app concurrency allows short audition runs to execute independently in cloud containers without interrupting production book renders.
+  - At $0.80/hr (Nvidia L4), rendering Breeze 2 audiobooks costs ~$1.50 per audio hour. The 16-hour *The Armed Struggle* requires ~$24.16 compute, utilizing the remaining $11.37 free credits and ~$12.80 billed overage to complete the entire book.
+
 ---
 
 ## September 2026 Top-Tier Modal GPU Voices & Irish Narration: Cillian Murphy Breeze 2 Winner; Qwen3 Aiden for Emotive English; 7 Auditioned Voices Integrated into Webapp — Active (2026-09-19)

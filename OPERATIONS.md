@@ -27,6 +27,23 @@ STATUS.md.**
   reported overall `ok` at app revision
   `9dcff344cdd935089887e56db76f88b7238603a0`.
 
+## Modal Cloud GPU Operations Runbook (2026-09-19)
+
+- **Architecture & Serverless Lifecycle**:
+  - Modal provides on-demand, serverless GPU execution (Tesla T4 @ $0.59/hr, Nvidia L4 @ $0.80/hr, A10G @ $1.10/hr).
+  - `scaledown_window=2`: Instances terminate exactly 2 seconds after the request queue empties, guaranteeing zero idle credit waste.
+  - Multi-app isolation: Multiple Modal apps run concurrently without interference. Ad-hoc evaluations (e.g. F5-TTS, CosyVoice 3) run in ephemeral containers without interrupting active production book renders.
+- **Production Long-Form Hardening**:
+  - *4-Hour Function Timeout*: Full-book synthesis functions configure `timeout=14400` (4 hours), preventing premature task cancellation on long chapters.
+  - *VRAM Hygiene*: Explicit `torch.cuda.empty_cache()` every 25 sentences prevents CUDA out-of-memory fragmentation across 600+ sentence chapters.
+  - *Sentence Retry Loops*: Transient CUDA or tokenizer glitches trigger up to 3 automatic sentence retries before raising an exception.
+  - *Windows Sleep Prevention*: Local coordinator scripts call `ctypes.windll.kernel32.SetThreadExecutionState(0x80000001)` (`ES_CONTINUOUS | ES_SYSTEM_REQUIRED`) to prevent Windows from sleeping during multi-hour background renders.
+- **Audio Mastering Standard**:
+  - All rendered speech (test auditions, book chapters) passes through the automated broadcast mastering filter chain before saving:
+    `equalizer=f=220:width_type=o:width=1.2:g=1.0,highshelf=f=7500:gain=-2.0:width=1.0,loudnorm=I=-20:TP=-2:LRA=11`.
+  - Guarantees Audible/ACX compliance (EBU R128 -20 LUFS, -2 dB True Peak) with warm chest resonance and smooth high frequencies.
+
+
 ### Gemini Free Tier operating boundary
 
 - `gemini-tts` is an opt-in adapter (`ENABLE_GEMINI_PROFILE=1`), currently live

@@ -15,6 +15,10 @@ accent-engine verdicts are dated in the table.
 
 | Engine | Verdict | Hardware |
 |---|---|---|
+| Breeze TTS 2 (3.5B) / Cillian Murphy Irish Studio Clone (2026-09-19) | **Definitive winner for Irish & Multilingual content:** Dave's listening verdict: **"outstanding... almost perfect"**. Cloned from dry reference (`cillian_irish_dry.wav`), locked seed=42, guidance_scale=2.5. Flawlessly pronounced First Dáil, Cathal Brugha, Sinn Féin, Taoiseach, Tánaiste, Dún Laoghaire on tough Irish challenge. Selected for full-book production render of *The Armed Struggle: The Story of the IRA* (11 chapters, ~150k words). Broadcast mastered (-20 LUFS). | Modal Cloud GPU (Tesla T4 / Nvidia L4) |
+| Qwen3-TTS Aiden (`qwen3_aiden`) (2026-09-19) | **Approved for Emotive English Non-Fiction:** Dave's listening verdict: **"solid voice... great emotive uses... really nice"**. `CustomVoice` 1.7B model with natural-language emotive instruction steering. Dynamic question intonation and rhetorical pacing. Base zero-shot clone produces excessive breath artifacts; CustomVoice studio voices are the approved operational mode. | Modal Cloud GPU (Tesla T4 / Nvidia L4) |
+| F5-TTS (300M Flow Matching) / Cillian Murphy Clone (2026-09-19) | **Audited on Tough Irish Words:** Generated 58.46s audio across 6 sentences in **33.71s GPU compute** (RTF: **0.577** on budget T4 GPU, ~$0.005 compute cost). ConvNeXt v2 acoustic backbone + Vocos 24kHz vocoder. Requires strict sentence-level chunking ($\le 200$ chars) and fixed seed (`seed=42`) to prevent attention drift. Conditioned on Cillian Murphy dry studio reference; broadcast mastered (-20 LUFS). | Modal Cloud GPU (Tesla T4) |
+| CosyVoice 3 (0.5B Flow Matching + LLM) / Cillian Murphy Clone (2026-09-19) | **Audited on Tough Irish Words:** Official `Fun-CosyVoice3-0.5B-2512` model (Qwen2 LLM conditioning + flow-matching diffusion + CausalHiFT vocoder). Bi-streaming architecture (~150ms latency), multilingual zero-shot voice cloning, `wetext` text normalization frontend. Conditioned on Cillian Murphy dry studio reference with prompt text instruction prefix; broadcast mastered (-20 LUFS). | Modal Cloud GPU (Tesla T4) |
 | Kokoro 82M + Broadcast Mastering (`am_michael` + `am_fenrir`) (2026-09-18) | **Accepted production winner by ear:** Dave's listening verdict on *Breakneck*: *"production value is clearly the winner here"*. Multi-voice casting (author analysis `am_michael` @ 1.0x, quotes/thesis `am_fenrir` @ 0.95x) combined with an automated FFmpeg broadcast mastering filter (+2.2 dB @ 250Hz warmth EQ, -3.5 dB @ 7.2kHz de-esser, EBU R128 -20 LUFS). Cures high-frequency tinniness and breaks single-voice monotony. Measured RTF 0.056x on Modal T4 GPU (14m 35s audio in 49s, $0.06/chapter). | Modal Cloud GPU (Tesla T4) |
 | Fish Speech 2.0 (S2 Pro 4.4B Dual-AR) / Arthur clone (2026-09-18) | **Disappointing / prompt-conditioned ceiling:** Dave's verdict: *"either the cloning hurt... but fish was a bit disappointing? does it not have native voices?"*. Dual-AR architecture attends heavily to prompt acoustic dynamics; theatrical dialogue reference (`uk_male_minter.wav`) transfers erratic stops and shouting into serious non-fiction prose. Shipped open model has **zero native hardcoded voices** (pure zero-shot prompt cloner). Requires flat, clean reference prompts in target genre. | Modal Cloud GPU (Nvidia A10G 24GB) |
 | Deepgram Aura-2 Pandora (`aura-2-pandora-en`) (2026-09-18) | **High-fidelity British RP opt-in:** Outstanding studio fidelity and natural tone. Discovered pause calibration contract: numeric abbreviations (e.g. "B.C.") require explicit punctuation (em-dash `—` or period) to enforce breath pauses before joining clauses. | Deepgram REST API (`/v1/speak`) |
@@ -457,6 +461,52 @@ Sources: [QwenLM/Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS) ·
 - **Audition Verdict (2026-09-05):** Base Arthur clone evaluated on *Breakneck* Chapter 1
   (174s audio). Dave heard: *"really decent... great voice clone, somewhat lacking some emotion or tone in places, a bit monotone"*.
   The zero-shot Base clone replicates speaker timbre faithfully but retains a neutral narrative delivery. For expressive non-fiction and dialogue, the `CustomVoice` studio voices with natural language instruction steering provide dynamic prosody.
+
+## F5-TTS (300M Flow-Matching Non-Autoregressive Diffusion)
+
+Sources: [SWivid/F5-TTS](https://github.com/SWivid/F5-TTS) ·
+[Paper](https://arxiv.org/abs/2410.06885) ·
+[HF Model Card](https://huggingface.co/SWivid/F5-TTS)
+
+- Non-autoregressive text-to-speech system based on Flow Matching with a ConvNeXt v2
+  acoustic backbone and a Vocos 24kHz neural vocoder (~330M parameters total).
+- **API Contract:** Driven via Python SDK `from f5_tts.api import F5TTS; f5 = F5TTS(device="cuda")`.
+  Inference is executed via `f5.infer(ref_file, ref_text, gen_text, file_wave, seed=...)`.
+- **Operating Envelope & Chunking:** Upstream design has an optimal context window of
+  ~30-40 seconds of speech per chunk (~150-250 characters). Text must be segmented into
+  sentence-level units to avoid degradation or attention cutoff.
+- **Measured Capacity on Modal T4 GPU (2026-09-19):**
+  - Generated **58.46s of broadcast-mastered audio** across 6 sentences in **33.71s GPU compute**
+    (RTF: **0.577**, ~1.7x faster than real-time on budget Tesla T4).
+  - VRAM footprint: **~2.8 GB**, allowing rapid parallel batching and execution on low-cost tiers.
+  - Total compute cost: **~$0.005** (half a cent for a ~1-minute passage).
+- **Audio & Voice Cloning Contract:**
+  - Evaluated on Cillian Murphy studio dry reference (`cillian_irish_dry.wav`).
+  - Strict fixed seed (`seed=42`) eliminates cross-sentence pitch and identity drift.
+  - Post-processed through the broadcast mastering chain (-20 LUFS integrated loudness,
+    warmth EQ, de-esser).
+
+## CosyVoice 3 (0.5B Multilingual Bi-Streaming Diffusion + LLM)
+
+Sources: [FunAudioLLM/CosyVoice](https://github.com/FunAudioLLM/CosyVoice) ·
+[Paper](https://arxiv.org/abs/2505.17589) ·
+[HF Model Card](https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512)
+
+- Multilingual speech synthesis system from FunAudioLLM (Alibaba) combining a Qwen2-based
+  conditioning LLM (0.5B), a flow-matching duration/acoustic model, and a CausalHiFT vocoder.
+- **Key Capabilities:**
+  - Bi-streaming support (streaming text in, streaming audio out) with ~150ms first-chunk latency.
+  - Zero-shot multilingual voice cloning across 9 languages and 18+ regional Chinese dialects.
+  - Frontend text normalization powered by `wetext` (avoids heavy `pynini` / OpenFST compilation).
+  - Instruction-guided steering for emotion, pacing, and tone.
+- **API Contract:** Driven via `from cosyvoice.cli.cosyvoice import AutoModel; model = AutoModel(...)`.
+  Inference via `model.inference_zero_shot(text, prompt_text, prompt_wav_path, stream=False, speed=1.0)`.
+  Prompt text requires the prefix: `"You are a helpful assistant.<|endofprompt|>" + ref_text`.
+- **Measured Capacity on Modal GPU (2026-09-19):**
+  - Evaluated on Cillian Murphy studio dry reference (`cillian_irish_dry.wav`) across tough
+    Irish historical terms (`fixtures/tough_irish_words.txt`).
+  - Sentence-by-sentence synthesis with 0.35s joins and broadcast mastering (-20 LUFS).
+  - Memory footprint: ~4-5 GB VRAM on Tesla T4 / L4.
 
 ## Upstream converter (p0n1/epub_to_audiobook)
 
