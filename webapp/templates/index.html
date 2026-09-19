@@ -3380,7 +3380,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         if (status.modal) {
             if (status.modal.configured) {
-                badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.15); color:#a78bfa; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa;"></span>Modal: ~$27/mo Free GPU</span>`);
+                const bal = status.modal.formatted || '~$27/mo Free GPU';
+                badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.15); color:#a78bfa; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa;"></span>Modal: ${escapeHtml(bal)}</span>`);
             } else {
                 badges.push(`<a href="#settings" onclick="switchTab('settings')" style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.08); color:#a78bfa; font-weight:600; text-decoration:none;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa; opacity:0.6;"></span>Modal: ~$27/mo Free GPU (Configure)</a>`);
             }

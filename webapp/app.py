@@ -5279,9 +5279,13 @@ def test_modal_connection():
             token_secret = get_setting('MODAL_TOKEN_SECRET') or os.environ.get('MODAL_TOKEN_SECRET')
         if not (token_id.startswith('ak-') and token_secret.startswith('as-')):
             return jsonify({'error': 'Modal Token ID must start with ak- and Secret with as-'}), 400
+        modal_info = _fetch_modal_balance(token_id, token_secret, force=True)
+        bal_msg = f" — {modal_info['formatted']}" if modal_info and modal_info.get('formatted') else " — ~$27/mo free credits active."
         return jsonify({
             'status': 'success',
-            'message': f'Modal credentials verified ({token_id[:6]}...{token_id[-4:]})! ~$27/mo free credits active.'
+            'message': f'Modal credentials verified ({token_id[:6]}...{token_id[-4:]})!{bal_msg}',
+            'formatted': modal_info.get('formatted') if modal_info else None,
+            'remaining': modal_info.get('remaining') if modal_info else None
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -5538,6 +5542,63 @@ def get_deepgram_balance():
     return jsonify({'configured': True, 'balance': None, 'formatted': None})
 
 
+_MODAL_BALANCE_CACHE = {}
+
+
+def _fetch_modal_balance(token_id: str, token_secret: str, force: bool = False):
+    """Fetch Modal workspace billing summary with a 60s cache."""
+    if not (token_id and token_secret):
+        return None
+    cache_key = f"{token_id}:{token_secret[:6]}"
+    now = time.time()
+    cached = _MODAL_BALANCE_CACHE.get(cache_key)
+    if not force and cached and (now - cached.get('time', 0) < 60):
+        return cached.get('data')
+
+    env = os.environ.copy()
+    env['MODAL_TOKEN_ID'] = token_id
+    env['MODAL_TOKEN_SECRET'] = token_secret
+
+    modal_bin = shutil.which('modal')
+    if not modal_bin:
+        for cand in ('/home/appuser/.local/bin/modal', '/root/.local/bin/modal', r'C:\Users\Dave\.local\bin\modal.exe'):
+            if Path(cand).exists():
+                modal_bin = cand
+                break
+
+    if modal_bin:
+        try:
+            proc = subprocess.run(
+                [modal_bin, 'billing', 'summary', '--json'],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=8
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                data = json.loads(proc.stdout)
+                metered = float(data.get('metered_cost') or 0.0)
+                billed = float(data.get('billed_cost') or 0.0)
+                free_tier_total = 30.0
+                remaining = max(0.0, free_tier_total - metered)
+                res = {
+                    'configured': True,
+                    'metered_cost': round(metered, 2),
+                    'billed_cost': round(billed, 2),
+                    'remaining': round(remaining, 2),
+                    'formatted': f"${remaining:.2f} Free Credit Left",
+                    'used_formatted': f"${metered:.2f} used",
+                }
+                _MODAL_BALANCE_CACHE[cache_key] = {'time': now, 'data': res}
+                return res
+        except Exception as e:
+            app.logger.warning(f"Error fetching Modal balance: {e}")
+
+    res = {'configured': True, 'formatted': 'Active (~$27/mo free)'}
+    _MODAL_BALANCE_CACHE[cache_key] = {'time': now, 'data': res}
+    return res
+
+
 @app.route('/api/cloud_status', methods=['GET'])
 def get_cloud_status():
     """Return live balances and limits for cloud/API-keyed engines and renderers."""
@@ -5560,6 +5621,7 @@ def get_cloud_status():
     modal_id = get_setting('MODAL_TOKEN_ID') or os.environ.get('MODAL_TOKEN_ID', '')
     modal_secret = get_setting('MODAL_TOKEN_SECRET') or os.environ.get('MODAL_TOKEN_SECRET', '')
     modal_configured = bool(modal_id and modal_secret)
+    modal_info = _fetch_modal_balance(modal_id, modal_secret) if modal_configured else None
 
     return jsonify({
         'deepgram': {
@@ -5581,7 +5643,10 @@ def get_cloud_status():
         'modal': {
             'configured': modal_configured,
             'label': 'Modal Serverless GPU',
-            'tier': 'Active (~$27/mo free credits)' if modal_configured else 'Unconfigured',
+            'tier': modal_info.get('formatted') if modal_info else ('Active (~$27/mo free credits)' if modal_configured else 'Unconfigured'),
+            'formatted': modal_info.get('formatted') if modal_info else None,
+            'remaining': modal_info.get('remaining') if modal_info else None,
+            'used_formatted': modal_info.get('used_formatted') if modal_info else None,
             'token_id': (modal_id[:6] + '...' + modal_id[-4:]) if len(modal_id) > 10 else (modal_id or '')
         },
         'vast': {
