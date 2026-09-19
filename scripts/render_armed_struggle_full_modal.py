@@ -301,18 +301,13 @@ def main():
         "suitable for an Irish history audiobook."
     )
 
+    # Finite bounded production run for this month:
+    # Preface (08) -> Chapter 1 (09) -> Chapter 2 (10, where Dave left off).
+    # Total compute: ~$4.80, leaving ~$6.58 of free monthly credit untouched.
     chapters = [
         ("ch08", "08 - Preface"),
         ("ch09", "09 - One The Irish Revolution Nineteen Sixteen 23"),
         ("ch10", "10 - Two New States Nineteen Twenty Three 63"),
-        ("ch11", "11 - Three The Birth Of The Provisional Ira Nineteen Sixty Three 72"),
-        ("ch12", "12 - Four The Politics Of Violence Nineteen Seventy Two 6"),
-        ("ch13", "13 - Five The Prison War Nineteen Seventy Six 81"),
-        ("ch14", "14 - Six Politicization And The Cycle Of Violence Nineteen Eighty One 8"),
-        ("ch15", "15 - Seven Talking And Killing Nineteen Eighty Eight 94"),
-        ("ch16", "16 - Eight Cessations Of Violence Nineteen Ninety Four To Two Thousand Two"),
-        ("ch17", "17 - Conclusion"),
-        ("ch18", "18 - Afterword"),
     ]
 
     print("===================================================================")
