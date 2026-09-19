@@ -45,7 +45,7 @@ image = (
 )
 
 
-@app.cls(image=image, gpu="L4", timeout=900, scaledown_window=5, concurrency_limit=3)
+@app.cls(image=image, gpu="L4", timeout=900, scaledown_window=5, max_containers=3)
 class FullBookBreezeProducer:
     @modal.enter()
     def setup(self):
