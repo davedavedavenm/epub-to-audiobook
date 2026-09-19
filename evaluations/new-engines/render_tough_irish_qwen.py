@@ -9,9 +9,7 @@ Text: fixtures/tough_irish_words.txt (Taoiseach, Tánaiste, Dún Laoghaire, Port
 """
 
 import modal
-import os
 import re
-import time
 import subprocess
 from pathlib import Path
 
@@ -55,7 +53,6 @@ class ToughIrishQwenProducer:
     def synthesize_aiden(self, items: list[dict]) -> dict:
         import numpy as np
         import soundfile as sf
-        import subprocess
 
         full_chunks = []
         sr = 24000
@@ -120,7 +117,6 @@ class ToughIrishQwenProducer:
         from qwen_tts import Qwen3TTSModel
         import numpy as np
         import soundfile as sf
-        import subprocess
 
         print("Loading Qwen3-TTS 1.7B Base model for Cillian Murphy zero-shot clone...")
         # Free CustomVoice VRAM if needed

@@ -9,7 +9,6 @@ Evaluates:
 """
 
 import modal
-import os
 import re
 import time
 import subprocess
@@ -55,7 +54,6 @@ class ArmedStruggleQwenProducer:
     def synthesize(self, items: list[dict]) -> dict:
         import numpy as np
         import soundfile as sf
-        import time
 
         full_chunks = []
         sr = 24000

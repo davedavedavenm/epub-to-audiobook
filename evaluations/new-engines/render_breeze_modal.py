@@ -10,7 +10,6 @@ Outputs:
 """
 
 import modal
-import os
 import re
 import time
 import subprocess
@@ -33,7 +32,7 @@ image = (
     )
     .run_commands(
         "git clone https://github.com/breezeblue-ai/breeze-tts.git /root/breeze-tts",
-        "huggingface-cli download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
+        "hf download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
     )
 )
 
@@ -84,7 +83,6 @@ class BreezeProducer:
         from breeze_infer.templates import get_template, prepare_inputs
         import numpy as np
         import soundfile as sf
-        import time
         import re
 
         ref_path = f"/tmp/{voice_id}_ref.wav"
@@ -328,11 +326,11 @@ def main(voice: str = "all"):
     out_dir = root / "evaluations" / "new-engines" / "output"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n==========================================")
-    print(f"Breeze TTS 2 Modal Production Runner")
+    print("\n==========================================")
+    print("Breeze TTS 2 Modal Production Runner")
     print(f"Voices to synthesize: {[v['name'] for v in targets]}")
     print(f"Total Chunks: {len(chunks)} ({len(text)} chars)")
-    print(f"==========================================\n")
+    print("==========================================\n")
 
     for v in targets:
         v_id = v["id"]

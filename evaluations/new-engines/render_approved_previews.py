@@ -14,9 +14,7 @@ All outputs are saved to data/previews/<voice_id>.mp3 with broadcast mastering (
 """
 
 import modal
-import os
 import re
-import time
 import subprocess
 from pathlib import Path
 
@@ -37,8 +35,8 @@ image = (
     )
     .run_commands(
         "git clone https://github.com/breezeblue-ai/breeze-tts.git /root/breeze-tts",
-        "huggingface-cli download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model",
-        "huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice --local-dir /root/qwen-customvoice"
+        "hf download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model",
+        "hf download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice --local-dir /root/qwen-customvoice"
     )
 )
 
@@ -292,7 +290,7 @@ def main():
         print(f"✓ Saved: {out_file.name} ({len(mp3_bytes):,} bytes)")
 
     # Render Qwen3 Aiden
-    print(f">>> Rendering qwen3_aiden...")
+    print(">>> Rendering qwen3_aiden...")
     aiden_file = previews_dir / "qwen3_aiden.mp3"
     aiden_bytes = producer.synthesize_qwen_aiden.remote(chunks)
     aiden_file.write_bytes(aiden_bytes)

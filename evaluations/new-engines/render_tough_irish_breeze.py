@@ -16,7 +16,6 @@ Fixes applied based on Dave's listening feedback:
 """
 
 import modal
-import os
 import re
 import time
 import subprocess
@@ -39,7 +38,7 @@ image = (
     )
     .run_commands(
         "git clone https://github.com/breezeblue-ai/breeze-tts.git /root/breeze-tts",
-        "huggingface-cli download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
+        "hf download BreezeBlue/Breeze-TTS-2 --local-dir /root/breeze-model"
     )
 )
 
@@ -81,7 +80,6 @@ class ToughIrishBreezeProducer:
         from breeze_infer.templates import get_template, prepare_inputs
         import numpy as np
         import soundfile as sf
-        import time
         import re
 
         ref_path = f"/tmp/{label}_ref.wav"
