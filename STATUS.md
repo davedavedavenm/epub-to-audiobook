@@ -1,5 +1,28 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-19 Top-Tier Modal GPU Voices & Full-Book Irish Render — COMPLETED / IN FLIGHT
+>
+> 1. **Irish & Multilingual Production Winner: Cillian Murphy (Breeze TTS 2)**:
+>    - Evaluated across tough Irish words challenge (Dáil Éireann, Cathal, Sinn Féin, Taoiseach, etc.) against Qwen3 zero-shot clone and Aiden.
+>    - Dave's listening verdict: **"outstanding... almost perfect"**. Cillian Murphy studio clone on Breeze 2 with locked seed=42 and guidance_scale=2.5 produces authentic, solemn literary cadence without timbre drift.
+>    - Full-book production render of *The Armed Struggle: The Story of the IRA* by Richard English (11 chapters, ~150K words) launched on Modal GPUs via parallel `.map()` pipeline (`scripts/render_armed_struggle_full_modal.py`).
+>    - Post-processing script (`scripts/sync_armed_struggle_abs.py`) automatically compiles M4B with chapter markers, syncs to Audiobookshelf on docker-vm, and recalibrates Dave's playback progress (28.97% into Chapter 2) for seamless listening resumption.
+>
+> 2. **7 Approved Top-Tier Cloud Voices Integrated into Webapp**:
+>    - `breeze_cillian_irish`: Cillian Murphy (Irish Studio, Breeze 2)
+>    - `qwen3_aiden`: Aiden (Expressive Non-Fiction, Qwen3-TTS)
+>    - `breeze_liam_au`: Liam (Australian / Irish, Breeze 2)
+>    - `breeze_karen_savage`: Karen Savage (Classic British Female, Breeze 2)
+>    - `breeze_arthur`: Arthur (Distinguished British Male, Breeze 2)
+>    - `breeze_adrian`: Adrian Praetzellis (Scholarly British, Breeze 2)
+>    - `breeze_tadhg_clean`: Tadhg Hynes (Restored Irish Male, Breeze 2)
+>    - Previews pre-rendered with broadcast mastering (-20 LUFS) and cached in `data/previews/` on Zorin host.
+>    - Webapp `/api/voices` and `/api/preview/<id>` verified live and responsive (HTTP 200).
+>
+> 3. **GitHub CI Failure Fixed**:
+>    - Resolved `ruff check` lint failures in `.github/workflows/ci.yml` (removed unused imports, f-string artifacts).
+>    - All 344 unit tests pass cleanly, and GitHub Actions CI workflow is 100% green.
+>
 > ## 2026-09-18 Cloud GPU Audition, Multi-Voice Directed Casting & Broadcast Mastering Pipeline — COMPLETED
 >
 > 1. **Multi-Voice Non-Fiction Casting & Broadcast Mastering (Clear Winner by Ear)**:
