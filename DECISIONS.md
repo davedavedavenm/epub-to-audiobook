@@ -14,6 +14,39 @@ the linked doc for the latest measurement before relying on it).
 
 ---
 
+## September 2026 Top-Tier Modal GPU Voices & Irish Narration: Cillian Murphy Breeze 2 Winner; Qwen3 Aiden for Emotive English; 7 Auditioned Voices Integrated into Webapp — Active (2026-09-19)
+
+Following multi-round auditions across *Breakneck: China’s Quest to Engineer the Future* and *The Armed Struggle: The Story of the IRA* (First Dáil excerpt and Tough Irish Words challenge: Dáil Éireann, Cathal, Sinn Féin, Taoiseach, Tánaiste, Dún Laoghaire, etc.) on Modal Cloud GPUs:
+
+- **Cillian Murphy (Irish Studio Clone, Breeze TTS 2) is the definitive winner for Irish & Multilingual content.**
+  Dave's listening verdict: **"outstanding... almost perfect"**.
+  - *Acoustic Setup*: Derived from dry reference audio (`chatterbox/voices/cillian_irish_dry.wav`, 9.5s, 456 KB). Locked `seed=42` eliminates inter-sentence timbre drift; `guidance_scale=2.5` eliminates date/number warble.
+  - *Tough Irish Evaluation*: Flawlessly pronounced Irish political titles, historical names, and Gaelic placenames where Qwen and older engines failed.
+  - *Mastering*: Broadcast mastering chain applied (-20 LUFS integrated loudness, +1.0 dB EQ at 220 Hz, -2 dB high shelf at 7.5 kHz).
+  - Selected for the full-book production render of *The Armed Struggle: The Story of the IRA* by Richard English (11 chapters, ~150,000 words).
+
+- **Qwen3-TTS Aiden (`qwen3_aiden`) is approved for Emotive English Non-Fiction.**
+  Dave's listening verdict: **"solid voice... great emotive uses... really nice"**.
+  - Uses `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` with natural-language emotive instruction steering. Excels at non-fiction narrative with dynamic question intonation and conversational rhetorical pacing.
+  - Note: Zero-shot base model cloning with Qwen3 produces excessive breath artifacts and poor non-English pronunciation; `CustomVoice` studio voices are the approved operational mode.
+
+- **5 Additional Approved Breeze 2 Voices for English-Only Content**:
+  - `breeze_liam_au`: Liam (Australian / Irish Male) — warm, natural non-fiction delivery.
+  - `breeze_karen_savage`: Karen Savage (Classic British Female) — elegant literary RP.
+  - `breeze_arthur`: Arthur (Distinguished British Male) — classic, distinguished UK non-fiction narrator.
+  - `breeze_adrian`: Adrian Praetzellis (Scholarly British Male) — articulate, scholarly tone.
+  - `breeze_tadhg_clean`: Tadhg Hynes (Restored Irish Male) — denoiser-restored studio timbre.
+
+- **Webapp Voice Architecture & Preview Contract**:
+  - All 7 voices registered in `webapp/app.py` `VOICES` catalogue and exposed via `/api/voices`.
+  - `get_voice_preview()` updated to treat `'breeze'` and `'cosyvoice'` as GPU-only: previews are pre-rendered on cloud GPUs and cached in `data/previews/`, never cold-generated on CPU (complying strictly with Rule 14).
+  - `docker-compose.yml` updated with `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` in both `webapp` and `worker` containers.
+
+- **GitHub CI Pipeline Fixed**:
+  - Resolved failing `ruff check` in `.github/workflows/ci.yml` caused by unused imports and unformatted f-strings. All 344 unit tests pass, and GitHub Actions CI workflow is 100% green.
+
+---
+
 ## September 2026 Modal GPU Bake-Off: Multi-Voice Casting & Broadcast Mastering Filter Chain Accepted; Fish Speech 2.0 Audited; Long-Form Pacing Settled — Active (2026-09-18)
 
 Comprehensive audition across *Breakneck: China’s Quest to Engineer the Future* (2-page excerpt and full 2,135-word / 14.6-minute Introduction) on Modal Cloud GPUs (Tesla T4, L4, A10G) testing Deepgram Aura-2, Chatterbox Turbo, Qwen3-TTS, F5-TTS, Fish Speech 2.0 (S2 Pro), and multi-voice Kokoro with automated broadcast mastering:
