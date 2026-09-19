@@ -44,7 +44,7 @@ image = (
 )
 
 
-@app.cls(image=image, gpu=["A10G", "L4"], timeout=3600, scaledown_window=300)
+@app.cls(image=image, gpu="L4", timeout=3600, scaledown_window=2)
 class FullBookBreezeProducer:
     @modal.enter()
     def setup(self):
@@ -202,6 +202,25 @@ def chunk_paragraph(text: str) -> list[str]:
     ]
 
 
+def check_credit_headroom(min_headroom_usd: float = 2.0) -> bool:
+    try:
+        proc = subprocess.run(["modal", "billing", "summary", "--json"], capture_output=True, text=True, timeout=10)
+        if proc.returncode == 0:
+            import json
+            data = json.loads(proc.stdout)
+            metered = float(data.get("metered_cost", 0.0))
+            # Modal free tier is $30.00/mo
+            remaining = 30.00 - metered
+            print(f"[CREDIT CHECK] Metered: ${metered:.2f} | Remaining Free Credit: ${remaining:.2f}")
+            if remaining < min_headroom_usd:
+                print(f"[SAFETY HALT] Remaining credit ${remaining:.2f} is below safety floor ${min_headroom_usd:.2f}. Halting to prevent any charges.")
+                return False
+            return True
+    except Exception as e:
+        print(f"[CREDIT CHECK WARNING] Unable to verify live billing ({e}); continuing cautiously.")
+    return True
+
+
 @app.local_entrypoint()
 def main():
     root = Path(__file__).resolve().parents[1]
@@ -272,14 +291,20 @@ def main():
     if not items_to_render:
         print("\nAll chapters already rendered!")
     else:
-        print(f"\nSubmitting {len(items_to_render)} chapters to Modal GPU workers...")
+        print(f"\nSubmitting {len(items_to_render)} chapters sequentially to Modal L4 GPU (Rate: $0.80/hr, single worker)...")
         producer = FullBookBreezeProducer()
-        for res in producer.render_chapter.map(items_to_render):
+        for idx, item in enumerate(items_to_render, 1):
+            title = item["title"]
+            print(f"\n--- [{idx}/{len(items_to_render)}] Processing: {title} ---")
+            if not check_credit_headroom(min_headroom_usd=2.0):
+                print(f"Halting render queue before {title} to protect Modal free credit buffer.")
+                break
+
+            res = producer.render_chapter.remote(item)
             cid = res["chapter_id"]
-            title = res["title"]
             out_file = out_dir / f"{title}.mp3"
             out_file.write_bytes(res["mp3_bytes"])
-            print(f"✓ FINISHED: {title}.mp3 ({len(res['mp3_bytes']):,} bytes, {res['duration']}s audio, rendered in {res['elapsed_gpu_sec']}s)")
+            print(f"✓ BANKED TO DISK: {title}.mp3 ({len(res['mp3_bytes']):,} bytes, {res['duration']}s audio, rendered in {res['elapsed_gpu_sec']}s)")
 
     print("\n===================================================================")
     print(">>> All chapters rendered! Generating M4B, metadata & syncing to ABS...")
