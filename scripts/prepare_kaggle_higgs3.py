@@ -103,14 +103,18 @@ try:
                     "vllm==0.29.0",
                     "git+https://github.com/vllm-project/vllm-omni.git",
                     "requests"], check=True)
+    deploy_yaml = "/usr/local/lib/python3.12/dist-packages/vllm_omni/deploy/higgs_multimodal_qwen3.yaml"
+    cfg = Path(deploy_yaml).read_text()
+    cfg = cfg.replace("attention_backend: FLASHINFER", "attention_backend: TRITON_ATTN")
+    Path(deploy_yaml).write_text(cfg)
+    print("Patched deploy yaml: FLASHINFER -> TRITON_ATTN (T4 sm_75)")
     env = dict(__import__("os").environ,
-               VLLM_ATTENTION_BACKEND="XFORMERS", DTYPE="float16")
+               VLLM_ATTENTION_BACKEND="TRITON_ATTN",
+               VLLM_USE_FLASHINFER_SAMPLER="0")
     srv = subprocess.Popen(
         ["vllm", "serve", "bosonai/higgs-audio-v3-tts-4b",
          "--host", "127.0.0.1", "--port", "8095",
-         "--trust-remote-code", "--omni",
-         "--dtype", "float16", "--gpu-memory-utilization", "0.85",
-         "--max-model-len", "4096"],
+         "--trust-remote-code", "--omni", "--dtype", "float16"],
         env=env)
     import requests
     ready = False
