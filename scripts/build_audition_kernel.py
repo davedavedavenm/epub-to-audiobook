@@ -77,7 +77,7 @@ try:
     print("OmniVoice loaded.")
     
     import re
-    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", eval_text) if s.strip()]
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\\s+", eval_text) if s.strip()]
     pieces = []
     sr_omni = model_omni.sampling_rate
     t0 = time.time()
@@ -116,7 +116,7 @@ try:
     
     import re
     import numpy as np
-    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", eval_text) if s.strip()]
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\\s+", eval_text) if s.strip()]
     pieces = []
     t0 = time.time()
     for idx, s in enumerate(sents, 1):

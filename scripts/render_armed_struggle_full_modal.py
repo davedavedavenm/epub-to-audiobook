@@ -14,7 +14,6 @@ Architecture:
 """
 
 import io
-import os
 import re
 import sys
 import time
@@ -131,7 +130,7 @@ class FullBookBreezeProducer:
                 for chunk in self.runtime.iter_audio_chunks(inputs, request_id=req_id, seed=LOCKED_SEED):
                     audio_parts.append(chunk.audio)
                 del inputs
-            except Exception as exc:
+            except Exception:
                 torch.cuda.empty_cache()
                 set_all_seeds(LOCKED_SEED)
                 inputs = prepare_inputs(
@@ -343,10 +342,10 @@ def main():
 
         sents, batches = partition_chapter(txt_file, cid, instruction, batch_size=15)
         total_batches = len(batches)
-        print(f"\n===================================================================")
+        print("\n===================================================================")
         print(f"[{ch_idx}/{len(chapters)}] CHAPTER: {title}")
         print(f"Total Sentences: {len(sents)} | Sub-Batches (15 sents): {total_batches}")
-        print(f"===================================================================")
+        print("===================================================================")
 
         for pass_num in range(1, 3):
             pending_batches = []

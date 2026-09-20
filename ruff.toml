@@ -41,4 +41,10 @@ ignore = [
 "scripts/kaggle/extract_vctk_voices.py" = ["E722", "E402"]
 "scripts/kaggle/run.py" = ["E722", "E402"]
 "scripts/kaggle/run_chatterbox.py" = ["E722", "E402"]
+# Kernel-generator: the arm code is embedded via the `"""...\"\"\"""" + text +
+# """\"\"\"..."""` string-splice trick, so ruff's scope model sees the embedded
+# f-string braces as module-level expressions. Verified false positives — the
+# file compiles and has pushed working kernels. Editing the strings to satisfy
+# the linter would edit code executed verbatim on Kaggle.
+"scripts/prepare_kaggle_audition_candidates.py" = ["F821"]
 "tests/*" = ["E402"]
