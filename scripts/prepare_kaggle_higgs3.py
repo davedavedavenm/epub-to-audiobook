@@ -100,7 +100,7 @@ try:
     print(">>> ARM 1: Higgs TTS 3 via vLLM-Omni (fp16 on T4)")
     print("=" * 60)
     subprocess.run([sys.executable, "-m", "pip", "install",
-                    "vllm==0.22.0",
+                    "vllm==0.29.0",
                     "git+https://github.com/vllm-project/vllm-omni.git",
                     "requests"], check=True)
     env = dict(__import__("os").environ,
