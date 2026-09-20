@@ -100,7 +100,7 @@ try:
     print(">>> ARM 1: Higgs TTS 3 via vLLM-Omni (fp16 on T4)")
     print("=" * 60)
     subprocess.run([sys.executable, "-m", "pip", "install",
-                    "vllm==0.18.*", "vllm-omni>=0.18.0", "requests"], check=True)
+                    "vllm==0.22.*", "vllm-omni==0.22.*", "requests"], check=True)
     env = dict(__import__("os").environ,
                VLLM_ATTENTION_BACKEND="XFORMERS", DTYPE="float16")
     srv = subprocess.Popen(
@@ -151,43 +151,10 @@ try:
 except Exception as exc:
     print(f"ARM 1 FAILED: {{exc}}")
 
-# ===================== ARM 2: transformers-native =====================
-try:
-    print("=" * 60)
-    print(">>> ARM 2: Higgs TTS 3 via transformers pipeline")
-    print("=" * 60)
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-                    "git+https://github.com/huggingface/transformers.git",
-                    "accelerate"], check=True)
-    from transformers import pipeline as hf_pipeline
-
-    tts = hf_pipeline("text-to-speech", model="bosonai/higgs-tts-3-4b",
-                      device_map="cuda:0", torch_dtype=torch.float16,
-                      trust_remote_code=True)
-    t0 = time.time()
-    pieces = []
-    sr = 24000
-    for idx, s in enumerate(sents, 1):
-        c_t0 = time.time()
-        out = tts(text=s)
-        audio = out["audio"]
-        if hasattr(audio, "cpu"):
-            audio = audio.cpu().numpy()
-        audio = np.asarray(audio, dtype=np.float32)
-        sr = out.get("sampling_rate", 24000)
-        pieces.append(audio)
-        pieces.append(np.zeros(int(0.35 * sr), dtype=np.float32))
-        c_dur = len(audio) / sr
-        c_el = time.time() - c_t0
-        print(f"  [Higgs3/hf {{idx}}/{{len(sents)}}] {{c_dur:.1f}}s audio in {{c_el:.1f}}s (RTF {{c_el / c_dur:.2f}}x)")
-    dur = join_and_save(pieces, sr, "/kaggle/working/out/higgs3_tf_raw.wav",
-                        "/kaggle/working/out/higgs3_tf_cillian_tough.mp3")
-    el = time.time() - t0
-    print(f"ARM 2 TOTAL: {{dur:.1f}}s audio in {{el:.1f}}s (RTF {{el / dur:.2f}}x)")
-except Exception as exc:
-    print(f"ARM 2 FAILED: {{exc}}")
-    if not arm1_ok:
-        raise
+# transformers-native support for higgs_multimodal_qwen3 is not in main yet
+# (verified failing on v2); vLLM-Omni is the only runnable public runtime.
+if not arm1_ok:
+    raise RuntimeError("ARM 1 (vLLM-Omni) failed; no supported runtime remains")
 
 print("=" * 60)
 print("Kaggle Execution Finished. Outputs:")
