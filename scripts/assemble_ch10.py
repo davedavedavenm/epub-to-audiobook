@@ -3,7 +3,6 @@ assemble_ch10.py — Concatenate contiguous batches 1-27 of Chapter 10,
 apply broadcast mastering chain, and encode to MP3.
 """
 
-import sys
 import wave
 import subprocess
 from pathlib import Path

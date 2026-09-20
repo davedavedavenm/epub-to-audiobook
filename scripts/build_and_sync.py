@@ -2,7 +2,6 @@
 build_and_sync.py — Rebuild Armed Struggle.m4b and sync to Audiobookshelf.
 """
 
-import os
 import json
 import subprocess
 from pathlib import Path
