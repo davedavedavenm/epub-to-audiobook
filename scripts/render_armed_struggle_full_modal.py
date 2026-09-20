@@ -182,7 +182,7 @@ class FullBookBreezeProducer:
 def chunk_paragraph(text: str) -> list[str]:
     protected = re.sub(r'([,;:—])\s*([“"][^”"]+[?!”"])', r'\1\n\2', text)
     marker = "\ue000"
-    for abbrev in ("Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "St.", "vs.", "e.g.", "i.e.", "Capt.", "Gen.", "Col.", "Lt.", "RIC", "IRA", "UDA", "UVF", "SDLP", "GAA", "INLA"):
+    for abbrev in ("Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "St.", "vs.", "e.g.", "i.e.", "Capt.", "Gen.", "Col.", "Lt."):
         protected = protected.replace(abbrev, abbrev[:-1] + marker)
     return [
         item.replace(marker, ".").strip()
