@@ -100,11 +100,13 @@ try:
     print(">>> ARM 1: Higgs TTS 3 via vLLM-Omni (fp16 on T4)")
     print("=" * 60)
     subprocess.run([sys.executable, "-m", "pip", "install",
-                    "vllm==0.22.*", "vllm-omni==0.22.*", "requests"], check=True)
+                    "vllm==0.22.0",
+                    "git+https://github.com/vllm-project/vllm-omni.git",
+                    "requests"], check=True)
     env = dict(__import__("os").environ,
                VLLM_ATTENTION_BACKEND="XFORMERS", DTYPE="float16")
     srv = subprocess.Popen(
-        ["vllm-omni", "serve", "bosonai/higgs-tts-3-4b",
+        ["vllm", "serve", "bosonai/higgs-audio-v3-tts-4b",
          "--host", "127.0.0.1", "--port", "8095",
          "--trust-remote-code", "--omni",
          "--dtype", "float16", "--gpu-memory-utilization", "0.85",
@@ -125,16 +127,21 @@ try:
         raise RuntimeError("vLLM-Omni server never became ready")
     print("vLLM-Omni server is up.")
 
+    ref_data_url = "data:audio/wav;base64," + base64.b64encode(Path(ref_path).read_bytes()).decode("ascii")
     t0 = time.time()
     pieces = []
     sr = 24000
     for idx, s in enumerate(sents, 1):
         c_t0 = time.time()
         resp = requests.post("http://127.0.0.1:8095/v1/audio/speech", json={{
+            "model": "bosonai/higgs-audio-v3-tts-4b",
             "input": s,
-            "references": [{{"audio_path": ref_path, "text": ref_text}}],
-            "temperature": 0.8, "top_k": 50, "max_new_tokens": 1024,
-        }}, timeout=600)
+            "response_format": "wav",
+            "ref_audio": ref_data_url,
+            "ref_text": ref_text,
+            "max_new_tokens": 2048,
+            "seed": 42,
+        }}, timeout=900)
         resp.raise_for_status()
         wav, sr = sf.read(__import__("io").BytesIO(resp.content), dtype="float32")
         pieces.append(wav)
