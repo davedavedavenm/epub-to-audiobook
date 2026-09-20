@@ -106,8 +106,10 @@ try:
     deploy_yaml = "/usr/local/lib/python3.12/dist-packages/vllm_omni/deploy/higgs_multimodal_qwen3.yaml"
     cfg = Path(deploy_yaml).read_text()
     cfg = cfg.replace("attention_backend: FLASHINFER", "attention_backend: TRITON_ATTN")
+    cfg = cfg.replace("gpu_memory_utilization: 0.6", "gpu_memory_utilization: 0.65")
+    cfg = cfg.replace("max_model_len: 8192", "max_model_len: 4096")
     Path(deploy_yaml).write_text(cfg)
-    print("Patched deploy yaml: FLASHINFER -> TRITON_ATTN (T4 sm_75)")
+    print("Patched deploy yaml: TRITON_ATTN, stage0 util 0.65, stage0 max_model_len 4096 (T4 sm_75)")
     env = dict(__import__("os").environ,
                VLLM_ATTENTION_BACKEND="TRITON_ATTN",
                VLLM_USE_FLASHINFER_SAMPLER="0")
