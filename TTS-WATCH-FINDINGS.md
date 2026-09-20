@@ -84,6 +84,30 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 20 September 2026 — Live landscape sweep vs the July review: 4 new open-weight candidates + 3 reconsideration triggers — **test/watch; no listening yet**
+Sources: vendor model cards, checked 2026-09-20. **All benchmark numbers below are vendor-reported and unverified by our listening gate.**
+
+- **Higgs TTS 3 (`bosonai/higgs-tts-3-4b`, ~4B, released early Sep 2026) — TEST, top priority.**
+  - Vendor SeedTTS WER 1.11 (vs Fish S2-Pro 1.31, OmniVoice 1.21, Qwen3-TTS-1.7B 1.30); top emergent-TTS win-rate vs Fish/Qwen/IndexTTS-2/MOSS/OmniVoice. Zero-shot cloning, 100+ languages (Irish in the WER 5–10 "usable" tier, US/UK/AU English in the polished tier), inline `<|emotion|>/<|prosody:pause|>/<|prosody:speed|>` control tokens, 24 kHz.
+  - This release **satisfies the recorded Higgs V2 boundary in `DECISIONS.md`** ("reopen only for a materially improved official release").
+  - Licence: Boson Higgs TTS 3 Research & Non-Commercial + Creator Use Grant explicitly covering audiobooks with attribution; personal listening use is inside the non-commercial grant (same class as BreezeBlue already in production).
+  - Serving: SGLang-Omni or vLLM-Omni OpenAI-compatible `/v1/audio/speech`; weights gated on HF (licence acceptance + token required). Card hardware claim is H100; T4/L4 fit unverified — first-run risk is runtime, not licence.
+  - First-party links: [model card](https://huggingface.co/bosonai/higgs-tts-3-4b), [blog](https://www.boson.ai/blog/higgs-audio-v3-tts), [SGLang cookbook](https://sgl-project.github.io/sglang-omni/cookbook/higgs_tts.html).
+- **Mistral Voxtral-4B-TTS-2603 (Mar 2026) — TEST.**
+  - Frontier open weights, 20 curated studio preset voices (no cloning needed — avoids the prompt-prosody contamination mode recorded for Fish S2 Pro), 9 languages incl. EN/NL/FR/DE with dialect claims, streaming, RTF 0.103 (vendor, H200, concurrency 1), ≥16 GB VRAM.
+  - Licence CC BY-NC 4.0 — personal non-commercial listening use permitted; commercial use is not.
+  - First-party links: [model card](https://huggingface.co/mistralai/Voxtral-4B-TTS-2603), [blog](https://mistral.ai/news/voxtral-tts), [paper](https://arxiv.org/abs/2603.25551).
+- **Supertone Supertonic-3 (May 2026, 99M ONNX) — TEST, cheapest first.**
+  - Runs fast on **CPU** (vendor: beats larger baselines measured on A100; card shows an audiobook sample), 31 languages, `<laugh>/<breath>/<sigh>` tags, OpenRAIL-M.
+  - Boundary: open-weight voices are fixed presets; zero-shot custom-voice styles route through a **paid** Voice Builder. If a preset clears the floor by ear it displaces Nano/Beatrice as free-local default for the whole back-catalogue with zero cloud quota; if not, closed.
+  - First-party links: [model card](https://huggingface.co/Supertone/supertonic-3), [GitHub](https://github.com/supertone-inc/supertonic), [audio demo](https://supertonic3.github.io/).
+- **Maya Research maya1 (3B, Apache-2.0, Nov 2025) — SKIP for now.** Voice-design + 20 emotion tags, English-only, 16 GB VRAM; card carries no reproducible benchmarks and heavy self-claims. Lower priority than the three above. [Card](https://huggingface.co/maya-research/maya1).
+
+- **Reconsideration triggers recorded (no verdicts changed here):**
+  1. **Fish S2 Pro bounded retry** — the Sep-2026 rejection names its own remedy ("perfectly flat, clean, non-theatrical studio prompt"); `chatterbox/voices/cillian_irish_dry.wav` is now that prompt. Under the rejection-boundary rule this is a materially different controlled hypothesis.
+  2. **CosyVoice 3 path inconsistency** — `DECISIONS.md` keeps the official Kaggle runtime as "keep / integration candidate" ("30-minute render listenable") while the Sep-19 **Modal wrapper** (wetext/vllm build) rendered "garbled". A wrapper failure is not an engine verdict; one official-runtime Kaggle arm would close the thread.
+  3. **Zero-cost economics** — Modal's $30/month free credit exceeds the ~$24 measured full-book Breeze cost, and the render already banks completed chapters, so pacing across the monthly reset is a true $0 path; separately the recorded Breeze T4 Kaggle figure (RTF 7.86) is explicitly "without FlashAttention" and has never been re-measured with it.
+
 ### 05 September 2026 — Audio8 TTS Preview 0.6B ONNX INT4 — **tested; rejected for audiobooks**
 - **What was tested:** Full non-fiction chapter passage from *Breakneck: China’s Quest to Engineer the Future* Chapter 1 ("Engineers vs. Lawyers", first 2 pages, 456 words normalized across 18 complete sentences). Synthesized on Zorin i5-12400 CPU (4 threads, RTF 3.032, peak RSS 3.94 GiB).
 - **Listening Verdict:** Dave rejected: *"garbled, loud then soft... not great"*.
