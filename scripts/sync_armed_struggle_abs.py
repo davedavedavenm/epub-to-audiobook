@@ -157,11 +157,15 @@ def main():
     if ch2_idx is not None:
         new_ch2_start = chapters_meta[ch2_idx]["start"]
         new_ch2_dur = chapter_durations[ch2_idx]
-        new_current_time = round(new_ch2_start + (0.28975 * new_ch2_dur), 2)
+        # In the original Arcas render, Dave was at 28.975% of Chapter 2 (sentence 166 / 575).
+        # In Breeze 2, batches 1-11 cover sentences 1-165, which corresponds to 2,385.0s into Chapter 2.
+        # We give a 35-second context lead-in at 2,350.0s (~39.2 min into Chapter 2).
+        offset_in_ch2 = min(2350.0, new_ch2_dur - 10.0)
+        new_current_time = round(new_ch2_start + offset_in_ch2, 2)
         print("\n>>> Recalibrating listening progress:")
-        print("    Original position: 7,723.6s (28.97% into Chapter 2: Two New States)")
-        print(f"    New Chapter 2 start: {new_ch2_start}s, duration: {new_ch2_dur}s")
-        print(f"    Recalibrated position: {new_current_time}s ({new_current_time/60:.1f} min)")
+        print("    Original position: 7,723.6s (28.97% into Chapter 2: Two New States in Arcas)")
+        print(f"    New Chapter 2 start: {new_ch2_start}s, available duration: {new_ch2_dur}s")
+        print(f"    Recalibrated position: {new_current_time}s ({new_current_time/60:.1f} min total, {offset_in_ch2/60:.1f} min into Ch2)")
     else:
         new_current_time = 0.0
         print("\n>>> Chapter 2 not yet synced; progress initialized to 0.0s.")
