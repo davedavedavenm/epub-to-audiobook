@@ -102,10 +102,7 @@ subprocess.run([sys.executable, "-c",
 # ---------- split codec onto 2nd GPU (S2 Pro needs >16 GB total) ----------
 inf_path = Path("/workspace/fish-speech/fish_speech/models/text2semantic/inference.py")
 src = inf_path.read_text()
-src = src.replace(
-    "def encode_audio(audio_path, codec, device):",
-    'import os as _os\\nCODEC_DEVICE = _os.environ.get("FISH_CODEC_DEVICE", "")\\n\\n\\ndef encode_audio(audio_path, codec, device):',
-)
+src = ('import os as _os\\nCODEC_DEVICE = _os.environ.get("FISH_CODEC_DEVICE", "")\\n' + src)
 src = src.replace("codec = load_codec_model(codec_checkpoint, device, precision)",
                   "codec = load_codec_model(codec_checkpoint, CODEC_DEVICE or device, precision)")
 src = src.replace("encode_audio(p, codec, device)",
