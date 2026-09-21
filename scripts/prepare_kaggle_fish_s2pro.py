@@ -119,7 +119,7 @@ def run_infer(text, sent_dir, idx):
            "--output", str(sent_dir / "output.wav"),
            "--output-dir", str(sent_dir),
            "--num-samples", "1",
-           "--precision", "float16"]
+           "--half"]
     env = os.environ.copy()
     env["PYTHONPATH"] = "/workspace/fish-speech:" + env.get("PYTHONPATH", "")
     r = subprocess.run(cmd, cwd="/workspace/fish-speech", env=env,
