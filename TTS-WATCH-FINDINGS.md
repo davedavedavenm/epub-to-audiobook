@@ -84,11 +84,13 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
-### 20 September 2026 — Fish S2 Pro bounded retry (flat Cillian ref) — **rendered on free Kaggle T4×2; health-gated; awaiting Dave's listening verdict**
+### 20 September 2026 — Fish S2 Pro bounded retry (flat Cillian ref) — **rendered on free Kaggle T4×2; VOICE PASSES by ear; pronunciation is the open issue**
+- **Dave's listening verdict (2026-09-20): "Fish S2 Pro retry voice is perfect"** — the flat-Cillian hypothesis is confirmed: the 2026-09-18 rejection was theatrical prompt prosody transfer, not the engine. The voice/timbre gate is now passed on the toughest test we have.
+- **Open issue: pronunciation of hard Irish terms** (Dáil Éireann, Taoiseach, Tánaiste, etc. as-spelled). ASR heard "Padreik Paris", "deal era", "Toshak" — consistent with the engine reading anglo spelling literally.
+- Plan of attack (in flight): deterministic proper-noun respelling lexicon applied at preprocessing (only exact watch-list tokens, engine-agnostic), A/B auditioned on the same kernel/text. Note: the repo's old respelling ban originated from a misdiagnosed formatting artefact (AGENTS rule 7 context) — this bounded audition re-tests that boundary with Dave's ear as judge. Fine-tuning is not viable (9.5s of reference audio); a longer reference does not teach out-of-distribution words.
 - The 2026-09-18 rejection named its own remedy (flat, non-theatrical studio prompt). Retry used `cillian_irish_dry.wav` + transcript on the tough-Irish paragraph, seed 42, per the rejection-boundary rule.
 - Result: **all 6 sentences passed waveform health gates** (kernel-side AND independent local re-check: 54.1s, RMS 0.095, zero saturation) and a faster-whisper-base ASR completeness pass (full passage, correct order, no truncation). Kernel `fish-s2pro-tough-irish-cillian` v9, RTF **15.03x** on free T4 — viable for auditions, slow for books.
 - Runtime notes that made T4 possible: S2 Pro stack needs >16 GB so the **DAC codec was split onto the second T4** (patched `inference.py`: `CODEC_DEVICE` env, 4 call sites); `--half` (current main replaced `--precision`); apt `portaudio19-dev` before `pip install -e`; weights via `snapshot_download`. Builder: `scripts/prepare_kaggle_fish_s2pro.py`.
-- **Dave's listening verdict pending — this file is unranked until heard.**
 
 ### 20 September 2026 — Chatterbox CPU Cillian voices (Nano dry/full, Turbo) — **tested on Tough Irish Words; rejected by ear**
 - Dave's verdict on all three arms: *"all those nano ones are shit"*.

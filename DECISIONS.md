@@ -12,6 +12,16 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## Fish Speech S2 Pro: voice accepted with flat Cillian reference; pronunciation via lexicon audition — Active (2026-09-20)
+
+Dave's verdict on the bounded flat-reference retry (tough-Irish paragraph, `cillian_irish_dry.wav` + transcript, free Kaggle T4×2, health-gated): **"Fish S2 Pro retry voice is perfect."** This reverses the 2026-09-18 bounded rejection for the exact boundary that rejection recorded: the failure was theatrical prompt prosody transfer, and the remedy it named (flat, clean, non-theatrical studio prompt) is confirmed as the required operating mode. Production eligibility now hinges on the one remaining open issue: **pronunciation of hard Irish terms read from anglo spelling** (ASR: "Padreik Paris", "deal era", "Toshak").
+
+- In flight: deterministic proper-noun respelling lexicon (exact watch-list tokens only, engine-agnostic, preprocessing-stage shape), A/B auditioned on the same kernel/text with Dave's ear as judge. The old respelling ban originated from a misdiagnosed formatting artefact; this bounded audition re-tests that boundary.
+- Not viable paths, recorded to prevent re-litigation: fine-tuning (9.5s of reference audio), longer references (do not teach out-of-distribution words), Higgs 3 for this need (H100-only), Chatterbox-family Cillian on CPU (rejected by ear same day).
+- Runtime facts for any free-tier rerun: `scripts/prepare_kaggle_fish_s2pro.py` — codec split to the second T4 (`CODEC_DEVICE`), `--half`, apt portaudio/sox/sndfile, `snapshot_download`. RTF 15.03x (audition-viable, book-slow). Licence/commercial terms of the 2026-09-18 entry continue to apply.
+
+---
+
 ## September 2026 Modal GPU Engine Expansion: F5-TTS (300M) & CosyVoice 3 (0.5B) Audited on Tough Irish Words; Serverless Cloud Economics Settled — Active (2026-09-19)
 
 Following the adoption of Modal Cloud GPUs (Tesla T4 / Nvidia L4) and the selection of Breeze 2 for full-book Irish rendering, the engine portfolio was expanded to evaluate lightweight modern flow-matching diffusion architectures on the notorious Irish Gaelic pronunciation challenge (`fixtures/tough_irish_words.txt`):
