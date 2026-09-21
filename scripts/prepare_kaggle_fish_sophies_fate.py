@@ -92,7 +92,7 @@ src = src.replace("encode_audio(p, codec, device)",
                   "encode_audio(p, codec, CODEC_DEVICE or device)")
 src = src.replace("decode_to_audio(merged_codes.to(device), codec)",
                   "decode_to_audio(merged_codes.to(CODEC_DEVICE or device), codec)")
-assert src.count("CODEC_DEVICE or device") == 3, "codec device patch incomplete"
+assert src.count("CODEC_DEVICE or device") == 4, "codec device patch incomplete"
 inf_path.write_text(src)
 
 # ---------- NOW import torch (post-install) ----------
