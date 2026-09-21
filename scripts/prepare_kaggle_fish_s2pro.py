@@ -114,7 +114,7 @@ src = src.replace("decode_to_audio(merged_codes.to(device), codec)",
                   "decode_to_audio(merged_codes.to(CODEC_DEVICE or device), codec)")
 assert src.count("CODEC_DEVICE or device") == 4, "codec device patch incomplete"
 inf_path.write_text(src)
-print(f"Codec device split patched (cuda:{1 if torch.cuda.device_count() > 1 else 0})")
+print(f"Codec device split patched (cuda:{{1 if torch.cuda.device_count() > 1 else 0}})")
 
 # ---------- health gate ----------
 def health(label, a, sr):
