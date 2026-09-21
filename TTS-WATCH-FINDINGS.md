@@ -84,6 +84,12 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 20 September 2026 — Fish S2 Pro bounded retry (flat Cillian ref) — **rendered on free Kaggle T4×2; health-gated; awaiting Dave's listening verdict**
+- The 2026-09-18 rejection named its own remedy (flat, non-theatrical studio prompt). Retry used `cillian_irish_dry.wav` + transcript on the tough-Irish paragraph, seed 42, per the rejection-boundary rule.
+- Result: **all 6 sentences passed waveform health gates** (kernel-side AND independent local re-check: 54.1s, RMS 0.095, zero saturation) and a faster-whisper-base ASR completeness pass (full passage, correct order, no truncation). Kernel `fish-s2pro-tough-irish-cillian` v9, RTF **15.03x** on free T4 — viable for auditions, slow for books.
+- Runtime notes that made T4 possible: S2 Pro stack needs >16 GB so the **DAC codec was split onto the second T4** (patched `inference.py`: `CODEC_DEVICE` env, 4 call sites); `--half` (current main replaced `--precision`); apt `portaudio19-dev` before `pip install -e`; weights via `snapshot_download`. Builder: `scripts/prepare_kaggle_fish_s2pro.py`.
+- **Dave's listening verdict pending — this file is unranked until heard.**
+
 ### 20 September 2026 — Chatterbox CPU Cillian voices (Nano dry/full, Turbo) — **tested on Tough Irish Words; rejected by ear**
 - Dave's verdict on all three arms: *"all those nano ones are shit"*.
 - Arms: `chatterbox-nano_dry`, `chatterbox-nano_full` (Zorin :8006, RTF 0.77–0.80), `chatterbox-turbo_full` (:8004, RTF 1.95), human `cillian_irish_dry` reference, seeded, mastered chain.
