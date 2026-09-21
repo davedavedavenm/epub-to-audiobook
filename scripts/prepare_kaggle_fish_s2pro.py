@@ -99,6 +99,23 @@ subprocess.run([sys.executable, "-c",
                 "snapshot_download('fishaudio/s2-pro', local_dir='/workspace/s2-pro')"],
                check=True)
 
+# ---------- split codec onto 2nd GPU (S2 Pro needs >16 GB total) ----------
+inf_path = Path("/workspace/fish-speech/fish_speech/models/text2semantic/inference.py")
+src = inf_path.read_text()
+src = src.replace(
+    "def encode_audio(audio_path, codec, device):",
+    'import os as _os\nCODEC_DEVICE = _os.environ.get("FISH_CODEC_DEVICE", "")\n\n\ndef encode_audio(audio_path, codec, device):',
+)
+src = src.replace("codec = load_codec_model(codec_checkpoint, device, precision)",
+                  "codec = load_codec_model(codec_checkpoint, CODEC_DEVICE or device, precision)")
+src = src.replace("encode_audio(p, codec, device)",
+                  "encode_audio(p, codec, CODEC_DEVICE or device)")
+src = src.replace("decode_to_audio(merged_codes.to(device), codec)",
+                  "decode_to_audio(merged_codes.to(CODEC_DEVICE or device), codec)")
+assert src.count("CODEC_DEVICE or device") == 4, "codec device patch incomplete"
+inf_path.write_text(src)
+print(f"Codec device split patched (cuda:{1 if torch.cuda.device_count() > 1 else 0})")
+
 # ---------- health gate ----------
 def health(label, a, sr):
     rms = float(np.sqrt(np.mean(a ** 2)))
@@ -122,6 +139,8 @@ def run_infer(text, sent_dir, idx):
            "--half"]
     env = os.environ.copy()
     env["PYTHONPATH"] = "/workspace/fish-speech:" + env.get("PYTHONPATH", "")
+    env["FISH_CODEC_DEVICE"] = "cuda:1" if torch.cuda.device_count() > 1 else ""
+    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     r = subprocess.run(cmd, cwd="/workspace/fish-speech", env=env,
                        capture_output=True, text=True)
     if r.returncode != 0:
