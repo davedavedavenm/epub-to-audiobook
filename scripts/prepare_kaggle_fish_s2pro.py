@@ -42,6 +42,7 @@ kernel_code = f'''#!/usr/bin/env python3
 """Fish Speech S2 Pro (flat Cillian ref) on Tough Irish Words - free Kaggle T4.
 Waveform-health-gated: refuses to emit the audition mp3 on silent/saturated audio."""
 
+import base64
 import glob
 import os
 import re
