@@ -1,0 +1,23 @@
+{
+  "_comment": "Irish proper-noun respelling lexicon - deterministic anglicised phonetics for engines that read anglo spelling literally. HYPOTHESES pending Dave's listening gate (2026-09-20). Applied to exact surface forms only, longest-first. Source terms must remain untouched in the text pipeline output; this mapping is applied at the TTS input boundary.",
+  "Pádraig Pearse": "Pawdrig Peerse",
+  "Padraig Pearse": "Pawdrig Peerse",
+  "Seán MacDiarmada": "Shawn MacDeermada",
+  "Sean MacDiarmada": "Shawn MacDeermada",
+  "Dáil Éireann": "Dawl Air-inn",
+  "Dail Eireann": "Dawl Air-inn",
+  "Éamon de Valera": "Aymun de Valera",
+  "Eamon de Valera": "Aymun de Valera",
+  "Priomh-Aire": "Preev Aira",
+  "Cathal Brugha": "Cahal Brooah",
+  "Cumann na mBan": "Kummun na Bann",
+  "Dún Laoghaire": "Doon Leery",
+  "Dun Laoghaire": "Doon Leery",
+  "Portlaoise": "Portleesh",
+  "Taoiseach": "Teeshock",
+  "Tánaiste": "Tawnishta",
+  "Ruairí Ó Brádaigh": "Ruree oh Brawdee",
+  "Ruairi O Bradaigh": "Ruree oh Brawdee",
+  "Sinn Féin": "Shin Fayn",
+  "Sinn Fein": "Shin Fayn"
+}

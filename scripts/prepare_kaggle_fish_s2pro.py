@@ -12,11 +12,16 @@ final file must pass waveform checks or the audition mp3 is NOT written.
 
 import base64
 import json
+import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 cillian_wav = root / "chatterbox" / "voices" / "cillian_irish_dry.wav"
 cillian_b64 = base64.b64encode(cillian_wav.read_bytes()).decode("ascii")
+
+mode = sys.argv[1] if len(sys.argv) > 1 else "plain"
+kernel_slug = "fish-s2pro-tough-irish-cillian"
+out_name = "fish_s2pro_cillian_tough.mp3"
 
 tough_irish_text = (
     "In Dublin, the leaders of the new republic assembled to challenge the authority of the Crown. "
@@ -35,7 +40,17 @@ ref_text = (
     "somebody else's point of view, and I've always been a big reader."
 )
 
-stage_dir = root / "scratch" / "kaggle_fish_s2pro" / "kernel"
+if mode == "respelled":
+    lex = json.loads(
+        (root / "fixtures" / "irish_pronunciation_lexicon.json").read_text(encoding="utf-8")
+    )
+    for key in sorted((k for k in lex if not k.startswith("_")), key=len, reverse=True):
+        tough_irish_text = tough_irish_text.replace(key, lex[key])
+    kernel_slug = "fish-s2pro-tough-irish-respelled"
+    out_name = "fish_s2pro_respelled_cillian_tough.mp3"
+    print("Respelled text:\n" + tough_irish_text)
+
+stage_dir = root / "scratch" / ("kaggle_fish_s2pro" if mode != "respelled" else "kaggle_fish_s2pro_respelled") / "kernel"
 stage_dir.mkdir(parents=True, exist_ok=True)
 
 kernel_code = f'''#!/usr/bin/env python3
@@ -185,7 +200,7 @@ full = np.concatenate(pieces)
 raw_wav = "/workspace/fish_s2pro_raw.wav"
 sf.write(raw_wav, full, sr_final)
 
-mp3 = OUT / "fish_s2pro_cillian_tough.mp3"
+mp3 = OUT / {repr(out_name)}
 af = ("equalizer=f=220:width_type=o:width=1.2:g=1.0,"
       "highshelf=f=7500:gain=-2.0:width=1.0,"
       "loudnorm=I=-20:TP=-2:LRA=11")
@@ -205,7 +220,7 @@ if health("FINAL_MP3", a, sr_a):
     print(f"FISH OK: {{dur:.1f}}s audio in {{el:.1f}}s (RTF {{el / dur:.2f}}x) -> {{mp3.name}} ({{mp3.stat().st_size:,}} bytes)")
 else:
     print("HEALTH-GATE ABORT: final mp3 failed; renaming to UNHEALTHY.")
-    mp3.rename(OUT / "fish_s2pro_cillian_tough_UNHEALTHY.mp3")
+    mp3.rename(OUT / (Path({repr(out_name)}).stem + "_UNHEALTHY.mp3"))
 '''
 
 run_file = stage_dir / "run_kernel.py"
@@ -213,8 +228,8 @@ run_file.write_text(kernel_code, encoding="utf-8")
 print(f"Written {run_file} ({run_file.stat().st_size:,} bytes)")
 
 meta = {
-    "id": "davedavedavedavenm/fish-s2pro-tough-irish-cillian",
-    "title": "fish-s2pro-tough-irish-cillian",
+    "id": f"davedavedavedavenm/{kernel_slug}",
+    "title": kernel_slug,
     "code_file": "run_kernel.py",
     "language": "python",
     "kernel_type": "script",
