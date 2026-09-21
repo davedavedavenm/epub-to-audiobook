@@ -84,6 +84,14 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 21 September 2026 — Fish S2 Pro full-chapter PILOT (optimized harness) — **COMPLETE; measured RTF 2.62x; 0/200 sentence failures; Dave's listening verdict pending**
+- Chapter: Sophie's World Ch 6 "Fate" (the chapter Dave is listening to; 15.5 min rendered vs 16.4 min professional narration; 2,851 source words). Kernel `fish-sophies-fate-cillian` v2, free Kaggle T4×2, $0.
+- **Measured RTF 2.62x** — 5.7x faster than the audition harness (15.03x): the single-process driver (AR + caches + codec loaded once, codec split to cuda:1) removed the per-sentence reload that dominated the audition number.
+- Gates: all 200 sentences passed in-kernel waveform checks; independent local re-check of the master (RMS 0.093, zero saturation, 928.9s); faster-whisper ASR = 2,853 words vs 2,851 source — word-complete, correct order.
+- **Whole-book math (measured basis):** 16-h book ≈ 42 GPU-h at RTF 2.62 single-AR-GPU (~1.5 weeks of ~30 h/wk free quota); 2-GPU sentence sharding (not yet built) would roughly halve wall time. A 95-min Armed Struggle chapter ≈ 4.2 GPU-h.
+- Pilot builder: `scripts/prepare_kaggle_fish_sophies_fate.py`. Gotchas baked in: install runtime BEFORE importing torch (torchaudio ABI), codec-patch touches 4 call sites, `PYTHONUTF8=1` for kernel push with unicode text.
+- **Dave's ear verdict pending — if it passes, the Armed Struggle production path is settled (Fish S2 Pro + Cillian + lexicon, chapters paced across free Kaggle quota).**
+
 ### 20 September 2026 — Fish S2 Pro bounded retry (flat Cillian ref) — **rendered on free Kaggle T4×2; VOICE PASSES by ear; pronunciation is the open issue**
 - **Dave's listening verdict (2026-09-20): "Fish S2 Pro retry voice is perfect"** — the flat-Cillian hypothesis is confirmed: the 2026-09-18 rejection was theatrical prompt prosody transfer, not the engine. The voice/timbre gate is now passed on the toughest test we have.
 - **Open issue: pronunciation of hard Irish terms** (Dáil Éireann, Taoiseach, Tánaiste, etc. as-spelled). ASR heard "Padreik Paris", "deal era", "Toshak" — consistent with the engine reading anglo spelling literally.
