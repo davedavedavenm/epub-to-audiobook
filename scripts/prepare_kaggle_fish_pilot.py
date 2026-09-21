@@ -47,18 +47,10 @@ stage_dir.mkdir(parents=True, exist_ok=True)
 
 kernel_code = f'''#!/usr/bin/env python3
 """Fish S2 Pro pilot - Sophie's World ch6 "Fate" - single-process, dual-T4, banked."""
-import base64, glob, os, re, subprocess, sys, time
+import base64, glob, json, os, re, subprocess, sys, time
 from pathlib import Path
 
-import numpy as np
 import soundfile as sf
-import torch
-
-assert torch.cuda.is_available()
-NGPU = torch.cuda.device_count()
-print(f"GPU: {{torch.cuda.get_device_name(0)}} x{{NGPU}}")
-DEVICE = "cuda:0"
-CODEC_DEVICE = "cuda:1" if NGPU > 1 else DEVICE
 
 WORK = Path("/workspace"); WORK.mkdir(exist_ok=True)
 OUT = Path("/kaggle/working/out"); (OUT / "wavs").mkdir(parents=True, exist_ok=True)
@@ -72,7 +64,8 @@ eval_text = {repr(chapter_text)}
 sents = [s.strip() for s in re.split(r"(?<=[.!?])\\s+", eval_text) if s.strip() and len(s.strip()) > 1]
 print(f"{{len(sents)}} sentences")
 
-# ---------- runtime install (proven recipe) ----------
+# ---------- runtime install FIRST (so the torch/torchaudio pair on disk is
+# consistent before this process imports torch - ABI mismatch otherwise) ----------
 subprocess.run(["apt-get", "update", "-q"], check=False)
 subprocess.run(["apt-get", "install", "-y", "-q", "portaudio19-dev", "libsox-dev", "libsndfile1", "ffmpeg"], check=False)
 subprocess.run(["git", "clone", "-q", "https://github.com/fishaudio/fish-speech.git", "/workspace/fish-speech"], check=False)
@@ -100,6 +93,15 @@ src = src.replace("encode_audio(p, codec, device)",
 src = src.replace("decode_to_audio(merged_codes.to(device), codec)",
                   "decode_to_audio(merged_codes.to(CODEC_DEVICE or device), codec)")
 inf_path.write_text(src)
+
+# ---------- NOW import torch (post-install) ----------
+import torch
+
+assert torch.cuda.is_available()
+NGPU = torch.cuda.device_count()
+print(f"GPU: {{torch.cuda.get_device_name(0)}} x{{NGPU}}")
+DEVICE = "cuda:0"
+CODEC_DEVICE = "cuda:1" if NGPU > 1 else DEVICE
 os.environ["FISH_CODEC_DEVICE"] = CODEC_DEVICE
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
