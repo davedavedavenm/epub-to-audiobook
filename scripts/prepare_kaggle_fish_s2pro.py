@@ -71,6 +71,9 @@ sents = [s.strip() for s in re.split(r"(?<=[.!?])\\s+", eval_text) if s.strip()]
 
 # ---------- install runtime (proven A10G recipe) ----------
 print("Installing fish-speech runtime...")
+subprocess.run(["apt-get", "update", "-q"], check=False)
+subprocess.run(["apt-get", "install", "-y", "-q", "portaudio19-dev", "libsox-dev",
+                "libsndfile1", "ffmpeg"], check=False)
 subprocess.run(["git", "clone", "-q", "https://github.com/fishaudio/fish-speech.git",
                 "/workspace/fish-speech"], check=False)
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-e",
