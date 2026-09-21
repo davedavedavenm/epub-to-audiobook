@@ -94,8 +94,10 @@ subprocess.run([sys.executable, "-m", "pip", "install", "-q", "protobuf>=6.31.1"
                check=False)
 
 print("Downloading fishaudio/s2-pro weights...")
-subprocess.run([sys.executable, "-m", "huggingface_hub.cli", "download",
-                "fishaudio/s2-pro", "--local-dir", "/workspace/s2-pro"], check=True)
+subprocess.run([sys.executable, "-c",
+                "from huggingface_hub import snapshot_download; "
+                "snapshot_download('fishaudio/s2-pro', local_dir='/workspace/s2-pro')"],
+               check=True)
 
 # ---------- health gate ----------
 def health(label, a, sr):
