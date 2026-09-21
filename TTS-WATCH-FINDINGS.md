@@ -84,7 +84,13 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
-### 20 September 2026 — Live landscape sweep vs the July review: 4 new open-weight candidates + 3 reconsideration triggers — **test/watch; no listening yet**
+### 20 September 2026 — Chatterbox CPU Cillian voices (Nano dry/full, Turbo) — **tested on Tough Irish Words; rejected by ear**
+- Dave's verdict on all three arms: *"all those nano ones are shit"*.
+- Arms: `chatterbox-nano_dry`, `chatterbox-nano_full` (Zorin :8006, RTF 0.77–0.80), `chatterbox-turbo_full` (:8004, RTF 1.95), human `cillian_irish_dry` reference, seeded, mastered chain.
+- Consequence: the Chatterbox-family CPU route to Cillian+Irish is **closed**, consistent with the earlier regional-accent-closure decision; local CPU default narrator remains Beatrice/Nano for UK content only. The CPU-Cillian ladder now runs: Higgs TTS 3 (Kaggle, Cillian clone, RTF 1.67, awaiting Dave's listening verdict) → Breeze 2 (current production winner).
+- First-party: rendered via the deployed Zorin services; no engine/voice changes made.
+
+### 20 September 2026 — Live landscape sweep vs the July review: 4 new open-weight candidates + 3 reconsideration triggers — **test/watch; listening in progress Sept 2026**
 Sources: vendor model cards, checked 2026-09-20. **All benchmark numbers below are vendor-reported and unverified by our listening gate.**
 
 - **Higgs TTS 3 (`bosonai/higgs-tts-3-4b`, ~4B, released early Sep 2026) — TEST, top priority.**
