@@ -84,6 +84,13 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — LOCKED-RECIPE stress test — **PASS: dual-ref routing, dates/ordinals/numbers/currency all spoken correctly; 0 failures**
+- Made-up 2-paragraph stress text (ordinals "12 July 1921", year ranges, "4,500", "55,000", "£15 million", em-dashes, curly apostrophes, dramatic quote mid-flow, deliberately-unrespelled killer Gaelic names: Caoimhghín Ó Caoláin, Glounthaune, Cnoc na Gaoithe).
+- Kernel `fish-stress-lab` v3: **RTF 2.78x, 0/8 failures** (auto re-roll armed but unneeded), final waveform gate pass. ASR completeness: **every sentence present in order**; "the twelfth of July nineteen twenty-one" ✓, "nineteen twenty-three" ✓, "four thousand five hundred" ✓, "fifteen million pounds" ✓, "the tenth of August nineteen twenty-seven" ✓; quote delivered complete via expressive-tail ref.
+- Known limits (by design): unrespelled raw Gaelic names mangle (lexicon is the fix — that's its job); "Dawl Air-inn" heard as "Dol Ehrin" once (ASR weakness or mild drift — Dave's ear decides on the chapter).
+- **Recipe now locked for chapter production**: narration = full 28s ref @ t0.85; quotes = expressive-tail crop @ t0.85; curly apostrophes; years/ordinals/numbers/currency→words; orphan merge; per-sentence banking + health gate + auto re-roll (seed 43/44); silence-trim + 0.18s/0.50s natural gaps; mastering chain; ASR completeness check before delivery.
+- Next: Dave hears the stress clip; on approval, chapter re-render of "New States 1923–63" with the full recipe, then paced book production.
+
 ### 22 September 2026 — Drama round 2 verdict + expressive-reference lab — **crops of the 28s clip as emotion anchors; verdict pending**
 - Round-2 pace verdicts: atempo 0.85 "still too fast", 0.88 "not quite right" (note: arm-level generation variance confounded the comparison — raw lengths differed before tempo), period surgery "nice but still flat or run on". Root complaint: **the quote is emotive and none of the takes convey it** — Fish anchors emotion on the reference, and both refs are flat interview cuts. Fish has no emotion control parameter.
 - Fix hypothesis: **emotionally-charged reference crops**. Silence-mapped the 28s Cillian clip; cut three expressive crops (`crop_emotional_list` 8.4s, `crop_power_of_art` 3.8s emphatic ending, `crop_expressive_tail` 9.9s) into the private refs dataset (v2) with transcripts.
