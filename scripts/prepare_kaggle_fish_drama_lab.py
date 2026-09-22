@@ -48,12 +48,11 @@ WORK = Path("/workspace"); WORK.mkdir(exist_ok=True)
 OUT = Path("/kaggle/working/out"); OUT.mkdir(exist_ok=True)
 
 REFDIR = None
-for cand in sorted(Path("/kaggle/input").glob("*")):
-    if (cand / "refs.json").exists():
-        REFDIR = cand
-        break
+hits = sorted(Path("/kaggle/input").rglob("refs.json"))
+if hits:
+    REFDIR = hits[0].parent
 if REFDIR is None:
-    print("INPUT MOUNTS:", [str(p) for p in Path("/kaggle/input").glob("*")], flush=True)
+    print("INPUT MOUNTS:", [str(p) for p in Path("/kaggle/input").rglob("*")][:40], flush=True)
     raise SystemExit("refs dataset not mounted")
 print("REFDIR:", REFDIR, flush=True)
 REFS_JSON = json.loads((REFDIR / "refs.json").read_text(encoding="utf-8"))
