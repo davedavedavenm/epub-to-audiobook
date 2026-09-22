@@ -158,12 +158,12 @@ for pid, para in enumerate(paras):
         in_quote = "‘" in s
         flat.append({"text": s, "para": pid, "quote": in_quote})
 
-# propagate quote flag: a sentence containing the closing quote mark (’, / ’.) or
-# starting with ’ continues a quote opened in a previous sentence
+# propagate/open quote detection: ’ that is NOT a letter apostrophe (didn’t)
+# i.e. a close-quote after punctuation/space, or a sentence-initial/opening ‘
 for i in range(1, len(flat)):
     if not flat[i]["quote"]:
         t = flat[i]["text"]
-        if ("’," in t) or ("’." in t) or t.startswith("’") or flat[i - 1]["quote"] and "’," in t:
+        if re.search(r"(?<![A-Za-z])’", t):
             flat[i]["quote"] = True
 
 print(f"{len(paras)} paragraphs, {len(flat)} sentences")
