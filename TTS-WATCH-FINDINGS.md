@@ -84,6 +84,11 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — AS ch2 v1 verdict + v2 fixes — **voice drift/pacing/years flagged by Dave; v2 rendering**
+- Dave's verdict on v1: voice sometimes goes American; pacing sometimes poor/running on; year ranges ("1911-1921") read digit-wise instead of "nineteen eleven to nineteen twenty-one".
+- v2 fixes (kernel `fish-as-newstates-cillian-v2`): (1) full year expansion — ranges, short forms ("1923–63" → "…to sixty-three"), standalone years; zero digit-years remain in the payload; (2) paragraph-aware assembly gaps (0.65s between paragraphs, 0.35s sentences) + abbreviation-safe sentence splitting (initials protected; 615 sentences vs v1's 504); (3) **temperature 1.0 → 0.7** (vendor fixed default) to anchor accent/prosody — the one change that needs Dave's A/B ear, since drift is inherent to zero-shot cloning at high temperature.
+- Runtime facts: same proven harness; digit-year check added to pre-push validation.
+
 ### 22 September 2026 — Armed Struggle ch2 "New States 1923-63" overnight render — **COMPLETE + spliced fix; awaiting Dave's listening verdict**
 - The actual chapter Dave is listening to (39.9% in; 95.6 min professional audio). 14,583 words from his own calibre EPUB, repo lexicon + chapter glossary (Fianna Fáil→"Fee-na Fawl", standalone Dáil/Éireann, Sean→"Shawn", Eamon→"Aymun", **IRA→"I-R-A"** letter-reading). Kernel `fish-as-newstates-cillian`, ~4h10m wall on free Kaggle T4×2, $0.
 - **RTF 2.56x** (503/504 sentences passed; one bare initial "F." of *F. L. Green* produced no audio — fixed by a candidate-letter kernel ("Ef."/"Eff."/"F."/"F" — all rendered; "Ef." spliced in) and local re-master. ASR spot-check at the splice confirms "F-L. Green's 1945 novel, Odd Man Out" with correct flow.
