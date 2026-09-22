@@ -104,6 +104,11 @@ def prep_text(raw: str) -> list[dict]:
 
     raw = re.sub(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(" + "|".join(_MONTHS) + r")\s+((?:19|20)\d{2})\b",
                  date_repl, raw)
+    # year-less dates: "9 October", "12th of July"
+    raw = re.sub(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(" + "|".join(_MONTHS) + r")\b",
+                 lambda m: f"the {ordinal_words(int(m.group(1)))} of {m.group(2)}", raw)
+    raw = re.sub(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+of\s+(" + "|".join(_MONTHS) + r")\b",
+                 lambda m: f"the {ordinal_words(int(m.group(1)))} of {m.group(2)}", raw)
     raw = re.sub(r"\b((?:19|20)\d{2})\s*[-–—]\s*((?:19|20)\d{2}|\d{2})\b",
                  lambda m: f"{year_words(int(m.group(1)))} to {year_words(int(m.group(2))) if len(m.group(2)) == 4 else under100(int(m.group(2)))}",
                  raw)
