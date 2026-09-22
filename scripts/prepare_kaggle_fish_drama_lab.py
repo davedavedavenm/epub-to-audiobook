@@ -27,10 +27,10 @@ D = ("We started shooting from the car, then getting out of the car we continued
      "We all shot at him; he didn't have a chance.")
 
 arms = [
-    {"label": "D_t07_full", "text": D, "temp": 0.7, "atempo": 1.0},
-    {"label": "D_t10_full", "text": D, "temp": 1.0, "atempo": 1.0},
-    {"label": "D_t085_full_slow", "text": D, "temp": 0.85, "atempo": 0.93},
-    {"label": "D_t085_full_nocomma", "text": "We started shooting from the car then getting out of the car we continued to shoot. We all shot at him; he didn't have a chance.", "temp": 0.85, "atempo": 1.0},
+    {"label": "D_t085_full_slow085", "text": D, "temp": 0.85, "atempo": 0.85},
+    {"label": "D_t085_full_slow088", "text": D, "temp": 0.85, "atempo": 0.88},
+    {"label": "D_t085_full_periods", "text": "We started shooting from the car. Then getting out of the car we continued to shoot. We all shot at him; he didn't have a chance.", "temp": 0.85, "atempo": 1.0},
+    {"label": "D_t085_full_periods_slow", "text": "We started shooting from the car. Then getting out of the car we continued to shoot. We all shot at him; he didn't have a chance.", "temp": 0.85, "atempo": 0.9},
 ]
 
 stage_dir = root / "scratch" / "kaggle_fish_drama_lab" / "kernel"
@@ -188,3 +188,4 @@ meta = {
 }
 (stage_dir / "kernel-metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 print("metadata written")
+
