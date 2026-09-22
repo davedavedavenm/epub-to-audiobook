@@ -84,6 +84,13 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — Dave v2 verdict + sentence-lab turn — **accent still somewhat American; pauses robotic ("by his death......Kevin...O'Higgins"); NO whole-chapter renders until recipe locked**
+- Dave's verdicts: v2 accent "just a bit too American still"; weird pauses, "doesn't sound like natural flowing speech"; specific defect at the Kevin O'Higgins sentence. Also directed: iterate at sentence level, not per-chapter.
+- Prime suspect identified: **all apostrophes in the source are curly Unicode (O’Higgins ×10, IRA’s, didn’t…)** — never tested (tough-Irish audition had no apostrophes); plus long comma-rich sentences inviting mechanical pauses.
+- Sentence lab `fish-ohiggins-lab` (8 arms, all rendered ok): S1/S2/S3 × curly vs straight vs spaced apostrophe vs comma-stripped, temp 0.7, per-arm mastered mp3s served for Dave's per-sentence picks.
+- Pacing-only fix built from existing v2 banked audio (no re-render): **v2.1** — per-sentence silence-trim + natural gaps (0.18s sentence / 0.50s paragraph) replacing mechanical 0.35/0.65s; 92.2 min, gate pass, served.
+- Accent lever queued behind lab results: **multi-reference anchoring** (cillian_irish.wav = 28s longer cut of the same Cillian source, transcript captured; generate_long accepts prompt_text/prompt_tokens lists) alongside the winning punctuation variant.
+
 ### 22 September 2026 — AS ch2 v1 verdict + v2 fixes — **voice drift/pacing/years flagged by Dave; v2 rendered + spliced; A/B awaiting ear verdict**
 - Dave's verdict on v1: voice sometimes goes American; pacing sometimes poor/running on; year ranges ("1911-1921") read digit-wise instead of "nineteen eleven to nineteen twenty-one".
 - v2 fixes (kernel `fish-as-newstates-cillian-v2`, ~4h15m, $0): (1) full year expansion — ASR confirms spoken-word years ("March nineteen thirty-four General Army Convention" transcribed as "March 1934"); zero digit-years in payload; (2) paragraph-aware assembly gaps (0.65s paragraphs / 0.35s sentences) + abbreviation-safe splitting (615 sentences vs 504); (3) **temperature 1.0 → 0.7** to anchor accent/prosody — the change that needs Dave's A/B ear.
