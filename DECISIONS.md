@@ -12,6 +12,37 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## Armed Struggle production: locked Cillian recipe (Fish S2 Pro) — Active (2026-09-22)
+
+Dave declared the recipe "the answer for this book" after the stress test passed
+(8/8 sentences, all dates/numbers/ordinals ASR-verified, 0 failures) and ordered
+the **whole book rendered from the Preface, replacing his existing ABS copy while
+preserving his exact listening position**.
+
+- **The exact method is codified in `CILLIAN-RECIPE.md`** — engine (Fish S2 Pro on
+  free Kaggle T4×2), dual-reference routing (narration = 28s full ref; quote
+  sentences = expressive-tail crop; both temp 0.85), text prep (lexicon incl.
+  corrected Tánaiste→"Tawnashta", dates/years/ordinals/numbers/currency → words,
+  orphan merge, curly apostrophes kept), per-sentence banking + health gates +
+  auto re-roll (seeds 42/43/44), silence-trim + natural-gap assembly, mastering
+  chain, ASR completeness gate before delivery.
+- Measured: RTF 2.56–2.78 free; whole book (152,359 words, 10 sections ≈ 17–20h
+  audio) ≈ **53 GPU-hours ≈ ~2 weeks of free Kaggle quota**, one chapter kernel at
+  a time (4–7h each), resumable everywhere.
+- Replacement contract: new per-chapter MP3s go into the ABS item `7039379c`
+  folder ("Armed Struggle"), ABS rescan, and Dave's progress is mapped to the
+  same chapter + same fraction (he is 39.9% into "New States 1923–63").
+- Book-wide payloads prepared: `scratch/as_book/*.json` via
+  `scripts/prepare_armed_struggle_chapters.py`; chapter kernels via
+  `scripts/prepare_kaggle_fish_as_book_chapter.py <slug>`.
+- General-novel note (Dave, standing): engines/voices rejected for THIS book's
+  Irish bar may still serve generic novels — Deepgram Flux Rufus/Colin
+  (expressivity=1, "very good", paid), Supertonic-3 (free CPU presets), Gemini
+  Achernar (free, quota-paced), Higgs 3 (needs H100-class). Full trail in
+  `TTS-WATCH-FINDINGS.md`.
+
+---
+
 ## Fish Speech S2 Pro: voice accepted with flat Cillian reference; pronunciation via lexicon audition — Active (2026-09-20)
 
 Dave's verdict on the bounded flat-reference retry (tough-Irish paragraph, `cillian_irish_dry.wav` + transcript, free Kaggle T4×2, health-gated): **"Fish S2 Pro retry voice is perfect."** This reverses the 2026-09-18 bounded rejection for the exact boundary that rejection recorded: the failure was theatrical prompt prosody transfer, and the remedy it named (flat, clean, non-theatrical studio prompt) is confirmed as the required operating mode. Production eligibility now hinges on the one remaining open issue: **pronunciation of hard Irish terms read from anglo spelling** (ASR: "Padreik Paris", "deal era", "Toshak").
