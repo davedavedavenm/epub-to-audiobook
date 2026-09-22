@@ -84,10 +84,12 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
-### 22 September 2026 — AS ch2 v1 verdict + v2 fixes — **voice drift/pacing/years flagged by Dave; v2 rendering**
+### 22 September 2026 — AS ch2 v1 verdict + v2 fixes — **voice drift/pacing/years flagged by Dave; v2 rendered + spliced; A/B awaiting ear verdict**
 - Dave's verdict on v1: voice sometimes goes American; pacing sometimes poor/running on; year ranges ("1911-1921") read digit-wise instead of "nineteen eleven to nineteen twenty-one".
-- v2 fixes (kernel `fish-as-newstates-cillian-v2`): (1) full year expansion — ranges, short forms ("1923–63" → "…to sixty-three"), standalone years; zero digit-years remain in the payload; (2) paragraph-aware assembly gaps (0.65s between paragraphs, 0.35s sentences) + abbreviation-safe sentence splitting (initials protected; 615 sentences vs v1's 504); (3) **temperature 1.0 → 0.7** (vendor fixed default) to anchor accent/prosody — the one change that needs Dave's A/B ear, since drift is inherent to zero-shot cloning at high temperature.
-- Runtime facts: same proven harness; digit-year check added to pre-push validation.
+- v2 fixes (kernel `fish-as-newstates-cillian-v2`, ~4h15m, $0): (1) full year expansion — ASR confirms spoken-word years ("March nineteen thirty-four General Army Convention" transcribed as "March 1934"); zero digit-years in payload; (2) paragraph-aware assembly gaps (0.65s paragraphs / 0.35s sentences) + abbreviation-safe splitting (615 sentences vs 504); (3) **temperature 1.0 → 0.7** to anchor accent/prosody — the change that needs Dave's A/B ear.
+- One orphan fragment failed in v2 ("At the", a broken-paragraph split inside "At the army's March 1934…"): rendered via candidate kernel ("At the" / "At the," — both passed) and spliced; first splice silently skipped the failed index (checked `ok` before the fix branch) — re-spliced and ASR-verified: "…working-class basis at the Army's March 1934 General Army Convention…".
+- **Structural fix queued for the production builder: merge orphan fragments (<4 words, no terminal punctuation) into the following sentence during text prep** — this class (v1: "F.", v2: "At the") then cannot occur.
+- Final v2: 94.8 min, RTF 2.6, waveform gate pass. A/B links: v1 `armed_struggle_ch2_newstates_cillian.mp3`, v2 `armed_struggle_ch2_newstates_cillian_v2.mp3`.
 
 ### 22 September 2026 — Armed Struggle ch2 "New States 1923-63" overnight render — **COMPLETE + spliced fix; awaiting Dave's listening verdict**
 - The actual chapter Dave is listening to (39.9% in; 95.6 min professional audio). 14,583 words from his own calibre EPUB, repo lexicon + chapter glossary (Fianna Fáil→"Fee-na Fawl", standalone Dáil/Éireann, Sean→"Shawn", Eamon→"Aymun", **IRA→"I-R-A"** letter-reading). Kernel `fish-as-newstates-cillian`, ~4h10m wall on free Kaggle T4×2, $0.
