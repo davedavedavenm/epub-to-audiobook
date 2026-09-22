@@ -84,6 +84,13 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — Lab verdicts round 2 + Deepgram assessed for Cillian — **curly kept; ordinal-date + dropped-word bugs logged; Deepgram = no cloning, presets only**
+- Apostrophe lab verdicts: S1 all four arms identical, **the chapter's weird pause did NOT reproduce** (stochastic per-sentence render variance, not the apostrophe — curly stays, book default). S2 curly fine; straight mispronounced Dáil Éireann in one arm (stochastic again); comma-smoothing "a little bit off".
+- v2.1 chapter verdicts: solid voice, **lacking emotion, quotes flat** (drama lab arms served separately); two completeness defects logged for the prep/queue: **ordinal dates read cardinally** ("Sunday 10 July" must become "the tenth of July") and **a dropped word** ("a" before "volunteer went"). Per-sentence re-roll for stochastic defects (dropped words, stray pauses) is now a production-queue requirement since banking makes it cheap.
+- Drama-lab arms (D × full ref: t0.7 / t1.0 / atempo 0.93 / no-comma) rendered and served — verdict pending.
+- **Deepgram assessed for the Cillian voice: not possible.** Official developer docs checked 2026-09-22 (full index + TTS/Flux/voices pages): no voice-cloning or custom-voice product exists on the platform; all voices are presets. Irish coverage: Aura-1 `angus` (already rejected by ear 2026-07), Flux `maeve` (female only). What Deepgram DOES add: Flux TTS `/v2/speak` with `expressivity` (-2..2, beta, calm↔animated) and `speed` (0.5–1.5), Aura-2 per-word pronunciation overrides. Book cost at documented Aura-2 pricing ($0.030/1k chars): ~900k chars ≈ **$27 — violates the zero-cost rule**; sample clips of draco/arcas (Aura-2) and rufus/colin (Flux, expressivity=1) rendered for reference (~$0.03 actual).
+- **General-novel applicability (Dave's standing note):** findings failing the Irish bar stay on record for books where accent/lexicon don't matter — Deepgram Flux (expressivity+speed, paid), Supertonic-3 (free CPU presets), Higgs 3 (needs H100-class), Gemini Achernar (free quota-paced) remain candidate narrators for generic novels.
+
 ### 22 September 2026 — Emotion lab — **10 arms rendered (temp x reference); Dave's picks pending**
 - Dave asked for emotion in the narration. Lab matrix: dramatic sentence (killer's quote, D) + neutral narrative (N) x temperature {0.7, 0.85, 1.0} on the dry ref; then 0.85 with the unused **28s full Cillian clip** (transcript captured via offline Whisper) and with **both refs as multi-reference** (`generate_long` accepts prompt lists).
 - All 10 arms rendered + gated + served (`lab_{D,N}_t{07,085,10}_dry`, `lab_{D,N}_t085_full`, `lab_{D,N}_t085_both`).
