@@ -65,12 +65,14 @@ import soundfile as sf
 WORK = Path("/workspace"); WORK.mkdir(exist_ok=True)
 OUT = Path("/kaggle/working/out"); OUT.mkdir(exist_ok=True)
 
-DRY_TEXT = {repr(DRY_TEXT)}
-FULL_TEXT = {repr(FULL_TEXT)}
+REFDIR = Path("/kaggle/input/cillian-refs")
+REFS_JSON = json.loads((REFDIR / "refs.json").read_text(encoding="utf-8"))
+DRY_TEXT = REFS_JSON["ref_dry_text"]
+FULL_TEXT = REFS_JSON["ref_full_text"]
 ARMS = json.loads({repr(json.dumps(arms, ensure_ascii=False))})
 
-Path("/workspace/ref_dry.wav").write_bytes(base64.b64decode({repr(dry_b64)}))
-Path("/workspace/ref_full.wav").write_bytes(base64.b64decode({repr(full_b64)}))
+Path("/workspace/ref_dry.wav").write_bytes((REFDIR / "cillian_irish_dry.wav").read_bytes())
+Path("/workspace/ref_full.wav").write_bytes((REFDIR / "cillian_irish.wav").read_bytes())
 
 subprocess.run(["apt-get", "update", "-q"], check=False)
 subprocess.run(["apt-get", "install", "-y", "-q", "portaudio19-dev", "libsox-dev", "libsndfile1", "ffmpeg"], check=False)
@@ -199,7 +201,7 @@ meta = {
     "enable_gpu": True,
     "enable_internet": True,
     "machine_shape": "NvidiaTeslaT4",
-    "dataset_sources": [],
+    "dataset_sources": ["davedavedavedavenm/cillian-refs"],
     "competition_sources": [],
     "kernel_sources": [],
     "model_sources": [],
