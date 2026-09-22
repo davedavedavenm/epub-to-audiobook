@@ -84,6 +84,12 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — Drama round 2 verdict + expressive-reference lab — **crops of the 28s clip as emotion anchors; verdict pending**
+- Round-2 pace verdicts: atempo 0.85 "still too fast", 0.88 "not quite right" (note: arm-level generation variance confounded the comparison — raw lengths differed before tempo), period surgery "nice but still flat or run on". Root complaint: **the quote is emotive and none of the takes convey it** — Fish anchors emotion on the reference, and both refs are flat interview cuts. Fish has no emotion control parameter.
+- Fix hypothesis: **emotionally-charged reference crops**. Silence-mapped the 28s Cillian clip; cut three expressive crops (`crop_emotional_list` 8.4s, `crop_power_of_art` 3.8s emphatic ending, `crop_expressive_tail` 9.9s) into the private refs dataset (v2) with transcripts.
+- Lab `fish-emoref-lab` rendered 4 arms (D quote, temp 0.85, refs: emotional-list / power-of-art / power-of-art@t1.0 / expressive-tail) — all ok, served. **Verdict pending.** If one conveys emotion without breaking the accent, production rule = narration uses the full-ref recipe; dramatic quotes use the chosen expressive crop.
+- Fallback if all still flat: Deepgram Rufus/Colin for quote-heavy passages (paid, ~$3/book for quote fraction) — Dave's call; or accept restrained delivery.
+
 ### 22 September 2026 — Verdicts: Rufus/Colin "very good" (general-novel list); drama arms all too fast → pace arms v2 served
 - Deepgram Flux **Rufus and Colin (expressivity=1): "both very good"** — recorded as top general-novel candidates (preset voices; cannot be Cillian; paid per character).
 - Drama line, full ref, round 1 (t0.7 / t1.0 / atempo 0.93 / no-comma): **all too fast** — the 28s ref's interview pace transfers, and 7% slowdown was insufficient. Round 2 served: **atempo 0.85**, **atempo 0.88**, **comma→period surgery** (short declarative sentences force the model to breathe), and **periods + atempo 0.9**. Verdict pending.
