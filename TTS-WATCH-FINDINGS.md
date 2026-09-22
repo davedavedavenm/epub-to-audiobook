@@ -84,6 +84,12 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — Emotion lab — **10 arms rendered (temp x reference); Dave's picks pending**
+- Dave asked for emotion in the narration. Lab matrix: dramatic sentence (killer's quote, D) + neutral narrative (N) x temperature {0.7, 0.85, 1.0} on the dry ref; then 0.85 with the unused **28s full Cillian clip** (transcript captured via offline Whisper) and with **both refs as multi-reference** (`generate_long` accepts prompt lists).
+- All 10 arms rendered + gated + served (`lab_{D,N}_t{07,085,10}_dry`, `lab_{D,N}_t085_full`, `lab_{D,N}_t085_both`).
+- Infra note: kernel source size limit (~1 MB) forces reference audio through a **private Kaggle dataset** (`davedavedavedavenm/cillian-refs` + refs.json transcripts, mounted at /kaggle/input) — the established pattern for future kernels.
+- Pending Dave's picks: temperature sweet spot, ref choice, then production recipe = winning punctuation style + winning temp/ref + orphan-merge + trim/natural-gap assembly. Chapter re-render only after that.
+
 ### 22 September 2026 — Dave v2 verdict + sentence-lab turn — **accent still somewhat American; pauses robotic ("by his death......Kevin...O'Higgins"); NO whole-chapter renders until recipe locked**
 - Dave's verdicts: v2 accent "just a bit too American still"; weird pauses, "doesn't sound like natural flowing speech"; specific defect at the Kevin O'Higgins sentence. Also directed: iterate at sentence level, not per-chapter.
 - Prime suspect identified: **all apostrophes in the source are curly Unicode (O’Higgins ×10, IRA’s, didn’t…)** — never tested (tough-Irish audition had no apostrophes); plus long comma-rich sentences inviting mechanical pauses.
