@@ -84,6 +84,11 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — Verdicts: Rufus/Colin "very good" (general-novel list); drama arms all too fast → pace arms v2 served
+- Deepgram Flux **Rufus and Colin (expressivity=1): "both very good"** — recorded as top general-novel candidates (preset voices; cannot be Cillian; paid per character).
+- Drama line, full ref, round 1 (t0.7 / t1.0 / atempo 0.93 / no-comma): **all too fast** — the 28s ref's interview pace transfers, and 7% slowdown was insufficient. Round 2 served: **atempo 0.85**, **atempo 0.88**, **comma→period surgery** (short declarative sentences force the model to breathe), and **periods + atempo 0.9**. Verdict pending.
+- Recipe state: narration LOCKED (Cillian, full 28s ref, temp 0.85, curly apostrophes, silence-trim + natural gaps). Open: dramatic-line pace, plus queued prep fixes (ordinal dates, orphan merge, per-sentence re-roll).
+
 ### 22 September 2026 — Lab verdicts round 2 + Deepgram assessed for Cillian — **curly kept; ordinal-date + dropped-word bugs logged; Deepgram = no cloning, presets only**
 - Apostrophe lab verdicts: S1 all four arms identical, **the chapter's weird pause did NOT reproduce** (stochastic per-sentence render variance, not the apostrophe — curly stays, book default). S2 curly fine; straight mispronounced Dáil Éireann in one arm (stochastic again); comma-smoothing "a little bit off".
 - v2.1 chapter verdicts: solid voice, **lacking emotion, quotes flat** (drama lab arms served separately); two completeness defects logged for the prep/queue: **ordinal dates read cardinally** ("Sunday 10 July" must become "the tenth of July") and **a dropped word** ("a" before "volunteer went"). Per-sentence re-roll for stochastic defects (dropped words, stray pauses) is now a production-queue requirement since banking makes it cheap.
