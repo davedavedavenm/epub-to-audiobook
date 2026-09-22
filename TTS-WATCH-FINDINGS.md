@@ -84,6 +84,12 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 22 September 2026 — Armed Struggle ch2 "New States 1923-63" overnight render — **COMPLETE + spliced fix; awaiting Dave's listening verdict**
+- The actual chapter Dave is listening to (39.9% in; 95.6 min professional audio). 14,583 words from his own calibre EPUB, repo lexicon + chapter glossary (Fianna Fáil→"Fee-na Fawl", standalone Dáil/Éireann, Sean→"Shawn", Eamon→"Aymun", **IRA→"I-R-A"** letter-reading). Kernel `fish-as-newstates-cillian`, ~4h10m wall on free Kaggle T4×2, $0.
+- **RTF 2.56x** (503/504 sentences passed; one bare initial "F." of *F. L. Green* produced no audio — fixed by a candidate-letter kernel ("Ef."/"Eff."/"F."/"F" — all rendered; "Ef." spliced in) and local re-master. ASR spot-check at the splice confirms "F-L. Green's 1945 novel, Odd Man Out" with correct flow.
+- Waveform gate on final: 93.3 min, RMS 0.096, zero saturation. Files landed in `evaluations/new-engines/output/` and served locally.
+- Measured basis for full-book production: **~42 GPU-h for 16 audio-hours (RTF ~2.6)** ≈ 1.5 weeks of free quota paced per chapter; a 95-min chapter ≈ 4.2 h.
+
 ### 21 September 2026 — Fish S2 Pro full-chapter PILOT (optimized harness) — **COMPLETE; measured RTF 2.62x; 0/200 sentence failures; Dave's listening verdict pending**
 - Chapter: Sophie's World Ch 6 "Fate" (the chapter Dave is listening to; 15.5 min rendered vs 16.4 min professional narration; 2,851 source words). Kernel `fish-sophies-fate-cillian` v2, free Kaggle T4×2, $0.
 - **Measured RTF 2.62x** — 5.7x faster than the audition harness (15.03x): the single-process driver (AR + caches + codec loaded once, codec split to cuda:1) removed the per-sentence reload that dominated the audition number.
