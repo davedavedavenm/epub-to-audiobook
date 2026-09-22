@@ -47,7 +47,15 @@ import soundfile as sf
 WORK = Path("/workspace"); WORK.mkdir(exist_ok=True)
 OUT = Path("/kaggle/working/out"); OUT.mkdir(exist_ok=True)
 
-REFDIR = Path("/kaggle/input/cillian-refs")
+REFDIR = None
+for cand in sorted(Path("/kaggle/input").glob("*")):
+    if (cand / "refs.json").exists():
+        REFDIR = cand
+        break
+if REFDIR is None:
+    print("INPUT MOUNTS:", [str(p) for p in Path("/kaggle/input").glob("*")], flush=True)
+    raise SystemExit("refs dataset not mounted")
+print("REFDIR:", REFDIR, flush=True)
 REFS_JSON = json.loads((REFDIR / "refs.json").read_text(encoding="utf-8"))
 FULL_TEXT = REFS_JSON["ref_full_text"]
 ARMS = json.loads({repr(json.dumps(arms, ensure_ascii=False))})
