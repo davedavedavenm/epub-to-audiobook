@@ -1,5 +1,56 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-23 Jev (TypeSafe) decision layer for TTS prep — ADDED, DEFAULT OFF, VALIDATED ON A REAL BOOK
+>
+> `webapp/jevspeak.py` (commit `1bee446`) adds two optional, fail-safe uses of
+> TypeSafe's Jev model (`jev-latest`), both **OFF by default** behind `JEV_*`
+> flags, so an install without a key is byte-identical to before:
+>
+> 1. **TTS text normalization** (`JEV_TTS_NORMALIZATION_ENABLED`): regex finds
+>    genuinely ambiguous spans (fractions, `Dr.`/`St.`/`No.`, roman numerals,
+>    attached measurements, ranges, currency, dotted initials); ONE batched Jev
+>    `choice` per chapter resolves the intended reading in context and code
+>    applies it. Deterministic classes (years, decades, ordinals, percentages,
+>    large integers) never go to the API.
+> 2. **Chapter boundary refinement** (`JEV_CHAPTER_BOUNDARY_ENABLED`): Jev is
+>    consulted only when the existing word-floor/title heuristics are ambiguous.
+>
+> Integration: `scripts/convert_book.py::chapter_text` and
+> `webapp/chapters.py::list_renderable_chapters`. Config, cost/volume, failure
+> behaviour and rollback are in `JEVSPEAK.md`; measurement script
+> `scripts/measure_jevspeak.py`; tests `tests/test_jevspeak.py`.
+>
+> **Real-book validation (2026-09-23).** Ran the exact converter path
+> (`chapter_text`) with the flag ON for one bounded slice — *Armed Struggle*
+> Chapter ONE (15,283 words, 35 spans, 1 request) and Breakneck Chapters 1 and 6
+> (18,068 words, 12 spans, 2 requests) — then left both flags OFF again. Jev
+> resolved every span correctly in context: `1919–21` → "nineteen nineteen to
+> twenty-one", `$36 billion` → "thirty-six billion dollars", `Henry VI` →
+> "Henry six", `Washington, DC` → "Washington, D C", `J. D.` → "J D",
+> `W. B.` → "W B", `£10,000` → "ten thousand pounds", `No. 2` → "Number 2".
+>
+> The run exposed and fixed four real defects in the candidate finder, each
+> covered by a new test (33 in `tests/test_jevspeak.py`):
+> - decades (`1980s`, `1960s`, `'70s`) matched the seconds unit and were sent to
+>   Jev as measurements — now excluded;
+> - ISBN hyphen groups (`978-0-330-47579-2`) yielded a bogus range `330-47579` —
+>   now excluded;
+> - abbreviated year ranges (`1919–21`) were rendered as cardinals
+>   ("one thousand nine hundred and nineteen to …") — now year style;
+> - a currency amount with a scale word (`$36 billion`) rendered only the amount
+>   and stranded the scale ("thirty-six dollars billion") — now
+>   "thirty-six billion dollars".
+>
+> **Fail-safe verified live:** with an invalid key the API returned HTTP 401 and
+> with an unreachable endpoint a ConnectionError; both logged a warning and the
+> chapter text was **byte-identical** to the feature-OFF output.
+>
+> Tests: 377 passing (371 + 6 new); `ruff check` clean on every touched file.
+> Both flags remain `0` in `.env.example` and are unset in the environment.
+> Pre-existing `ruff` errors in `scripts/as_prep.py` and
+> `scripts/regenerate_as_book.py` (added in `f077d2a`, untouched here) still fail
+> the repo-wide lint gate — not a regression from this work.
+
 > ## 2026-09-19 Top-Tier Modal GPU Voices & Full-Book Irish Render — COMPLETED / IN FLIGHT
 >
 > 1. **Irish & Multilingual Production Winner: Cillian Murphy (Breeze TTS 2)**:

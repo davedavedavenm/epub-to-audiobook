@@ -42,6 +42,7 @@ from tts_preprocess import (
     _decimal_to_words,
     _number_to_words,
     _ordinal_to_words,
+    _year_to_words,
     normalize_text_for_tts,
 )
 
@@ -283,6 +284,25 @@ def _money_words(symbol: str, amount: str) -> Optional[str]:
     return f"{words} {unit}"
 
 
+def _scaled_currency(symbol: str, amount: str, scale: str) -> Optional[str]:
+    """'$36' + 'billion' -> 'thirty-six billion dollars'.
+
+    A currency amount followed by a scale word is a magnitude, not pounds-and-
+    pence: the earlier code rendered only ``$36`` and left "billion" stranded
+    ("thirty-six dollars billion"). The scale word is part of the span and the
+    unit is plural because the scale always exceeds one.
+    """
+    amount = amount.replace(',', '')
+    _, major_many, _, _ = _CURRENCY_UNITS[symbol]
+    whole_s, dot, _ = amount.partition('.')
+    try:
+        whole = int(whole_s or 0)
+    except ValueError:
+        return None
+    words = _decimal_to_words(amount) if dot else _number_to_words(whole)
+    return f"{words} {scale.lower()} {major_many}"
+
+
 def _literal_currency(symbol: str, amount: str) -> Optional[str]:
     amount = amount.replace(',', '')
     major_one, major_many, _, _ = _CURRENCY_UNITS[symbol]
@@ -387,10 +407,19 @@ def _find_slash(text: str) -> Iterable[Candidate]:
         yield _make('slash', match, text, _SLASH_CRITERIA, render)
 
 
-_CURRENCY_RE = re.compile(r'([£$€])(\d[\d,]*\.?\d*)')
+_CURRENCY_RE = re.compile(
+    r'([£$€])(\d[\d,]*\.?\d*)(?:[ \t]*(hundred|thousand|million|billion|trillion))?',
+    re.IGNORECASE)
 _CURRENCY_CRITERIA = {
     'money': 'An amount of money, spoken as pounds and pence (or dollars and cents)',
     'literal': 'A bare decimal number followed by the currency unit, e.g. four point five pounds',
+    'leave': 'Leave the characters for the engine to read',
+}
+_CURRENCY_SCALE_CRITERIA = {
+    'money': 'An amount of money, spoken as the number, the scale word and the currency '
+             'unit, e.g. thirty-six billion dollars',
+    'literal': 'The number read as a bare decimal, followed by the scale word and the '
+               'currency unit',
     'leave': 'Leave the characters for the engine to read',
 }
 
@@ -398,15 +427,21 @@ _CURRENCY_CRITERIA = {
 def _find_currency(text: str) -> Iterable[Candidate]:
     for match in _CURRENCY_RE.finditer(text):
         symbol, amount = match.group(1), match.group(2)
+        scale = (match.group(3) or '').lower() or None
+        criteria = _CURRENCY_SCALE_CRITERIA if scale else _CURRENCY_CRITERIA
 
-        def render(choice, symbol=symbol, amount=amount):
+        def render(choice, symbol=symbol, amount=amount, scale=scale):
+            if scale:
+                if choice in ('money', 'literal'):
+                    return _scaled_currency(symbol, amount, scale)
+                return None
             if choice == 'money':
                 return _money_words(symbol, amount)
             if choice == 'literal':
                 return _literal_currency(symbol, amount)
             return None
 
-        yield _make('currency', match, text, _CURRENCY_CRITERIA, render)
+        yield _make('currency', match, text, criteria, render)
 
 
 # Only the genuinely ambiguous abbreviations get a question. The rest are
@@ -470,11 +505,29 @@ _UNIT_CRITERIA = {
 }
 
 
+def _is_decade_shorthand(number: str, unit: str) -> bool:
+    """True for a decade written as a year/2-digit shorthand plus ``s``.
+
+    "1980s" and "the '70s" both end in the seconds unit letter, but a decade is
+    a deterministic class the normalizer owns and must never be sent to Jev as a
+    measurement ("one thousand nine hundred and eighty seconds"). A short
+    duration like "5s" is still a genuine measurement.
+    """
+    if unit != 's' or not number.isdigit():
+        return False
+    value = int(number)
+    if len(number) == 4:
+        return 1000 <= value <= 2099
+    return len(number) == 2 and 20 <= value <= 99
+
+
 def _find_unit(text: str) -> Iterable[Candidate]:
     for match in _UNIT_RE.finditer(text):
         number, unit = match.group(1), match.group(2)
         word = _UNIT_WORDS.get(unit)
         if not word:
+            continue
+        if _is_decade_shorthand(number, unit):
             continue
 
         def render(choice, number=number, unit=unit, word=word):
@@ -487,8 +540,10 @@ def _find_unit(text: str) -> Iterable[Candidate]:
         yield _make('unit', match, text, _UNIT_CRITERIA, render)
 
 
+# The lookarounds also exclude a hyphen: a numeric range is a standalone token,
+# so an ISBN-style hyphen group ("978-0-330-47579-2") must not yield "330-47579".
 _RANGE_RE = re.compile(
-    r'(?<![\w.])(\d+(?:\.\d+)?)[ \t]?[-–—][ \t]?(\d+(?:\.\d+)?)(?![\w.])')
+    r'(?<![\w.\-])(\d+(?:\.\d+)?)[ \t]?[-–—][ \t]?(\d+(?:\.\d+)?)(?![\w.\-])')
 _RANGE_CRITERIA = {
     'range': 'A range, spoken with "to", e.g. ten to twelve',
     'sequence': 'Two separate numbers read in sequence, e.g. ten twelve',
@@ -496,10 +551,25 @@ _RANGE_CRITERIA = {
 }
 
 
+def _range_part(value: str) -> str:
+    """Render one end of a range, using year style for a 4-digit year.
+
+    "1919–21" must read "nineteen nineteen to twenty-one", not the cardinal
+    "one thousand nine hundred and nineteen to twenty-one" — the earlier code
+    sent every part through ``_number_words`` and got abbreviated year ranges
+    audibly wrong.
+    """
+    if len(value) == 4 and value.isdigit() and 1000 <= int(value) <= 2099:
+        return _year_to_words(value)
+    return _number_words(value)
+
+
 def _find_range(text: str) -> Iterable[Candidate]:
     for match in _RANGE_RE.finditer(text):
         first_s, second_s = match.group(1), match.group(2)
-        # Year ranges are already handled deterministically; skip them here.
+        # Full four-digit year ranges are already handled deterministically;
+        # skip them here. Abbreviated year ranges ("1919–21") fall through and
+        # are rendered in year style by ``_range_part``.
         if first_s.isdigit() and second_s.isdigit():
             first, second = int(first_s), int(second_s)
             if 1000 <= first <= 2099 and 1000 <= second <= 2099:
@@ -510,9 +580,9 @@ def _find_range(text: str) -> Iterable[Candidate]:
 
         def render(choice, first_s=first_s, second_s=second_s):
             if choice == 'range':
-                return f"{_number_words(first_s)} to {_number_words(second_s)}"
+                return f"{_range_part(first_s)} to {_range_part(second_s)}"
             if choice == 'sequence':
-                return f"{_number_words(first_s)} {_number_words(second_s)}"
+                return f"{_range_part(first_s)} {_range_part(second_s)}"
             return None
 
         yield _make('range', match, text, _RANGE_CRITERIA, render)

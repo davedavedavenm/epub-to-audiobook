@@ -12,6 +12,40 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## Jev (TypeSafe) decision layer is opt-in and disambiguation-only — Active (2026-09-23)
+
+`webapp/jevspeak.py` adds an optional TypeSafe/Jev layer with two features, both
+**OFF by default** (`JEV_TTS_NORMALIZATION_ENABLED`, `JEV_CHAPTER_BOUNDARY_ENABLED`).
+With the flags off both entry points are pass-throughs, so existing output is
+byte-identical and the marginal cost is exactly zero. Reference: `JEVSPEAK.md`.
+
+- **Jev only disambiguates spans the deterministic rules cannot resolve.** Regex
+  finds candidate spans (fractions, `Dr.`/`St.`/`No.`, roman numerals, attached
+  measurements, ranges, currency, dotted initials); one batched Jev `choice` per
+  chapter picks the intended reading in sentence context and ordinary code
+  applies it. It is "select instead of generate", never free-text rewriting.
+- **Deterministic classes never go to the API.** Years, decades, ordinals,
+  percentages, large integers and the abbreviations/currency the normalizer
+  already handles are resolved in code; sending them would only cost tokens.
+  The real-book run found and fixed finder bugs that leaked decades and ISBN
+  hyphen groups into the API path (see STATUS 2026-09-23).
+- **Feature 2 (boundary refinement) is consulted only when the existing
+  heuristics are ambiguous** — a near-floor section or a back-matter-looking
+  title — so a normal chapter listing makes no call.
+- **Any failure falls back to existing behaviour.** Missing key, timeout,
+  connection error, non-2xx (after one bounded retry on 429/5xx), malformed
+  body, an off-menu choice, or confidence below `JEV_MIN_CONFIDENCE` all leave
+  the deterministic result untouched. `ask_jev` never raises. Verified live:
+  HTTP 401 and a ConnectionError both produced output byte-identical to
+  feature-off.
+- **Threshold evidence:** measured live on `jev-1.13.0`, 15 spans in one
+  request, lowest confidence 0.85 against the default floor 0.55
+  (`scripts/measure_jevspeak.py`). Re-measure before lowering it.
+- This changes no engine, voice, default path or output. Rollback is unsetting
+  the two flags; full removal is documented in `JEVSPEAK.md`.
+
+---
+
 ## Armed Struggle production: locked Cillian recipe (Fish S2 Pro) — Active (2026-09-22)
 
 Dave declared the recipe "the answer for this book" after the stress test passed
