@@ -127,12 +127,35 @@ def _title_for(html, fallback):
     return fallback
 
 
+def _jev_scan_floor(min_words):
+    """Word floor used to gather chapter candidates for the opt-in Jev boundary
+    pass. Returns ``min_words`` unchanged (so the scan is identical) whenever the
+    feature is off or unavailable."""
+    try:
+        from jevspeak import chapter_boundary_enabled, jev_scan_floor
+        if chapter_boundary_enabled():
+            return jev_scan_floor(min_words)
+    except Exception:
+        pass
+    return min_words
+
+
 def list_renderable_chapters(epub_path, min_words=MIN_WORDS):
     """The chapters that will actually render, numbered exactly as the converter
     numbers them (1-based, after dropping sub-min_words front/back matter).
 
     Each item: {index, title, words, back_matter}.
+
+    Opt-in Jev boundary ranking (JEV_CHAPTER_BOUNDARY_ENABLED, default OFF):
+    when enabled, sections just below the word floor are also gathered (marked
+    ``below_threshold``) and near-threshold or back-matter-looking sections are
+    sent to Jev in one batched request. Confident ``front_matter``/``back_matter``
+    answers are dropped, confident ``body`` answers are kept (and rescued from
+    below the floor), and the survivors are renumbered. With the flag off this
+    function is unchanged: no extra keys, no extra calls.
     """
+    scan_min = _jev_scan_floor(min_words)
+    gather_below = scan_min != min_words
     out = []
     with zipfile.ZipFile(epub_path) as z:
         idx = 0
@@ -140,11 +163,13 @@ def list_renderable_chapters(epub_path, min_words=MIN_WORDS):
             html = z.read(name).decode('utf-8', 'ignore')
             text = _plain_text(html)
             words = len(text.split())
-            if words < min_words:
+            if words < scan_min:
                 continue
-            idx += 1
+            below = words < min_words
+            if not below:
+                idx += 1
             title = _title_for(html, f"Chapter {idx}")
-            out.append({
+            item = {
                 'index': idx,
                 'title': title,
                 'words': words,
@@ -153,5 +178,14 @@ def list_renderable_chapters(epub_path, min_words=MIN_WORDS):
                 # real chapter even when the title is the book's own name.
                 'snippet': ' '.join(text.split()[:45]),
                 'back_matter': bool(BACK_MATTER_RE.search(title)),
-            })
+            }
+            if gather_below:
+                item['below_threshold'] = below
+            out.append(item)
+    if gather_below:
+        try:
+            from jevspeak import refine_boundaries
+            out = refine_boundaries(out, min_words)
+        except Exception:
+            pass
     return out

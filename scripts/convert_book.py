@@ -28,7 +28,10 @@ from html.parser import HTMLParser
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
-from tts_preprocess import sanitize_html, normalize_text_for_tts  # noqa: E402
+from tts_preprocess import sanitize_html  # noqa: E402
+# Drop-in for normalize_text_for_tts with an opt-in TypeSafe/Jev pass
+# (JEV_TTS_NORMALIZATION_ENABLED, default OFF). Disabled = byte-identical.
+from jevspeak import normalize_text_for_tts_jev  # noqa: E402
 # Shared chapter numbering — the SAME function the web UI's picker uses, so the
 # chapter number a user selects is exactly the chapter that renders here.
 from chapters import spine_docs, renderable_wordcount, _title_for  # noqa: E402
@@ -185,7 +188,7 @@ def chapter_text(z, name):
     p = _P(); p.feed(sanitize_html(z.read(name).decode('utf-8', 'ignore')))
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
     modern = _TEXT_PROFILE in ('modern', 'explicit')
-    text = normalize_text_for_tts(
+    text = normalize_text_for_tts_jev(
         text, modern=modern,
         expand_numbers=True if _TEXT_PROFILE == 'explicit' else None,
     )
