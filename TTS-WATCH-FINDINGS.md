@@ -84,6 +84,20 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 23 September 2026 — BOOK PRODUCTION underway — **Preface ✅ + Chapter ONE ✅ (both gated); Chapter TWO rendering**
+- **Preface**: 78/78 sentences, RTF 2.82, 0 failures, 12.2 min, ASR-complete. Re-rendered once after prep fix.
+- **Chapter ONE (Irish Revolution 1916–23)**: **641/641 sentences, RTF 2.78, 0 failures, no re-rolls needed, 102.2 min**, waveform gate clean, ASR content coverage **94.7%** after year-digit normalization (remainder = ASR mishearing proper nouns + digit-form normalization; no systematic drops). First/last passages match source.
+- **Chapter TWO (New States 1923–63 — Dave's chapter) rendering now.** Remaining: ch3 (1,152 sents — largest, ~8h), ch4–8, conclusion. All banked/resumable.
+- Recipe held at production scale with zero manual intervention. Total spend: $0.
+- **Incident note:** Windows temp cleanup wiped `%TEMP%\opencode` (served audition files + analysis venv). Book renders were safe in `evaluations/new-engines/output/` (durable-copies discipline paid off); lab clips remain re-downloadable from their Kaggle kernels; venv rebuilt. Serve dir recreated with book files.
+- After all 10 sections: build chaptered M4B, replace audio in ABS item `7039379c`, rescan, remap Dave's position (39.9% fraction into "New States 1923–63").
+
+### 23 September 2026 — BOOK PRODUCTION launched — Preface rendered; Chapter ONE next
+- Dave approved the locked recipe ("perfect... this is the answer for this book") and ordered the **whole book from the Preface**, replacing his existing ABS copy while preserving his exact progress. Tánaiste respelling corrected ("Tawnashta") per his stress-test catch.
+- Method codified in **`CILLIAN-RECIPE.md`**; book-wide payloads in `scratch/as_book/*.json` (10 sections, 152,359 words, zero digit-years); production renderer `scripts/prepare_kaggle_fish_as_book_chapter.py <slug>`.
+- Year-less ordinal dates fixed in prep ("9 October" → "the ninth of October") after the first Preface render surfaced it.
+- Plan: sequential chapter kernels (~53 GPU-h total ≈ ~2 weeks free quota); ABS swap + progress remap at the end.
+
 ### 22 September 2026 — LOCKED-RECIPE stress test — **PASS: dual-ref routing, dates/ordinals/numbers/currency all spoken correctly; 0 failures**
 - Made-up 2-paragraph stress text (ordinals "12 July 1921", year ranges, "4,500", "55,000", "£15 million", em-dashes, curly apostrophes, dramatic quote mid-flow, deliberately-unrespelled killer Gaelic names: Caoimhghín Ó Caoláin, Glounthaune, Cnoc na Gaoithe).
 - Kernel `fish-stress-lab` v3: **RTF 2.78x, 0/8 failures** (auto re-roll armed but unneeded), final waveform gate pass. ASR completeness: **every sentence present in order**; "the twelfth of July nineteen twenty-one" ✓, "nineteen twenty-three" ✓, "four thousand five hundred" ✓, "fifteen million pounds" ✓, "the tenth of August nineteen twenty-seven" ✓; quote delivered complete via expressive-tail ref.
