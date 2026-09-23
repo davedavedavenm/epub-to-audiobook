@@ -30,7 +30,7 @@ normalizer runs.
 | Candidate | Question | Choices |
 |---|---|---|
 | `1/2`, `3/4` | fraction / date / ratio? | fraction, date (British), ratio, leave |
-| `£4.50` | money / literal decimal? | money, literal, leave |
+| `£4.50`, `$36 billion` | money / literal decimal? | money, literal, leave |
 | `Dr.` | doctor / drive? | doctor, drive, leave |
 | `St.` | saint / street? | saint, street, leave |
 | `No. 4` | number / no? | number, no, leave |
@@ -39,11 +39,16 @@ normalizer runs.
 | `10-12` | range / sequence? | range, sequence, leave |
 | `J. R. R.` | dotted initials | letters, leave |
 
-Deliberately **not** sent to Jev: years, decades (`1990s`), ordinals (`4th`),
-large integers, percentages and the currency/abbrev classes the deterministic
-normalizer already handles correctly. Those are unambiguous and already solved
-in code; sending them would only cost tokens. `1914-1918` is skipped because the
-existing year-range rule owns it.
+Deliberately **not** sent to Jev: years, decades (`1990s`, `'70s`), ordinals
+(`4th`), large integers, percentages and the currency/abbrev classes the
+deterministic normalizer already handles correctly. Those are unambiguous and
+already solved in code; sending them would only cost tokens. The finder
+explicitly rejects decade shorthand (which would otherwise match the `s` unit as
+"seconds") and ISBN-style hyphen groups. `1914-1918` is skipped because the
+existing year-range rule owns it; an abbreviated year range (`1919–21`) is sent,
+and is rendered in year style ("nineteen nineteen to twenty-one"). A currency
+amount followed by a scale word (`$36 billion`) keeps the scale word in the span
+and is read "thirty-six billion dollars".
 
 ### 2. Chapter/section boundary ranking (`JEV_CHAPTER_BOUNDARY_ENABLED`)
 

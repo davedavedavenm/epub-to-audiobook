@@ -103,6 +103,28 @@ def test_year_range_is_left_to_the_deterministic_rule():
     assert jevspeak.find_normalization_candidates('1914-1918') == []
 
 
+def test_decades_are_not_unit_candidates():
+    # A trailing "s" must not turn a decade into "seconds" (real-book defect:
+    # "1980s"/"70s" matched the seconds unit and would be sent to Jev).
+    for text in ('Deng Xiaoping governed in the 1980s and 1990s.',
+                 'The 1960s and 1970s changed everything.',
+                 'The Californian counterculture of the ’70s mattered.'):
+        assert all(c.kind != 'unit' for c in
+                   jevspeak.find_normalization_candidates(text)), text
+
+
+def test_real_seconds_still_detected():
+    spans = {c.span: c.kind for c in
+             jevspeak.find_normalization_candidates('He waited 5s then ran 5m.')}
+    assert spans.get('5s') == 'unit' and spans.get('5m') == 'unit'
+
+
+def test_isbn_hyphen_groups_are_not_ranges():
+    # Real-book defect: "978-0-330-47579-2" yielded a bogus range "330-47579".
+    assert jevspeak.find_normalization_candidates(
+        'ISBN 978-0-330-47579-2 in Adobe Reader format.') == []
+
+
 def test_roman_needs_canonical_form():
     spans = [c.span for c in jevspeak.find_normalization_candidates('MIX IV VII')]
     assert 'IV' in spans and 'VII' in spans
@@ -123,6 +145,32 @@ def test_date_renderer_is_british():
 def test_money_renderer():
     assert jevspeak._money_words('£', '4.50') == 'four pounds and fifty pence'
     assert jevspeak._money_words('$', '1') == 'one dollar'
+
+
+def test_scaled_currency_renderer():
+    # Real-book defect: "$36 billion" rendered only the amount, stranding the
+    # scale word ("thirty-six dollars billion").
+    assert jevspeak._scaled_currency('$', '36', 'billion') == 'thirty-six billion dollars'
+    assert jevspeak._scaled_currency('$', '1', 'trillion') == 'one trillion dollars'
+    assert jevspeak._scaled_currency('£', '1.2', 'billion') == 'one point two billion pounds'
+
+
+def test_currency_with_scale_word_keeps_the_scale():
+    out = jevspeak.normalize_text_for_tts_jev(
+        'It cost $36 billion to build.', enabled=True,
+        client=_Recorder({'$36 billion': 'money'}))
+    assert 'thirty-six billion dollars' in out
+    assert 'dollars billion' not in out
+
+
+def test_year_range_renders_in_year_style():
+    # Real-book defect: abbreviated year ranges read as cardinals
+    # ("one thousand nine hundred and nineteen to twenty-one").
+    out = jevspeak.normalize_text_for_tts_jev(
+        'The IRA of 1919–21 were at the centre.', enabled=True,
+        client=_Recorder({'1919–21': 'range'}))
+    assert 'nineteen nineteen to twenty-one' in out
+    assert 'one thousand' not in out
 
 
 # --- Feature 1: chosen readings are applied --------------------------------
