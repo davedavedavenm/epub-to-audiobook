@@ -55,6 +55,22 @@ def under1000(n):
 
 
 def year_words(y):
+    if 1000 <= y <= 1099:
+        rest = y - 1000
+        if rest == 0:
+            return "ten hundred"
+        if rest < 10:
+            return f"ten oh {_ONES[rest]}"
+        return f"ten {under100(rest)}"
+    if 1100 <= y <= 1899:
+        cent = {11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen",
+                15: "fifteen", 16: "sixteen", 17: "seventeen", 18: "eighteen"}[y // 100]
+        rest = y % 100
+        if rest == 0:
+            return f"{cent} hundred"
+        if rest < 10:
+            return f"{cent} oh {_ONES[rest]}"
+        return f"{cent} {under100(rest)}"
     if 1900 <= y <= 1999:
         rest = y - 1900
         if rest == 0:
@@ -69,8 +85,7 @@ def year_words(y):
         if rest < 10:
             return f"two thousand and {_ONES[rest]}"
         return f"two thousand and {under100(rest)}"
-    return under1000(y)
-
+    return num_words(y)
 
 def num_words(n):
     if n >= 1_000_000:

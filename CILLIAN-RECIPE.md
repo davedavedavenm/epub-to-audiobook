@@ -21,24 +21,40 @@ listening verdicts across 2026-09-20/22 (see `DECISIONS.md` and
 
 ## Text preparation (in order)
 
+**Canonical implementation: `scripts/as_prep.py`** (unit-tested — run it directly;
+it asserts every rule). Chapter payloads are generated via
+`scripts/regenerate_as_book.py`. The prep pipeline, in order:
+
 1. **Irish lexicon** (`fixtures/irish_pronunciation_lexicon.json`), longest-first exact
    replacement. Includes Dáil Éireann→"Dawl Air-inn", Taoiseach→"Teeshock",
    Tánaiste→"Tawnashta" (corrected 2026-09-22), Dún Laoghaire→"Doon Leery",
    Portlaoise→"Portleesh", Sinn Féin→"Shin Fayn", IRA→"I-R-A", Fianna Fáil→"Fee-na
    Fawl", person names, etc. **Books carry their own glossary additions** (data, not code).
-2. **Dates → words**: "12 July 1921" → "the twelfth of July nineteen twenty-one"
-   (handles 12th/12 forms; Dave verdict: cardinals are wrong).
-3. **Year ranges** ("1923–63" → "nineteen twenty-three to sixty-three") and
-   **standalone years** → words. Zero digit-years may remain in the payload (checked).
-4. **Numbers/currency → words**: "4,500" → "four thousand five hundred",
-   "£15 million" → "fifteen million pounds".
-5. **Orphan merge**: fragments without terminal punctuation (<3 words) merge into
-   the following sentence (kills the "F." / "At the" defect class).
-6. **Quote detection**: sentences containing an opening ‘ are flagged; the flag
-   propagates to sentences containing a non-letter-apostrophe ’ (regex
-   `(?<![A-Za-z])’`). Quote sentences use the expressive ref.
-7. Curly apostrophes are **kept** (verdict: all apostrophe variants sounded the same;
-   book default is fine).
+2. **Dates → words**: "12 July 1921" → "the twelfth of July nineteen twenty-one";
+   year-less dates ("9 October") and month-first forms too (Dave verdict: cardinals are wrong).
+3. **Decades**: "1920s"/"late-1920s" → "nineteen twenties".
+4. **Year ranges** ("1923–63" → "nineteen twenty-three to sixty-three"; also
+   "1763–98" with expanded first year) and **standalone years 1000–2099** → words
+   ("1848" → "eighteen forty-eight", "1798" → "seventeen ninety-eight",
+   "1014" → "ten fourteen"). Zero digit-years may remain in the payload (checked).
+5. **Short-form quote years**: ’98 → "ninety-eight".
+6. **Money/weights**: "£15 million" → "fifteen million pounds" (comma amounts safe);
+   "250lb" → "two hundred and fifty pound".
+7. **Numbers → words**: 3+-digit and comma-group integers, then 2-digit, then
+   1-digit ("World War 1" → "World War one").
+8. **Times/calibers**: "8.45 p.m." → "eight forty-five p.m."; ".45" → "forty-five".
+9. **Mixed decade ranges**: "forties–80s" → "forties to eighties".
+10. **Orphan merge**: fragments without terminal punctuation (<3 words) merge into
+    the following sentence (kills the "F." / "At the" defect class).
+11. **Quote detection**: sentences containing an opening ‘ are flagged; the flag
+    propagates to sentences containing a non-letter-apostrophe ’ (regex
+    `(?<![A-Za-z])’`). Quote sentences use the expressive ref.
+12. Curly apostrophes are **kept** (verdict: all apostrophe variants sounded the same;
+    book default is fine).
+
+Hard rule validated by the 2026-09-22 incidents: **any digit surviving prep will be
+read wrongly** — the payload scan must show zero digit runs before pushing a kernel.
+(MI6/MI5/M60/M62-style acronyms are the only intended exceptions.)
 
 ## Synthesis (per sentence)
 
