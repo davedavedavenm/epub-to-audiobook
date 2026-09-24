@@ -259,6 +259,17 @@ app needs is entered in **Settings → Render Lanes**; nothing goes in the repo.
 | `FISH_LANE` | `auto` (default), `colab`, `kaggle`, `lightning` | which lane a job picks |
 | `LIGHTNING_USERNAME` + `LIGHTNING_API_KEY` | Lightning account + key | the **paid** lane only |
 
+> **The paid Lightning lane is not available inside the app image.**
+> `lightning-sdk` caps `urllib3 <= 2.5.0` while the Vast CLI needs
+> `>= 2.7.0` — measured across every published version of both on 2026-09-25,
+> so the two cannot share one environment. Enter the credentials and the
+> **Render Lanes** card will tell you the truth (`lightning-sdk not installed in
+> this environment`) instead of pretending the lane works; naming the lane on a
+> job still passes authorization, and the render is refused at start-up with
+> that same reason rather than failing later on an import error. To actually
+> use the lane, install the SDK in a **separate venv** — the route used for the
+> 2026-09-24 T4 probe. Full evidence: `webapp/requirements.txt` and DECISIONS.md.
+
 Two rules are enforced in code, not by convention:
 
 1. **`auto` resolves free lanes only** (`colab`, `kaggle`). To spend money you

@@ -71,6 +71,27 @@ preserving his exact listening position**.
   (expressivity=1, "very good", paid), Supertonic-3 (free CPU presets), Gemini
   Achernar (free, quota-paced), Higgs 3 (needs H100-class). Full trail in
   `TTS-WATCH-FINDINGS.md`.
+- **Gate is the definition of done (settled 2026-09-25):** a section ships only
+  when `scripts/gate_book_chapter.py` reports PASS on both halves — waveform
+  health (RMS 0.02–0.30, no plateau, no 30 s quiet window) **and** ASR
+  completeness (word ratio ≥ 0.93, coverage ≥ 0.90) against the *exact payload
+  the lane rendered*. The tool was validated by reproducing the already-gated
+  Preface before it was trusted on new chapters. A PASS is a completeness and
+  health claim only — it never becomes a listening verdict, which stays Dave's.
+- **Boundary: do not queue *The Armed Struggle* through the webapp lane path
+  until the chapter mapping is reconciled (settled 2026-09-25).**
+  `scripts/fish_bundle.py` derives slugs as `ch{idx:02d}` from
+  `chapters.list_renderable_chapters()`, which returns **24** sections for
+  `fixtures/armed_struggle.epub`, while this book's authoritative payloads are
+  the **10** sections `scripts/regenerate_as_book.py` maps
+  (`preface, ch1…ch8, conclusion`). A webapp-built bundle would therefore carry
+  a manifest that overrides the runner's ORDER and renders a different chapter
+  split, with no gate source for it. The in-flight render is unaffected: its
+  bundle came from `regenerate_as_book.py`, carries **no** `manifest.json`, so
+  the runner uses its Armed Struggle defaults — and its 10 payloads were
+  diffed byte-for-byte against `scratch/as_book/*.json` (identical). Measured
+  and recorded in `TTS-WATCH-FINDINGS.md` 2026-09-25; revisit when a general
+  book needs the webapp lane.
 
 ---
 
@@ -879,6 +900,28 @@ Fish build-out's first cut did the opposite: `resolve_lane('auto')` walked
 configured would have silently selected the paid lane — the exact autoscale
 incident reopened. `test_queue_length_cannot_provision_paid_gpu` now pins the
 free-only list as well as the render-target tuple.
+
+**lightning-sdk is not shipped in the app image (settled 2026-09-25).** The
+paid Lightning lane's SDK cannot coexist with the Vast CLI: `lightning-sdk`
+from 2025.12.5 on declares `urllib3 <= 2.5.0`, `vastai` from 1.4.0 on declares
+`urllib3 >= 2.7.0, < 3.0` — an empty intersection. Read from **PyPI release
+metadata across every published version of both packages** (not inferred from
+one failure): the only coexisting pairs require downgrading one of them
+(`vastai <= 1.3.0` or `lightning-sdk <= 2025.12.2`), and both current pins are
+deliberate — `vastai 1.5.4` for billing-time safety on the money path, and the
+SDK pin because its API surface (`User` / teamspaces / `Studio`) was verified
+against it on 2026-09-24 with a live T4 start/stop probe. **The money path
+wins**; an optional, explicitly-paid, not-yet-wired lane does not justify
+downgrading a billing-critical dependency or shipping an unverified SDK version
+(Authoritative-Source Gate). This is a *capability* decision, not an
+authorization one: naming `lane='lightning'` still passes POST (test
+`test_job_creation_accepts_a_named_paid_lane_and_persists_it`), while
+`fish_lane.lane_ready()` refuses the render at its first line with the same
+words the Render Lanes panel reports (`lightning-sdk not installed in this
+environment`) — never a queued job that dies on an import error. The route if
+the lane is ever wanted is a **separate venv**, which is how the 2026-09-24
+probe ran. First deploy of the lane surface failed on exactly this
+(`ResolutionImpossible`, 2026-09-25) — evidence in `webapp/requirements.txt`.
 
 **Why:** costs real money; this is a standing safety rule, not a per-task
 judgment call.

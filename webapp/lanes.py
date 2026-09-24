@@ -84,6 +84,25 @@ def configured_lanes() -> tuple:
     return tuple(l for l in LANES if lane_configured(l))
 
 
+def lightning_sdk_available() -> bool:
+    """Can the PAID Lightning lane run here at all?
+
+    Credentials say a lane is *authorised*; this says the environment can
+    *honour* it. `find_spec` first so the normal (absent) case never executes
+    the module — lightning-sdk is heavy — then the exact symbols
+    `_lightning_client()` imports, so a partial install is caught here rather
+    than as a traceback mid-render.
+    """
+    import importlib.util
+    try:
+        if importlib.util.find_spec('lightning_sdk') is None:
+            return False
+        from lightning_sdk import User, Studio  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
 def resolve_lane(explicit: str | None = None) -> str:
     """Pick the lane for a fish render.
 

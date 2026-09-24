@@ -61,7 +61,10 @@ def _log(log, msg):
 
 
 def lane_ready(lane: str) -> tuple:
-    """(configured?, reason) — credential presence only; live probes are lanes.lane_status."""
+    """(configured?, reason) — credentials plus LOCAL wiring, never a network probe
+    (live probes are lanes.lane_status). Checked as the first step of
+    render_on_lane(), so a job that cannot possibly run fails here with an
+    actionable reason rather than minutes later with a traceback."""
     try:
         import lanes as L
     except Exception as e:
@@ -74,6 +77,16 @@ def lane_ready(lane: str) -> tuple:
         return False, ('Fish-on-Kaggle kernel not wired yet (its e2e test is blocked '
                        'by the exhausted weekly quota — see STATUS.md); '
                        'use Colab or Lightning')
+    if lane == 'lightning' and not L.lightning_sdk_available():
+        # Credentials are present but the SDK cannot be: it conflicts with
+        # vastai's urllib3>=2.7.0 (see webapp/requirements.txt). Naming the lane
+        # is still the authorization to spend — this is an environment gap, not
+        # an authorization one — so it is refused here, at render start, with
+        # the same words the Render Lanes panel already shows.
+        return False, ('lightning-sdk not installed in this environment (it '
+                       'conflicts with the Vast CLI urllib3 pin — see '
+                       'webapp/requirements.txt and DECISIONS.md). The paid '
+                       'Lightning lane needs a separate venv.')
     return True, ''
 
 

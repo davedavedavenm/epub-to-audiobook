@@ -34,7 +34,7 @@
 > orchestration section. Lightning AI ruled out as a lane (free-tier GPU needs a
 > payment method); Modal remains vetoed.
 
-> ## 2026-09-25 — Render-lane webapp surface + free-only lane resolution — **BUILT, TESTED (398 green), NOT YET DEPLOYED**
+> ## 2026-09-25 — Render-lane webapp surface + free-only lane resolution — **BUILT, TESTED (399 green), DEPLOY IN PROGRESS**
 >
 > The webapp can now submit, poll and harvest a Fish render lane instead of the
 > lane being a khpi5-only manual procedure:
@@ -75,7 +75,18 @@
 > wired (its e2e is blocked by the exhausted weekly quota — the picker says so
 > honestly); Colab lane submit e2e blocked while the production sessions hold
 > the account's 2 GPU slots; docs (GETTING-STARTED / ENGINES / VOICES /
-> README) being written now.
+> README) written 2026-09-25.
+>
+> **First deploy failed and was fixed (2026-09-25).** Adding
+> `lightning-sdk==2026.9.18.post1` to `webapp/requirements.txt` broke the image
+> build with `ResolutionImpossible`: lightning-sdk caps `urllib3<=2.5.0` while
+> `vastai 1.5.4` needs `>=2.7.0`. Verified against PyPI metadata for **all**
+> versions of both — no version pair coexists without downgrading one of them.
+> Fix: the SDK is **not** shipped (the money path wins), `lane_ready()` refuses
+> a named-Lightning render at its first line with the exact reason the panel
+> shows, and a new test pins that boundary. Resolution re-verified in
+> `python:3.11-slim` (`Would install … urllib3-2.8.0 vastai-1.5.4`, clean).
+> Decision recorded in DECISIONS (GPU / Vast.ai policy).
 
 > ## 2026-09-23 Jev (TypeSafe) decision layer for TTS prep — ADDED, DEFAULT OFF, VALIDATED ON A REAL BOOK
 >
