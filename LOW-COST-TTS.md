@@ -375,6 +375,10 @@ owned hardware unless volume grows — a used 3060 desktop only pays off past
 >   payment method before starting GPU compute", API 400) — it is not a free
 >   lane. The working headless GPU lane is the official `google-colab-cli`
 >   (AI-Pro compute units, L4) run from khpi5; see CILLIAN-RECIPE.md.
+>   **UPDATE 2026-09-24 ~20:00:** Dave linked a payment method and added
+>   balance; GPU start now works (verified: `switch_machine(T4)` + real
+>   `Tesla T4` from `nvidia-smi -L`, then stopped). It is a **paid** lane now,
+>   not a free one — official rates: T4 $0.55/h, L4 $0.79/h.
 - HuggingFace Spaces ZeroGPU: free but small daily quota (used early on).
 
 **CHEAP — Vast.ai consumer GPUs** (the "under $0.10/hr" tier, not the H100s):
