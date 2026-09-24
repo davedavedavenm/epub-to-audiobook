@@ -1,16 +1,23 @@
 #!/usr/bin/env python
 """khpi5 watchdog for the headless Colab render (self-healing control plane).
 
-Runs forever on khpi5 (tool venv python). Every LOOP seconds:
+v2: multi-session (two-lane split of The Armed Struggle).
 
-  1. Re-adopt the assignment if the local sessions.json entry for NAME was
+Runs forever on khpi5 (tool venv python). Every LOOP seconds, for EACH lane:
+
+  1. Re-adopt the assignment if the local sessions.json entry for the lane was
      pruned, or its keep-alive daemon died -> respawns keep-alive so Colab
      does not reclaim the billing VM.
   2. Refresh the stored runtime-proxy token when it is within 15 min of
      expiry (an expired token makes `colab exec` 404, which is exactly what
      pruned the registry on 2026-09-24 and blinded the harvest loop).
-  3. Probe the VM's runner process; if it has exited (10h budget or crash)
-     and the book is not finished, relaunch it (state-resumable).
+  3. Probe the VM's runner process + remaining scope; if the runner has
+     exited (10h budget or crash) and the lane's scope is NOT finished,
+     relaunch it (state-resumable).
+
+Probe semantics (v2 /tmp/runner_probe.py): `ALIVE|DEAD <remain>` where
+remain = chapters of this lane's /content/as_chapters.txt scope not yet in
+as_state.json. remain==0 means the lane's scope is complete.
 
 Failure mode handling: if the assignment itself is gone (VM reclaimed), just
 log it - re-provisioning stays a MANUAL step so a transient empty assignment
@@ -35,12 +42,12 @@ from colab_cli.commands.session import spawn_keep_alive
 from colab_cli.common import state
 from colab_cli.state import SessionState
 
-EP = "gpu-l4-s-kkb-ass1a1-rxwdks0v6xni"
-NAME = "render"
+SESSIONS = [
+    ("render", "gpu-l4-s-kkb-ass1a1-rxwdks0v6xni"),
+    ("render2", "gpu-l4-s-kkb-ass1b0-1hw8fhv01sh9f"),
+]
 LOOP = 300
-TOTAL_SECTIONS = 10
 TOKEN_MARGIN = 900  # refresh stored token if it expires within 15 min
-RELAUNCH_MARK = "/tmp/.watchdog_relaunch"
 LOG = "/tmp/watchdog.log"
 
 
@@ -93,43 +100,39 @@ def keep_alive_alive(pid):
         return False
 
 
-def ensure_registry(asg):
-    """Returns True if the local registry is usable for exec."""
-    s = state.store.get(NAME)
-    if s and s.endpoint == EP and keep_alive_alive(s.keep_alive_pid):
+def ensure_registry(asg, name, ep):
+    """Returns True if the local registry entry for `name` is usable."""
+    s = state.store.get(name)
+    if s and s.endpoint == ep and keep_alive_alive(s.keep_alive_pid):
         if not token_fresh(s.token):
             rpi = asg.runtime_proxy_info
             s.token = rpi.token
             s.url = rpi.url
             state.store.add(s)
-            log("refreshed runtime-proxy token (expires in >%ds)" % TOKEN_MARGIN)
+            log("[%s] refreshed runtime-proxy token" % name)
         return True
 
-    # Missing entry, dead keep-alive, or wrong endpoint -> full re-adopt.
     rpi = asg.runtime_proxy_info
     s = SessionState(
-        name=NAME,
+        name=name,
         token=rpi.token,
         url=rpi.url,
-        endpoint=EP,
+        endpoint=ep,
         variant="GPU",
         accelerator="L4",
         machine_shape="STANDARD",
     )
     state.store.add(s)
-    pid = spawn_keep_alive(EP, NAME)
+    pid = spawn_keep_alive(ep, name)
     s.keep_alive_pid = pid
     state.store.add(s)
-    log(
-        "RE-ADOPTED registry (previous entry=%s, keep_alive_pid=%s)"
-        % (state.store.get(NAME) is not None, pid)
-    )
+    log("[%s] RE-ADOPTED registry (keep_alive_pid=%s)" % (name, pid))
     return True
 
 
-def probe_runner():
-    """Returns (alive: bool, done: int, raw: str) or (None, None, raw)."""
-    r = colab("exec", "-s", NAME, "-f", "/tmp/runner_probe.py", timeout=180)
+def probe_runner(name):
+    """Returns (alive, remain, raw) or (None, None, raw) if inconclusive."""
+    r = colab("exec", "-s", name, "-f", "/tmp/runner_probe.py", timeout=180)
     if r is None:
         return None, None, ""
     raw = ""
@@ -147,44 +150,41 @@ def probe_runner():
     return None, None, raw
 
 
-def relaunch_runner():
-    mark = RELAUNCH_MARK
+def relaunch_runner(name):
+    mark = "/tmp/.watchdog_relaunch_" + name
     if os.path.exists(mark) and time.time() - os.path.getmtime(mark) < 900:
         return  # already relaunched within the last 15 min
     open(mark, "w").write(str(time.time()))
-    r = colab("exec", "-s", NAME, "-f", "/tmp/launch.py", timeout=300)
+    r = colab("exec", "-s", name, "-f", "/tmp/launch.py", timeout=300)
     out = ((r.stdout or "") + (r.stderr or "")).strip()[-300:] if r else "no-result"
-    log("RELAUNCHED runner: %s" % out)
+    log("[%s] RELAUNCHED runner: %s" % (name, out))
 
 
-def cycle():
-    asgs = assignments()
-    if asgs is None:
-        return  # auth/API blip: do NOT treat as "VM gone"
-    a = next((x for x in asgs if getattr(x, "endpoint", None) == EP), None)
-    if a is None:
-        log("assignment gone (VM reclaimed) - manual re-provision required")
-        return
-    if not ensure_registry(a):
-        return
-    alive, done, raw = probe_runner()
-    if alive is None:
-        log("runner probe inconclusive: %r" % raw)
-        return
-    if not alive and done is not None and done < TOTAL_SECTIONS:
-        relaunch_runner()
-    elif not alive:
-        log("runner exited with book complete (%d/%d) - idle" % (done, TOTAL_SECTIONS))
+def cycle(asgs):
+    for name, ep in SESSIONS:
+        a = next((x for x in asgs if getattr(x, "endpoint", None) == ep), None)
+        if a is None:
+            log("[%s] assignment gone (VM reclaimed) - manual re-provision required" % name)
+            continue
+        ensure_registry(a, name, ep)
+        alive, remain, raw = probe_runner(name)
+        if alive is None:
+            log("[%s] runner probe inconclusive: %r" % (name, raw))
+            continue
+        if not alive and remain and remain > 0:
+            relaunch_runner(name)
+        elif not alive:
+            log("[%s] lane scope complete (remain=0) - idle" % name)
 
 
 def main():
-    log(
-        "watchdog started (pid %d, EP=%s, loop=%ds)"
-        % (os.getpid(), EP, LOOP)
-    )
+    log("watchdog v2 started (pid %d, lanes=%s, loop=%ds)"
+        % (os.getpid(), ",".join(n for n, _ in SESSIONS), LOOP))
     while True:
         try:
-            cycle()
+            asgs = assignments()
+            if asgs is not None:
+                cycle(asgs)
         except Exception as e:
             log("cycle error: %r" % e)
         time.sleep(LOOP)

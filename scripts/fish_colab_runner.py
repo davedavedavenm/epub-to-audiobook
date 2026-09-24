@@ -37,6 +37,11 @@ OUT.mkdir(exist_ok=True)
 STATE_PATH = BASE / "as_state.json"
 BUNDLE = BASE / "as_bundle.zip"
 ORDER = ["preface", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "conclusion"]
+# Optional lane scope (two-lane split): /content/as_chapters.txt holds a
+# comma-separated subset of ORDER; when present only those chapters render.
+SCOPE_FILE = BASE / "as_chapters.txt"
+if SCOPE_FILE.exists():
+    ORDER = [s for s in SCOPE_FILE.read_text().split(",") if s]
 
 print("=== install runtime ===", flush=True)
 
