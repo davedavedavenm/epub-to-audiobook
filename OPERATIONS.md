@@ -64,6 +64,34 @@ If expired: re-run and feed the code.
 
 **Incident 2026-09-24:** first L4 session reclaimed mid-Preface; 40 min of
 un-harvested work lost → harvest loop made mandatory by design (above).
+
+**Incident 2026-09-24 17:31 BST — local registry prune blinds the pipeline:**
+the VM's Jupyter kernel was recycled; the next `colab exec` hit kernel-404 →
+`POST /api/kernels` also 404'd → the CLI treated it as "session lost" and
+**pruned the `render` entry from `~/.config/colab-cli/sessions.json`**. The
+prune also **killed the keep-alive daemon** (`prune_session` kills
+`keep_alive_pid`), so from 17:31: (a) `colab exec -s render` said "Session
+'render' not found", (b) the harvest loop silently failed every cycle
+(stderr was suppressed), (c) nothing was pinging the assignment — while the
+VM stayed listed and **billing at 1.54 units/h**. The runner on the VM was
+unaffected (detached from the kernel) and kept rendering ch1 throughout.
+Recovery = re-insert the registry entry from the live assignment's
+`runtimeProxyInfo` (fresh token/url) + respawn keep-alive →
+`scripts/colab_adopt.py` (run with the CLI's own venv python; system python
+cannot load the tool's pydantic_core).
+
+**Guard (same day): `scripts/colab_watchdog.py`** now runs on khpi5
+(`nohup …/google-colab-cli/bin/python /tmp/colab_watchdog.py &`, log
+`/tmp/watchdog.log`, 5-min cycle). It (1) re-adopts the assignment if the
+registry entry vanishes or keep-alive dies, (2) refreshes the stored
+runtime-proxy token when <15 min to expiry (the likely 404 root cause),
+(3) probes `/content` for the runner process (`scripts/colab_runner_probe.py`)
+and relaunches `launch.py` if it died with the book unfinished (10-hour budget
+exits and resumes from `/content/as_state.json`). It deliberately does NOT
+auto-provision: a reclaimed VM logs `manual re-provision required` so a
+transient empty assignment list can never spawn a second billing VM.
+**If the render looks stuck: check `/tmp/watchdog.log` first, then
+`/tmp/harvest.log`, then `colab exec -s render -f /tmp/poll2.py`.**
 **Lane facts:** Kaggle weekly GPU cap 30 h (hit 23 Sep; fallback kernels staged);
 Lightning free tier: GPU blocked without payment method (don't bother retrying);
 Modal vetoed. When all 10 sections are harvested+gated: M4B build → ABS swap
