@@ -370,6 +370,11 @@ owned hardware unless volume grows — a used 3060 desktop only pays off past
   (no username). On Windows the CLI needs the temp upload dir pre-created.
 - Colab free tier is similar (T4, ~30 h/wk) but flakier / shorter idle timeout;
   Lightning AI (~15 GPU-hrs/mo credits) and Paperspace free tier are overflow.
+>   **CORRECTION 2026-09-24:** Lightning free tier CANNOT start GPU machines at
+>   all without a linked payment method ("Free-tier users must have a verified
+>   payment method before starting GPU compute", API 400) — it is not a free
+>   lane. The working headless GPU lane is the official `google-colab-cli`
+>   (AI-Pro compute units, L4) run from khpi5; see CILLIAN-RECIPE.md.
 - HuggingFace Spaces ZeroGPU: free but small daily quota (used early on).
 
 **CHEAP — Vast.ai consumer GPUs** (the "under $0.10/hr" tier, not the H100s):
