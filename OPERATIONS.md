@@ -27,6 +27,48 @@ STATUS.md.**
   reported overall `ok` at app revision
   `9dcff344cdd935089887e56db76f88b7238603a0`.
 
+## Headless Colab production run — Armed Struggle Cillian render (2026-09-24)
+
+Control plane is **khpi5** (the Colab CLI is Linux-only). Repo-side method and
+setup gotchas: `CILLIAN-RECIPE.md` ("Production orchestration"). Operator loop:
+
+```
+ssh khpi5
+export PATH=$HOME/.local/bin:$PATH
+colab usage                      # units balance + rate (L4 ≈ 1.54/h)
+colab sessions                   # active VMs
+colab exec -s render -f /tmp/poll2.py    # render progress (grep-style markers)
+tail -3 /tmp/harvest.log; ls /tmp/harvest/   # harvested chapters
+```
+
+**If the render VM dies** (Colab reclaims; symptom: `colab exec` 404 / "session
+lost"): re-provision and relaunch — it resumes within the chapter from
+`/content/as_state.json`:
+```
+colab new -s render --gpu L4
+colab upload -s render /tmp/as_bundle.zip /content/as_bundle.zip
+colab upload -s render /tmp/fish_colab_runner.py /content/runner.py
+colab exec -s render -f /tmp/launch.py
+```
+**Harvest loop** must always be up: `nohup bash /tmp/harvest.sh &` (polls
+as_state.json every 4 min, downloads completed chapters to `/tmp/harvest/`).
+
+**Pull finished chapters to Windows** (durable + gated):
+`scp khpi5:/tmp/harvest/armed_struggle_* C:\Users\Dave\repos\epub-to-audiobook\evaluations\new-engines\output\`
+then waveform check + ASR completeness on `epub-to-audiobook-ui` (faster-whisper
+base under /data/models/whisper). Never deliver ungated audio.
+
+**Auth:** one-time OAuth device URL (`colab usage` when unauthenticated) —
+approve on the **AI Pro Google account**. Token persists (`~/.config/colab-cli`).
+If expired: re-run and feed the code.
+
+**Incident 2026-09-24:** first L4 session reclaimed mid-Preface; 40 min of
+un-harvested work lost → harvest loop made mandatory by design (above).
+**Lane facts:** Kaggle weekly GPU cap 30 h (hit 23 Sep; fallback kernels staged);
+Lightning free tier: GPU blocked without payment method (don't bother retrying);
+Modal vetoed. When all 10 sections are harvested+gated: M4B build → ABS swap
+(item `7039379c`) → rescan → progress remap (39.9% into "New States 1923–63").
+
 ## Modal Cloud GPU Operations Runbook (2026-09-19)
 
 - **Architecture & Serverless Lifecycle**:

@@ -11,10 +11,10 @@ listening verdicts across 2026-09-20/22 (see `DECISIONS.md` and
 | Component | Value |
 |---|---|
 | Engine | Fish Speech **S2 Pro** (`fishaudio/s2-pro`, 4.4B Dual-AR + DAC codec) |
-| Hardware | **Free Kaggle T4×2** only — NO Modal, NO paid GPU (standing rule) |
+| Hardware | **Primary: headless Colab L4 via `google-colab-cli` on khpi5** (~197 compute units ≈ 100+ GPU-h at 1.54 units/h measured). Fallback: Kaggle T4×2 (30 h weekly cap). NEVER Modal (zero credit, standing veto) or Lightning free GPU (payment-method wall, verified 2026-09-24) |
 | Narration reference | `chatterbox/voices/cillian_irish.wav` (28s clip) — Dave: "perfect" |
 | Quote/dramatic reference | expressive crop `crop_expressive_tail.wav` (last 9.9s of the same clip) — Dave: "probably the best" |
-| Precision | `--half` (fp16; T4 has no bf16) |
+| Precision | L4/Ampere+: `torch.bfloat16` auto; T4 fallback: fp16 `--half` (no bf16 on sm_75) |
 | Temperature | **0.85** (narration AND quotes; 0.7 = flat, 1.0 = drifts American) |
 | Sampling | top_p 0.9, top_k 30, iterative_prompt, chunk_length 300, seed 42 (re-rolls 43/44) |
 | Licence | Boson-class non-commercial personal use; Fish licence terms per DECISIONS 2026-09-18 entry |
@@ -60,19 +60,29 @@ read wrongly** — the payload scan must show zero digit runs before pushing a k
 
 - Single process: model + caches load **once** (RTF 2.6–2.8; the per-sentence
   subprocess harness measured 15x — never use it for books).
-- AR model on `cuda:0`; **DAC codec split to `cuda:1`** (S2 Pro stack >16 GB).
-  Patch `inference.py`: prepend module-top `CODEC_DEVICE` env read + 4 call sites;
-  set `FISH_CODEC_DEVICE=cuda:1`.
+- Single-GPU L4 (24 GB): whole stack on `cuda:0`, no split needed. On the 16 GB
+  T4 fallback, split the DAC codec to `cuda:1` (S2 Pro stack >16 GB): patch
+  `inference.py` with a module-top `CODEC_DEVICE` env read + 4 call-site swaps,
+  set `FISH_CODEC_DEVICE=cuda:1`. The runner carries the patch either way
+  (harmless when unset).
 - Install order: apt `portaudio19-dev libsox-dev libsndfile1 ffmpeg` BEFORE
   `pip install -e`; **import torch only after pip** (torchaudio ABI mismatch otherwise).
 - Weights: `snapshot_download('fishaudio/s2-pro')`.
-- **Per-sentence banking** to `/kaggle/working/out/wavs/NNNN.wav` + manifest.json
-  (survives crashes; partial output downloadable).
+- **Per-sentence banking** to `/content/wavs/CHAPTER/NNNN.wav` + `/content/as_state.json`
+  (resumable; harvest loop copies finished chapters off the VM every 4 min — a
+  chapter does NOT count until harvested. On the Kaggle fallback lane:
+  `/kaggle/working/out/wavs/`).
 - **Health gate per sentence** (RMS 0.005–0.5, mean|diff|>0.001, peak>0.05);
   **auto re-roll on failure with seed 43, then 44**.
-- Reference audio/transcripts ship via **private Kaggle dataset**
-  `davedavedavedavenm/cillian-refs` (kernel scripts must stay <1 MB).
-- Push with `PYTHONUTF8=1`.
+- Payloads + references ship as one **`as_bundle.zip`** (2.3 MB: payloads, refs,
+  transcripts) via `colab upload`; the Kaggle fallback lane uses the private
+  dataset `davedavedavedavenm/cillian-refs` instead (kernel scripts must stay
+  under 1 MB).
+- **Python 3.10 venv is mandatory on Colab images**: fish-speech pins
+  `datasets==2.18.0`, which has no 3.12/3.13 wheels — uv then backtracks to
+  tokenizers 0.10.3 (Rust source build → fails). The runner detects this and
+  self-bootstraps `uv venv /content/fishenv --python 3.10`, seeding
+  numpy/soundfile, then re-execs into it.
 
 ## Assembly
 
@@ -87,11 +97,55 @@ read wrongly** — the payload scan must show zero digit runs before pushing a k
 
 ## Measured basis
 
-- RTF **2.56–2.78x** on T4×2 (single-AR-GPU; codec mostly idle → 2-GPU sentence
+- RTF **2.56–2.78x** on Kaggle T4×2 (single-AR-GPU; codec mostly idle → 2-GPU sentence
   sharding could ~halve wall time, not yet built).
+- **Colab L4 (2026-09-24/25): Preface 40/83 sentences in 14 min ≈ RTF ~2.1**;
+  compute cost **1.54 units/hour** → 197-unit balance ≈ 100–128 L4 GPU-hours.
 - Stress test (2026-09-22): 8/8 sentences, 0 failures, all dates/numbers verified by ASR.
-- Whole book (19.8 h audio): **≈ 53 GPU-hours ≈ ~2 weeks of free Kaggle quota**,
-  chapter-by-chapter (~4–6 h per chapter kernel), resumable at every step.
+- Whole book (152,359 words, 10 sections ≈ 17–20h audio): **40–55 GPU-hours** —
+  inside a single AI-Pro credit balance; earlier estimate of "~2 weeks of Kaggle
+  quota" obsoleted by the Colab lane.
+
+## Production orchestration — headless Colab (khpi5)
+
+**One-time setup (done 2026-09-24):**
+- `uv tool install google-colab-cli` on khpi5 (v0.7.2, Linux-only → the Pi is
+  the control plane; Windows is not supported).
+- CLI 0.7.2 breaks against current `jupyter-kernel-client`: install 1.0.2 into
+  the tool env AND shim `KernelClient = JupyterKernelClient` in
+  `colab_cli/runtime.py` (every `colab exec` otherwise dies with AttributeError).
+- Auth: run any colab command; it prints an OAuth device URL — approve **on the
+  AI Pro Google account** and paste the code back. Token persists in
+  `~/.config/colab-cli`. (The `colab-mcp` browser-bridge server also works but
+  the CLI supersedes it — no browser tab to babysit, and the account is fixed
+  rather than "whichever tab is open".)
+
+**Per-session render loop (all on khpi5, `/tmp/` assets):**
+```
+colab new -s render --gpu L4
+colab upload -s render /tmp/as_bundle.zip /content/as_bundle.zip
+colab upload -s render /tmp/fish_colab_runner.py /content/runner.py
+colab exec -s render -f /tmp/launch.py       # detached runner; /content/render.log
+colab exec -s render -f /tmp/poll2.py        # progress markers
+```
+**The harvest loop must be running** (`nohup bash /tmp/harvest.sh`): every 4 min
+it reads `/content/as_state.json` and `colab download`s completed chapters to
+`/tmp/harvest/armed_struggle_CHAPTER_cillian.mp3` (log: `/tmp/harvest.log`).
+A VM reclaim then costs at most the in-progress chapter — proven by the first
+session, lost 40 min into the Preface.
+
+**Windows-side pull (per harvest):** `scp khpi5:/tmp/harvest/* ` →
+`evaluations/new-engines/output/`; waveform gate + ASR completeness; only then
+is a chapter "done".
+
+**Finish line:** all 10 sections → chaptered M4B → replace audio of ABS item
+`7039379c` → ABS rescan → progress remap (Dave is 39.9% into "New States 1923–63").
+
+**Economics / lanes:** L4 ≈ 1.54 units/h; book ≈ 40–55 GPU-h ≈ 60–90 units of
+the ~197 balance. Kaggle fallback lane kernels:
+`scripts/prepare_kaggle_fish_as_book_chapter.py` (weekly 30 h cap applies).
+Lightning AI: GPU requires a linked payment method on free tier (verified
+400 PermissionDenied) — key held in `.secrets/lightning_api_key`, dormant.
 
 ## Known limits
 

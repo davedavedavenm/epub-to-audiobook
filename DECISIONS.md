@@ -53,22 +53,17 @@ Dave declared the recipe "the answer for this book" after the stress test passed
 the **whole book rendered from the Preface, replacing his existing ABS copy while
 preserving his exact listening position**.
 
-- **The exact method is codified in `CILLIAN-RECIPE.md`** — engine (Fish S2 Pro on
-  free Kaggle T4×2), dual-reference routing (narration = 28s full ref; quote
-  sentences = expressive-tail crop; both temp 0.85), text prep (lexicon incl.
-  corrected Tánaiste→"Tawnashta", dates/years/ordinals/numbers/currency → words,
-  orphan merge, curly apostrophes kept), per-sentence banking + health gates +
-  auto re-roll (seeds 42/43/44), silence-trim + natural-gap assembly, mastering
-  chain, ASR completeness gate before delivery.
-- Measured: RTF 2.56–2.78 free; whole book (152,359 words, 10 sections ≈ 17–20h
-  audio) ≈ **53 GPU-hours ≈ ~2 weeks of free Kaggle quota**, one chapter kernel at
-  a time (4–7h each), resumable everywhere.
+- **The exact method is codified in `CILLIAN-RECIPE.md`** — engine (Fish S2 Pro), dual-reference routing (narration = 28s full ref; quote sentences = expressive-tail crop; both temp 0.85), text prep (lexicon incl. corrected Tánaiste→"Tawnashta", dates/years/ordinals/numbers/currency → words, orphan merge, curly apostrophes kept), per-sentence banking + health gates + auto re-roll (seeds 42/43/44), silence-trim + natural-gap assembly, mastering chain, ASR completeness gate before delivery.
+- **Production lane (2026-09-24, supersedes Kaggle-only):** headless **Colab L4** via official `google-colab-cli` **on khpi5** (AI Pro account, ~197 compute units ≈ 100+ L4 GPU-hours at measured 1.54 units/h). Kaggle T4×2 kernels remain the fallback lane (hit the 30 h/weekly cap 2026-09-23). **Lightning AI free tier cannot start GPU without a linked payment method** (verified error 2026-09-24) — excluded as a lane. Runner: `scripts/fish_colab_runner.py`; the **harvest loop** (khpi5 `/tmp/harvest.sh`) MUST pull each completed chapter off the VM — the first session was reclaimed mid-Preface and taught that lesson.
+- Measured: RTF 2.56–2.78 on T4×2; L4 in progress (Preface 40/83 in 14 min ≈ RTF ~2.1); whole book (152,359 words, 10 sections ≈ 17–20h audio) ≈ **40–55 GPU-hours**, well inside the L4 unit budget; one chapter at a time, resumable.
 - Replacement contract: new per-chapter MP3s go into the ABS item `7039379c`
   folder ("Armed Struggle"), ABS rescan, and Dave's progress is mapped to the
   same chapter + same fraction (he is 39.9% into "New States 1923–63").
 - Book-wide payloads prepared: `scratch/as_book/*.json` via
-  `scripts/prepare_armed_struggle_chapters.py`; chapter kernels via
-  `scripts/prepare_kaggle_fish_as_book_chapter.py <slug>`.
+  `scripts/prepare_armed_struggle_chapters.py` (+ canonical unit-tested
+  `scripts/as_prep.py`); bundle + runner staged on khpi5 (`as_bundle.zip`,
+  `fish_colab_runner.py`); Kaggle fallback kernels via
+  `scripts/prepare_kaggle_fish_as_book_chapter.py` (slug argument).
 - General-novel note (Dave, standing): engines/voices rejected for THIS book's
   Irish bar may still serve generic novels — Deepgram Flux Rufus/Colin
   (expressivity=1, "very good", paid), Supertonic-3 (free CPU presets), Gemini
