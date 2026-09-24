@@ -233,6 +233,31 @@ def test_lane_ready_kaggle_is_honest(monkeypatch):
     assert ready is False and 'not wired' in why
 
 
+def test_lane_ready_lightning_refuses_when_sdk_missing(monkeypatch):
+    """Credentials authorise the paid lane; the environment must still be able to
+    honour them.
+
+    lightning-sdk cannot be installed alongside the Vast CLI (urllib3 caps
+    overlap — webapp/requirements.txt), so a named-lightning render is refused
+    HERE, at the first line of render_on_lane(), with the same words the Render
+    Lanes panel shows — instead of being queued and dying on an ImportError.
+
+    Authorization semantics are deliberately untouched: naming the lane is
+    still the authorization (test_job_creation_accepts_a_named_paid_lane...).
+    """
+    monkeypatch.setenv('LIGHTNING_API_KEY', 'k')
+    monkeypatch.setenv('LIGHTNING_USERNAME', 'u')
+    LN._cache.clear()
+    if LN.lightning_sdk_available():
+        pytest.skip('lightning-sdk installed — refusal path not reachable')
+    ready, why = FL.lane_ready('lightning')
+    assert ready is False
+    assert 'not installed' in why
+    # POST-time authorization still succeeds — this is a readiness gate, not a
+    # credential one.
+    assert LN.resolve_lane('lightning') == 'lightning'
+
+
 # --- tombstones / no wrong-engine books ------------------------------------
 
 def test_fish_has_no_local_engine_url():
