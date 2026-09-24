@@ -8,18 +8,74 @@
 > session, halving wall-clock), driven headless by `google-colab-cli` on khpi5
 > (`scripts/fish_colab_runner.py`; lane scopes via `/content/as_chapters.txt`:
 > lane `render` = ch1,ch2,ch3,ch8; lane `render2` = ch4–ch7,conclusion).
-> **Preface ✅ DONE+GATED** (83/83, 0 failures, 12.3 min, RTF 2.8; waveform
-> clean, ASR ratio 0.977 / coverage 95.5%, first+last lines verbatim). ch1
-> rendering (lane 1, resumed at 200/742) + ch4 starting (lane 2). Full book ≈
-> 40–55 GPU-h split across lanes vs ~196 compute units @ 1.54/h each lane.
-> Watchdog v2 + harvest loop v2 both cover both lanes; **Kaggle 30 h weekly
-> quota still blocked** (probed 2026-09-24) and Lightning GPU still
-> payment-walled, so neither is a lane.
+> **3 of 10 sections DONE+GATED — all PASS** (`scripts/gate_book_chapter.py`,
+> thresholds word ≥0.93 / coverage ≥0.90 / RMS 0.02–0.30):
+>
+> | section | sents | length | RMS | ASR word ratio | coverage | WER |
+> |---|---|---|---|---|---|---|
+> | preface | 83/83 | 12.3 min | 0.0969 | 0.9937 | 0.965 | 0.038 |
+> | ch1 | 742/742 | 103.6 min | 0.0988 | 0.9944 | 0.9465 | 0.061 |
+> | ch4 | 687/687 | 89.6 min | 0.0977 | 0.9940 | 0.9506 | 0.056 |
+>
+> In flight at 2026-09-25 00:10: **ch2** (lane `render`, 300/652) and **ch5**
+> (lane `render2`, 200/742). Full book ≈ 40–55 GPU-h split across lanes vs
+> ~196 compute units @ 1.54/h each lane. Watchdog v2 + harvest loop v2 both
+> cover both lanes; a local arm auto-pulls and auto-gates every landed chapter
+> (5 min cycle, atomic `.part` → rename) and reports `ALLDONE` with a verdict
+> table. **Kaggle 30 h weekly quota still blocked** (probed 2026-09-24) and
+> Lightning GPU still payment-walled, so neither is a lane. Total spend: **$0**.
+>
+> Gate-source provenance verified 2026-09-25: the production bundle's 10
+> payloads are **byte-identical** to `scratch/as_book/*.json`, so every gate
+> compares ASR against exactly the text that was rendered.
 > **Next on completion:** waveform+ASR gate each harvest → chaptered M4B →
 > replace ABS item `7039379c` audio → rescan → remap Dave's position (39.9% into
 > "New States 1923–63"). Full method: `CILLIAN-RECIPE.md`; runbook: same file's
 > orchestration section. Lightning AI ruled out as a lane (free-tier GPU needs a
 > payment method); Modal remains vetoed.
+
+> ## 2026-09-25 — Render-lane webapp surface + free-only lane resolution — **BUILT, TESTED (398 green), NOT YET DEPLOYED**
+>
+> The webapp can now submit, poll and harvest a Fish render lane instead of the
+> lane being a khpi5-only manual procedure:
+>
+> - **`webapp/lanes.py`** — `auto` resolves **free-only** (`colab`, `kaggle`).
+>   Naming a paid lane explicitly is the only way to reach it, an unknown lane
+>   name raises, and an unconfigured explicit lane refuses rather than silently
+>   swapping to something else.
+> - **Paid-hole fix:** a job with no lane target can no longer queue onto
+>   Lightning. `lane='lightning'` with no credentials is refused **at POST**
+>   with the reason, instead of being queued and failing hours later; a batch
+>   convert that would pick a Fish voice is refused the same way. The boundary
+>   is recorded in DECISIONS (GPU / Vast.ai policy) and guarded by assertions
+>   on `FREE_LANES` plus `test_resolve_lane_free_first`.
+> - **`webapp/fish_lane.py` colab adapter + `~/as-lane/lane_ctl.sh` on khpi5**
+>   — `status / submit / progress / fetch / log / done / stop`, JSON only,
+>   status+progress cached 45 s so the 10 s UI poll never hammers the CLI.
+>   **Guard: submit refuses to create a session while `LANE_COLAB_MAX_SESSIONS`
+>   (default 2) are already up**, because Colab reclaims VMs to stay inside its
+>   limits — a refused submit must never be able to kill the running book
+>   render. Verified on khpi5: `status` returns live sessions, `progress` on an
+>   unknown scope degrades to machine-readable JSON (rc 0), `submit` refuses
+>   with an actionable message (rc 1) and **leaves both production sessions
+>   untouched**.
+> - **UI:** engine `fish` in the Voices catalogue, a lane picker on the
+>   Convert screen (`auto` / `colab` / `kaggle` / `lightning`, paid option
+>   badged "Costs money"), a **Render Lanes** Settings card
+>   (`COLAB_SSH_*`, `FISH_LANE`, `LIGHTNING_*`), and a live lane panel that
+>   polls `/api/lanes` every 10 s. **Not yet verified in a browser.**
+> - **Voice `fish_cillian_irish` is audition-ready and verified through the
+>   real API:** `/api/voices` → `preview_cached: true`;
+>   `/api/preview/fish_cillian_irish` → 200 `audio/mpeg`, 1,561,748 B matching
+>   disk byte-for-byte; unknown ID → 404. The clip is 65.0 s cut from the
+>   **gated** Preface (mean −20.5 dB, peak −2.5 dB), so the preview is
+>   locked-recipe output, not a fresh synthesis.
+>
+> **Still open:** browser-verify the lane UI; Kaggle Fish kernel still not
+> wired (its e2e is blocked by the exhausted weekly quota — the picker says so
+> honestly); Colab lane submit e2e blocked while the production sessions hold
+> the account's 2 GPU slots; docs (GETTING-STARTED / ENGINES / VOICES /
+> README) being written now.
 
 > ## 2026-09-23 Jev (TypeSafe) decision layer for TTS prep — ADDED, DEFAULT OFF, VALIDATED ON A REAL BOOK
 >

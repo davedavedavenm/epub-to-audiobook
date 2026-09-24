@@ -1,18 +1,33 @@
-"""runner.py — Armed Struggle full-book production render on Colab GPU (headless).
+"""runner.py — locked-recipe Fish S2 Pro book render on a GPU lane (headless).
 Locked recipe: Fish S2 Pro, dual-ref routing (narration=cillian_irish.wav,
 quotes=crop_expressive_tail.wav), temp 0.85, per-sentence bank + health gate +
 reroll seeds, per-chapter silence-trim + natural-gap assembly + mastering.
-Resumable via /content/as_state.json."""
+Resumable via $FISH_BASE/as_state.json.
+
+Lane portability (2026-09-24): the working directory defaults to /content —
+the exact layout the deployed Colab production lanes run today, byte-for-byte
+unchanged — and FISH_BASE redirects it for other lanes (Lightning /tmp,
+Kaggle /kaggle/working). When the bundle carries manifest.json the chapter
+ORDER and output names come from it (any book, any name); without a manifest
+the Armed Struggle defaults below apply, so old bundles keep working."""
 
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-VENV = "/content/fishenv"
+# Lane images differ: Colab ships uv, a bare Lightning/Kaggle image may not.
+# Without uv the venv bootstrap below falls back to python3.10 -m venv, which
+# modern images also often lack — so install uv first when it is absent.
+if not shutil.which("uv"):
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "uv"], check=False)
+
+BASE = Path(os.environ.get("FISH_BASE", "/content"))
+VENV = str(BASE / "fishenv")
 if not sys.prefix.startswith(VENV):
     vp = Path(VENV) / "bin" / "python"
     pyv = Path(VENV, "PYVER")
@@ -30,18 +45,13 @@ import numpy as np
 import soundfile as sf
 
 
-BASE = Path("/content")
 OUT = BASE / "out"
 OUT.mkdir(exist_ok=True)
 (WAVS := BASE / "wavs").mkdir(exist_ok=True)
 STATE_PATH = BASE / "as_state.json"
 BUNDLE = BASE / "as_bundle.zip"
+BOOK_TAG, VOICE_TAG = "armed_struggle", "cillian"
 ORDER = ["preface", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "conclusion"]
-# Optional lane scope (two-lane split): /content/as_chapters.txt holds a
-# comma-separated subset of ORDER; when present only those chapters render.
-SCOPE_FILE = BASE / "as_chapters.txt"
-if SCOPE_FILE.exists():
-    ORDER = [s for s in SCOPE_FILE.read_text().split(",") if s]
 
 print("=== install runtime ===", flush=True)
 
@@ -61,7 +71,7 @@ pip_install("-e", str(BASE / "fish-speech"))
 pip_install("huggingface_hub", "soundfile")
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "protobuf>=6.31.1"], check=False)
 
-for path in glob.glob("/content/fishenv/lib/python3.*/site-packages/audiotools/ml/decorators.py") + \
+for path in glob.glob(str(Path(VENV) / "lib/python3.*/site-packages/audiotools/ml/decorators.py")) + \
             glob.glob("/usr/local/lib/python3.*/dist-packages/audiotools/ml/decorators.py") + \
             glob.glob("/usr/lib/python3.*/dist-packages/audiotools/ml/decorators.py"):
     try:
@@ -72,11 +82,25 @@ for path in glob.glob("/content/fishenv/lib/python3.*/site-packages/audiotools/m
         pass
 
 if not BUNDLE.exists():
-    raise SystemExit("as_bundle.zip missing at /content")
+    raise SystemExit(f"as_bundle.zip missing at {BASE}")
 import zipfile
 with zipfile.ZipFile(BUNDLE) as zf:
     zf.extractall(BASE)
 print("bundle extracted", flush=True)
+
+# manifest.json (written by scripts/fish_bundle.py) makes this runner
+# book-agnostic: chapter ORDER and output file names come from the manifest.
+# A lane scope file (as_chapters.txt) still wins over both — that is how a
+# two-lane split narrows a manifest-driven book too.
+if (BASE / "manifest.json").exists():
+    _mf = json.loads((BASE / "manifest.json").read_text(encoding="utf-8"))
+    if _mf.get("chapters"):
+        ORDER = [c["slug"] for c in _mf["chapters"]]
+    BOOK_TAG = _mf.get("book_tag") or BOOK_TAG
+    VOICE_TAG = _mf.get("voice_tag") or VOICE_TAG
+SCOPE_FILE = BASE / "as_chapters.txt"
+if SCOPE_FILE.exists():
+    ORDER = [s for s in SCOPE_FILE.read_text().split(",") if s and s in ORDER]
 
 inf_path = BASE / "fish-speech/fish_speech/models/text2semantic/inference.py"
 src = inf_path.read_text()
@@ -101,7 +125,7 @@ if not (BASE / "s2-pro/codec.pth").exists():
     from huggingface_hub import snapshot_download
     print("=== downloading s2-pro weights ===", flush=True)
     t_w = time.time()
-    snapshot_download("fishaudio/s2-pro", local_dir="/content/s2-pro")
+    snapshot_download("fishaudio/s2-pro", local_dir=str(BASE / "s2-pro"))
     print(f"weights done in {time.time() - t_w:.0f}s", flush=True)
 
 sys.path.insert(0, str(BASE / "fish-speech"))
@@ -111,11 +135,11 @@ from fish_speech.models.text2semantic.inference import (
 
 precision = torch.half if torch.cuda.get_device_capability(0) < (8, 0) else torch.bfloat16
 print("precision:", precision, flush=True)
-model, decode_one_token = init_model("/content/s2-pro", DEVICE, precision, compile=False)
+model, decode_one_token = init_model(str(BASE / "s2-pro"), DEVICE, precision, compile=False)
 with torch.device(DEVICE):
     model.setup_caches(max_batch_size=1, max_seq_len=model.config.max_seq_len,
                        dtype=next(model.parameters()).dtype)
-codec = load_codec_model("/content/s2-pro/codec.pth", DEVICE, precision)
+codec = load_codec_model(str(BASE / "s2-pro/codec.pth"), DEVICE, precision)
 REFS = json.loads((BASE / "refs/refs.json").read_text(encoding="utf-8"))
 REFS.setdefault("cillian_irish_text", REFS["ref_full_text"])
 REFS.setdefault("crop_expressive_tail_text", REFS["crop_expressive_tail_text"])
@@ -247,7 +271,7 @@ for slug in ORDER:
     full = np.concatenate(pieces)
     raw = BASE / f"{slug}_raw.wav"
     sf.write(raw, full, SR)
-    mp3 = OUT / f"armed_struggle_{slug}_cillian.mp3"
+    mp3 = OUT / f"{BOOK_TAG}_{slug}_{VOICE_TAG}.mp3"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw),
                     "-af", "equalizer=f=220:width_type=o:width=1.2:g=1.0,highshelf=f=7500:gain=-2.0:width=1.0,loudnorm=I=-20:TP=-2:LRA=11",
                     "-codec:a", "libmp3lame", "-b:a", "192k", str(mp3)], check=True)

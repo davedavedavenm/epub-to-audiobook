@@ -31,3 +31,8 @@ edge-tts==7.2.8
 # model downloads once and caches.
 faster-whisper==1.1.1
 modal==1.5.5
+# Official Lightning AI SDK (lanes.py: studio status for the Render Lanes
+# panel, and the paid Lightning GPU lane for Fish/Cillian renders).
+# Pinned: the API surface (User/Teamspace/studios) was verified against this
+# version on 2026-09-24, including a live T4 start/stop probe.
+lightning-sdk==2026.9.18.post1

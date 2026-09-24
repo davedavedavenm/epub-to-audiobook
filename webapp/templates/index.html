@@ -705,6 +705,57 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     </div>
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <h3 style="margin:0; font-family:var(--serif);">Render Lanes (Fish S2 Pro)</h3>
+                            <span style="font-size:0.75rem; background:rgba(16,185,129,0.15); color:#4ade80; padding:2px 8px; border-radius:4px; font-weight:700;">FREE lanes first</span>
+                        </div>
+                        <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                            A <strong>lane</strong> is a GPU that renders the locked Fish/Cillian recipe.
+                            <strong>Colab and Kaggle are free</strong>; Lightning AI is paid and is only ever
+                            used when you pick it for a specific book — a queued job can never select it on
+                            its own. Credentials are stored on this server and never in the repo.
+                        </p>
+                        <div id="lane-status-panel" style="margin-bottom:16px; padding:12px; background:var(--bg-base, rgba(0,0,0,.2)); border-radius:10px;">
+                            <span style="color:var(--text-secondary); font-size:.85rem;">Loading lane status…</span>
+                        </div>
+                        <div style="display:flex; gap:16px; align-items:flex-end;">
+                            <div style="flex:2;">
+                                <label for="set-COLAB_SSH_HOST" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Colab control host (SSH — free lane)</label>
+                                <input type="text" id="set-COLAB_SSH_HOST" class="input-control" style="margin-top:8px;" placeholder="khpi5">
+                            </div>
+                            <div style="flex:1;">
+                                <label for="set-COLAB_SSH_USER" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">SSH user</label>
+                                <input type="text" id="set-COLAB_SSH_USER" class="input-control" style="margin-top:8px;" placeholder="dave">
+                            </div>
+                            <div style="flex:1;">
+                                <label for="set-COLAB_SSH_PORT" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">SSH port</label>
+                                <input type="text" id="set-COLAB_SSH_PORT" class="input-control" style="margin-top:8px;" placeholder="22">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
+                            <div style="flex:1;">
+                                <label for="set-FISH_LANE" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Default lane for fish jobs</label>
+                                <select id="set-FISH_LANE" class="input-control" style="margin-top:8px;">
+                                    <option value="auto">auto — Colab, then Kaggle (never paid)</option>
+                                    <option value="colab">colab — free</option>
+                                    <option value="kaggle">kaggle — free</option>
+                                    <option value="lightning">lightning — PAID, used for every fish job</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:16px; align-items:flex-end; margin-top:16px;">
+                            <div style="flex:1;">
+                                <label for="set-LIGHTNING_USERNAME" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Lightning username (paid lane, optional)</label>
+                                <input type="text" id="set-LIGHTNING_USERNAME" class="input-control" style="margin-top:8px;" placeholder="your-lightning-username">
+                            </div>
+                            <div style="flex:1;">
+                                <label for="set-LIGHTNING_API_KEY" style="font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Lightning API key (paid lane, optional)</label>
+                                <input type="password" id="set-LIGHTNING_API_KEY" class="input-control" style="margin-top:8px;" placeholder="Paste your Lightning API key">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top:0; font-family:var(--serif);">Audiobookshelf Sync</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             Automatically send finished audiobooks directly to your Audiobookshelf server. 
@@ -1118,7 +1169,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         if(tabId === 'history') loadHistory();
         if(tabId === 'voices') renderVoices();
         if(tabId === 'queue') loadJobs();
-        if(tabId === 'settings') loadSettings();
+        if(tabId === 'settings') { loadSettings(); loadLaneStatus().catch(() => {}); }
     }
 
     function setTheme(theme) {
@@ -1135,7 +1186,14 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const data = await resp.json();
         Object.entries(data).forEach(([key, val]) => {
             const el = document.getElementById('set-' + key);
-            if(el) el.value = val;
+            if(!el) return;
+            el.value = val;
+            // An unset server value on a <select> would leave no option chosen
+            // (and an empty value is never posted back, so the default could
+            // never be restored). Fall back to the control's first option.
+            if (el.tagName === 'SELECT' && el.value === '' && el.options.length) {
+                el.value = el.options[0].value;
+            }
         });
         try {
             const p = await fetch('/api/settings/pronunciations');
@@ -1283,6 +1341,43 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const isCloud = ['deepgram', 'gemini', 'edge', 'inworld', 'polly', 'elevenlabs', 'openai'].includes(eng);
         const hid = document.getElementById('rt-' + bookId);
 
+        const laneHid = document.getElementById('lane-' + bookId);
+
+        // Fish renders ONLY on a GPU lane (the API refuses any other target),
+        // so the render options are the lanes themselves. 'auto' is offered
+        // first and resolves FREE lanes only — the paid lane appears as an
+        // explicitly-labelled choice, never the default (DECISIONS.md: queue
+        // never provisions paid GPU). Status comes from the 10 s /api/lanes
+        // poll; before it lands we render the options un-statused rather than
+        // hiding them.
+        if (eng === 'fish') {
+            const lanes = (cachedLanes && cachedLanes.lanes) || {};
+            const cfg = (cachedLanes && cachedLanes.configured) || [];
+            // cachedLanes === null means the poll hasn't landed yet: don't
+            // claim a lane is missing when we simply don't know yet.
+            const known = !!cachedLanes;
+            const hasFree = known ? (cfg.includes('colab') || cfg.includes('kaggle')) : true;
+            const hasPaid = known && cfg.includes('lightning');
+            const rates = lanes.lightning && lanes.lightning.detail && lanes.lightning.detail.rates;
+            const rateTxt = rates ? Object.entries(rates).filter(([k]) => k !== 'source')
+                .map(([g, v]) => `${g} $${v}/h`).join(' · ') : 'T4 $0.55/h · L4 $0.79/h · L40S $2.14/h';
+            const currLane = laneHid ? (laneHid.value || '') : '';
+            const opt = (laneId, title, sub, badge) => `
+                <div class="rt-opt ${currLane === laneId ? 'on' : ''}" data-rt="lane" data-lane="${laneId}" onclick="pickRender('${bookId}',this)">
+                    ${badge || ''}
+                    <div class="rt-t">${title}</div><div class="rt-s">${sub}</div>
+                </div>`;
+            container.innerHTML = `
+                ${opt('', 'Any free lane', known && !hasFree ? 'no free lane configured' : 'free · Colab → Kaggle', '<span class="rt-badge">Recommended</span>')}
+                ${opt('colab', 'Colab', known && !hasFree ? 'not configured' : 'free · headless control plane')}
+                ${opt('kaggle', 'Kaggle GPU', known && !hasFree ? 'not configured' : 'free · ~30h/wk')}
+                ${!known || hasPaid || !hasFree ? opt('lightning', 'Lightning AI', 'PAID · ' + rateTxt, '<span class="rt-badge" style="background:#b91c1c; color:#fff;">Costs money</span>') : ''}
+            `;
+            if (hid) hid.value = 'lane';
+            renderTargetNote(bookId, 'lane');
+            return;
+        }
+
         if (isCloud) {
             let engTitle = 'Cloud API';
             let engSub = 'Fast cloud synthesis · Assembled locally';
@@ -1317,7 +1412,13 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 </div>
             `;
             if (hid) hid.value = 'local';
+            if (laneHid) laneHid.value = '';
         } else if (MODAL_GPU_ENGINES.includes(eng)) {
+            // Switching away from fish must clear BOTH lane fields: a stale
+            // 'lane' target would submit a lane render for a non-fish engine
+            // (refused at POST), and a stale lane name is refused too.
+            if (hid && hid.value === 'lane') hid.value = '';
+            if (laneHid) laneHid.value = '';
             container.innerHTML = `
                 <div class="rt-opt cloud on" data-rt="modal" style="grid-column: 1 / -1;" onclick="pickRender('${bookId}',this)">
                     <span class="rt-badge" style="background:#8b5cf6; color:#fff;">Modal Cloud GPU</span>
@@ -1327,6 +1428,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             `;
             if (hid) hid.value = 'modal';
         } else {
+            if (hid && hid.value === 'lane') hid.value = '';
+            if (laneHid) laneHid.value = '';
             const isHeavy = eng === 'chatterbox' || eng === 'tada';
             const curr = hid ? hid.value : (isHeavy ? 'kaggle' : 'local');
             container.innerHTML = `
@@ -1381,7 +1484,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         'kokoro': 'KOKORO TTS (Neural)',
         'edge': 'EDGE TTS (Cloud)',
         'tada': 'TADA (Natural GPU)',
-        'cosyvoice': 'COSYVOICE 3 (Kaggle GPU)'
+        'cosyvoice': 'COSYVOICE 3 (Kaggle GPU)',
+        'fish': 'FISH S2 PRO (Locked Recipe — GPU Lane)'
     };
     function buildVoiceOptions(selectedId) {
         const usable = selectableVoices();
@@ -1516,6 +1620,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                                          </div>
                                      </div><div class="rt-note" id="rt-note-${bookId}"></div>
                                     <input type="hidden" id="rt-${bookId}" value="local">
+                                    <!-- Which GPU lane a fish render NAMES. Empty = auto,
+                                         which resolves FREE lanes only (Colab → Kaggle) and
+                                         can never reach the paid lane; the paid lane must be
+                                         picked explicitly below. -->
+                                    <input type="hidden" id="lane-${bookId}" value="">
                                 </div>
                                 <button class="btn btn-primary" style="width:100%; height: 64px;" data-path="${escapeHtml(b.path)}" onclick="convertWithSettings('${bookId}', this)">Narrate this book</button>
                             </div>
@@ -1724,6 +1833,30 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             } else {
                 note.innerHTML = '<span class="ok">⚡ Modal Serverless GPU active (~$27/mo free credit). Synthesizes on high-speed NVIDIA L4/A10G cloud GPUs.</span>';
             }
+        } else if (target === 'lane') {
+            // Fish lane render. The note must say which lane will actually be
+            // used and, when that is the paid one, what it costs — auto never
+            // picks paid, so a default selection can always say "free".
+            const laneName = (document.getElementById('lane-' + bookId)?.value || '').trim();
+            const known = !!cachedLanes;
+            const cfg = (cachedLanes && cachedLanes.configured) || [];
+            const freeCfg = cfg.filter(l => l !== 'lightning');
+            if (laneName === 'lightning') {
+                const rates = cachedLanes?.lanes?.lightning?.detail?.rates;
+                const rateTxt = rates ? Object.entries(rates).filter(([k]) => k !== 'source')
+                    .map(([g, v]) => `${g} $${v}/h`).join(' · ') : 'T4 $0.55/h · L4 $0.79/h · L40S $2.14/h';
+                note.innerHTML = `<span class="warn">⚠ <b>Lightning AI costs money</b> (${rateTxt}, billed while a studio runs). This book is set to use it explicitly — a queue never selects it on its own.</span>`;
+            } else if (known && laneName && !freeCfg.includes(laneName)) {
+                note.innerHTML = `<span class="warn">⚠ The <b>${escapeHtml(laneName)}</b> lane isn't configured yet — add it in <b>Settings → Render Lanes</b>, or pick another lane.</span>`;
+            } else if (known && freeCfg.length) {
+                note.innerHTML = `<span class="ok">Renders on a free GPU lane (${escapeHtml(freeCfg.join(' → '))}). Locked Fish/Cillian recipe; chapters bank as they finish.</span>`;
+            } else if (known && cfg.includes('lightning')) {
+                note.innerHTML = '<span class="warn">⚠ No free lane configured. Auto never selects the paid lane — pick <b>Lightning AI</b> below to spend, or add Colab/Kaggle in <b>Settings → Render Lanes</b>.</span>';
+            } else if (known) {
+                note.innerHTML = '<span class="warn">⚠ No free GPU lane configured — add Colab or Kaggle in <b>Settings → Render Lanes</b> first.</span>';
+            } else {
+                note.innerHTML = '<span class="muted">Checking GPU lane status…</span>';
+            }
         } else {
             note.innerHTML = '<span class="muted">' + localSpeedNote(bookId) + '</span>';
         }
@@ -1778,6 +1911,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         el.classList.add('on');
         const hid = document.getElementById('rt-' + bookId);
         if (hid) hid.value = el.getAttribute('data-rt');
+        // Lane name rides along with the target: absent on ordinary renders
+        // (so the field is cleared, never a stale name the API would refuse),
+        // present on fish renders where the option IS a lane choice.
+        const laneHid = document.getElementById('lane-' + bookId);
+        if (laneHid) laneHid.value = el.getAttribute('data-lane') || '';
         renderTargetNote(bookId, el.getAttribute('data-rt'));
     }
 
@@ -1790,8 +1928,15 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const voice2 = document.getElementById('voice2-' + bookId)?.value || '';
         const customRegex = document.getElementById('regex-' + bookId)?.value || '';
         const renderTarget = document.getElementById('rt-' + bookId)?.value || 'local';
+        const laneName = (document.getElementById('lane-' + bookId)?.value || '').trim();
         const outputFormat = document.getElementById('fmt-' + bookId)?.value || 'mp3';
         const allowFallback = document.getElementById('fallback-' + bookId)?.checked || false;
+        if (renderTarget === 'lane' && laneName === 'lightning' && !await appConfirm({
+            title: 'Lightning AI is a paid lane',
+            message: 'This render will use Lightning AI, which bills for GPU time while a studio runs (the API refuses paid lanes for any job that does not name one).',
+            details: { 'Rates': 'T4 $0.55/h · L4 $0.79/h · L40S $2.14/h (lightning.ai/pricing)' },
+            confirmText: 'Use paid lane', cancelText: 'Use a free lane', icon: '💳', tone: 'default',
+        })) return;
         if (renderTarget === 'kaggle') {
             const q = kaggleQuota;
             if (!q || !q.configured) {
@@ -1819,7 +1964,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const voiceName = el.closest('.production-workspace')?.querySelector('#voice-' + bookId)?.selectedOptions[0]?.text || voice;
         const eng = (voices[voice] || {}).engine;
         let where = 'this computer (free, local)';
-        if (renderTarget === 'modal' || eng === 'breeze') {
+        if (renderTarget === 'lane') {
+            where = laneName === 'lightning'
+                ? 'Lightning AI — PAID (T4 $0.55/h · L4 $0.79/h · L40S $2.14/h)'
+                : (laneName ? `free GPU lane (${laneName})` : 'a free GPU lane (auto: Colab → Kaggle)');
+        } else if (renderTarget === 'modal' || eng === 'breeze') {
             where = 'Modal Serverless GPU (~$27/mo free credits)';
         } else if (renderTarget === 'kaggle') {
             where = 'free Kaggle GPU (~30h/wk)';
@@ -1845,7 +1994,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             confirmText: 'Start narration', cancelText: 'Not yet', icon: '▶', tone: 'default',
         })) return;
         const submittedTarget = renderTarget === 'modal' ? 'local' : renderTarget;
-        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: submittedTarget, output_format: outputFormat, allow_engine_fallback: allowFallback }) });
+        const body = { path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: submittedTarget, output_format: outputFormat, allow_engine_fallback: allowFallback };
+        // Only a lane render may name a lane — the API refuses the combination
+        // otherwise, so never send the field alongside an ordinary target.
+        if (submittedTarget === 'lane') body.lane = laneName;
+        const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
         const data = await resp.json();
         if(data.status === 'success') {
             const oldText = el.textContent;
@@ -3390,6 +3543,64 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         return badges.join(' ');
     }
 
+    // GPU-lane status (Settings → Render Lanes + the per-book lane picker).
+    // /api/lanes is TTL-cached server-side (45 s network probes) so the 10 s
+    // poll below is cheap; failures are reported per lane, never as a 500.
+    let cachedLanes = null;
+    async function loadLaneStatus() {
+        try {
+            const resp = await fetch('/api/lanes');
+            if (resp.ok) cachedLanes = await resp.json();
+        } catch(e) {}
+        const panel = document.getElementById('lane-status-panel');
+        if (panel && cachedLanes) panel.innerHTML = buildLaneStatusHtml(cachedLanes);
+        // The per-book render row may already be showing lane options.
+        document.querySelectorAll('[id^="rt-row-"]').forEach(row => {
+            const bookId = row.id.replace('rt-row-', '');
+            const vs = document.getElementById('voice-' + bookId);
+            const eng = (vs && voices[vs.value]) ? voices[vs.value].engine : null;
+            if (eng === 'fish') updateRenderOptions(bookId);
+        });
+    }
+
+    const LANE_TITLES = {
+        colab: ['Colab (free)', 'headless Colab via SSH control plane'],
+        kaggle: ['Kaggle GPU (free)', 'your weekly ~30 h quota'],
+        lightning: ['Lightning AI (PAID)', 'official rates — never a default']
+    };
+    const LANE_STATE_TONE = {
+        'ok': 'ok', 'idle': 'ok', 'quota-exhausted': 'warn',
+        'not-configured': 'muted', 'unreachable': 'warn', 'error': 'warn'
+    };
+    // CSS colours for the state word (the classes above are for prose notes).
+    const LANE_TONE = {
+        ok: '#4ade80', warn: '#fbbf24', muted: 'var(--text-secondary)'
+    };
+    function buildLaneStatusHtml(data) {
+        const lanes = data.lanes || {};
+        const rows = Object.entries(lanes).map(([id, st]) => {
+            const [title, sub] = LANE_TITLES[id] || [id, ''];
+            const tone = LANE_TONE[LANE_STATE_TONE[st.state] || 'muted'] || 'var(--text-secondary)';
+            const paid = id === 'lightning';
+            const rates = paid && st.detail && st.detail.rates
+                ? Object.entries(st.detail.rates).filter(([k]) => k !== 'source')
+                    .map(([g, v]) => `${g} $${v}/h`).join(' · ')
+                : '';
+            const badge = paid
+                ? `<span style="background:rgba(239,68,68,.15); color:#f87171; padding:2px 8px; border-radius:4px; font-weight:700; font-size:.7rem;">PAID${rates ? ' · ' + rates : ''}</span>`
+                : `<span style="background:rgba(34,197,94,.15); color:#4ade80; padding:2px 8px; border-radius:4px; font-weight:700; font-size:.7rem;">FREE</span>`;
+            const detail = st.reason ? `<div style="color:var(--text-secondary); font-size:.8rem; margin-top:4px;">${escapeHtml(st.reason)}</div>` : '';
+            return `<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid var(--border, rgba(255,255,255,.06));">
+                <div><div style="font-weight:700;">${title} <span style="font-weight:400; color:var(--text-secondary); font-size:.85rem;">— ${sub}</span></div>${detail}</div>
+                <div style="text-align:right; white-space:nowrap;">${badge}<div style="color:${tone}; font-size:.8rem; margin-top:4px;">${escapeHtml(st.state)}</div></div>
+            </div>`;
+        }).join('');
+        const fishOk = data.fish_available
+            ? '<span class="ok">Fish S2 Pro available — a lane credential is present.</span>'
+            : '<span class="warn">⚠ No lane configured — add Colab or Kaggle in Settings.</span>';
+        return `<div style="font-size:.85rem;">${rows}<div style="margin-top:10px;">${fishOk}</div></div>`;
+    }
+
     async function loadCloudStatus() {
         try {
             const resp = await fetch('/api/cloud_status');
@@ -3446,5 +3657,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             if ((qp && qp.classList.contains('active')) || (sp && sp.classList.contains('active'))) loadGpuStatus();
         }, 10000);
         loadKaggleQuota();
+        // Lane status drives the Settings panel AND the per-book lane picker,
+        // so it polls alongside engine health; /api/lanes is TTL-cached
+        // server-side (45 s network probes) and never 500s.
+        loadLaneStatus().catch(console.error);
+        setInterval(loadLaneStatus, 10000);
     };
 </script></body></html>
