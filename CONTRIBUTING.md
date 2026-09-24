@@ -31,7 +31,8 @@ docker compose up -d
 |---------|------|
 | `webapp` | Flask UI + API (port 8881) |
 | `worker` | Queue runner, spawns conversion containers |
-| `kokoro-tts` | Default TTS engine (port 8880) |
+| `chatterbox-nano` | **Default TTS engine** — Beatrice (Nano), system default narrator (profile `chatterbox`) |
+| `kokoro-tts` | Compatibility/debug TTS engine (port 8880); its tested voices are retired from normal quality selection, so it is not the default |
 | `chatterbox-tts` | Voice-cloning engine, profile `chatterbox` (port 8004) |
 | `tada-tts` | Voice-cloning engine, profile `tada` (port 8005) |
 | `tts-proxy` | Transcript capture + Edge/Polly/Inworld routing |

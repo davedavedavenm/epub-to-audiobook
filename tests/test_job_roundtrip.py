@@ -62,6 +62,7 @@ def test_every_saved_field_is_persisted(db):
         'voice': 'uk_male_minter_nano',
         'tts_engine': 'chatterbox_nano',
         'render_target': 'local',
+        'lane': 'colab',
         'output_format': 'm4b',
         'source_kind': 'article',
         'source_site': 'Wired',

@@ -213,6 +213,16 @@ but when you want the best result:
   **CosyVoice 3** (0.5B multilingual bi-streaming diffusion). Previews are pre-cached in the app.
   Requires `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` in `.env`. Runs on per-second compute
   with zero idle billing ($30/month free credit allowance).
+- **Fish S2 Pro / Cillian Murphy (free render lanes)** — the locked recipe for
+  Irish history narration: dual reference routing (narration + expressive crop
+  for quotes), temp 0.85, per-sentence health gate with seed re-rolls, silence
+  trim with natural gaps, then broadcast mastering. Voice `fish_cillian_irish`
+  is offered only with its **exact preview already cached** (65 s cut from a
+  gated chapter), so a Play click never triggers synthesis. Rendering runs on a
+  **free render lane** — Colab AI-Pro compute units or Kaggle's weekly 30 h —
+  never on your CPU and never on a paid GPU unless you name one. Configure it
+  in **Settings → Render Lanes** below; the full method and gate are in
+  [CILLIAN-RECIPE.md](CILLIAN-RECIPE.md).
 - **Qwen3-TTS / VibeVoice Local GPU profiles** — GPU-only local Docker profiles or
   explicit free-Kaggle render targets. Qwen is the full-precision consistency leader.
   Starting either Compose profile assumes a local CUDA GPU is attached. See [ENGINES.md](ENGINES.md)
@@ -235,6 +245,51 @@ Which sounds best depends on the book. Trust your ears. Automated transcription
 can detect missing or repeated speech, but it cannot tell you whether a voice
 is natural, clear or pleasant. More detail: [ENGINES.md](ENGINES.md) and
 [VOICES.md](VOICES.md).
+
+### Connect a free render lane (Settings → Render Lanes)
+
+Fish S2 Pro has no local CPU path — it renders on a GPU lane. Everything the
+app needs is entered in **Settings → Render Lanes**; nothing goes in the repo.
+
+| Setting | What to enter | Needed for |
+|---|---|---|
+| `COLAB_SSH_HOST` | the control-plane host (khpi5) | the **free** Colab lane |
+| `COLAB_SSH_USER` | SSH user on that host | the Colab lane |
+| `COLAB_SSH_KEY` / `COLAB_SSH_PORT` | optional key path / non-22 port | the Colab lane |
+| `FISH_LANE` | `auto` (default), `colab`, `kaggle`, `lightning` | which lane a job picks |
+| `LIGHTNING_USERNAME` + `LIGHTNING_API_KEY` | Lightning account + key | the **paid** lane only |
+
+Two rules are enforced in code, not by convention:
+
+1. **`auto` resolves free lanes only** (`colab`, `kaggle`). To spend money you
+   must name `lightning` yourself — on the Convert screen the option carries a
+   "Costs money" badge and asks for confirmation.
+2. **A paid lane with no credentials is refused when you press Convert**, with
+   the reason, rather than being queued and failing hours later.
+
+Settings marked as secrets are stored outside the repository (settings DB /
+`.secrets/`) and are masked when read back — re-entering them is never needed
+after a deploy. The **Render Lanes** card also shows live lane status
+(polling `/api/lanes`), so you can see whether a lane is idle, running or
+quota-exhausted before starting a job.
+
+### Add your own voice from a ~15 s clip
+
+**Settings → Clone a voice**: give it a name, choose a **WAV** file and press
+**Upload**. It becomes a narrator on both Chatterbox engines.
+
+- **Real WAV (PCM) only.** An MP3 renamed to `.wav` is refused right there with
+  that exact message — Chatterbox opens the file with `wave`, so a fake WAV
+  fails at synthesis time with an error pointing nowhere near the upload.
+- **8–45 seconds** is the band the server checks: under 8 s clones far less
+  reliably, over 45 s adds nothing. Mono, 22 kHz or above, is the safer
+  reference — and read at the pace you want the book read, because the clone
+  copies your delivery, not just your timbre.
+- The upload immediately queues both local variants (`<name>` and
+  `<name>_nano`), but the voice appears in **Voices** only once their previews
+  are persisted — so Play is always instant, never a cold synthesis.
+- `GET /api/voices/custom` lists them; `DELETE /api/voices/custom/<id>` removes
+  one.
 
 ### Enable Deepgram Cloud TTS (Aura-2)
 

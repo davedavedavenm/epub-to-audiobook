@@ -866,6 +866,20 @@ Kaggle automatically. It had not created a job. The cron was retired with a
 backup and sentinel guard. A future “no automatic cloud render” audit must
 inspect cron/timers and external callers, not only `app.py` and Compose.
 
+**GPU lanes inherit this boundary (settled 2026-09-24).** `render_target='lane'`
+may be queued, but **`lane='auto'` resolves `FREE_LANES = ('colab', 'kaggle')`
+only** — it never falls through to the paid Lightning lane, even when Lightning
+is the *sole* configured lane, in which case it refuses with the action that
+authorises spend. Naming a lane *is* the authorization: `lane='lightning'` on
+the job, or `FISH_LANE=lightning` in Settings. The job API refuses at POST
+(400) rather than queueing a job that could not start, and an unknown lane name
+is refused instead of silently becoming `auto`. This was written because the
+Fish build-out's first cut did the opposite: `resolve_lane('auto')` walked
+`('colab','kaggle','lightning')`, so a queued book with only Lightning
+configured would have silently selected the paid lane — the exact autoscale
+incident reopened. `test_queue_length_cannot_provision_paid_gpu` now pins the
+free-only list as well as the render-target tuple.
+
 **Why:** costs real money; this is a standing safety rule, not a per-task
 judgment call.
 

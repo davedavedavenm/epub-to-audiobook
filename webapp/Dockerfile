@@ -45,6 +45,14 @@ COPY webapp/ .
 
 # Copy conversion script
 COPY scripts/convert_book.py ./scripts/convert_book.py
+# Fish lane render (locked Cillian recipe): bundle builder + canonical prep +
+# the lane runner that ships inside every as_bundle.zip. as_prep resolves its
+# lexicon via ROOT/fixtures, so the whole fixtures/ dir comes with it.
+COPY scripts/fish_bundle.py scripts/as_prep.py scripts/fish_colab_runner.py ./scripts/
+COPY fixtures/ ./fixtures/
+# The narration reference the bundle derives its quote crop from (tracked in
+# the repo alongside the other accent narrator WAVs).
+COPY chatterbox/voices/cillian_irish.wav ./chatterbox/voices/cillian_irish.wav
 
 RUN mkdir -p /data/uploads /data/audiobooks /data/previews /data/logs
 

@@ -16,6 +16,7 @@ COMPOSE = (ROOT / 'docker-compose.yml').read_text(encoding='utf-8')
 DEPLOY = (ROOT / 'scripts' / 'deploy.sh').read_text(encoding='utf-8')
 WORKER = (ROOT / 'webapp' / 'worker.py').read_text(encoding='utf-8')
 GPU_MANAGER = (ROOT / 'webapp' / 'gpu_manager.py').read_text(encoding='utf-8')
+LANES = (ROOT / 'webapp' / 'lanes.py').read_text(encoding='utf-8')
 AGENT_RULES = (ROOT / 'AGENTS.md').read_text(encoding='utf-8')
 DECISIONS = (ROOT / 'DECISIONS.md').read_text(encoding='utf-8')
 INDEX = (ROOT / 'webapp' / 'templates' / 'index.html').read_text(encoding='utf-8')
@@ -208,8 +209,22 @@ def test_queue_length_cannot_provision_paid_gpu():
         "official Vast CLI is not version-pinned in the application image"
     assert 'requests==2.33.0' in requirements, \
         "requests pin is incompatible with the pinned vastai 1.5.4 package"
-    assert "render_target not in ('local', 'kaggle')" in APP, \
+    assert "render_target not in ('local', 'kaggle', 'lane')" in APP, \
         "job API accepts a paid render target from ordinary queueing"
+    # 'lane' joined the tuple in the Fish build-out (fish is lane-only), so the
+    # tuple check alone no longer proves the invariant: a lane can be PAID.
+    # The spend-safety now lives in lanes.py — pin it. 'auto' resolves
+    # FREE_LANES only, and the paid lane is reachable only when named
+    # explicitly (job lane field / FISH_LANE). Enlarging FREE_LANES to include
+    # 'lightning', or letting auto fall through to it, re-opens the incident
+    # above: a queued book silently provisioning paid GPU.
+    assert "FREE_LANES = ('colab', 'kaggle')" in LANES, \
+        "lane auto-resolution is no longer restricted to free lanes"
+    assert "for lane in FREE_LANES:" in LANES, \
+        "'auto' lane pick does not iterate the free-only list"
+    # Whether auto can actually REACH the paid lane is behavioural, not
+    # structural — see test_fish_lane.py::test_resolve_lane_free_first, which
+    # asserts auto raises when only Lightning is configured.
 
 
 def test_official_documentation_gate_is_mandatory():

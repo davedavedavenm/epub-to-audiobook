@@ -156,8 +156,62 @@ system python3 dies on `pydantic_core`. It never auto-provisions: a reclaimed
 VM logs `manual re-provision required`.
 
 **Windows-side pull (per harvest):** `scp khpi5:/tmp/harvest/* ` →
-`evaluations/new-engines/output/`; waveform gate + ASR completeness; only then
-is a chapter "done".
+`evaluations/new-engines/output/`; a local arm polls every 5 min, pulls
+atomically (`.part` → rename) and gates each chapter, reporting `ALLDONE` with
+a verdict table when all 10 `.gate.json` files exist.
+
+## Gate — the only definition of "done"
+
+```bash
+python scripts/gate_book_chapter.py evaluations/new-engines/output/armed_struggle_ch1_cillian.mp3
+# → writes <name>.gate.json, exit 0 = PASS / 1 = FAIL
+```
+
+Compares ASR (`faster-whisper base`, `WHISPER_MODEL_DIR` =
+`evaluations/new-engines/output/.whisper`) against the **exact payload the lane
+rendered** (`scratch/as_book/<slug>.json`), plus streaming waveform stats.
+Thresholds: word ratio ≥ 0.93, coverage ≥ 0.90, RMS 0.02–0.30, mean|diff| >
+0.002, plateau < 2 s, quiet-30 s windows = 0. The gate tool itself was
+validated by reproducing the already-gated Preface exactly before it was
+trusted on new chapters.
+
+Verdicts so far (2026-09-25):
+
+| section | sents | length | RMS | word ratio | coverage | verdict |
+|---|---|---|---|---|---|---|
+| preface | 83/83 | 12.3 min | 0.0969 | 0.9937 | 0.965 | **PASS** |
+| ch1 | 742/742 | 103.6 min | 0.0988 | 0.9944 | 0.9465 | **PASS** |
+| ch4 | 687/687 | 89.6 min | 0.0977 | 0.9940 | 0.9506 | **PASS** |
+
+A gate PASS is a *completeness and health* claim only. Whether the chapter
+**sounds** right stays Dave's ear — never promote a PASS to a listening verdict.
+
+## Running a lane from the webapp
+
+The same job can be driven through the app instead of the manual loop above:
+
+1. **Settings → Render Lanes** → set `COLAB_SSH_HOST` / `COLAB_SSH_USER`
+   (khpi5) and optionally `FISH_LANE` (`auto` = free lanes only; name
+   `lightning` explicitly to spend money).
+2. Convert screen → engine **Fish S2 Pro** → pick a lane → Convert. A paid lane
+   is refused **at POST** with the reason if its credentials are absent, so a
+   doomed job never enters the queue.
+3. The app SSHes to `~/as-lane/lane_ctl.sh` on khpi5
+   (`status / submit / progress / fetch / log / done / stop`) to create the
+   session, upload `as_bundle.zip` + `runner.py`, poll `as_state.json` and pull
+   finished chapters into the job's `out/` dir.
+
+**Safety guard:** `submit` refuses while `LANE_COLAB_MAX_SESSIONS` (default 2)
+Colab sessions are already up. Colab reclaims VMs to stay inside its limits, so
+letting a webapp job start a third session could kill a running render —
+including this book. The refusal is loud and actionable, never a silent kill.
+
+**Not yet runnable for this book:** `scripts/fish_bundle.py` derives slugs as
+`ch{idx:02d}` from `chapters.list_renderable_chapters()`, which returns 24
+sections for `fixtures/armed_struggle.epub`, while the production payloads are
+the 10 sections `scripts/regenerate_as_book.py` maps. Queueing *The Armed
+Struggle* through the webapp would therefore render a different chapter split.
+Reconcile the chapter mapping first — see TTS-WATCH-FINDINGS.md 2026-09-25.
 
 **Finish line:** all 10 sections → chaptered M4B → replace audio of ABS item
 `7039379c` → ABS rescan → progress remap (Dave is 39.9% into "New States 1923–63").

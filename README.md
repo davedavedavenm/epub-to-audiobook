@@ -270,7 +270,12 @@ cp .env.example .env
 | Harriet | Female | Ruth Golding (LibriVox) | Chatterbox, TADA |
 | Beatrice | Female | Cori Samuel (LibriVox) | Chatterbox, TADA |
 
-Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md) §5.
+### Fish S2 Pro — Irish Studio Clone (free render lane)
+| Voice | Gender | Engine | Notes |
+|-------|--------|--------|-------|
+| Cillian Murphy (Irish) — `fish_cillian_irish` | Male | Fish S2 Pro | Locked production recipe for Irish history narration; renders on the **free** Colab L4 lane, so it needs no cloud key — only a lane in **Settings → Render Lanes**. Offered only with its exact preview already cached. |
+
+Add your own from a 15–30 s WAV clip — see [GETTING-STARTED.md](GETTING-STARTED.md), *Add your own voice from a ~15 s clip*.
 
 ### Kokoro Voices (Local)
 | Accent | Female | Male |
@@ -305,6 +310,10 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | `APP_TRUSTED_HOSTS` | Comma-separated Flask host allowlist (LAN addresses and any Pangolin/reverse-proxy hostname; no ports) |
 | `PUBLIC_BASE_URL` | Canonical public HTTPS origin used in RSS/channel/enclosure URLs when deployed behind Pangolin or another reverse proxy |
 | `GPU_RENDER_ENABLED` | Environment-only host-admin gate for a separate manual paid Vast.ai action (default `0` / off; unavailable through Settings; queueing never provisions) |
+| `COLAB_SSH_HOST` / `COLAB_SSH_USER` / `COLAB_SSH_KEY` / `COLAB_SSH_PORT` | Control-plane SSH target for the **free Colab render lane** (set them in Settings → Render Lanes; never committed) |
+| `FISH_LANE` | Which lane a Fish job picks: `auto` (**free lanes only** — `colab`, `kaggle`), or name `colab` / `kaggle` / `lightning` explicitly. `auto` will never resolve to a paid lane; an unconfigured explicit lane is refused rather than silently swapped. |
+| `LANE_COLAB_MAX_SESSIONS` | Guard on the Colab control plane (default `2`): submit refuses to open another GPU session while that many are up, because Colab reclaims VMs to stay inside its limits. |
+| `LIGHTNING_USERNAME` / `LIGHTNING_API_KEY` | **Paid** lane credentials — reachable only by naming the lane explicitly; the key lives in `.secrets/lightning_api_key` + the settings DB, never in the repo |
 | `AUTOSCALE_COST_CAP` | Safety cap for a manually authorized paid-GPU session; not an autoscale trigger |
 | `ASR_VERIFY` | Structural source/audio comparison (default `1`); detects gross collapse/mismatch, never voice quality |
 | `AUDIO_ASR_VERIFY_ENABLED` | Additional sampled structural ASR check after completion (default `0`) |
@@ -316,6 +325,8 @@ Add your own from any ~15 s clip — see [GETTING-STARTED.md](GETTING-STARTED.md
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/voices` | GET | Voice catalogue plus configured preview-cache readiness |
+| `/api/voices/custom` | GET / POST | List / upload reference WAVs for a cloned narrator |
+| `/api/lanes` | GET | Live render-lane status (free vs paid, sessions, quota) |
 | `/api/version` | GET | Build fingerprint (version + git SHA) |
 | `/api/preview/<voice_id>` | GET | Persisted voice preview audio; never cold-renders |
 | `/api/convert` | POST | Start conversion (upload) |

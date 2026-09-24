@@ -356,7 +356,7 @@ cloner?**
 | Model | Mechanism | English accents | Verdict |
 |---|---|---|---|
 | **[MeloTTS](https://github.com/myshell-ai/MeloTTS)** | **trained per-accent** | `EN-US`, `EN-BR`, `EN_INDIA`, `EN-AU`, `EN-Default` | Installed and fast, then **rejected by ear** for poor pronunciation, number handling and overall TTS quality. **No Irish.** |
-| **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | Not a low-cost Zorin candidate: current S2 Pro is 4B and its official install guide calls for 24 GB GPU memory. CPU packaging exists but does not make it practical here. |
+| **[Fish-Speech / S2](https://github.com/fishaudio/fish-speech)** | cloning **+ free-form text tags** | 80+ languages; supports a literal `[with strong accent]` tag and 15,000+ free-form delivery descriptors | Not a local Zorin candidate: current S2 Pro is 4B and its official install guide calls for 24 GB GPU memory, and CPU packaging is not practical. **Resolved 2026-09-24 by moving off local hardware entirely:** the free Colab **L4 lane has the required 24 GB**, and that is what renders the production book. |
 | **[IndexTTS-2.5](https://github.com/index-tts/index-tts/blob/39207d91c30899cad1e7c1b9eb678c241f678e55/README.md)** | zero-shot cloning from one reference | No official named or regional-English preset catalogue | **Rejected for production.** Complete-sentence calls fixed the upstream-splitter corruptions, but the corrected Arthur clip still had poor timing/pacing and was far less natural than Gemini Zephyr or Chatterbox. |
 | **[Orpheus-TTS](https://github.com/canopyai/Orpheus-TTS)** | zero-shot cloning + named voices | English voices (tara, leah, jess, leo, dan, mia, zac, zoe); no accent variants | Cloning half will hit the rule. **But it ships fine-tuning tooling and data-processing scripts** — the supported route to a custom local voice. 3B, heavy on CPU. ⚠️ Their own guidance: *"I recommend not using synthetic data for training as it produces worse results"* — a direct warning against distilling Edge output, which is worth knowing **before** attempting the distil path below. |
 | **[Dia2-2B](https://huggingface.co/nari-labs/Dia2-2B)** | dialogue TTS, context conditioning | English only, 2-minute cap | Not accent-targeted, and the 2-minute cap rules out narration. |
@@ -365,7 +365,9 @@ cloner?**
 **Resulting order:** grade Chatterbox V3 → keep Omni as a candidate for its
 supported accents and short work → find materially better local models for the
 remaining accents. The current Piper path and Melo are rejected for production;
-Fish S2 Pro is outside the local/free-GPU hardware budget. Neither Fish nor
+Fish S2 Pro is outside the *local* hardware budget — solved 2026-09-24 by
+rendering it on the free Colab L4 lane (24 GB) instead, which is how the
+production book is being made. Neither Fish nor
 Index provides a documented named Australian, Irish or South African voice
 catalogue; accent quality depends on a rights-cleared human reference and must
 be heard, never inferred from a free-form accent tag.
@@ -514,6 +516,7 @@ recorded speech if any is available.
 
 | Need | Current answer |
 |---|---|
+| **Irish history narration, production, £0** | **Fish S2 Pro / `fish_cillian_irish`** — the locked recipe (`CILLIAN-RECIPE.md`), Dave's verdict *"Fish S2 Pro retry voice is perfect"* (2026-09-22, reversing the 2026-09-18 theatrical-prompt rejection). Rendered on the **free Colab L4 lane**, gated per chapter by waveform + ASR completeness. Its preview is a 65 s cut from a **gated** chapter, so what you audition is the real output. Currently rendering *The Armed Struggle*. |
 | Irish or South African, local | **No approved production voice.** The exact Chatterbox Multilingual V3 regional gate failed by ear. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
 | Irish, South African or Australian, online | **Azure William (AU), Connor (IE) and Luke (ZA) are accepted opt-in quality-floor voices** on the proven 48 kHz lossless, correctly processed path. Accents are acceptable; emotion is weak and none is as real as Arthur. F0 first, never automatic paid fallback. |

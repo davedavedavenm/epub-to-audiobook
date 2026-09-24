@@ -485,6 +485,14 @@ TTS_ENGINES = {
         'description': 'Lightweight non-autoregressive flow-matching voice cloning on Modal GPU (RTF ~0.10)',
         'url_env': 'MODAL_F5TTS_URL',
         'default_url': 'http://modal-f5tts:8017/v1'
+    },
+    'fish': {
+        'name': 'Fish Speech S2 Pro (locked Cillian recipe)',
+        'description': 'S2 Pro with dual-reference routing, per-sentence health gate and '
+                       'seed re-roll (CILLIAN-RECIPE.md). Renders on a GPU lane '
+                       '(Colab / Kaggle / Lightning), never on this machine.',
+        'url_env': '',
+        'default_url': ''
     }
 }
 
@@ -681,6 +689,14 @@ VOICES = {
     'breeze_adrian': {'name': 'Adrian Praetzellis (Scholarly British, Breeze 2)', 'accent': 'British', 'gender': 'Male', 'engine': 'breeze'},
     'breeze_tadhg_clean': {'name': 'Tadhg Hynes (Restored Irish Male, Breeze 2)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'breeze'},
 
+    # ============ FISH SPEECH S2 PRO — LOCKED CILLIAN RECIPE (GPU LANE ONLY) ============
+    # Renders exclusively through a GPU lane (webapp/lanes.py); the preview is a
+    # cut from the gated Preface render of The Armed Struggle — never synthesized
+    # on this CPU box (same rule as the Modal/Kaggle voices above). The quote
+    # reference (expressive crop) is applied automatically by the recipe, so it
+    # is not a separate user-facing voice.
+    'fish_cillian_irish': {'name': 'Cillian Murphy (Irish, Fish S2 Pro)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'fish'},
+
     # ============ FREE CPU CANDIDATES (OFFICIAL CATALOGUES) ============
     # Pocket's upstream catalogue does not publish reliable accent/gender
     # metadata for every preset, so do not infer it from a name. Peter, Jasper
@@ -785,9 +801,17 @@ def init_db():
                 newline_mode TEXT DEFAULT 'double',
                 title_mode TEXT DEFAULT 'auto',
                 custom_regex TEXT,
-                render_target TEXT DEFAULT 'local'
+                render_target TEXT DEFAULT 'local',
+                lane TEXT
             )
         ''')
+
+        # Add lane column (migration — which GPU lane a fish render names;
+        # NULL/'' = 'auto', which resolves FREE lanes only, never paid).
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN lane TEXT")
+        except sqlite3.OperationalError:
+            pass
 
         # Add newline_mode column (migration)
         try:
@@ -1003,8 +1027,8 @@ def save_job(job: dict):
              start_chapter, end_chapter, notify_telegram, retry_count, queue_rank,
              sync_target_host, sync_target_path, sync_timestamp, sync_file_count, sync_status, sync_error, job_log_path,
              tts_speed, newline_mode, title_mode, custom_regex, preprocess_summary, narration_profile, render_target, output_format, qa_verified,
-             source_kind, source_url, source_site, source_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             source_kind, source_url, source_site, source_date, lane)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             job.get('id'),
             job.get('book_name'),
@@ -1062,6 +1086,10 @@ def save_job(job: dict):
             job.get('source_url'),
             job.get('source_site'),
             job.get('source_date'),
+            # The lane a fish render NAMES. NULL/'' = 'auto', which resolves
+            # FREE lanes only (lanes.FREE_LANES) — see the header comment above
+            # for why a missing column here is worse than a missing column.
+            (job.get('lane') or '').strip().lower() or None,
         ))
         conn.commit()
 
@@ -1866,7 +1894,8 @@ def _do_recovery(job_id):
     time_module.sleep(30)  # Brief delay to let engine settle
     try:
         job = get_job(job_id) or {}
-        if (job.get('render_target') or 'local') == 'kaggle':
+        _rt = (job.get('render_target') or 'local')
+        if _rt == 'kaggle':
             # Never fall from a GPU-only Kaggle engine into the local converter:
             # that either targets an offline CUDA service or silently changes
             # the execution path. The Kaggle recovery planner skips chapters
@@ -1874,6 +1903,12 @@ def _do_recovery(job_id):
             convert_book_kaggle(job_id, job.get('input_filename', ''),
                                 job.get('output_dirname', ''), job.get('voice', ''),
                                 resume=False, recover_existing=True)
+        elif _rt == 'lane':
+            # Lane renders bank chapters as they finish, so recovery is a
+            # resume: the lane adapter skips chapters already on disk.
+            convert_book_fish_lane(job_id, job.get('input_filename', ''),
+                                   job.get('output_dirname', ''), job.get('voice', ''),
+                                   resume=True)
         else:
             recover_partial_conversion(job_id)
     except Exception as e:
@@ -2535,9 +2570,9 @@ def get_voice_preview(voice_id: str) -> Path:
     engine = voice_info.get('engine', 'kokoro')
     ptext = _preview_text_for(engine)
 
-    # GPU-only engines (Kaggle/Modal render): previews are pre-rendered and
+    # GPU-only engines (Kaggle/Modal/lane render): previews are pre-rendered and
     # dropped into PREVIEWS_DIR, never generated on this CPU box.
-    if engine in ('cosyvoice', 'breeze', 'f5tts'):
+    if engine in ('cosyvoice', 'breeze', 'f5tts', 'fish'):
         return preview_path if preview_path.exists() else None
 
     try:
@@ -2909,6 +2944,13 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         # Keep this tombstone so an old queued job fails visibly instead of
         # falling through to Kokoro and producing an unwanted audiobook.
         raise ValueError('Piper is retired; choose a currently offered narrator')
+    elif tts_engine == 'fish':
+        # Fish has no OpenAI-compatible endpoint on this host by design: the
+        # locked recipe renders on a GPU lane (webapp/lanes.py) through
+        # convert_book_fish_lane(). Falling through to Kokoro here would produce
+        # a wrong-engine audiobook, so refuse loudly instead.
+        raise ValueError('Fish S2 Pro renders on a GPU lane (Settings → Render Lanes), '
+                         'not through a local engine URL')
     elif tts_engine in ('inworld', 'edge', 'polly', 'deepgram'):
         url = f"{TTS_PROXY_URL}/j/{job_id}/v1" if TTS_PROXY_URL else f"http://tts-proxy:8882/j/{job_id}/v1"
         model = 'deepgram' if tts_engine == 'deepgram' else ('inworld' if tts_engine == 'inworld' else 'tts-1')
@@ -2945,7 +2987,10 @@ def text_profile_for_engine(tts_engine: str) -> str:
     """
     if tts_engine in ('pocket', 'kitten', 'gemini', 'deepgram'):
         return 'explicit'
-    if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3'):
+    if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3', 'fish'):
+        # 'fish' never reaches convert_book (the lane path preps with as_prep.py
+        # instead); listed so any shared caller gets the spoken-numbers contract
+        # rather than the legacy phonetic one.
         return 'modern'
     return 'legacy'
 
@@ -4111,6 +4156,193 @@ def convert_book_kaggle(job_id: str, input_filename: str, output_dirname: str, v
     maybe_start_next_queued_job()
 
 
+def convert_book_fish_lane(job_id: str, input_filename: str, output_dirname: str,
+                           voice: str, resume: bool = False):
+    """Locked-recipe Fish/Cillian render through a GPU lane (webapp/fish_lane.py).
+
+    Same skeleton as convert_book_kaggle: validate lane -> render with
+    sentence-level progress -> the SHARED completion tail (rename, cleanup,
+    verify, quality gate, ABS sync, notify). The bundle (scripts/fish_bundle.py)
+    is built inside the lane adapter, so this function is orchestration only.
+    """
+    try:
+        import fish_lane as FL
+        import lanes as LN
+    except Exception as e:
+        update_job(job_id, status='failed', error=f'Fish lane render unavailable: {e}',
+                   completed_at=datetime.now().isoformat())
+        maybe_start_next_queued_job()
+        return
+
+    job = get_job(job_id) or {}
+    engine = job.get('tts_engine', 'kokoro')
+    if engine != 'fish':
+        update_job(job_id, status='failed',
+                   error=f'Lane target is for the Fish engine only (job engine: {engine}).',
+                   completed_at=datetime.now().isoformat())
+        maybe_start_next_queued_job()
+        return
+
+    # Which lane: the job may name one (persisted `lane` column); otherwise
+    # FISH_LANE; otherwise free-first auto (colab -> kaggle). resolve_lane()
+    # never reaches the PAID Lightning lane from auto — naming it is the
+    # authorization to spend (DECISIONS.md: queueing never provisions paid GPU)
+    # — and it refuses an unknown or unconfigured lane instead of silently
+    # swapping (GPU-SAFETY).
+    wanted = (job.get('lane') or get_setting('FISH_LANE') or 'auto').strip().lower()
+    try:
+        lane = LN.resolve_lane(None if wanted in ('', 'auto') else wanted)
+    except ValueError as e:
+        update_job(job_id, status='failed', error=str(e),
+                   completed_at=datetime.now().isoformat())
+        append_job_log(job_id, f'Lane render aborted: {e}')
+        maybe_start_next_queued_job()
+        return
+
+    epub_path = UPLOAD_DIR / input_filename
+    output_path = OUTPUT_DIR / output_dirname
+    output_path.mkdir(parents=True, exist_ok=True)
+    start = job.get('start_chapter') or 1
+    end = job.get('end_chapter') or 0
+
+    # Ground truth for verification: how many renderable chapters exist in the
+    # requested range (same scan the Kaggle path and the picker use).
+    render_stats = {'total': None}
+    try:
+        import chapters as _ch
+        in_range = [int(c['index']) for c in _ch.list_renderable_chapters(str(epub_path))
+                    if int(c['index']) >= int(start or 1)
+                    and (not end or int(c['index']) <= int(end))]
+        if in_range:
+            render_stats['total'] = len(in_range)
+    except Exception as e:
+        append_job_log(job_id, f'Lane: chapter scan failed ({e}); verify will rely on the range')
+
+    if not resume:
+        update_job(job_id, status=f'rendering on {lane} lane', progress_percent=1)
+        append_job_log(job_id, f'Fish lane render start (lane={lane}, voice={voice}, '
+                               f'chapters {start}-{end or "end"})')
+    else:
+        append_job_log(job_id, f'Fish lane render resume (lane={lane}, voice={voice})')
+
+    def on_status(st, mins, prog=None):
+        current = get_job(job_id)
+        if current and current.get('status') == 'cancelled':
+            raise Exception('Job was cancelled by user')
+        base = f'rendering on {lane} lane'
+        done = sents_total = None
+        if prog:
+            try:
+                done, sents_total = int(prog[0]), int(prog[1])
+            except Exception:
+                done = sents_total = None
+        if sents_total and sents_total > 0 and done is not None:
+            pct = min(99, max(1, int(done / sents_total * 100)))
+            # Sentence-grounded ETA: measured rate over actual banked sentences.
+            eta = int((mins / done) * (sents_total - done)) if done else 0
+            update_job(job_id,
+                       status=f'{base} · {done:,}/{sents_total:,} sentences',
+                       progress_percent=pct, eta_minutes=max(0, eta))
+        else:
+            # Cold start (apt/fish-speech/weights ≈ 5-10 min): coarse elapsed
+            # progress, no fake ETA.
+            update_job(job_id, status=base,
+                       progress_percent=max(1, min(15, int(mins))),
+                       eta_minutes=0)
+
+    # Resume/recovery: never re-render chapters already banked on disk — same
+    # rule as the Kaggle recovery planner. Each contiguous missing span renders
+    # as its own lane submission so a Retry after a crash costs only what is
+    # actually left.
+    spans = [(int(start or 1), int(end or 0))]
+    if resume:
+        spans, banked_n, missing_n = _lane_missing_spans(epub_path, output_path, start, end)
+        append_job_log(job_id, f'Lane recovery: {banked_n} chapter(s) already banked, '
+                               f'{missing_n} still to render')
+        if not spans:
+            update_job(job_id, progress_percent=99)
+    for _si, (_bs, _be) in enumerate(spans, 1):
+        if len(spans) > 1:
+            append_job_log(job_id, f'Lane: span {_si}/{len(spans)} — chapters {_bs}-{_be or "end"}')
+        try:
+            ok, msg = FL.render_on_lane(
+                str(epub_path), voice, lane, _bs, _be, str(output_path),
+                log=lambda m: append_job_log(job_id, m),
+                on_status=on_status, resume=resume)
+        except Exception as e:
+            current = get_job(job_id)
+            if current and current.get('status') == 'cancelled':
+                append_job_log(job_id, 'Lane render loop aborted: job cancelled by user.')
+                maybe_start_next_queued_job()
+                return
+            update_job(job_id, status='failed', error=f'Lane render error: {e}',
+                       completed_at=datetime.now().isoformat())
+            append_job_log(job_id, f'Lane render error: {e}')
+            maybe_start_next_queued_job()
+            return
+        if not ok:
+            # Earlier spans already banked; a later Retry resumes with the rest.
+            update_job(job_id, status='failed', error=f'Lane render failed: {msg}',
+                       completed_at=datetime.now().isoformat())
+            append_job_log(job_id, f'Lane render failed: {msg}')
+            maybe_start_next_queued_job()
+            return
+    if not spans:
+        ok, msg = True, 'all requested chapters were already banked'
+
+    # Same completion tail as the Kaggle and local paths.
+    rename_output_files(output_path, job.get('book_name') or output_dirname)
+    removed = cleanup_small_files(output_path, MIN_CHAPTER_SIZE_KB)
+    output_files = list(output_path.glob('*.mp3'))
+    is_ok, verify_msg = verify_book_complete(
+        job_id, output_path, job.get('total_chapters'),
+        start_chapter=job.get('start_chapter'), end_chapter=job.get('end_chapter'),
+        cleaned_up_count=removed, expected_override=render_stats.get('total'))
+    if not is_ok:
+        update_job(job_id, status='failed', error=f'Verification failed: {verify_msg}',
+                   completed_at=datetime.now().isoformat())
+        maybe_start_next_queued_job()
+        return
+    outcome = _gate_and_sync(job_id, output_path, job.get('book_name'), len(output_files))
+    append_job_log(job_id, f'Lane render complete: {len(output_files)} chapters '
+                           f'via {lane} ({msg})')
+    job = get_job(job_id)
+    if outcome == 'completed' and job and job.get('notify_telegram'):
+        send_telegram_notification(job, success=True)
+    maybe_start_next_queued_job()
+
+
+def _lane_missing_spans(epub_path: Path, output_path: Path, start, end):
+    """(spans, banked_count, missing_count) for a lane resume.
+
+    Spans are contiguous [lo, hi] chapter ranges still to render, computed from
+    the SAME renderable-chapter list the picker and verify use — banked files
+    match by their leading chapter number (``NNN_title.mp3`` pre-rename and
+    ``NN - Title.mp3`` after it both parse).
+    """
+    import chapters as _ch
+    try:
+        wanted = [int(c['index']) for c in _ch.list_renderable_chapters(str(epub_path))
+                  if int(c['index']) >= int(start or 1)
+                  and (not end or int(c['index']) <= int(end))]
+    except Exception:
+        wanted = []
+    banked = set()
+    for f in output_path.glob('*.mp3'):
+        m = re.match(r'^(\d+)', f.stem)
+        if m:
+            banked.add(int(m.group(1)))
+    banked_n = len([n for n in wanted if n in banked])
+    missing = [n for n in wanted if n not in banked]
+    spans = []
+    for n in missing:
+        if not spans or n != spans[-1][1] + 1:
+            spans.append([n, n])
+        else:
+            spans[-1][1] = n
+    return [tuple(s) for s in spans], banked_n, len(missing)
+
+
 def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: str, is_pdf: bool = False):
     """Run book conversion via Docker in background."""
     # Guard: if this job is already being converted (e.g. another process claimed it),
@@ -4126,8 +4358,11 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
     # Cloud GPU render path: delegate to Kaggle instead of a local container.
     _rt_job = get_job(job_id)
-    if _rt_job and (_rt_job.get('render_target') or 'local') == 'kaggle':
+    _rt = (_rt_job.get('render_target') or 'local') if _rt_job else 'local'
+    if _rt == 'kaggle':
         return convert_book_kaggle(job_id, input_filename, output_dirname, voice)
+    if _rt == 'lane':
+        return convert_book_fish_lane(job_id, input_filename, output_dirname, voice)
 
     host_input_path = f"{HOST_UPLOAD_DIR}/{input_filename}"
     host_output_dir = f"{HOST_OUTPUT_DIR}/{output_dirname}"
@@ -4705,6 +4940,14 @@ def check_engines_health(max_age=20):
         out['qwen3'] = True
         out['cosyvoice'] = True
         out['f5tts'] = True
+    # Fish S2 Pro is healthy exactly when SOME GPU lane credential exists. This
+    # check is deliberately local (no SSH/SDK probe inside the health poll —
+    # live reachability is /api/lanes' job, and it is TTL-cached there).
+    try:
+        import lanes as _lanes
+        out['fish'] = bool(_lanes.configured_lanes())
+    except Exception:
+        out['fish'] = False
     _ENGINE_HEALTH_CACHE['ts'] = now
     _ENGINE_HEALTH_CACHE['data'] = out
     return out
@@ -4733,6 +4976,17 @@ def engines_unconfigured():
     for engine, (setting_key, reason) in ENGINE_CREDENTIALS.items():
         if not (get_setting(setting_key) or os.environ.get(setting_key)):
             missing[engine] = reason
+    # Fish is unconfigured when NO GPU lane exists — the per-lane detail (which
+    # one, why it is unreachable) belongs to /api/lanes, not here.
+    try:
+        import lanes as _lanes
+        if not _lanes.configured_lanes():
+            missing['fish'] = ('LIGHTNING_API_KEY',
+                               'Needs a GPU lane (Settings → Render Lanes): Colab bridge, '
+                               'Kaggle token or Lightning key')
+    except Exception:
+        missing['fish'] = ('LIGHTNING_API_KEY',
+                           'Needs a GPU lane (Settings → Render Lanes)')
     return missing
 
 
@@ -5116,6 +5370,10 @@ def pick_engine_with_fallback(preferred_engine, preferred_voice, allow_fallback=
     health = check_engines_health()
     if health.get(preferred_engine):
         return preferred_engine, preferred_voice, None
+    if preferred_engine == 'fish':
+        # Never substitute another engine for the locked recipe: the voice
+        # exists nowhere else, so any "healthy" swap is a wrong-engine book.
+        return preferred_engine, preferred_voice, None
     if not allow_fallback:
         return preferred_engine, preferred_voice, None
     for eng in _ENGINE_FALLBACK_ORDER:
@@ -5128,6 +5386,23 @@ def pick_engine_with_fallback(preferred_engine, preferred_voice, allow_fallback=
 @app.route('/api/engines/health')
 def engines_health():
     return jsonify(check_engines_health())
+
+
+@app.route('/api/lanes')
+def api_lanes():
+    """Live GPU-lane status for the Render Lanes panel.
+
+    Each lane is TTL-cached inside webapp/lanes.py (45 s network probes, 10 s
+    UI poll) so a busy browser cannot hammer SSH or the Lightning API. Failures
+    are reported per lane as 'unreachable'/'error' — this endpoint itself never
+    500s, because a broken lane must not break the UI that is trying to show it.
+    """
+    try:
+        import lanes as LANES
+        return jsonify(LANES.lanes_status())
+    except Exception as e:
+        return jsonify({'lanes': {}, 'configured': [], 'fish_available': False,
+                        'updated_at': 0, 'error': f'{type(e).__name__}: {e}'})
 
 
 @app.route('/api/voices')
@@ -5158,7 +5433,10 @@ def api_settings():
         'LLM_API_KEY', 'TELEGRAM_BOT_TOKEN',
         'EVOLUTION_API_KEY', 'ABS_API_TOKEN', 'VASTAI_API_KEY',
         'INWORLD_API_KEY', 'DEEPGRAM_API_KEY', 'KAGGLE_API_TOKEN',
-        'MODAL_TOKEN_SECRET'
+        'MODAL_TOKEN_SECRET',
+        # Render-lane credentials (Settings → Render Lanes) — same rule as the
+        # other secrets: stored in the DB, masked on read, never in the repo.
+        'LIGHTNING_API_KEY'
     ]
     config_keys = [
         'ABS_API_URL', 'TELEGRAM_CHAT_ID', 'AWS_REGION',
@@ -5168,6 +5446,12 @@ def api_settings():
         'KAGGLE_USERNAME',
         # Modal Cloud GPU render tokens
         'MODAL_TOKEN_ID',
+        # GPU render lanes (webapp/lanes.py): SSH control plane for Colab,
+        # Lightning identity + preferred studio/machine, and which lane a fish
+        # job should use when the caller does not name one.
+        'COLAB_SSH_HOST', 'COLAB_SSH_USER', 'COLAB_SSH_PORT', 'COLAB_LANE_CTL',
+        'LIGHTNING_USERNAME', 'LIGHTNING_STUDIO', 'LIGHTNING_MACHINE',
+        'FISH_LANE'
     ]
 
     if request.method == 'POST':
@@ -7871,10 +8155,28 @@ def convert_from_library():
         output_dirname = f"{safe_name}_{job_id}"
         tts_engine = all_voices().get(voice, {}).get('engine', 'kokoro')
         render_target = (data.get('render_target') or 'local').lower()
-        if render_target not in ('local', 'kaggle'):
+        if render_target not in ('local', 'kaggle', 'lane'):
             return jsonify({'error': 'Paid GPU cannot be selected by queueing a book. '
                             'Vast provisioning is manual and session-specific; use local '
                             'or free Kaggle for this job.'}), 400
+        # Fish is lane-only. A fish voice on any other target would reach
+        # get_engine_url()'s tombstone (or worse, a failover) and produce a
+        # wrong-engine book — the exact failure class Piper's tombstone exists
+        # to prevent. Refuse here with the actionable reason.
+        if tts_engine == 'fish' and render_target != 'lane':
+            return jsonify({'error': 'Fish S2 Pro renders on a GPU lane, not locally. '
+                            'Choose a lane render target (Colab / Kaggle / Lightning — '
+                            'see Settings → Render Lanes).'}), 400
+        # The named lane ('lane' field) is only meaningful on a lane render, and
+        # only fish renders on a lane today — refuse the meaningless combination
+        # instead of silently dropping the caller's choice.
+        wanted_lane = str(data.get('lane') or '').strip().lower()
+        if wanted_lane and render_target != 'lane':
+            return jsonify({'error': "A lane can only be named on a lane render "
+                            "(render_target='lane'); otherwise leave it unset."}), 400
+        if render_target == 'lane' and tts_engine != 'fish':
+            return jsonify({'error': 'Lane renders are for the Fish engine only — '
+                            'other engines render locally or on Kaggle.'}), 400
         engine_fallback_note = None
         health = check_engines_health()
         # A stopped local CUDA service says nothing about Kaggle availability.
@@ -7883,7 +8185,9 @@ def convert_from_library():
             # Opt-in failover: if the caller allows it, substitute the next
             # healthy engine (voice remapped) so the book still runs. Default
             # (no flag) keeps the strict reject so we never silently swap voices.
-            if data.get('allow_engine_fallback'):
+            # Fish is excluded from failover outright: its recipe voices exist
+            # on no other engine, so a substitution is always a bad book.
+            if data.get('allow_engine_fallback') and tts_engine != 'fish':
                 new_eng, new_voice, engine_fallback_note = pick_engine_with_fallback(tts_engine, voice)
                 if engine_fallback_note:
                     tts_engine, voice = new_eng, new_voice
@@ -7901,6 +8205,20 @@ def convert_from_library():
                 return jsonify({'error': f'The {tts_engine} engine is offline — its service is not running. '
                                 f'Start it (e.g. docker compose --profile {tts_engine} up -d), pick a voice from another engine, '
                                 f'or resend with allow_engine_fallback to auto-substitute a healthy engine.'}), 409
+
+        # Resolve the lane NOW, at POST. A job that could never start (unknown
+        # lane name, explicit-but-unconfigured lane, or auto with only the PAID
+        # lane configured) is a 400 here — never a queued job that spends money
+        # or fails ten minutes later. Run time resolves again from the same
+        # chain, because credentials can change while a job sits in the queue.
+        if render_target == 'lane':
+            import lanes as _lanes
+            wanted = (wanted_lane or get_setting('FISH_LANE') or 'auto')
+            try:
+                _lanes.resolve_lane(None if wanted in ('', 'auto')
+                                    else wanted)
+            except ValueError as e:
+                return jsonify({'error': f'Lane render refused: {e}'}), 400
 
         save_job({
             'id': job_id,
@@ -7923,6 +8241,10 @@ def convert_from_library():
             'notify_telegram': 1 if data.get('notify_telegram') else 0,
             'notify_whatsapp': 1 if data.get('notify_whatsapp') else 0,
             'render_target': render_target,
+            # Which lane this job NAMES. NULL/'' = auto (free lanes only).
+            # Persisted so the queue shows what will run and the runner uses
+            # the same chain the API validated (job lane -> FISH_LANE -> auto).
+            'lane': wanted_lane or None,
             'output_format': (data.get('output_format') or 'mp3').lower(),
             # Set HERE, at creation, not patched on afterwards. The queue runner
             # is kicked off on the next line, so a caller that saved the job and
@@ -7961,6 +8283,15 @@ def batch_convert_library():
                       if voice_option in ('default', 'keep') else voice_option)
     if resolved_voice not in all_voices():
         return jsonify({'error': 'Unknown narrator'}), 400
+    # Same refuse-at-POST rule as the single-book path: batch never sets
+    # render_target (it defaults to 'local'), so a fish voice here would only
+    # be discovered at job start by get_engine_url()'s tombstone. Refuse the
+    # whole request with the actionable reason instead of queueing a doomed job.
+    if all_voices()[resolved_voice].get('engine') == 'fish':
+        return jsonify({'error': 'Fish S2 Pro renders on a GPU lane and batch '
+                        'convert has no lane target. Convert this book one at '
+                        'a time with render_target=lane (see Settings → '
+                        'Render Lanes).'}), 400
 
     enqueued = []
     for p_str in paths:
