@@ -35,23 +35,33 @@ setup gotchas: `CILLIAN-RECIPE.md` ("Production orchestration"). Operator loop:
 ```
 ssh khpi5
 export PATH=$HOME/.local/bin:$PATH
-colab usage                      # units balance + rate (L4 ≈ 1.54/h)
-colab sessions                   # active VMs
-colab exec -s render -f /tmp/poll2.py    # render progress (grep-style markers)
-tail -3 /tmp/harvest.log; ls /tmp/harvest/   # harvested chapters
+colab usage                      # units balance + rate (L4 ≈ 1.54/h each lane)
+colab sessions                   # active VMs (render + render2 since 2026-09-24)
+colab exec -s render -f /tmp/poll2.py    # lane 1 progress (ch1,ch2,ch3,ch8)
+colab exec -s render2 -f /tmp/poll2.py   # lane 2 progress (ch4-ch7,conclusion)
+tail -3 /tmp/harvest.log; ls /tmp/harvest/   # harvested chapters (both lanes)
 ```
 
-**If the render VM dies** (Colab reclaims; symptom: `colab exec` 404 / "session
-lost"): re-provision and relaunch — it resumes within the chapter from
-`/content/as_state.json`:
+**Two-lane split:** the book runs on TWO concurrent L4 sessions with disjoint
+chapter scopes (`/content/as_chapters.txt` on each VM — lane `render` =
+ch1,ch2,ch3,ch8; lane `render2` = ch4–ch7,conclusion). Never start a third
+runner on a lane whose scope is unfinished-but-running, and never launch a
+runner without uploading its scope file first — a missing scope file means
+FULL ORDER, i.e. duplicate work against the other lane.
+
+**If a render VM dies** (Colab reclaims; symptom: `colab exec` 404 / "session
+lost"): re-provision that lane and relaunch — it resumes within the chapter
+from `/content/as_state.json` (upload the scope file too):
 ```
-colab new -s render --gpu L4
-colab upload -s render /tmp/as_bundle.zip /content/as_bundle.zip
-colab upload -s render /tmp/fish_colab_runner.py /content/runner.py
-colab exec -s render -f /tmp/launch.py
+colab new -s LANE --gpu L4
+colab upload -s LANE /tmp/as_bundle.zip /content/as_bundle.zip
+colab upload -s LANE /tmp/fish_colab_runner.py /content/runner.py
+colab upload -s LANE /tmp/laneN.txt /content/as_chapters.txt
+colab exec -s LANE -f /tmp/launch.py
 ```
-**Harvest loop** must always be up: `nohup bash /tmp/harvest.sh &` (polls
-as_state.json every 4 min, downloads completed chapters to `/tmp/harvest/`).
+**Harvest loop** must always be up: `nohup bash /tmp/colab_harvest.sh &`
+(v2 — polls BOTH sessions' as_state.json every 4 min, downloads completed
+chapters to `/tmp/harvest/`; lane scopes are disjoint so names never collide).
 
 **Pull finished chapters to Windows** (durable + gated):
 `scp khpi5:/tmp/harvest/armed_struggle_* C:\Users\Dave\repos\epub-to-audiobook\evaluations\new-engines\output\`
@@ -80,18 +90,21 @@ Recovery = re-insert the registry entry from the live assignment's
 `scripts/colab_adopt.py` (run with the CLI's own venv python; system python
 cannot load the tool's pydantic_core).
 
-**Guard (same day): `scripts/colab_watchdog.py`** now runs on khpi5
-(`nohup …/google-colab-cli/bin/python /tmp/colab_watchdog.py &`, log
-`/tmp/watchdog.log`, 5-min cycle). It (1) re-adopts the assignment if the
-registry entry vanishes or keep-alive dies, (2) refreshes the stored
+**Guard (same day, v2 for two lanes): `scripts/colab_watchdog.py`** runs on
+khpi5 (`nohup …/google-colab-cli/bin/python /tmp/colab_watchdog.py &`, log
+`/tmp/watchdog.log`, 5-min cycle). Per lane it (1) re-adopts the assignment if
+the registry entry vanishes or keep-alive dies, (2) refreshes the stored
 runtime-proxy token when <15 min to expiry (the likely 404 root cause),
-(3) probes `/content` for the runner process (`scripts/colab_runner_probe.py`)
-and relaunches `launch.py` if it died with the book unfinished (10-hour budget
-exits and resumes from `/content/as_state.json`). It deliberately does NOT
-auto-provision: a reclaimed VM logs `manual re-provision required` so a
-transient empty assignment list can never spawn a second billing VM.
-**If the render looks stuck: check `/tmp/watchdog.log` first, then
-`/tmp/harvest.log`, then `colab exec -s render -f /tmp/poll2.py`.**
+(3) probes for the runner + remaining scope (`ALIVE|DEAD <remain>` from
+`/tmp/runner_probe.py`) and relaunches `launch.py` if it died with its lane
+scope unfinished (10-hour budget exits and resumes from `/content/as_state.json`).
+**It must run under the CLI venv python** — system python3 dies on
+`pydantic_core` (that exact failure cost one silent restart on 2026-09-24).
+It deliberately does NOT auto-provision: a reclaimed VM logs `manual
+re-provision required` so a transient empty assignment list can never spawn a
+second billing VM.
+**If a render looks stuck: check `/tmp/watchdog.log` first, then
+`/tmp/harvest.log`, then `colab exec -s LANE -f /tmp/poll2.py`.**
 **Lane facts:** Kaggle weekly GPU cap 30 h (hit 23 Sep; fallback kernels staged);
 Lightning free tier: GPU blocked without payment method (don't bother retrying);
 Modal vetoed. When all 10 sections are harvested+gated: M4B build → ABS swap

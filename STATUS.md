@@ -3,15 +3,18 @@
 > ## 2026-09-25 — Armed Struggle headless Colab L4 production render — **IN FLIGHT**
 >
 > The locked Cillian recipe (DECISIONS 2026-09-22) is rendering the **whole book**
-> (Preface → ch8 → Conclusion, 152,359 words) on a free AI-Pro Colab **L4**,
-> driven headless by `google-colab-cli` on khpi5 (`scripts/fish_colab_runner.py`;
-> resumable, per-chapter harvest loop). **Preface ✅ DONE+GATED** (83/83, 0 failures,
-> 12.3 min, RTF 2.8; waveform clean, ASR ratio 0.977 / coverage 95.5%, first+last
-> lines verbatim). Chapter 1 rendering now (~15 s/sentence → ~3.2 h). Full
-> book ≈ 40–55 GPU-h vs ~196 compute units @ 1.54/h. **Kaggle-era Preface &
-> Ch1 renders are superseded** — they predate the year/decade/time/ordinal prep
-> fixes found from Dave's "18xx read as 1,800" report; canonical prep with unit
-> tests is `scripts/as_prep.py`, payloads regenerated with zero stray digits.
+> (Preface → ch8 → Conclusion, 152,359 words) on **two parallel free AI-Pro
+> Colab L4 lanes** (2026-09-24 18:27 — the account accepts a second concurrent
+> session, halving wall-clock), driven headless by `google-colab-cli` on khpi5
+> (`scripts/fish_colab_runner.py`; lane scopes via `/content/as_chapters.txt`:
+> lane `render` = ch1,ch2,ch3,ch8; lane `render2` = ch4–ch7,conclusion).
+> **Preface ✅ DONE+GATED** (83/83, 0 failures, 12.3 min, RTF 2.8; waveform
+> clean, ASR ratio 0.977 / coverage 95.5%, first+last lines verbatim). ch1
+> rendering (lane 1, resumed at 200/742) + ch4 starting (lane 2). Full book ≈
+> 40–55 GPU-h split across lanes vs ~196 compute units @ 1.54/h each lane.
+> Watchdog v2 + harvest loop v2 both cover both lanes; **Kaggle 30 h weekly
+> quota still blocked** (probed 2026-09-24) and Lightning GPU still
+> payment-walled, so neither is a lane.
 > **Next on completion:** waveform+ASR gate each harvest → chaptered M4B →
 > replace ABS item `7039379c` audio → rescan → remap Dave's position (39.9% into
 > "New States 1923–63"). Full method: `CILLIAN-RECIPE.md`; runbook: same file's

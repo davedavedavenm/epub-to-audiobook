@@ -122,19 +122,38 @@ read wrongly** — the payload scan must show zero digit runs before pushing a k
   the CLI supersedes it — no browser tab to babysit, and the account is fixed
   rather than "whichever tab is open".)
 
-**Per-session render loop (all on khpi5, `/tmp/` assets):**
+**Two-lane parallel split (since 2026-09-24 18:27, halves wall-clock):**
+the AI Pro account accepts a second concurrent L4 session, so the book runs on
+two lanes with **disjoint chapter scopes**. The runner reads
+`/content/as_chapters.txt` (comma-separated slugs; absent = full ORDER) —
+without it both runners would render the same chapters.
+- **lane 1 `render`** (`gpu-l4-s-kkb-ass1a1-...`): `ch1,ch2,ch3,ch8` (3,611 sents)
+- **lane 2 `render2`** (`gpu-l4-s-kkb-ass1b0-...`): `ch4,ch5,ch6,ch7,conclusion` (3,479 sents)
+
+**Per-lane render loop (all on khpi5, `/tmp/` assets):**
 ```
-colab new -s render --gpu L4
-colab upload -s render /tmp/as_bundle.zip /content/as_bundle.zip
-colab upload -s render /tmp/fish_colab_runner.py /content/runner.py
-colab exec -s render -f /tmp/launch.py       # detached runner; /content/render.log
-colab exec -s render -f /tmp/poll2.py        # progress markers
+colab new -s render2 --gpu L4                    # second lane
+colab upload -s LANE /tmp/as_bundle.zip /content/as_bundle.zip
+colab upload -s LANE /tmp/fish_colab_runner.py /content/runner.py
+colab upload -s LANE /tmp/laneN.txt /content/as_chapters.txt   # scope!
+colab exec -s LANE -f /tmp/launch.py       # detached runner; /content/render.log
+colab exec -s LANE -f /tmp/poll2.py        # progress markers
 ```
-**The harvest loop must be running** (`nohup bash /tmp/harvest.sh`): every 4 min
-it reads `/content/as_state.json` and `colab download`s completed chapters to
+**The harvest loop must be running** (`nohup bash /tmp/colab_harvest.sh` — v2
+polls BOTH sessions): every 4 min it reads each lane's `/content/as_state.json`
+and `colab download`s completed chapters to
 `/tmp/harvest/armed_struggle_CHAPTER_cillian.mp3` (log: `/tmp/harvest.log`).
-A VM reclaim then costs at most the in-progress chapter — proven by the first
-session, lost 40 min into the Preface.
+Lane scopes are disjoint so filenames never collide. A VM reclaim then costs at
+most the in-progress chapter — proven by the first session, lost 40 min into
+the Preface.
+
+**Watchdog** (`scripts/colab_watchdog.py`, v2, khpi5 `/tmp/`): covers BOTH
+lanes — re-adopt pruned registry entries, respawn keep-alive, refresh proxy
+tokens <15 min to expiry, probe `ALIVE|DEAD <remain>` and relaunch a dead
+runner while its lane scope is unfinished. **Always start it with the CLI venv
+python** (`/home/dave/.local/share/uv/tools/google-colab-cli/bin/python`) —
+system python3 dies on `pydantic_core`. It never auto-provisions: a reclaimed
+VM logs `manual re-provision required`.
 
 **Windows-side pull (per harvest):** `scp khpi5:/tmp/harvest/* ` →
 `evaluations/new-engines/output/`; waveform gate + ASR completeness; only then
