@@ -165,8 +165,12 @@ is a chapter "done".
 **Economics / lanes:** L4 ≈ 1.54 units/h; book ≈ 40–55 GPU-h ≈ 60–90 units of
 the ~197 balance. Kaggle fallback lane kernels:
 `scripts/prepare_kaggle_fish_as_book_chapter.py` (weekly 30 h cap applies).
-Lightning AI: GPU requires a linked payment method on free tier (verified
-400 PermissionDenied) — key held in `.secrets/lightning_api_key`, dormant.
+Lightning AI: GPU required a linked payment method on free tier (verified
+400 PermissionDenied) — **reversed 2026-09-24 ~20:00: Dave added a payment
+method + balance; GPU start verified working (real Tesla T4, then stopped)**.
+Key in `.secrets/lightning_api_key` + `LIGHTNING_USERNAME=david-mep9n`.
+Official rates (lightning.ai/pricing, checked 2026-09-24): T4 $0.55/h,
+L4 $0.79/h, L40S $2.14/h.
 
 ## Known limits
 
