@@ -5,8 +5,10 @@
 > The locked Cillian recipe (DECISIONS 2026-09-22) is rendering the **whole book**
 > (Preface → ch8 → Conclusion, 152,359 words) on a free AI-Pro Colab **L4**,
 > driven headless by `google-colab-cli` on khpi5 (`scripts/fish_colab_runner.py`;
-> resumable, per-chapter harvest loop). Preface ≈ 25–30 min (RTF ≈ 2.1); full
-> book ≈ 40–55 GPU-h against ~197 compute units @ 1.54/h. **Kaggle-era Preface &
+> resumable, per-chapter harvest loop). **Preface ✅ DONE+GATED** (83/83, 0 failures,
+> 12.3 min, RTF 2.8; waveform clean, ASR ratio 0.977 / coverage 95.5%, first+last
+> lines verbatim). Chapter 1 rendering now (~15 s/sentence → ~3.2 h). Full
+> book ≈ 40–55 GPU-h vs ~196 compute units @ 1.54/h. **Kaggle-era Preface &
 > Ch1 renders are superseded** — they predate the year/decade/time/ordinal prep
 > fixes found from Dave's "18xx read as 1,800" report; canonical prep with unit
 > tests is `scripts/as_prep.py`, payloads regenerated with zero stray digits.

@@ -99,8 +99,10 @@ read wrongly** — the payload scan must show zero digit runs before pushing a k
 
 - RTF **2.56–2.78x** on Kaggle T4×2 (single-AR-GPU; codec mostly idle → 2-GPU sentence
   sharding could ~halve wall time, not yet built).
-- **Colab L4 (2026-09-24/25): Preface 40/83 sentences in 14 min ≈ RTF ~2.1**;
-  compute cost **1.54 units/hour** → 197-unit balance ≈ 100–128 L4 GPU-hours.
+- **Colab L4 (2026-09-24/25): Preface DONE** — 83/83, 0 failures, 12.3 min audio
+  in 34 min (RTF ≈ 2.8); harvested + waveform-clean + ASR 95.5% coverage.
+  ch1 pace ~15 s/sentence (RTF ≈ 1.8–2). Compute cost **1.54 units/hour** →
+  197-unit balance ≈ 100–128 L4 GPU-hours.
 - Stress test (2026-09-22): 8/8 sentences, 0 failures, all dates/numbers verified by ASR.
 - Whole book (152,359 words, 10 sections ≈ 17–20h audio): **40–55 GPU-hours** —
   inside a single AI-Pro credit balance; earlier estimate of "~2 weeks of Kaggle
