@@ -8,22 +8,24 @@
 > session, halving wall-clock), driven headless by `google-colab-cli` on khpi5
 > (`scripts/fish_colab_runner.py`; lane scopes via `/content/as_chapters.txt`:
 > lane `render` = ch1,ch2,ch3,ch8; lane `render2` = ch4–ch7,conclusion).
-> **3 of 10 sections DONE+GATED — all PASS** (`scripts/gate_book_chapter.py`,
+> **5 of 10 sections DONE+GATED — all PASS** (`scripts/gate_book_chapter.py`,
 > thresholds word ≥0.93 / coverage ≥0.90 / RMS 0.02–0.30):
 >
 > | section | sents | length | RMS | ASR word ratio | coverage | WER |
 > |---|---|---|---|---|---|---|
 > | preface | 83/83 | 12.3 min | 0.0969 | 0.9937 | 0.965 | 0.038 |
 > | ch1 | 742/742 | 103.6 min | 0.0988 | 0.9944 | 0.9465 | 0.061 |
+> | ch2 | 652/652 | 96.2 min | 0.0975 | 0.990 | 0.9343 | — |
 > | ch4 | 687/687 | 89.6 min | 0.0977 | 0.9940 | 0.9506 | 0.056 |
+> | ch5 | 742/742 | 103.0 min | 0.0979 | 0.9909 | 0.9479 | — |
 >
-> In flight at 2026-09-25 00:10: **ch2** (lane `render`, 300/652) and **ch5**
-> (lane `render2`, 200/742). Full book ≈ 40–55 GPU-h split across lanes vs
-> ~196 compute units @ 1.54/h each lane. Watchdog v2 + harvest loop v2 both
-> cover both lanes; a local arm auto-pulls and auto-gates every landed chapter
-> (5 min cycle, atomic `.part` → rename) and reports `ALLDONE` with a verdict
-> table. **Kaggle 30 h weekly quota still blocked** (probed 2026-09-24) and
-> Lightning GPU still payment-walled, so neither is a lane. Total spend: **$0**.
+> In flight at 2026-09-25 06:40: **ch3** (lane `render`, 620/1,255) and
+> **ch6** (lane `render2`, 560/665, then ch7 + conclusion). Automated
+> pull+gate arm: `scripts/pull_and_gate_book.py` (5 min cycle). Full book ≈
+> 40–55 GPU-h split across lanes vs ~196 compute units @ 1.54/h each lane.
+> Watchdog v2 + harvest loop v2 both cover both lanes. **Kaggle 30 h weekly
+> quota still blocked** (probed 2026-09-24) and Lightning GPU still
+> payment-walled, so neither is a lane. Total spend: **$0**.
 >
 > Gate-source provenance verified 2026-09-25: the production bundle's 10
 > payloads are **byte-identical** to `scratch/as_book/*.json`, so every gate
