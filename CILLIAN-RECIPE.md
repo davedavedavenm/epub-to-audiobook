@@ -156,9 +156,11 @@ system python3 dies on `pydantic_core`. It never auto-provisions: a reclaimed
 VM logs `manual re-provision required`.
 
 **Windows-side pull (per harvest):** `scp khpi5:/tmp/harvest/* ` →
-`evaluations/new-engines/output/`; a local arm polls every 5 min, pulls
-atomically (`.part` → rename) and gates each chapter, reporting `ALLDONE` with
-a verdict table when all 10 `.gate.json` files exist.
+`evaluations/new-engines/output/`; automated by
+`scripts/pull_and_gate_book.py` — polls every 5 min, pulls atomically
+(`.part` → rename, with a remote size check before adoption), gates each
+chapter, never re-touches a gated one, and exits `ALLDONE` with a verdict
+table (rc 0 all-PASS / rc 2 any-FAIL) when all 10 `.gate.json` files exist.
 
 ## Gate — the only definition of "done"
 
