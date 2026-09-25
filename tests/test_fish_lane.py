@@ -171,7 +171,6 @@ def test_runner_is_lane_portable_but_defaults_to_content():
     # The deployed Colab lanes must keep their exact default behaviour.
     assert 'os.environ.get("FISH_BASE", "/content")' in src
     # No stray hardcoded /content outside the default + docstring.
-    import re
     strays = [l for l in src.splitlines()
               if '/content' in l and not l.strip().startswith('#')
               and 'FISH_BASE' not in l and '"""' not in l and 'Lane portability' not in l]

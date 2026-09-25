@@ -1,7 +1,6 @@
 """Regenerate all Armed Struggle chapter payloads with the canonical as_prep module,
 then hard-scan: zero digit runs, zero broken ordinals anywhere."""
 
-import glob
 import json
 import re
 import sys
