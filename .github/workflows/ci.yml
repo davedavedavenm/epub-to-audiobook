@@ -11,7 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # lfs: true is REQUIRED, not cosmetic: the voice-reference WAVs
+      # (chatterbox/voices/*.wav) are LFS-tracked, and without it checkout
+      # leaves pointer text files that make test_bundle_contract's wave.open
+      # fail with "file does not start with RIFF id".
       - uses: actions/checkout@v7
+        with:
+          lfs: true
 
       - uses: actions/setup-python@v7
         with:
