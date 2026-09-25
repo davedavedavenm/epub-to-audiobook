@@ -30,7 +30,10 @@ jobs:
 
       - name: Lint
         run: |
-          pip install -q ruff
+          # PINNED: an unpinned ruff made CI red on every push when releases
+          # added rules to files the repo's ratchet (ruff.toml) had frozen.
+          # Bump deliberately, not silently.
+          pip install -q "ruff==0.16.0"
           ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/ vibevoice/ qwen3/ pocket/ kitten/
 
       - name: Run tests

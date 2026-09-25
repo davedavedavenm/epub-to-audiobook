@@ -37,10 +37,15 @@ ignore = [
 "tada/server.py" = ["E722", "E402"]
 "scripts/wanted/wanted_monitor.py" = ["E722", "F841"]
 # Kaggle drivers pip-install their dependencies at RUNTIME, so those imports
-# physically cannot sit at the top of the file — E402 is the correct shape here.
+# physically cannot sit at the top of the file - E402 is the correct shape here.
 "scripts/kaggle/extract_vctk_voices.py" = ["E722", "E402"]
 "scripts/kaggle/run.py" = ["E722", "E402"]
 "scripts/kaggle/run_chatterbox.py" = ["E722", "E402"]
+# The Colab runner is the sibling of those drivers: it re-execs itself into a
+# venv python (os.execv) and pip-installs torch/numpy at RUNTIME, so numpy,
+# zipfile, torch and the fish_speech imports necessarily sit after bootstrap
+# blocks. Same reasoning, same ignore.
+"scripts/fish_colab_runner.py" = ["E402"]
 # Kernel-generator: the arm code is embedded via the `"""...\"\"\"""" + text +
 # """\"\"\"..."""` string-splice trick, so ruff's scope model sees the embedded
 # f-string braces as module-level expressions. Verified false positives — the

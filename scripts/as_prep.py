@@ -60,7 +60,6 @@ def ordinal_words(n):
         return _ORD_BASE.get(n, under100(n) + "th")
     d = n % 10
     if d == 0:
-        t = _TENS[n // 10]
         return {_TENS.index(tt): tt[:-1] + "ieth" for tt in ("twenty", "thirty", "forty",
                 "fifty", "sixty", "seventy", "eighty", "ninety")}[n // 10]
     return _TENS[n // 10] + "-" + _ORD_BASE.get(d, _ONES[d] + "th")
@@ -273,5 +272,10 @@ if __name__ == "__main__":
                   "seventeen sixty-three to ninety-eight",
                   "the thirtieth of January nineteen seventy-two"]:
         assert probe in joined, f"MISSING: {probe}"
-    assert not re.search(r"\d", joined), f"digits remain: {re.findall(r'.{0,25}\\d.{0,25}', joined)}"
+    # The context regex must live outside the f-string: a backslash inside an
+    # f-string expression is 3.12+ syntax (PEP 701) and this file must parse on
+    # the 3.11 container image. Hoisting it also fixes the pattern itself —
+    # r'\\d' matches a literal backslash followed by 'd', not a digit.
+    ctx = re.findall(r".{0,25}\d.{0,25}", joined)
+    assert not re.search(r"\d", joined), f"digits remain: {ctx}"
     print("ALL PREP TESTS PASS")
