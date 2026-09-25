@@ -195,6 +195,12 @@ The same job can be driven through the app instead of the manual loop above:
 1. **Settings → Render Lanes** → set `COLAB_SSH_HOST` / `COLAB_SSH_USER`
    (khpi5) and optionally `FISH_LANE` (`auto` = free lanes only; name
    `lightning` explicitly to spend money).
+   **Done on the deployed stack 2026-09-25** (Dave approved): host
+   `192.168.1.143`, user `dave`, and the container's own key
+   (`epub-audiobook-sync`, SHA256:`DsfosNxi…mj0`) authorized in khpi5's
+   `authorized_keys` — verified live from inside the `epub-to-audiobook-ui`
+   container and through `/api/lanes` (`colab: ok`, live `render`/`render2`
+   sessions + 2/2 guard).
 2. Convert screen → engine **Fish S2 Pro** → pick a lane → Convert. A paid lane
    is refused **at POST** with the reason if its credentials are absent, so a
    doomed job never enters the queue.

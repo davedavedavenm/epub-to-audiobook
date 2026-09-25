@@ -98,15 +98,21 @@
 > `python:3.11-slim` (`Would install … urllib3-2.8.0 vastai-1.5.4`, clean).
 > Decision recorded in DECISIONS (GPU / Vast.ai policy).
 >
-> **Open — the deployed panel cannot reach the Colab control plane yet.** The
-> webapp container's SSH key (`SHA256:DsfosNxi4bXuL87s1blOV5PcqC8Px1aANQDH09DVmj0`,
-> comment `epub-audiobook-sync`) is **not** in khpi5's `authorized_keys`, and no
-> `COLAB_SSH_*` key exists in `app_settings`, so `/api/lanes` honestly reports
-> `colab: not-configured`. Wiring it = granting the container shell access to
-> khpi5 (lane_ctl.sh only touches `lane-<tag>` sessions by design, so
-> `render`/`render2` stay untouchable) — a decision for Dave, not a default.
-> The book render itself does not need it: lanes run headless with the harvest
-> loop, and gating pulls locally.
+> **Control-plane wiring DONE (2026-09-25, Dave approved):** the container's
+> key (`SHA256:DsfosNxi4bXuL87s1blOV5PcqC8Px1aANQDH09DVmj0`, comment
+> `epub-audiobook-sync`) is authorized on khpi5's `authorized_keys` (backup:
+> `authorized_keys.bak-20260925`), and `COLAB_SSH_HOST=192.168.1.143` /
+> `COLAB_SSH_USER=dave` are set in the app settings store (masked on read,
+> never in the repo — this app has no Infisical integration; its settings DB
+> is the documented credential store). Verified end-to-end: from inside the
+> `epub-to-audiobook-ui` container, `ssh dave@192.168.1.143
+> ~/as-lane/lane_ctl.sh status` returns live JSON; `/api/lanes` reports
+> `configured: [colab, kaggle]`, `colab: state=ok` with the live
+> `render`/`render2` sessions, harvest contents and the 2/2 guard; and the
+> Settings → Render Lanes card shows Colab FREE/ok. `auto` now resolves
+> **colab**. Optional future hardening: prefix the authorized_keys line with a
+> `command=` restriction to `lane_ctl.sh` (everything the app runs over SSH
+> goes through it) — deferred while the book render relies on that script.
 
 > ## 2026-09-23 Jev (TypeSafe) decision layer for TTS prep — ADDED, DEFAULT OFF, VALIDATED ON A REAL BOOK
 >
