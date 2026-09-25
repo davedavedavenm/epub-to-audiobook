@@ -8,7 +8,7 @@
 > session, halving wall-clock), driven headless by `google-colab-cli` on khpi5
 > (`scripts/fish_colab_runner.py`; lane scopes via `/content/as_chapters.txt`:
 > lane `render` = ch1,ch2,ch3,ch8; lane `render2` = ch4–ch7,conclusion).
-> **5 of 10 sections DONE+GATED — all PASS** (`scripts/gate_book_chapter.py`,
+> **8 of 10 sections DONE+GATED — all PASS** (`scripts/gate_book_chapter.py`,
 > thresholds word ≥0.93 / coverage ≥0.90 / RMS 0.02–0.30):
 >
 > | section | sents | length | RMS | ASR word ratio | coverage | WER |
@@ -16,16 +16,24 @@
 > | preface | 83/83 | 12.3 min | 0.0969 | 0.9937 | 0.965 | 0.038 |
 > | ch1 | 742/742 | 103.6 min | 0.0988 | 0.9944 | 0.9465 | 0.061 |
 > | ch2 | 652/652 | 96.2 min | 0.0975 | 0.990 | 0.9343 | — |
+> | ch3 | 1255/1255 | 176.1 min | 0.0985 | 0.987 | 0.938 | 0.067 |
 > | ch4 | 687/687 | 89.6 min | 0.0977 | 0.9940 | 0.9506 | 0.056 |
 > | ch5 | 742/742 | 103.0 min | 0.0979 | 0.9909 | 0.9479 | — |
+> | ch6 | 665/665 | — | — | 0.9893 | 0.9317 | — |
+> | ch7 | 415/415 | 54.3 min | 0.0996 | 0.990 | 0.950 | 0.054 |
 >
-> In flight at 2026-09-25 06:40: **ch3** (lane `render`, 620/1,255) and
-> **ch6** (lane `render2`, 560/665, then ch7 + conclusion). Automated
-> pull+gate arm: `scripts/pull_and_gate_book.py` (5 min cycle). Full book ≈
-> 40–55 GPU-h split across lanes vs ~196 compute units @ 1.54/h each lane.
-> Watchdog v2 + harvest loop v2 both cover both lanes. **Kaggle 30 h weekly
-> quota still blocked** (probed 2026-09-24) and Lightning GPU still
-> payment-walled, so neither is a lane. Total spend: **$0**.
+> In flight at 2026-09-25 13:45: **ch3 ✅ and ch7 ✅ gated** (see below), and
+> **ch8 + conclusion re-rendering after a lane incident** — the deployed
+> launch had mistyped render's scope (`ch4` for `ch8`) and both lanes crashed
+> on newline-polluted slugs after their clean prefixes; both were re-scoped
+> and relaunched on the warm VMs at 13:45 (weights still loaded, banked work
+> intact). ETA for both ≈ **16:00–16:20**, then automated gate ≈ 10 min, then
+> chaptered M4B → ABS. Automated pull+gate arm:
+> `scripts/pull_and_gate_book.py` (5 min cycle). Full book ≈ 40–55 GPU-h
+> split across lanes vs ~196 compute units @ 1.54/h each lane. Watchdog v2 +
+> harvest loop v2 both cover both lanes. **Kaggle 30 h weekly quota still
+> blocked** (probed 2026-09-24) and Lightning GPU still payment-walled, so
+> neither is a lane. Total spend: **$0**.
 >
 > Gate-source provenance verified 2026-09-25: the production bundle's 10
 > payloads are **byte-identical** to `scratch/as_book/*.json`, so every gate
