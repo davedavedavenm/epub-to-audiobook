@@ -177,6 +177,21 @@ def test_runner_is_lane_portable_but_defaults_to_content():
     assert not strays, strays
 
 
+def test_runner_scope_file_strips_slugs_instead_of_dropping_them():
+    """A trailing newline in as_chapters.txt must become a clean slug.
+
+    Incident 2026-09-25: the deployed launch wrote 'ch1,ch2,ch3,ch4\\n'. The
+    old no-strip parser turned the last entry into 'ch4\\n', crashed the lane
+    on payloads/ch4\\n.json, and an intermediate fix silently DROPPED the
+    polluted entry - a book would end up missing a chapter with no error.
+    The parser must strip first, then filter.
+    """
+    src = (ROOT / 'scripts' / 'fish_colab_runner.py').read_text(encoding='utf-8')
+    assert "s.strip() for s in SCOPE_FILE.read_text().split(\",\")" in src
+    # The silently-dropping form must never come back.
+    assert 'split(",") if s and s in ORDER' not in src
+
+
 # --- lane resolution rules -------------------------------------------------
 
 def _isolate_lane_creds(monkeypatch, tmp_path):
