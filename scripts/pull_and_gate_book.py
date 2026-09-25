@@ -61,6 +61,16 @@ def remote_listing() -> set:
     return {Line.rsplit("/", 1)[-1] for Line in r.stdout.splitlines() if Line.strip()}
 
 
+def remote_alarms() -> list:
+    """Control-plane alarm files (watchdog crash-loop etc.) — surfaced loudly."""
+    r = subprocess.run(
+        ["ssh", REMOTE, f"ls -1 {HARVEST_DIR}/ALARM_* 2>/dev/null"],
+        capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        return []
+    return [Line.rsplit("/", 1)[-1] for Line in r.stdout.splitlines() if Line.strip()]
+
+
 def pull(slug: str) -> bool:
     """scp to <name>.part then rename. Returns True when the full file is in place."""
     name = f"{PREFIX}{slug}{SUFFIX}"
@@ -137,6 +147,9 @@ def main() -> int:
     verdicts = {}
     while True:
         listing = remote_listing()
+        for a in remote_alarms():
+            log(f"*** CONTROL-PLANE ALARM: {a} — a render lane keeps crashing; "
+                f"see the file on {REMOTE} and /tmp/watchdog.log ***")
         for slug in SLUGS:
             if gate_for(slug).exists():
                 try:
