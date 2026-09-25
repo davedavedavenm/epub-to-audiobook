@@ -63,7 +63,15 @@
 >   Convert screen (`auto` / `colab` / `kaggle` / `lightning`, paid option
 >   badged "Costs money"), a **Render Lanes** Settings card
 >   (`COLAB_SSH_*`, `FISH_LANE`, `LIGHTNING_*`), and a live lane panel that
->   polls `/api/lanes` every 10 s. **Not yet verified in a browser.**
+>   polls `/api/lanes` every 10 s. **Deployed and verified 2026-09-25:**
+>   health reports `9e27092`; `/api/voices` shows the fish voice
+>   `preview_cached: true`; `/api/preview/fish_cillian_irish` serves the exact
+>   1,561,748-byte preview; `/api/lanes` reports honest per-lane states; the
+>   Settings Render Lanes card renders those states live in the browser; and
+>   the per-book fish lane picker was verified by executing
+>   `updateRenderOptions`' fish branch against the live `/api/lanes` payload
+>   (free options only when a free lane is configured; Lightning shown with a
+>   "Costs money" badge when configured; un-statused before the first poll).
 > - **Voice `fish_cillian_irish` is audition-ready and verified through the
 >   real API:** `/api/voices` → `preview_cached: true`;
 >   `/api/preview/fish_cillian_irish` → 200 `audio/mpeg`, 1,561,748 B matching
@@ -87,6 +95,16 @@
 > shows, and a new test pins that boundary. Resolution re-verified in
 > `python:3.11-slim` (`Would install … urllib3-2.8.0 vastai-1.5.4`, clean).
 > Decision recorded in DECISIONS (GPU / Vast.ai policy).
+>
+> **Open — the deployed panel cannot reach the Colab control plane yet.** The
+> webapp container's SSH key (`SHA256:DsfosNxi4bXuL87s1blOV5PcqC8Px1aANQDH09DVmj0`,
+> comment `epub-audiobook-sync`) is **not** in khpi5's `authorized_keys`, and no
+> `COLAB_SSH_*` key exists in `app_settings`, so `/api/lanes` honestly reports
+> `colab: not-configured`. Wiring it = granting the container shell access to
+> khpi5 (lane_ctl.sh only touches `lane-<tag>` sessions by design, so
+> `render`/`render2` stay untouchable) — a decision for Dave, not a default.
+> The book render itself does not need it: lanes run headless with the harvest
+> loop, and gating pulls locally.
 
 > ## 2026-09-23 Jev (TypeSafe) decision layer for TTS prep — ADDED, DEFAULT OFF, VALIDATED ON A REAL BOOK
 >
