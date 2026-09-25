@@ -100,7 +100,13 @@ if (BASE / "manifest.json").exists():
     VOICE_TAG = _mf.get("voice_tag") or VOICE_TAG
 SCOPE_FILE = BASE / "as_chapters.txt"
 if SCOPE_FILE.exists():
-    ORDER = [s for s in SCOPE_FILE.read_text().split(",") if s and s in ORDER]
+    # strip() is load-bearing: a trailing newline in the scope file must become
+    # a clean slug, not a silently-dropped chapter (the deployed 2026-09-24
+    # launch wrote 'ch1,ch2,ch3,ch4\n'; the old no-strip code crashed on
+    # 'ch4\n' and an earlier draft of this filter silently skipped the last
+    # entry instead - a book would end up missing a chapter with no error).
+    ORDER = [s.strip() for s in SCOPE_FILE.read_text().split(",")]
+    ORDER = [s for s in ORDER if s and s in ORDER]
 
 inf_path = BASE / "fish-speech/fish_speech/models/text2semantic/inference.py"
 src = inf_path.read_text()
