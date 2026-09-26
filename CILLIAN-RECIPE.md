@@ -221,8 +221,22 @@ the 10 sections `scripts/regenerate_as_book.py` maps. Queueing *The Armed
 Struggle* through the webapp would therefore render a different chapter split.
 Reconcile the chapter mapping first — see TTS-WATCH-FINDINGS.md 2026-09-25.
 
-**Finish line:** all 10 sections → chaptered M4B → replace audio of ABS item
-`7039379c` → ABS rescan → progress remap (Dave is 39.9% into "New States 1923–63").
+**Finish line — DONE 2026-09-26 03:11.** All 10 sections gated PASS →
+`scripts/assemble_armed_struggle_m4b.py` built the chaptered M4B (16.37 h,
+10 chapters, 1,017,790,689 B) and swapped it into ABS item `7039379c`
+(every old audio file moved out as `_SUPERSEDED_2026-09-26`, nothing
+deleted) → rescan → **Dave's position remapped by content** to 9,258.36 s =
+39.92 % into "Two – New States 1923–63", his exact Sep-19 stopping point.
+Two hard-won swap rules for next time: (1) after remapping a position in
+the ABS DB, the listener must **fully close the player and reopen fresh** —
+a stale player pushes its cached old-book absolute position back over the
+remap (this happened once; measured, fixed, verified); (2) expect a
+`database is locked` retry and a file-watcher race between the swap and the
+remap — both are handled in the script. The overnight watch that finished
+the delivery ran itself: watchdog (crash-loop-capped + ALARM files),
+20-minute scheduled passes, Telegram success/failure alerts, and a
+self-disabling schedule. Burn stopped after delivery (both L4 sessions +
+watchdog down). Total: **$0 cash, ≈118 of ~197 compute units.**
 
 **Economics / lanes:** L4 ≈ 1.54 units/h; book ≈ 40–55 GPU-h ≈ 60–90 units of
 the ~197 balance. Kaggle fallback lane kernels:
