@@ -1,50 +1,75 @@
 # Project Status & Remaining Tasks
 
-> ## 2026-09-25 — Armed Struggle headless Colab L4 production render — **IN FLIGHT**
+> ## 2026-09-26 — Armed Struggle — **DELIVERED** (render → 10/10 gated PASS → 16.37 h chaptered M4B → live in Audiobookshelf, listening position preserved)
 >
-> The locked Cillian recipe (DECISIONS 2026-09-22) is rendering the **whole book**
-> (Preface → ch8 → Conclusion, 152,359 words) on **two parallel free AI-Pro
-> Colab L4 lanes** (2026-09-24 18:27 — the account accepts a second concurrent
-> session, halving wall-clock), driven headless by `google-colab-cli` on khpi5
-> (`scripts/fish_colab_runner.py`; lane scopes via `/content/as_chapters.txt`:
-> lane `render` = ch1,ch2,ch3,ch8; lane `render2` = ch4–ch7,conclusion).
-> **8 of 10 sections DONE+GATED — all PASS** (`scripts/gate_book_chapter.py`,
-> thresholds word ≥0.93 / coverage ≥0.90 / RMS 0.02–0.30):
+> The locked Cillian recipe (DECISIONS 2026-09-22) rendered the **whole book**
+> (Preface → ch8 → Conclusion, 152,359 words, 7,173 sentences) on two parallel
+> free AI-Pro Colab L4 lanes, driven headless by `google-colab-cli` on khpi5.
+> Every section passed the delivery gate (`scripts/gate_book_chapter.py`:
+> waveform health + ASR completeness vs the exact rendered payload, thresholds
+> word ≥0.93 / coverage ≥0.90 / RMS 0.02–0.30):
 >
 > | section | sents | length | RMS | ASR word ratio | coverage | WER |
 > |---|---|---|---|---|---|---|
 > | preface | 83/83 | 12.3 min | 0.0969 | 0.9937 | 0.965 | 0.038 |
 > | ch1 | 742/742 | 103.6 min | 0.0988 | 0.9944 | 0.9465 | 0.061 |
-> | ch2 | 652/652 | 96.2 min | 0.0975 | 0.990 | 0.9343 | — |
-> | ch3 | 1255/1255 | 176.1 min | 0.0985 | 0.987 | 0.938 | 0.067 |
+> | ch2 | 652/652 | 96.2 min | 0.0975 | 0.990 | 0.9343 | 0.072 |
+> | ch3 | 1255/1255 | 176.1 min | 0.0985 | 0.9873 | 0.9383 | 0.067 |
 > | ch4 | 687/687 | 89.6 min | 0.0977 | 0.9940 | 0.9506 | 0.056 |
-> | ch5 | 742/742 | 103.0 min | 0.0979 | 0.9909 | 0.9479 | — |
-> | ch6 | 665/665 | — | — | 0.9893 | 0.9317 | — |
-> | ch7 | 415/415 | 54.3 min | 0.0996 | 0.990 | 0.950 | 0.054 |
+> | ch5 | 742/742 | 103.0 min | 0.0979 | 0.9909 | 0.9479 | 0.058 |
+> | ch6 | 665/665 | 89.3 min | 0.0980 | 0.9893 | 0.9317 | 0.075 |
+> | ch7 | 415/415 | 54.3 min | 0.0996 | 0.9898 | 0.9503 | 0.054 |
+> | ch8 | 962/962 | 132.9 min | 0.0984 | 0.9846 | 0.9481 | 0.056 |
+> | conclusion | 970/970 | 124.7 min | 0.0969 | 0.9936 | 0.9653 | 0.039 |
 >
-> In flight at 2026-09-25 13:45: **ch3 ✅ and ch7 ✅ gated** (see below), and
-> **ch8 + conclusion re-rendering after a lane incident** — the deployed
-> launch had mistyped render's scope (`ch4` for `ch8`) and both lanes crashed
-> on newline-polluted slugs after their clean prefixes; both were re-scoped
-> and relaunched on the warm VMs at 13:45 (weights still loaded, banked work
-> intact). ETA for both ≈ **16:00–16:20**, then automated gate ≈ 10 min, then
-> chaptered M4B → ABS. Automated pull+gate arm:
-> `scripts/pull_and_gate_book.py` (5 min cycle). Full book ≈ 40–55 GPU-h
-> split across lanes vs ~196 compute units @ 1.54/h each lane. Watchdog v2 +
-> harvest loop v2 both cover both lanes. **Kaggle 30 h weekly quota still
-> blocked** (probed 2026-09-24) and Lightning GPU still payment-walled, so
-> neither is a lane. Total spend: **$0**.
+> **Delivered 2026-09-26 ~03:15** (assembly built 02:54): `Armed Struggle.m4b`,
+> 1,017,790,689 bytes, 16.37 h, 10 FFMETADATA chapters — live in ABS item
+> `7039379c-0265-4597-9fd8-d083da521f03` (verified in the ABS DB: file size and
+> chapter list match the build). The old 3-chapter partial is preserved as
+> `/opt/stacks/audiobookshelf/Armed Struggle_SUPERSEDED_2026-09-26.m4b`,
+> outside the library. **Dave's position was remapped by content:** 11,130.18 s
+> (old book) → **9,258.36 s = 39.92 % into "Two – New States 1923–63"** — his
+> exact Sep-19 stopping point. Post-swap wrinkle: his player was still open
+> from before the swap and pushed its cached old-book absolute position
+> (~3:06) over the remap once; fixed by re-writing 9,258.36 and a full
+> close-and-reopen. **Swap rule for future books (settled): after remapping a
+> position in the ABS DB, the listener must fully close the player and reopen
+> fresh — a stale player will push its cached position back.**
 >
-> Gate-source provenance verified 2026-09-25: the production bundle's 10
-> payloads are **byte-identical** to `scratch/as_book/*.json`, so every gate
-> compares ASR against exactly the text that was rendered.
-> **Next on completion:** waveform+ASR gate each harvest → chaptered M4B →
-> replace ABS item `7039379c` audio → rescan → remap Dave's position (39.9% into
-> "New States 1923–63"). Full method: `CILLIAN-RECIPE.md`; runbook: same file's
-> orchestration section. Lightning AI ruled out as a lane (free-tier GPU needs a
-> payment method); Modal remains vetoed.
+> **Automation that carried the finish (all verified working):** the khpi5
+> watchdog (crash-loop-capped at 3 relaunches/hour, then a persisted
+> `/tmp/harvest/ALARM_*`), `scripts/pull_and_gate_book.py` (idempotent
+> pull+gate), `scripts/assemble_armed_struggle_m4b.py` (self-refuses below
+> 10/10 PASS; fixed mid-delivery by the overnight watch — multi-file swap
+> inventory, locked-DB retry, once-only remap marker, commit `3b2a6bd`), and
+> a scheduled OpenChamber pass every 20 min that gated landings, re-provisioned
+> reclaimed VMs, ran the assembly, sent **Telegram success/failure alerts**
+> (both fired as designed), then disabled itself. All Colab VMs and the
+> watchdog were **stopped after delivery** — nothing left burning.
+>
+> **Incidents paid for (full trail in TTS-WATCH-FINDINGS):** (1) launch-time
+> scope typo (`ch4` for `ch8`) + no-strip slug parser → both lanes
+> crash-looped silently for ~4 h while the watchdog logged fake health
+> (~15 GPU-h wasted; parser fixed + pinned by test; watchdog now
+> alarms instead of retrying); (2) Colab's 24 h VM wall reclaimed both lanes
+> mid-chapter on 2026-09-25 (ch8 ~64 %, conclusion ~77 % lost; re-provisioned
+> automatically/semi-automatically on fresh VMs — the wall is inherent,
+> start final chapters on young VMs); (3) first assembly run hit real script
+> bugs → failure alert fired, overnight pass fixed and delivered.
+>
+> **Spend: $0 cash.** Estimated ~118 of ~197 Colab compute units (≈77 L4-h
+> across two lanes, incl. the ~23-unit waste above). Wall clock: lanes up
+> 2026-09-24 18:27 → M4B built 2026-09-26 02:54. Gate-source provenance was
+> verified 2026-09-25 (bundle payloads byte-identical to `scratch/as_book/`).
+>
+> **Not done / next, honestly:** the Kaggle Fish kernel is still not wired
+> (quota-blocked e2e); a webapp lane **submit** e2e has still never run (the
+> account's 2 GPU slots were busy throughout — they are free now, so it is
+> testable); and `scripts/fish_bundle.py` still maps 24 sections for this
+> book's fixture vs the 10 the production payloads use — do not queue *this*
+> book through the webapp lane path until that mapping is reconciled.
 
-> ## 2026-09-25 — Render-lane webapp surface + free-only lane resolution — **BUILT, TESTED (399 green), DEPLOY IN PROGRESS**
+> ## 2026-09-25 - Render-lane webapp surface + free-only lane resolution - **DEPLOYED (commit 9e27092) AND VERIFIED - tests 400 green**
 >
 > The webapp can now submit, poll and harvest a Fish render lane instead of the
 > lane being a khpi5-only manual procedure:

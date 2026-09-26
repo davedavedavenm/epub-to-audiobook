@@ -92,6 +92,18 @@ preserving his exact listening position**.
   diffed byte-for-byte against `scratch/as_book/*.json` (identical). Measured
   and recorded in `TTS-WATCH-FINDINGS.md` 2026-09-25; revisit when a general
   book needs the webapp lane.
+- **DELIVERED 2026-09-26 03:11 (closure).** All 10 sections gated PASS (word
+  0.9846–0.9944, coverage 93.2–96.5 %); 16.37 h chaptered M4B live in ABS
+  item `7039379c` with every old audio file moved out as `_SUPERSEDED`,
+  nothing deleted; Dave's position preserved by content-remap (39.92 % into
+  "Two – New States 1923–63"). **ABS swap method settled:** remap via sqlite,
+  then the listener fully closes the player and reopens fresh — a stale
+  player pushes its cached old-book absolute position back over the remap
+  (measured once, fixed, verified). All Colab VMs and the watchdog stopped
+  post-delivery; the delivery-watch schedule is disabled-in-place. Spend: $0
+  cash, ≈118 of ~197 Colab units (≈23 of them the 2026-09-25 crash-loop
+  waste — full trail in TTS-WATCH-FINDINGS). Listening verdicts stay Dave's;
+  the preserved `18 - Afterword.mp3` has no 10-section counterpart yet.
 
 ---
 
