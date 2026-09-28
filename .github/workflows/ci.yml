@@ -71,7 +71,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/pwd" \
             ghcr.io/gitleaks/gitleaks:latest detect --source /pwd \
-            --no-banner --log-opts="--all"
+            --no-banner --log-opts="--all" --config /pwd/.gitleaks.toml
       - name: Fail loudly if leaks found
         if: failure()
         run: |

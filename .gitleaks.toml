@@ -1,0 +1,5 @@
+[allowlist]
+description = "Known fake test placeholder - not a real secret"
+regexes = [
+  '''AIza012345678901234567890123456789''',
+]
