@@ -1,5 +1,38 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-28 — Full live audit vs docs — **DONE** (metadata fixed, socket hardened, TADA-Cillian experiment preserved)
+>
+> Read-only audit of all docs against the live Zorin stack, then applied four fixes
+> (commit `9cc3623`, deployed via `scripts/deploy.sh master`, verified live):
+>
+> - **Stale version metadata fixed.** The running webapp/worker reported
+>   `git_sha ed060c3` / `v1.8.2` / build `2026-02-04` (Dockerfile defaults) because
+>   the last build bypassed `scripts/deploy.sh` and the live `.env` hardcoded
+>   `APP_VERSION=v1.8.2` / `APP_GIT_SHA=ed060c3`. **Fix:** removed both pins from
+>   the live `.env` and redeployed — health now reports `git_sha 9cc3623` /
+>   `2.1.0`. The metadata can no longer rot on a future rebuild. Rule 11 stands:
+>   use `scripts/deploy.sh`, never a bare `docker compose build`.
+> - **Raw Docker socket removed from webapp/worker.** `docker-compose.override.yml`
+>   was re-mounting `/var/run/docker.sock` into both containers, negating the
+>   AUDIT-PLAN 4.1 socket-proxy hardening. **Fix:** dropped both mounts; the only
+>   Docker path is now the whitelisted `docker-socket-proxy`
+>   (`DOCKER_HOST=tcp://docker-socket-proxy:2375`). Verified: 0 socket mounts on
+>   webapp and worker.
+> - **README current-plan pointer corrected.** PLAN-V6 is the current forward
+>   plan; V5 is previous (AGENTS.md already had it right).
+> - **TADA-Cillian experiment preserved & committed.** An uncommitted
+>   `cillian_irish_dry` transcript entry + `tada/voices/cillian_irish_dry.wav`
+>   duplicate sat on the Zorin working tree. Cillian is **not** a TADA voice in the
+>   app (only Breeze + Fish). Preserved as a dormant experiment; no TADA voice
+>   registration or listening verdict yet. See DECISIONS 2026-09-28.
+>
+> **Live state at close (all verified):** webapp/worker healthy at `9cc3623`;
+> `GPU_RENDER_ENABLED=0`; `/api/engines/health` — `tada/vibevoice/inworld/polly`
+> false, all free/local engines true; fish preview byte-exact (1,561,748 B); lanes
+> `colab/kaggle` configured, `state:ok`/idle (all 10 Armed Struggle chapters
+> harvested); queue empty; engine containers untouched by the redeploy (Up
+> 35-36 h).
+
 > ## 2026-09-26 — Armed Struggle — **DELIVERED** (render → 10/10 gated PASS → 16.37 h chaptered M4B → live in Audiobookshelf, listening position preserved)
 >
 > The locked Cillian recipe (DECISIONS 2026-09-22) rendered the **whole book**

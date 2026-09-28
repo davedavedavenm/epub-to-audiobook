@@ -12,6 +12,48 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## TADA Cillian is an undocumented experiment, not an offered voice — Active (2026-09-28)
+
+A live audit found an uncommitted `cillian_irish_dry` transcript entry and a
+`tada/voices/cillian_irish_dry.wav` duplicate on the Zorin working tree. **Cillian
+is never registered as a TADA voice** — the app exposes it only as Breeze
+(`breeze_cillian_irish`) and Fish (`fish_cillian_irish`); all synthesis uses the
+canonical `chatterbox/voices/cillian_irish_dry.wav`. The TADA additions are
+unwired and undocumented. Decision: the files are **preserved and committed as an
+experiment** (commit `9cc3623`), but they do **not** make Cillian a selectable
+TADA narrator)Skip a TADA voice registration, an app `VOICES` entry, and a
+listening verdict are all still required before it is offered. Until then the
+`cillian_irish_dry` TADA transcript + reference remain dormant.
+
+## Audit 2026-09-28: live audit vs docs — raw Docker socket override removed — Active
+
+A full live audit (Zorin stack at commit `c5b83d0`, then redeployed) against the
+docs surfaced and fixed three gaps:
+
+- **Stale version metadata.** The running webapp/worker reported `git_sha
+  ed060c3` / `v1.8.2` / build `2026-02-04` (Dockerfile defaults) because the last
+  build bypassed `scripts/deploy.sh` and the live `.env` hardcoded
+  `APP_VERSION=v1.8.2` / `APP_GIT_SHA=ed060c3`. **Fix:** removed both pins from
+  the live `.env` (so `deploy.sh` always stamps the real ref) and redeployed via
+  `scripts/deploy.sh master` — health now reports `git_sha 9cc3623` / `2.1.0`.
+  Lesson: never run a bare `docker compose build`; always use `scripts/deploy.sh`
+  (Rule 11).
+- **`docker-compose.override.yml` re-exposed the raw Docker socket.** The tracked
+  override mounted `/var/run/docker.sock` into `webapp` and `worker`, negating the
+  AUDIT-PLAN 4.1 hardening that routes Docker through the whitelisted
+  `docker-socket-proxy`. **Fix:** removed both raw socket mounts from the override
+  (commit `9cc3623`); `DOCKER_HOST=tcp://docker-socket-proxy:2375` is now the only
+  access path. **Check before any future deploy:** do not re-add the raw socket
+  mount; if the app ever needs a Docker capability the socket proxy does not
+  expose, extend the proxy allowlist, not the mount.
+- **README listed PLAN-V5 as the current forward plan.** Corrected to PLAN-V6
+  (commit `9cc3623`); AGENTS.md already had it right.
+
+The audit confirmed the docs otherwise match live reality: GPU/paid engines off
+(`GPU_RENDER_ENABLED=0`; `tada/vibevoice/inworld/polly` false),
+`chatterbox-nano` default narrator up, fish preview byte-exact, lanes idle post-
+delivery (all 10 Armed Struggle chapters harvested).
+
 ## Jev (TypeSafe) decision layer is opt-in and disambiguation-only — Active (2026-09-23)
 
 `webapp/jevspeak.py` adds an optional TypeSafe/Jev layer with two features, both
