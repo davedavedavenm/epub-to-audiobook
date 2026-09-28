@@ -54,3 +54,26 @@ jobs:
       - uses: actions/checkout@v7
       - name: Validate docker-compose
         run: docker compose config --quiet
+
+  # Secret scan on every push/PR so a credential can never land silently.
+  # The repo history contains scrubbed-but-once-present keys (e.g. archive/
+  # removed in e78117e), so a visibility flip is banned regardless — but this
+  # guard stops NEW leaks from entering the log in the first place.
+  # Uses the OSS gitleaks binary directly (no paid license secret required).
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks scan (full history)
+        run: |
+          docker run --rm -v "$PWD:/pwd" \
+            ghcr.io/gitleaks/gitleaks:latest detect --source /pwd \
+            --no-banner --log-opts="--all"
+      - name: Fail loudly if leaks found
+        if: failure()
+        run: |
+          echo "::error::gitleaks found a possible secret in the pushed history. Fix and amend before merging."
+          exit 1

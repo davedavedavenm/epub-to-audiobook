@@ -1,4 +1,8 @@
 services:
+  # Local data-dir overrides. SECURITY: never mount /var/run/docker.sock into
+  # webapp/worker here — Docker access must stay on the whitelisted
+  # docker-socket-proxy (AUDIT-PLAN 4.1, DOCKER_HOST=tcp://docker-socket-proxy:2375).
+  # If a Docker capability is missing, extend the proxy allowlist, not this mount.
   worker:
     volumes:
       - ./data/uploads:/data/uploads

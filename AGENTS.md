@@ -47,6 +47,11 @@ Read these before changing anything TTS- or text-related:
 | Doc | What it holds |
 |-----|---------------|
 | [DECISIONS.md](DECISIONS.md) | **Settled questions — check first, before STATUS.md.** |
+| [CILLIAN-RECIPE.md](CILLIAN-RECIPE.md) | **Locked Fish S2 Pro production recipe** — the exact method for the Cillian voice / Armed Struggle class of work. Read before any Fish/Cillian render. |
+| [JEVSPEAK.md](JEVSPEAK.md) | The optional TypeSafe/Jev normalization + boundary layer (OFF by default). Config, cost, failure/rollback. |
+| [GEMINI-SETUP.md](GEMINI-SETUP.md) | Free-only Gemini voice setup + safety procedure (dedicated Free project, never attach billing). |
+| [NVIDIA-NIM-DIAGNOSTIC.md](NVIDIA-NIM-DIAGNOSTIC.md) | Bounded MagpieTTS hosted-NIM diagnostic (one short text, key-gated). |
+| [AUDIT-PLAN.md](AUDIT-PLAN.md) | **Historical** 2026-07-22 remediation checklist. Not current config — DECISIONS/STATUS govern. |
 | [GETTING-STARTED.md](GETTING-STARTED.md) | New-user walkthrough: install, convert, connect an LLM, voices, ABS. |
 | [OPERATIONS.md](OPERATIONS.md) | Runbook + incident log: job states, failure responses, capacity truths. |
 | [STATUS.md](STATUS.md) | **Current state & remaining tasks — read first.** What's verified vs unverified vs not-done. |

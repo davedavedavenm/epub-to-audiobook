@@ -1,5 +1,32 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-09-28 — Recommendations implemented — commit `d3f9b41`-style pass (docs, CI secret-scan, .env hygiene)
+>
+> Follow-on to the 2026-09-28 audit, four improvements shipped (and #7 status
+> recorded):
+>
+> - **`.env.example` version pins removed.** `APP_VERSION`/`APP_GIT_SHA`/
+>   `APP_BUILD_TIME` no longer set in the example; `scripts/deploy.sh` is the single
+>   source of truth (stamps from the git ref). A bare `docker compose build` now
+>   reports an honest `unknown`, never a stale SHA — closes the metadata-rot class
+>   permanently.
+> - **`docker-compose.override.yml` guard comment added.** Warnings against ever
+>   re-mounting the raw `/var/run/docker.sock` into webapp/worker; Docker access
+>   stays on the whitelisted `docker-socket-proxy` (AUDIT-PLAN 4.1).
+> - **CI secret-scan added** (`secret-scan` job). Runs OSS gitleaks over the full
+>   history on every push/PR so a credential can never land silently. Uses the
+>   binary directly — no paid-license secret required.
+> - **AGENTS.md doc map extended** with CILLIAN-RECIPE.md, JEVSPEAK.md,
+>   GEMINI-SETUP.md, NVIDIA-NIM-DIAGNOSTIC.md, AUDIT-PLAN.md.
+> - **#7 render-lane submit e2e — still not run (explicit GPU decision).** The
+>   read/status path is now fully verified **live end-to-end**: `/api/lanes`
+>   returns live session JSON, and the app container→khpi5 SSH→`lane_ctl.sh status`
+>   path returns the real control-plane payload (4 stopped post-delivery colab
+>   sessions, `owned:false`, all 10 Armed Struggle chapters in harvest). What has
+>   still never run is the **submit** — it creates a real Colab session (counts
+>   GPU units). Per GPU-SAFETY / "explicit user request" rule, that stays behind
+>   Dave's go-ahead. Everything around it is verified live-ready.
+
 > ## 2026-09-28 — Full live audit vs docs — **DONE** (metadata fixed, socket hardened, TADA-Cillian experiment preserved)
 >
 > Read-only audit of all docs against the live Zorin stack, then applied four fixes
