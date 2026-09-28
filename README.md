@@ -350,7 +350,8 @@ Add your own from a 15–30 s WAV clip — see [GETTING-STARTED.md](GETTING-STAR
 - [LOW-COST-TTS.md](LOW-COST-TTS.md) — engine bake-off, costs & GPU strategy
 - [GPU-PLAYBOOK.md](GPU-PLAYBOOK.md) — one-command Vast GPU runbook
 - [GPU-SAFETY.md](GPU-SAFETY.md) — cloud GPU cost-safety rules
-- [PLAN-V5.md](PLAN-V5.md) — current forward plan
+- [PLAN-V6.md](PLAN-V6.md) — current forward plan
+- [PLAN-V5.md](PLAN-V5.md) — previous forward plan
 - [AGENTS.md](AGENTS.md) — guide for AI agents working in this repo
 
 ## Credits
