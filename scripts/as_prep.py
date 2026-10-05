@@ -114,6 +114,15 @@ PLACEHOLDER = "\ue000"
 
 
 def prep(raw: str, lexicon: dict) -> list[dict]:
+    # Footnote reference numerals arrive as standalone 1-3 digit lines. They MUST be
+    # removed before digits become words: the later paragraph filter runs after number
+    # conversion, so it never matched and ~234 stray "one"/"two"/... sentences were
+    # spoken aloud across Armed Struggle (found 2026-10-05).
+    raw = re.sub(r"(?m)^[ \t]*\d{1,3}[ \t]*$", "", raw)
+    # Editorial square brackets: "[Easter] Week" -> "Easter Week" (Higgs skips bracketed
+    # words entirely; Fish read them). "[sic]" is dropped; "[’]" keeps the apostrophe.
+    raw = re.sub(r"\[sic\]", "", raw)
+    raw = re.sub(r"\[([^\]\n]{1,60})\]", r"\1", raw)
     for key in sorted((k for k in lexicon if not k.startswith("_")), key=len, reverse=True):
         raw = raw.replace(key, lexicon[key])
 
@@ -258,6 +267,12 @@ if __name__ == "__main__":
     assert year_words(2002) == "two thousand and two"
     assert num_words(4500) == "four thousand five hundred"
     assert num_words(55000) == "fifty-five thousand"
+    # footnote numerals and editorial brackets (2026-10-05)
+    _t = prep("Before [Easter] Week was finished I had changed.\n\n2\n\nIt was a truly dramatic event [sic] indeed.", {})
+    _txt = " ".join(x["text"] for x in _t)
+    assert "Before Easter Week was finished" in _txt and "[" not in _txt and "sic" not in _txt, _txt
+    assert not any(x["text"].strip().lower() in ("one", "two") for x in _t), _t
+    assert all(x["text"].strip() != "two" for x in prep("Terrible beauty,\n\n2\n\nto the end of it all.", {}))
     assert num_words(15) == "fifteen"
     assert short_year_words("98") == "ninety-eight" and short_year_words("45") == "forty-five"
     out = prep("On 12 July 1921, by 1848 the ’98 spirit rose again; 4,500 attended, cost £15 million. On 9 October nothing moved. World War 1 began in 1914. In the early 1920s and late-1930s, 82 men and 12 rounds of .45 ammunition were counted. At 8.45 p.m. and around 10.30, the Catch 22 held on the 28th. It spanned 1919-21 and 1763–98, from January 30, 1972.", load_lexicon())
