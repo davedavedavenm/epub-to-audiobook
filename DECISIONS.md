@@ -12,6 +12,27 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## Higgs TTS 3 works on a Colab L4; emotion tags give a standout dramatic read — Active (2026-10-05)
+
+Reverses the 2026-09-20 "not runnable on free hardware" closure for the
+boundary it named (free Ampere+ compute): the AI-Pro Colab **L4** (Ada, bf16) runs
+`bosonai/higgs-audio-v3-tts-4b` correctly. Runtime that works: Python 3.12 venv,
+`vllm==0.30.0` + `vllm-omni==0.30.0` from PyPI (the Sep git-main pin no longer
+imports), deploy-yaml `FLASHINFER`→`TRITON_ATTN` and `max_model_len` 4096, `--dtype
+bfloat16` (`scripts/higgs3_colab_l4.py`). Do not install into Colab's system Python
+(3.13): torch mismatch. Measured RTF 1.2–1.9 (Fish S2 Pro ~2.7); ~1.8 compute units
+for install + four clips; waveform healthy (RMS 0.06–0.10).
+
+Dave's verdict (Cillian clone, 28 s full reference, seed 42): plain paragraph and
+plain/sadness+slow quote "all perfectly decent"; **`<|emotion:anger|>` quote "awesome,
+super super emotive"**. Emotion tags (`<|emotion:…|>`, `<|prosody:…|>`, start of
+utterance) are Higgs's documented control surface — what Fish S2 Pro lacks. Not yet
+done: ASR completeness check, a real full chapter, accent drift over long form, licence
+check of Boson's "no voice cloning without consent" prohibition for the Cillian
+reference (private listening only so far). Provenance: model card
+huggingface.co/bosonai/higgs-tts-3-4b and sgl-project.github.io/sglang-omni/cookbook/higgs_tts.html,
+read 2026-10-05.
+
 ## TADA Cillian is an undocumented experiment, not an offered voice — Active (2026-09-28)
 
 A live audit found an uncommitted `cillian_irish_dry` transcript entry and a

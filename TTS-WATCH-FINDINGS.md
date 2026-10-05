@@ -84,6 +84,10 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 05 October 2026 — Higgs TTS 3 on Colab L4 — **WORKS; emotion-tagged quote "awesome"; candidate for dramatic passages**
+- Reopened the 2026-09-20 closure (T4 fp16 collapsed): Colab L4 runs it cleanly. Working recipe in `scripts/higgs3_colab_l4.py` (py3.12 venv, vllm/vllm-omni 0.30.0 from PyPI, TRITON_ATTN, bf16). RTF 1.2–1.9; ~1.8 units.
+- Dave: A–C (plain paragraph, plain quote, sadness+slow) all "perfectly decent"; D (`<|emotion:anger|>`) "super super emotive". Open: ASR check, full-chapter long-form drift, Boson consent-clause review for the Cillian clone. Colab also lists A100/G4 as eligible on this plan (H100 not).
+
 ### 02 October 2026 — edge0 streaming MoE LLM inference framework — **watch; NOT suitable today (no Linux/CPU path); re-check when the unified framework ships (roadmap Q4 2026)**
 
 - **What it is (not TTS):** open-source (Apache-2.0) streaming MoE **LLM** inference framework from Edge0-AI, first release 2026-09-08; technical report arXiv:2609.18063 (2026-09-16). Recipe: SSD expert offload (peak memory bounded by the *active* expert set, not parameter count) + Recover-LoRA (frozen int4 base, distilled adapters recover most quantisation loss) + trained prerouter (one-step-ahead expert prefetch, up to +59% decode). Two preview tiers bundled with trained adapters: `Edge0-35B-A3B` (Qwen3.6-35B-A3B base; ~23 GB disk, ~2.9 GiB active RAM, vendor 15–28 tok/s decode) and `Edge0-8B-A1B` (Ling 3.0 base; ~4.2 GB disk, ~1.0 GiB active, vendor 24–45 tok/s). **All benchmark/quality numbers are vendor-reported and unverified by us** (self-run OpenCompass: −3.9 pts avg vs fp16 base for 35B, −2.8 for 8B).
