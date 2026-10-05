@@ -5195,7 +5195,7 @@ def bookfinder_search():
     try:
         from openbooks_client import search_openbooks_async
         import asyncio
-        results = asyncio.run(search_openbooks_async(query, timeout=30.0))
+        results = asyncio.run(search_openbooks_async(query, timeout=90.0))
         resp = jsonify({'results': results})
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp

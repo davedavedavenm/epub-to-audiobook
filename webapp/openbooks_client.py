@@ -15,7 +15,7 @@ OPENBOOKS_BOOKS_DIR = os.getenv("OPENBOOKS_BOOKS_DIR", "/home/dave/docker-apps/c
 
 _ws_lock = threading.Lock()
 
-async def _do_search(clean_query: str, timeout: float = 20.0):
+async def _do_search(clean_query: str, timeout: float = 90.0):
     for attempt in range(1, 3):
         try:
             async with aiohttp.ClientSession() as session:
@@ -32,7 +32,7 @@ async def _do_search(clean_query: str, timeout: float = 20.0):
                             logger.warning(f"OpenBooks search timed out after {timeout}s for '{clean_query}'")
                             break
                         try:
-                            msg = await asyncio.wait_for(ws.receive(), timeout=min(remaining, 15.0))
+                            msg = await asyncio.wait_for(ws.receive(), timeout=remaining)
                             if msg.type == aiohttp.WSMsgType.TEXT:
                                 data = json.loads(msg.data)
                                 if data.get("type") == 2:  # Search Results
@@ -76,7 +76,7 @@ async def _do_search(clean_query: str, timeout: float = 20.0):
                 await asyncio.sleep(1.0)
     return []
 
-async def search_openbooks_async(query: str, timeout: float = 20.0):
+async def search_openbooks_async(query: str, timeout: float = 90.0):
     if not query or not query.strip():
         return []
 
@@ -86,7 +86,7 @@ async def search_openbooks_async(query: str, timeout: float = 20.0):
     with _ws_lock:
         return await _do_search(clean_query, timeout=timeout)
 
-async def _do_grab(command: str, timeout: float = 35.0):
+async def _do_grab(command: str, timeout: float = 180.0):
     filename = None
     for attempt in range(1, 3):
         try:
@@ -103,9 +103,13 @@ async def _do_grab(command: str, timeout: float = 35.0):
                         if remaining <= 0:
                             break
                         try:
-                            msg = await asyncio.wait_for(ws.receive(), timeout=min(remaining, 25.0))
+                            msg = await asyncio.wait_for(ws.receive(), timeout=remaining)
                             if msg.type == aiohttp.WSMsgType.TEXT:
                                 data = json.loads(msg.data)
+                                if data.get("type") == 0 and data.get("appearance") == 3:
+                                    # OpenBooks reported a failed transfer: stop waiting
+                                    logger.warning(f"OpenBooks error: {data.get('title')}")
+                                    break
                                 if data.get("type") == 3:  # Book file received
                                     filename = data.get("detail")
                                     logger.info(f"OpenBooks downloaded: {filename}")
@@ -122,7 +126,7 @@ async def _do_grab(command: str, timeout: float = 35.0):
                 await asyncio.sleep(1.0)
     return filename
 
-async def grab_openbooks_async(command: str, timeout: float = 35.0):
+async def grab_openbooks_async(command: str, timeout: float = 180.0):
     if not command:
         raise ValueError("No download command specified")
 
