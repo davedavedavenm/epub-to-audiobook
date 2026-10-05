@@ -12,7 +12,10 @@ import threading
 logger = logging.getLogger(__name__)
 
 OPENBOOKS_WS_URL = os.getenv("OPENBOOKS_WS_URL", "ws://192.168.1.113:6082/ws")
-OPENBOOKS_SSH_HOST = os.getenv("OPENBOOKS_SSH_HOST", "docker-vm")
+# By IP, not the `docker-vm` alias: inside the container ~/.ssh/config maps that alias to
+# /root/.ssh/id_ed25519, which the app user cannot read, so publickey auth fails; the IP
+# falls through to the app user's own default key (the same host the WebSocket URL uses).
+OPENBOOKS_SSH_HOST = os.getenv("OPENBOOKS_SSH_HOST", "192.168.1.113")
 OPENBOOKS_SSH_USER = os.getenv("OPENBOOKS_SSH_USER", "dave")
 OPENBOOKS_BOOKS_DIR = os.getenv("OPENBOOKS_BOOKS_DIR", "/home/dave/docker-apps/calibre-web-automated/book-ingest")
 
