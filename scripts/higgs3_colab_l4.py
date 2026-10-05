@@ -1,6 +1,17 @@
-import subprocess, sys, time, os, io, base64, json, glob, re
+import base64
+import glob
+import io
+import json
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
-import urllib.request
+
+import numpy as np
+import requests
+import soundfile as sf
+
 OUT = Path("/content/out"); OUT.mkdir(exist_ok=True, parents=True)
 LOG = lambda *a: print(time.strftime("%H:%M:%S"), *a, flush=True)
 LOG(subprocess.run('nvidia-smi -L',shell=True,capture_output=True,text=True).stdout)
@@ -18,7 +29,6 @@ cfg = cfg.replace("attention_backend: FLASHINFER","attention_backend: TRITON_ATT
 yml.write_text(cfg); LOG("patched", yml)
 env = dict(os.environ, VLLM_ATTENTION_BACKEND="TRITON_ATTN", VLLM_USE_FLASHINFER_SAMPLER="0")
 srv = subprocess.Popen([VENV+"/bin/vllm","serve","bosonai/higgs-audio-v3-tts-4b","--host","127.0.0.1","--port","8095","--trust-remote-code","--omni","--dtype","bfloat16"],env=env,stdout=open("/content/vllm.log","w"),stderr=subprocess.STDOUT)
-import requests, numpy as np, soundfile as sf
 ok=False
 for _ in range(240):
     time.sleep(10)
