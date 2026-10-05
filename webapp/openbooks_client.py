@@ -3,6 +3,9 @@ import asyncio
 import json
 import logging
 import os
+import re
+import shlex
+import time
 import subprocess
 import threading
 
@@ -140,29 +143,85 @@ async def grab_openbooks_async(command: str, timeout: float = 180.0):
 
     return filename
 
-def _bg_sync_to_studio(filename: str):
-    """Background helper to sync grabbed book from docker-vm to Audiobook Studio uploads."""
+OPENBOOKS_CALIBRE_LIBRARY = os.getenv(
+    "OPENBOOKS_CALIBRE_LIBRARY", "/home/dave/docker-apps/calibre-web-automated/calibre-library")
+_SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=no"]
+
+
+def _library_search_terms(filename: str):
+    """(author_last_name, first_long_title_word) from an OpenBooks filename.
+
+    "Patrick Radden Keefe - Say Nothing- A True Story ... (retail) (epub).epub"
+    -> ("Keefe", "Nothing"). Calibre-Web-Automated renames/truncates titles on ingest, so
+    only these two stable tokens are matched against the library path.
+    """
+    stem = os.path.splitext(filename)[0]
+    stem = re.sub(r"\s*[\(\[][^\)\]]*[\)\]]", "", stem)
+    author, sep, title = stem.partition(" - ")
+    if not sep:
+        author, title = "", stem
+    author_tokens = re.findall(r"[A-Za-z0-9]+", author)
+    title_tokens = re.findall(r"[A-Za-z0-9]+", title)
+    long_words = [w for w in title_tokens if len(w) > 3] or title_tokens
+    return (author_tokens[-1] if author_tokens else ""), (long_words[0] if long_words else "")
+
+
+def _scp_from_docker_vm(remote_path: str, local_dest: str) -> bool:
+    cmd = ["scp"] + _SSH_OPTS + [f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_path}", local_dest]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    return res.returncode == 0 and os.path.exists(local_dest) and os.path.getsize(local_dest) > 0
+
+
+def _find_in_calibre_library(filename: str):
+    """Newest .epub in the Calibre library whose path matches the book, else None."""
+    author_last, title_word = _library_search_terms(filename)
+    if not (author_last and title_word):
+        return None
+    ext = os.path.splitext(filename)[1].lower() or ".epub"
+    # shlex.quote: the tokens come from a remote filename
+    cmd = (f"find {shlex.quote(OPENBOOKS_CALIBRE_LIBRARY)} -type f -iname {shlex.quote('*' + ext)} "
+           f"-ipath {shlex.quote('*' + author_last + '*')} -ipath {shlex.quote('*' + title_word + '*')} "
+           "-printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-")
+    res = subprocess.run(["ssh"] + _SSH_OPTS + [f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}", cmd],
+                         capture_output=True, text=True, timeout=30)
+    out = res.stdout.strip()
+    return out if res.returncode == 0 and out else None
+
+
+def _bg_sync_to_studio(filename: str, wait_s: float = 120.0, poll_s: float = 6.0):
+    """Copy a grabbed book from docker-vm into the conversion app's uploads.
+
+    OpenBooks saves into <ingest>/books/<file> and Calibre-Web-Automated moves it into its
+    library within seconds, so the book is looked for in the drop folder first and then, by
+    author/title, in the Calibre library. (The old code looked only for <ingest>/<file>,
+    which never exists, so grabbed books never reached the app.)
+    """
     local_upload_dir = os.getenv("UPLOAD_DIR", "/data/uploads")
     os.makedirs(local_upload_dir, exist_ok=True)
     local_dest = os.path.join(local_upload_dir, filename)
-
     if os.path.exists(local_dest):
-        return
+        return True
 
-    remote_src = f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{OPENBOOKS_BOOKS_DIR}/{filename}"
-    logger.info(f"Background syncing {filename} from {remote_src} to {local_dest}...")
-    try:
-        cmd = ["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no", remote_src, local_dest]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        if res.returncode != 0:
-            remote_calibre_dir = "/home/dave/docker-apps/calibre-web-automated/calibre-library"
-            find_cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}", f"find '{remote_calibre_dir}' -name '{filename}'"]
-            find_res = subprocess.run(find_cmd, capture_output=True, text=True, timeout=8)
-            if find_res.returncode == 0 and find_res.stdout.strip():
-                remote_file = find_res.stdout.strip().splitlines()[0]
-                subprocess.run(["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no", f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_file}", local_dest], timeout=10)
-    except Exception as e:
-        logger.warning(f"Background SCP skipped or timed out (book safely ingested into Calibre-Web): {e}")
+    candidates = [f"{OPENBOOKS_BOOKS_DIR}/books/{filename}", f"{OPENBOOKS_BOOKS_DIR}/{filename}"]
+    deadline = time.monotonic() + wait_s
+    while True:
+        try:
+            for remote in candidates:
+                if _scp_from_docker_vm(remote, local_dest):
+                    logger.info(f"Synced {filename} to {local_dest} from the drop folder")
+                    return True
+            remote = _find_in_calibre_library(filename)
+            if remote and _scp_from_docker_vm(remote, local_dest):
+                logger.info(f"Synced {filename} to {local_dest} from the Calibre library ({remote})")
+                return True
+        except Exception as e:
+            logger.warning(f"Background sync attempt for {filename} failed: {e}")
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(poll_s)
+    logger.warning(f"Could not sync {filename} to uploads (it is safely in Calibre if ingest succeeded)")
+    return False
+
 
 def grab_and_import_book(command: str, title: str = "", author: str = ""):
     """
