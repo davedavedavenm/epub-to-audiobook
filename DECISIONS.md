@@ -29,7 +29,22 @@ super super emotive"**. Emotion tags (`<|emotion:…|>`, `<|prosody:…|>`, star
 utterance) are Higgs's documented control surface — what Fish S2 Pro lacks. Not yet
 done: ASR completeness check, a real full chapter, accent drift over long form, licence
 check of Boson's "no voice cloning without consent" prohibition for the Cillian
-reference (private listening only so far). Provenance: model card
+reference (private listening only so far). Mixed-passage verdicts (3 min of
+*Armed Struggle* ch.1, narration + quotes, Cillian clone, 2026-10-05): **accent
+"great/fantastic" in every arm; tagged chunked render "super super good"**
+(emotion loved; Tom Barry quote slightly over-acted → use milder/no tag there;
+heading lines each got a 0.5 s gap → "pause fatigue"; merge heading lines into one
+chunk). **Per-sentence generation (33 requests) is rejected by ear** — sentences sound
+clipped and strung together; **paragraph-sized chunks (<=~70 words, tags inline at
+sentence starts) fixed most of it.** Remaining defect is stochastic abrupt chunk ends
+(plain arm, "...even for a moment": end-of-clip RMS 0.27 of body vs ~0.01 for clean
+ends) → production runner needs an end-abruptness gate with seed re-roll (measure last
+50 ms RMS / body RMS, reroll if > 0.25). Single stray footnote numerals ("one",
+"two"…) in the payload are near-silent in Higgs and are read aloud by Fish in the
+delivered chapters — fix once in text prep. Mastering: the first mastered MP3s
+(EQ + single-pass dynamic loudnorm) were heard as clipped; gain-only WAV was clean, but
+my later gain-curve measurement showed the chain moves gain only ~1 dB, so the cause
+of that clipping is **unproven** — keep Higgs mastering gain-only until isolated. Provenance: model card
 huggingface.co/bosonai/higgs-tts-3-4b and sgl-project.github.io/sglang-omni/cookbook/higgs_tts.html,
 read 2026-10-05.
 
