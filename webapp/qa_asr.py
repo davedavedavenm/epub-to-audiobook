@@ -165,6 +165,39 @@ def diff_report(source_text: str, transcript: str, context: int = 4) -> dict:
     }
 
 
+def summarize_patterns(divergences: list[dict], top: int = 10) -> list[dict]:
+    """Group divergences into recurring classes so a systematic defect is one line.
+
+    The 2026-10-05 Higgs review found "bracketed editorial words are dropped" only because a
+    human read the raw diff. This groups the diff instead: drops/extras/subs by the words
+    involved, ranked by how often they recur and how many words they cost. Every entry is a
+    pointer to *listen here*, never an automatic fix (ASR mishears names - see
+    annotate_suggestions).
+
+    Returns [{kind, key, count, words, example}] sorted by (count, words) descending.
+    """
+    groups: dict[tuple, dict] = {}
+    for d in divergences:
+        src, heard = d.get('source') or [], d.get('heard') or []
+        if d['type'] == 'drop':
+            kind, key = 'dropped', ' '.join(src[:3])
+            if len(src) > 6:
+                kind, key = 'dropped-run', f'{len(src)}-word run'
+        elif d['type'] == 'extra':
+            kind, key = 'extra', ' '.join(heard[:3])
+            if len(heard) > 6:
+                kind, key = 'extra-run', f'{len(heard)}-word run'
+        else:
+            kind = 'changed'
+            key = f"{' '.join(src[:3])} -> {' '.join(heard[:3])}"
+        g = groups.setdefault((kind, key), {'kind': kind, 'key': key, 'count': 0, 'words': 0,
+                                            'example': d.get('context', '')})
+        g['count'] += 1
+        g['words'] += max(len(src), len(heard))
+    ranked = sorted(groups.values(), key=lambda g: (-g['count'], -g['words'], g['key']))
+    return ranked[:top]
+
+
 # Words the ASR has demonstrably mangled while the engine said them acceptably.
 # Applying a "fix" for these would corrupt audio that is already right.
 _ASR_ARTEFACT = re.compile(
@@ -256,6 +289,7 @@ def verify_chapter(audio_path: str | Path, source_text: str,
     rep['audio'] = str(audio_path)
     rep['flagged'] = rep['wer'] >= wer_flag
     rep['lexicon_suggestions'] = suggest_lexicon(rep['divergences'])
+    rep['patterns'] = summarize_patterns(rep['divergences'])
     return rep
 
 
