@@ -31,7 +31,7 @@ jobs:
       - name: Install deps
         run: |
           pip install -q flask requests gunicorn num2words nltk ebooklib \
-            beautifulsoup4 lxml boto3 kaggle pytest mutagen edge-tts
+            beautifulsoup4 lxml boto3 kaggle pytest mutagen edge-tts numpy soundfile
           pip install -q -r gemini/requirements.txt
 
       - name: Lint
