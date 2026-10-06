@@ -31,7 +31,6 @@ from pathlib import Path
 
 import modal
 
-from higgs_book_plan import L4_USD_PER_S, estimate_usd, load_bundle, plan_batches, spent_usd  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 for _p in (str(ROOT / "scripts"), str(ROOT / "webapp")):
@@ -193,7 +192,10 @@ def assemble_chapter(man_ch: dict, payload: dict, chunk_dir: Path, out_dir: Path
 
 
 def main(argv=None) -> int:
+    # driver-only imports: this module is also imported INSIDE the Modal image (image build + containers),
+    # where these local helpers are not present
     import fish_bundle
+    from higgs_book_plan import L4_USD_PER_S, estimate_usd, load_bundle, plan_batches, spent_usd
 
     ap = argparse.ArgumentParser(description="Render a book with Higgs TTS 3 on Modal")
     ap.add_argument("epub")
