@@ -233,6 +233,7 @@ def main(argv=None) -> int:
     if a.dry_run:
         return 0
 
+    book_dir.mkdir(parents=True, exist_ok=True)
     log = (book_dir / "run.log").open("a", encoding="utf-8")
     run = {"gpu_s": 0.0, "audio_s": 0.0, "chunks": 0, "flagged": 0, "failed": 0,
            "started": time.strftime("%Y-%m-%d %H:%M:%S")}
