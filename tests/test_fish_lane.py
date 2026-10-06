@@ -166,6 +166,32 @@ def test_engine_for_voice_and_runner_selection():
     assert FL.runner_path().name == 'fish_colab_runner.py'
 
 
+def test_repo_root_finds_scripts_in_both_layouts(tmp_path):
+    # container layout: /app/fish_lane.py with /app/scripts beside it (NOT one level up)
+    app = tmp_path / 'app'
+    (app / 'scripts').mkdir(parents=True)
+    (app / 'fish_lane.py').write_text('')
+    assert FL._repo_root(app / 'fish_lane.py') == app.resolve()
+    # source checkout: <repo>/webapp/fish_lane.py with <repo>/scripts
+    repo = tmp_path / 'repo'
+    (repo / 'webapp').mkdir(parents=True)
+    (repo / 'scripts').mkdir()
+    (repo / 'webapp' / 'fish_lane.py').write_text('')
+    assert FL._repo_root(repo / 'webapp' / 'fish_lane.py') == repo.resolve()
+    # the real module resolves to a directory that really contains the lane scripts
+    assert (FL._repo_root() / 'scripts' / 'fish_bundle.py').is_file()
+    assert FL.runner_path('higgs').is_file() and FL.runner_path('fish').is_file()
+
+
+def test_dockerfile_ships_every_script_the_lane_needs():
+    df = (ROOT / 'webapp' / 'Dockerfile').read_text(encoding='utf-8')
+    for f in ('fish_bundle.py', 'as_prep.py', 'fish_colab_runner.py', 'higgs_prep.py',
+              'higgs_colab_runner.py'):
+        assert f in df, f'{f} missing from webapp/Dockerfile - lane jobs would die in the container'
+    for d in ('fixtures/', 'chatterbox/voices/cillian_irish.wav'):
+        assert d in df
+
+
 def test_higgs_voice_registered_on_the_lane_engine():
     v = appmod.all_voices()['higgs_cillian_irish']
     assert v['engine'] == 'fish' and v['accent'] == 'Irish'

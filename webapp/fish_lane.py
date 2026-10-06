@@ -42,9 +42,18 @@ STUDIO_START_TIMEOUT = 900  # Lightning cold start + machine provisioning
 LANE_FAILS_BEFORE_ERROR = 5 # consecutive probe failures before giving up
 
 
-def _repo_root() -> Path:
-    # webapp/fish_lane.py -> repo root (in-container: /app/fish_lane.py -> /app)
-    return Path(__file__).resolve().parent.parent
+def _repo_root(here=None) -> Path:
+    """The directory that holds ``scripts/``.
+
+    Source checkout: ``<repo>/webapp/fish_lane.py`` -> ``<repo>`` (scripts is a sibling of
+    webapp). Container image: ``/app/fish_lane.py`` with ``/app/scripts`` beside it. The old
+    code always used ``parent.parent``, which is ``/`` in the container, so every lane job
+    died with "No module named 'fish_bundle'" (found 2026-10-06 on the first real submit).
+    """
+    here = Path(here or __file__).resolve()
+    if (here.parent / 'scripts').is_dir():
+        return here.parent
+    return here.parent.parent
 
 
 def runner_path(engine: str = 'fish') -> Path:
