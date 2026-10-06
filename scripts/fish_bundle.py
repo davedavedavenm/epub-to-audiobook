@@ -326,7 +326,7 @@ def scan_digit_runs(payloads: dict) -> list:
 def build_bundle(epub_path, out_zip, title: str | None = None,
                  start: int | None = None, end: int | None = None,
                  narration_ref: Path | None = None, engine: str = "fish",
-                 tagger=None, keep_matter: bool = False) -> dict:
+                 tagger=None, keep_matter: bool = False, chunk_max_words: int | None = None) -> dict:
     """Build the bundle zip at *out_zip* and return the manifest dict.
 
     *start*/*end* are 1-based renderable-chapter indexes (the same numbering
@@ -372,7 +372,7 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
                               "sents": sents}
             n_units = len(sents)
             if engine == "higgs":
-                chunks = higgs_prep.build_chunks(sents)
+                chunks = higgs_prep.build_chunks(sents, max_words=chunk_max_words or higgs_prep.MAX_WORDS)
                 tags = tagger(sents) if tagger else None
                 for ch in chunks:
                     tagged = higgs_prep.apply_tags(sents, ch, tags)
@@ -404,7 +404,8 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
         "voice_tag": "cillian_higgs" if engine == "higgs" else "cillian",
         "source": epub_path.name,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "recipe": RECIPE_HIGGS if engine == "higgs" else RECIPE,
+        "recipe": ({**RECIPE_HIGGS, "chunk_max_words": chunk_max_words or higgs_prep.MAX_WORDS}
+                   if engine == "higgs" else RECIPE),
         "chapters": manifest_chapters,
         "skipped": skipped_matter,
         "imprint_sentences_stripped": stripped,
@@ -442,9 +443,11 @@ def main(argv=None) -> int:
     ap.add_argument("--start", type=int, default=None)
     ap.add_argument("--end", type=int, default=None)
     ap.add_argument("--engine", choices=("fish", "higgs"), default="fish")
+    ap.add_argument("--chunk-words", type=int, default=None, help="Higgs chunk ceiling (default higgs_prep.MAX_WORDS)")
     a = ap.parse_args(argv)
     out = Path(a.out) if a.out else Path(a.epub).with_suffix(".as_bundle.zip")
-    m = build_bundle(a.epub, out, title=a.title, start=a.start, end=a.end, engine=a.engine)
+    m = build_bundle(a.epub, out, title=a.title, start=a.start, end=a.end, engine=a.engine,
+                     chunk_max_words=a.chunk_words)
     print(f"bundle: {m['bundle']} ({m['bytes']} bytes)")
     for c in m["chapters"]:
         print(f"  {c['slug']}  {c['sents']:5} sents  {c['words']:6} words  {c['title'][:60]}")
