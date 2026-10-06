@@ -108,34 +108,66 @@ def chapter_text(html: str) -> str:
 # 26k-word duplicate, Bibliography and Index as chapters = ~7 h of wasted GPU audio.
 _SKIP_TITLE = re.compile(
     r"^(copyright(\s+page)?|contents|table of contents|title page|half[- ]?title|cover|"
+    r"list of (abbreviations|illustrations|plates|maps|figures|tables)|abbreviations|"
     r"dedication|also by .*|by the same author|about the authors?|praise for .*|"
-    r"acknowledge?ments?|notes?|endnotes?|(a )?notes? on (the )?(sources?|text)|"
+    r"acknowledge?ments?|notes?( and references)?|references|endnotes?|(a )?notes? on (the )?(sources?|text)|"
     r"(select(ed)? )?bibliography|further reading|sources|index|permissions|credits|"
     r"(photo(graph)? )?credits|(list of )?illustrations|maps?|glossary|colophon)$",
     re.I)
 # Once one of these appears after real chapters, nothing that follows is narrative.
 _CUT_TITLE = re.compile(
-    r"^(acknowledge?ments?|notes?|endnotes?|(a )?notes? on (the )?(sources?|text)|"
+    r"^(acknowledge?ments?|notes?( and references)?|references|endnotes?|(a )?notes? on (the )?(sources?|text)|"
     r"(select(ed)? )?bibliography|further reading|sources|index|about the authors?)$",
     re.I)
 
 
-def filter_matter(chapter_list: list, keep_matter: bool = False) -> tuple[list, list]:
-    """(narrative chapters, skipped [{title, why}]). A chapter list is in spine order."""
+NARRATIVE_WORDS_BEFORE_CUT = 8000   # back matter is only recognised after this much real text
+MIN_KEPT_FRACTION = 0.5             # refuse to drop more than half of a book
+
+
+def _norm_title(t: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", (t or "").lower())
+
+
+def filter_matter(chapter_list: list, keep_matter: bool = False,
+                  book_title: str | None = None) -> tuple[list, list]:
+    """(narrative chapters, skipped [{title, why}]). A chapter list is in spine order.
+
+    Titles decide what is front/back matter; word counts (``c['words']``) decide WHEN the
+    back matter starts. The first version counted entries ("3 chapters seen") instead of
+    words, so on Armed Struggle the title page, copyright page and list of abbreviations
+    counted as chapters, "Acknowledgments" then triggered the cut, and EVERY real chapter was
+    dropped (1,767 words left). Hence: a cut needs >= NARRATIVE_WORDS_BEFORE_CUT words of
+    narrative first, and the whole filter raises rather than discard more than half the book.
+    """
     if keep_matter:
         return list(chapter_list), []
-    kept, skipped, narrative = [], [], 0
+    title_key = _norm_title(book_title or "")
+    kept, skipped, narrative_words = [], [], 0
+    total = sum(int(c.get("words") or 0) for c in chapter_list) or 1
     for pos, c in enumerate(chapter_list):
         title = re.sub(r"\s+", " ", str(c.get("title") or "")).strip()
-        if narrative >= 3 and _CUT_TITLE.match(title):
+        words = int(c.get("words") or 0)
+        if narrative_words >= NARRATIVE_WORDS_BEFORE_CUT and (_CUT_TITLE.match(title) or c.get("back_matter")):
             skipped.extend({"title": str(x.get("title") or ""), "why": "back matter (cut)"}
                            for x in chapter_list[pos:])
             break
         if _SKIP_TITLE.match(title):
             skipped.append({"title": title, "why": "front/back matter"})
             continue
+        # Title/half-title/copyright pages carry the BOOK'S title before any real text.
+        if (narrative_words < NARRATIVE_WORDS_BEFORE_CUT and words < 3000 and title_key
+                and _norm_title(title) and title_key.startswith(_norm_title(title))):
+            skipped.append({"title": title, "why": "title page"})
+            continue
         kept.append(c)
-        narrative += 1
+        narrative_words += words
+    kept_words = sum(int(c.get("words") or 0) for c in kept)
+    if kept_words < MIN_KEPT_FRACTION * total:
+        raise ValueError(
+            f"front/back-matter filter would keep only {kept_words}/{total} words "
+            f"({100 * kept_words // total}%) - refusing; inspect the chapter list "
+            f"or pass keep_matter=True")
     return kept, skipped
 
 
@@ -223,7 +255,8 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
     out_zip = Path(out_zip)
     lex = load_lexicon()
     chapter_list = _chapters.list_renderable_chapters(str(epub_path))
-    chapter_list, skipped_matter = filter_matter(chapter_list, keep_matter)
+    chapter_list, skipped_matter = filter_matter(chapter_list, keep_matter,
+                                                 book_title=title or epub_path.stem)
 
     payloads: dict = {}
     manifest_chapters = []

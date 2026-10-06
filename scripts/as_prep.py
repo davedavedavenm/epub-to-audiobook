@@ -186,6 +186,11 @@ def prep(raw: str, lexicon: dict) -> list[dict]:
                  lambda m: f"the {ordinal_words(int(m.group(2)))} of {m.group(1)} {year_words(int(m.group(3)))}", raw)
     raw = re.sub(r"\b(" + "|".join(_MONTHS) + r")\s+(\d{1,2})(?:st|nd|rd|th)?\b",
                  lambda m: f"the {ordinal_words(int(m.group(2)))} of {m.group(1)}", raw)
+    # one-digit range ends: "1972–6" -> "nineteen seventy-two to seventy-six", "1920–1" -> "... to twenty-one"
+    # (the end digit completes the start year's decade; found in Armed Struggle's chapter titles)
+    raw = re.sub(r"\b(\d{4})\s*[-–—]\s*(\d)\b",
+                 lambda m: f"{year_words(int(m.group(1)))} to "
+                           f"{short_year_words(m.group(1)[2] + m.group(2))}", raw)
     # year ranges: any 4-digit year to short or full second year
     raw = re.sub(r"\b(\d{4})\s*[-–—]\s*(\d{2}|\d{4})\b",
                  lambda m: f"{year_words(int(m.group(1)))} to {year_words(int(m.group(2))) if len(m.group(2)) == 4 else short_year_words(m.group(2))}",
@@ -295,6 +300,10 @@ if __name__ == "__main__":
     assert "early sixties" in _x and "Y N S" not in _x and "YNS six four nine K" in _x, _x
     assert "IRA twelve volunteers" in " ".join(t["text"] for t in prep("The IRA 12 volunteers met.", {}))
     assert "ninety-eight" in _x and not re.search(r"\d", _x), _x
+    # one-digit range ends (Armed Struggle chapter titles, 2026-10-06)
+    _r = " ".join(t["text"] for t in prep("FOUR 1972–6 and 1981–8 and During 1920–1 it ended.", {}))
+    assert "nineteen seventy-two to seventy-six" in _r and "nineteen eighty-one to eighty-eight" in _r, _r
+    assert "nineteen twenty to twenty-one" in _r and "–" not in _r, _r
     # line breaks from inline tags and photo credit lines (Say Nothing audit, 2026-10-06)
     _y = [t["text"] for t in prep(
         "At the headquarters of \nThe Times\n in London, a phone rang.\n\n"
