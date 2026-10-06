@@ -26,6 +26,7 @@ earlier "clipped" mastered MP3s is isolated.
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -143,6 +144,52 @@ def gate_chunk(w, sr, words):
     return True, m
 
 
+# ----------------------------------------------------------------------------
+# checkpoints: Colab removes these VMs after ~1 hour (3 of 3 on 2026-10-06), so finished chunk
+# audio must leave the VM continuously. The runner packs new chunk wavs into small
+# ckpt_<slug>_<lo>-<hi>.tgz files in /content/out; lane_ctl (khpi5) downloads them on every
+# progress poll and uploads them to the NEXT VM as /content/ckpt_*.tgz, where
+# restore_checkpoints() unpacks them so generation resumes at the first missing chunk.
+# ----------------------------------------------------------------------------
+
+CKPT_EVERY_CHUNKS = 10
+CKPT_EVERY_S = 120
+_CKPT_MEMBER = re.compile(r"ch\w+/\d{4}\.wav")
+
+
+def restore_checkpoints(base=None, wavs=None) -> int:
+    """Unpack uploaded ckpt_*.tgz into the wav bank; returns the number of wavs restored."""
+    import tarfile
+    n = 0
+    for t in sorted(glob.glob(str(Path(base or BASE) / "ckpt_*.tgz"))):
+        try:
+            with tarfile.open(t) as tf:
+                for m in tf.getmembers():
+                    if m.isfile() and _CKPT_MEMBER.fullmatch(m.name):   # nothing else is ever extracted
+                        tf.extract(m, str(wavs or WAVS))
+                        n += 1
+        except Exception as e:
+            log(f"checkpoint {Path(t).name} unreadable: {str(e)[:100]}")
+    return n
+
+
+def write_checkpoint(slug, lo, hi, wdir, out=None):
+    """Pack chunk wavs lo..hi (1-based, inclusive) of a chapter into out/ckpt_<slug>_<lo>-<hi>.tgz.
+    Written to a .part file and renamed, so a poller never sees a half-written archive."""
+    import tarfile
+    out = Path(out or OUT)
+    files = [Path(wdir) / f"{i:04d}.wav" for i in range(lo, hi + 1) if (Path(wdir) / f"{i:04d}.wav").exists()]
+    if not files:
+        return None
+    name = f"ckpt_{slug}_{lo:04d}-{hi:04d}.tgz"
+    part = out / (name + ".part")
+    with tarfile.open(part, "w:gz", compresslevel=1) as tf:
+        for f in files:
+            tf.add(f, arcname=f"{slug}/{f.name}")
+    part.rename(out / name)
+    return name
+
+
 def gap_after(chunk, next_chunk):
     """Silence after a chunk: 0.3 s within a paragraph or between headings, 0.5 s across
     paragraphs (kept in step with scripts/higgs_prep.gap_after; duplicated because this file
@@ -204,6 +251,9 @@ def main():
         wanted = [s.strip() for s in scope.read_text().split(",") if s.strip()]
         ORDER = [s for s in ORDER if s in wanted]
 
+    restored = restore_checkpoints()
+    if restored:
+        log(f"restored {restored} chunk wav(s) from checkpoints uploaded by the previous VM")
     bootstrap_env()
     import numpy as np
     import soundfile as sf
@@ -255,6 +305,10 @@ def main():
         log(f"=== {slug}: {len(chunks)} chunks, resuming at {st['progress'].get(slug, 0)} ===")
         warns = 0
         sr = 24000
+        ck_hi = 0                      # last chunk already packed into a checkpoint (or restored)
+        while (wdir / f"{ck_hi + 1:04d}.wav").exists():
+            ck_hi += 1
+        ck_t = time.time()
         for i, ch in enumerate(chunks, 1):
             wp = wdir / f"{i:04d}.wav"
             if wp.exists():
@@ -285,6 +339,13 @@ def main():
                     (wdir / f"{i:04d}.WARN").write_text(json.dumps(m))
                     log(f"  [{slug} {i}] WARN kept best attempt: {m}")
             st["progress"][slug] = i
+            if i > ck_hi and (i - ck_hi >= CKPT_EVERY_CHUNKS or time.time() - ck_t >= CKPT_EVERY_S):
+                name = write_checkpoint(slug, ck_hi + 1, i, wdir)
+                if name:
+                    st.setdefault("ckpts", []).append(name)
+                    STATE_PATH.write_text(json.dumps(st, indent=1))   # publish promptly
+                    last_save = time.time()
+                ck_hi, ck_t = i, time.time()
             if time.time() - last_save > 60 or i == len(chunks):
                 STATE_PATH.write_text(json.dumps(st, indent=1))
                 last_save = time.time()
@@ -316,6 +377,10 @@ def main():
                         "-codec:a", "libmp3lame", "-b:a", "192k", str(mp3)], check=True)
         raw.unlink()
         fails = len(list(wdir.glob("*.FAIL")))
+        # the finished chapter mp3 supersedes this chapter's checkpoints
+        for n in [n for n in st.get("ckpts", []) if n.startswith(f"ckpt_{slug}_")]:
+            st["ckpts"].remove(n)
+            (OUT / n).unlink(missing_ok=True)
         st["completed"].append(slug)
         st.setdefault("meta", {})[slug] = {"sec": round(len(full) / sr, 1), "sents": len(chunks),
                                            "fails": fails, "warns": warns, "gain_db": round(gain, 2)}

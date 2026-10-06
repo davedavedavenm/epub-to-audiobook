@@ -40,7 +40,8 @@ POLL_SECONDS = 60           # state is saved every 20 sentences (~7 min); 60 s p
 MAX_CRASH_RELAUNCHES = 2    # crash relaunches (a "10h budget" clean exit is NOT a crash)
 STUDIO_START_TIMEOUT = 900  # Lightning cold start + machine provisioning
 LANE_FAILS_BEFORE_ERROR = 5 # consecutive probe failures before giving up
-MAX_VM_RELAUNCHES = 8       # Colab reclaims of the VM (each resubmits only unbanked chapters)
+MAX_VM_RELAUNCHES = 60      # Colab removes these VMs after ~1 h (3 of 3 on 2026-10-06); a 17 h book
+                            # needs ~30 VMs. Each resubmit restores the chunk checkpoints, so it resumes mid-chapter.
 
 
 def _repo_root(here=None) -> Path:
@@ -172,7 +173,7 @@ def _max_hours(lane: str, manifest: dict | None = None) -> float:
     """Wall-clock cap for one lane job. An explicit FISH_LANE_MAX_HOURS always wins; with
     none set the cap scales with the book (a flat 12 h would have stopped a 14-hour
     audiobook, which needs ~20 GPU-hours, half way): ~1.5 GPU-h per audio hour (Fish is
-    slower, Higgs faster), x1.6 headroom for VM relaunches, +2 h, never below 12."""
+    slower, Higgs faster), x2.0 headroom for hourly VM relaunches, +2 h, never below 12."""
     try:
         import lanes as L
         explicit = (L._cfg('FISH_LANE_MAX_HOURS', '') or '').strip()
@@ -183,7 +184,7 @@ def _max_hours(lane: str, manifest: dict | None = None) -> float:
     if manifest:
         words = sum(int(c.get('words') or 0) for c in manifest.get('chapters', []))
         audio_h = words / 150 / 60
-        return max(12.0, round(audio_h * 1.5 * 1.6 + 2, 1))
+        return max(12.0, round(audio_h * 1.5 * 2.0 + 2, 1))
     return 12.0
 
 

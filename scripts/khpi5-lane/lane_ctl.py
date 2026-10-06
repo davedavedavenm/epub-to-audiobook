@@ -50,6 +50,38 @@ HEARTBEAT_S = 900        # a healthy runner rewrites state about every 7 min
 SCOPE_PFX = "lane-"
 TAG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 MP3_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.mp3$")
+# Chunk checkpoints written by the runner (see scripts/higgs_colab_runner.py): Colab removes
+# these VMs after ~1 hour, so finished chunks are pulled off the VM on every progress poll and
+# re-uploaded to the next VM. ckpt_<slug>_<lo>-<hi>.tgz
+CKPT_RE = re.compile(r"^ckpt_([A-Za-z0-9]+)_\d{4}-\d{4}\.tgz$")
+
+
+def pull_ckpts(tag: str, scope: str, payload: dict) -> int:
+    """Download checkpoints the runner has published but we do not have yet. Best effort:
+    a failed download is retried on the next poll."""
+    names = (payload.get("state") or {}).get("ckpts") or []
+    out = JOBS / tag / "out"
+    out.mkdir(parents=True, exist_ok=True)
+    got = 0
+    for n in names:
+        if not CKPT_RE.match(str(n)) or (out / n).is_file():
+            continue
+        try:
+            colab("download", "-s", scope, f"/content/out/{n}", str(out / n), timeout=300)
+            got += 1
+        except RuntimeError:
+            break
+    return got
+
+
+def ckpts_to_upload(jd: Path, scope_slugs) -> list:
+    """Checkpoint files on this side that a NEW VM needs: only chapters still to render."""
+    res = []
+    for f in sorted((jd / "out").glob("ckpt_*.tgz")):
+        m = CKPT_RE.match(f.name)
+        if m and (scope_slugs is None or m.group(1) in scope_slugs):
+            res.append(f)
+    return res
 
 
 def die(msg: str) -> NoReturn:
@@ -251,9 +283,15 @@ def cmd_submit(tag: str) -> None:
               "/content/runner.py", timeout=300)
         # Optional scope written by the webapp on a RESUBMIT: only the chapters not yet
         # banked, so a fresh VM never re-renders finished chapters.
+        scope_slugs = None
         if (jd / "as_chapters.txt").is_file():
             colab("upload", "-s", scope, str(jd / "as_chapters.txt"),
                   "/content/as_chapters.txt", timeout=120)
+            scope_slugs = {s.strip() for s in
+                           (jd / "as_chapters.txt").read_text().split(",") if s.strip()}
+        # Restore point for a replacement VM: every checkpointed chunk of the chapters still to render.
+        for f in ckpts_to_upload(jd, scope_slugs):
+            colab("upload", "-s", scope, str(f), f"/content/{f.name}", timeout=600)
     except RuntimeError as e:
         die(f"upload to {scope} failed: {e}")
 
@@ -334,6 +372,10 @@ def cmd_progress(tag: str) -> None:
         emit(out)
         return
     payload = _summarise(payload, jd, tag)
+    try:
+        pull_ckpts(tag, scope, payload)
+    except Exception:
+        pass   # never let checkpoint housekeeping break a progress reply
     text = json.dumps(payload, ensure_ascii=False)
     try:
         CACHE.mkdir(parents=True, exist_ok=True)
