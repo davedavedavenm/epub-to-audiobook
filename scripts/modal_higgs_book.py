@@ -241,7 +241,7 @@ def main(argv=None) -> int:
     log = (book_dir / "run.log").open("a", encoding="utf-8")
     run = {"gpu_s": 0.0, "audio_s": 0.0, "chunks": 0, "flagged": 0, "failed": 0,
            "started": time.strftime("%Y-%m-%d %H:%M:%S")}
-    containers = min(a.containers, len(batches))
+    containers = max(1, min(a.containers, len(batches)))   # >= 1 even when resuming a finished render
     round_size = containers * 3
     def render_all(worker, batches) -> bool:
         """Render every batch in rounds; False if the spend cap stopped it."""
