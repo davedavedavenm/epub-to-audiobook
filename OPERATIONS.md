@@ -27,6 +27,32 @@ STATUS.md.**
   reported overall `ok` at app revision
   `9dcff344cdd935089887e56db76f88b7238603a0`.
 
+## Higgs / Colab lane runbook (2026-10-06) - supersedes the 24 h assumptions below
+
+**One click:** Convert screen -> voice `higgs_cillian_irish`, render target Lane, lane Colab, format M4B. The webapp
+builds the bundle (`scripts/fish_bundle.py --engine higgs`), runs the **preflight audit** (refuses defective books
+before any GPU spend), pushes it to khpi5 and drives `~/as-lane/lane_ctl.sh` (source of truth:
+`scripts/khpi5-lane/`; deploy = copy to khpi5, backups `*.bak-<date>`).
+
+**Facts that bite:**
+- Colab removes lane VMs ~60 min after creation (measured 3/3, 2026-10-06). A reclaimed VM reports `session_gone`;
+  `render_colab` resubmits only unbanked chapters (max 60 relaunches). Finished chunks leave the VM every 10 chunks /
+  2 min as `ckpt_<slug>_<lo>-<hi>.tgz`, are pulled to khpi5 on every progress poll and uploaded to the next VM, which
+  restores them. Expect ~8 min cold start per VM; a 17 h book needs ~30 VMs.
+- **Cost:** units ~ audio hours x 1.4 x 1.54 x 1.15 (Armed Struggle ~42, Say Nothing ~34). Check `ssh khpi5 colab usage`.
+  Two long books do not fit one ~70 unit balance.
+- The queue/lane code lives in the webapp process: **do not deploy while a lane job is running** (the restart kills
+  its poll loop; khpi5 keeps rendering but nothing harvests). Deploy first, then submit.
+- `lane_ctl progress` returns `session_gone: true` for a dead VM and error JSON (exit 0) for an unreachable bridge;
+  both are failures, never "no news".
+
+**Checking a job:** `curl http://<zorin>:8881/api/jobs/<id>` and `/logs` ("banked", "VM gone", "relaunch");
+`ssh khpi5 '~/as-lane/lane_ctl.sh status'`; checkpoints are in `~/as-lane/jobs/<tag>/out/`.
+
+**Before pushing code:** `scripts/ci_local.sh` (clean checkout, pinned ruff, CI's deps, full tests).
+**Before trusting a change to text extraction:** `python scripts/corpus_audit.py <folder-of-epubs>` (Dave's 187 library
+books: 100 % pass). **Before a long run:** rehearse the failure that matters (kill a VM mid-chapter) - it found two bugs.
+
 ## Headless Colab production run — Armed Struggle Cillian render (2026-09-24)
 
 Control plane is **khpi5** (the Colab CLI is Linux-only). Repo-side method and

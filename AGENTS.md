@@ -142,6 +142,15 @@ playbook but skips these is a net negative.
     `/api/voices`, open `/api/preview/<voice_id>` yourself, and record the
     ready/total count. Never describe a wiped or incomplete cache as ready.
 
+15. **Run `scripts/ci_local.sh` before every push.** It runs CI's exact commands in a clean checkout of HEAD.
+    *Violation (2026-10-06): three red GitHub runs in one day - a test depending on an untracked copyrighted EPUB,
+    numpy missing in CI, a lint error - all invisible in the working folder.*
+16. **Rehearse the failure that matters before a long GPU run, and audit the book first.** A healthy 6-minute test
+    proved nothing about a 20-hour run: the lane had never survived Colab removing a VM (they last ~1 h), a dead VM
+    looked like an empty healthy probe, and a filter silently deleted every chapter of a book. Use the preflight
+    audit, `scripts/corpus_audit.py` (whole-library regression) and a kill-the-VM rehearsal. Never deploy while a
+    lane job is running.
+
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
 - The deployed stack is currently a Git checkout on Zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook` (the older `/opt/epub-to-audiobook` documentation was stale). Deploy **from git only**; never patch application source live. The default deploy enables Chatterbox Nano with **Beatrice (Nano)** (`uk_female_samuel_nano`) as system default narrator. Piper is fully retired after its controlled old/current-runtime + encoding A/B failed quality: do not restore its service, profile, route or voices without an explicit decision reversal. Chatterbox Turbo and TADA require the explicit `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1` opt-ins. Zorin was upgraded to an i5-12400 / 31 GB (2026-07-20); Chatterbox now runs comfortably for previews. TADA is opt-in and **works** as of 2026-07-27 (#23 closed — the OOM was fp32 on CPU; bf16 fits the cap, RTF 1.68).

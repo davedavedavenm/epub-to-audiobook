@@ -325,6 +325,23 @@ path is closed. Piper was fully retired from the executable product on
 gone; this section remains only as the evidence for that decision. See
 VOICES.md.
 
+## Higgs TTS 3 (Boson AI) - current production engine for new Cillian books (checked 2026-10-05)
+
+- **Model:** `bosonai/higgs-audio-v3-tts-4b` (~4B, BF16). Sources: huggingface.co/bosonai/higgs-tts-3-4b and
+  sgl-project.github.io/sglang-omni/cookbook/higgs_tts.html (model card + cookbook; vendor benchmarks are on an H100).
+- **Serving used:** `vllm==0.30.0` + `vllm-omni==0.30.0` in a clean Python 3.12 venv, `--omni --dtype bfloat16`, deploy
+  yaml patched `attention_backend FLASHINFER->TRITON_ATTN`, `max_model_len 8192->4096`. OpenAI-style `/v1/audio/speech`
+  with `ref_audio` (data URL) + `ref_text`. Colab L4 works; **T4 fp16 produces garbage** (2026-09-20).
+- **Control tags** (per sentence, one emotion each; they do not persist): 21 emotions (affection ... surprise), styles
+  `singing/shouting/whispering`, prosody `speed_*`, `pitch_*`, `expressive_*`, `pause`, `long_pause`, 9 sfx. This repo
+  allows only mild emotions (`higgs_prep.ALLOWED_EMOTIONS`); anger/shouting are blocked in code (Dave disliked "shouty").
+- **Licence:** Creator Use Grant permits audiobooks with prominent Boson credit; it **prohibits voice cloning without
+  consent**. The Cillian reference is a real person's voice, used here for private listening only - review before any
+  wider use.
+- **Measured:** RTF 1.2-1.9 on an L4; Say Nothing ch.4 WER 1.75 %. Per-sentence generation sounded clipped and strung
+  together; paragraph chunks (<=70 words) fixed it; output is gain-only (earlier EQ+loudnorm MP3s were heard as clipped).
+- Details and verdicts: DECISIONS "Higgs TTS 3 works on a Colab L4..." and "Higgs lane pipeline is wired end to end...".
+
 ## Hume TADA-1B
 
 Sources: [HumeAI/tada GitHub](https://github.com/HumeAI/tada) ·

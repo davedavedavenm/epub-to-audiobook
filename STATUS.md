@@ -1,5 +1,30 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-10-06 - Higgs TTS 3 is the production engine for new books; Colab lane rebuilt around a 1-hour VM limit
+>
+> **State at the end of the day (claim levels kept apart):**
+> - **VERIFIED:** Higgs TTS 3 (Cillian clone) renders correctly on a Colab L4 through the real webapp lane
+>   (Say Nothing ch.4: 22 chunks, 0 failed, ASR WER 1.75 %, ~0.5 unit). Dave's ear: "perfect"; names clip "all
+>   sounds great"; earlier mixed-passage test: accent "great", emotion loved, shouty parts disliked.
+> - **VERIFIED:** Colab removes lane VMs ~60 min after creation (3 of 3: 06:47->07:48, 16:45->17:46, 16:45->17:45
+>   UTC; the same setup ran 24 h in September). The runner now checkpoints chunks, `lane_ctl` pulls them each poll and
+>   uploads them to the next VM; rehearsed end to end (VM 2 log: "restored 6 chunk wav(s)").
+> - **VERIFIED:** automatic preflight + library audit: 187 of 187 real EPUBs pass (was 170 / 10 refused / 7 crashed).
+> - **IN PROGRESS (not done):** Armed Struggle re-render on Higgs, webapp job `8413750a`, started 2026-10-06 20:21,
+>   ~30 h wall, ~37-42 units of 69. **Say Nothing is deferred** (needs ~34 more units); its chapters 3-4 render fine.
+> - **NOT DONE:** moving Dave's Armed Struggle listening position (3 h 09 m 55 s, inside Chapter 2, ABS user dave) to
+>   the new audiobook and swapping the item in Audiobookshelf; deploying commit `8908cd1` (corpus-audit fixes) to
+>   Zorin - held back so a restart does not interrupt the running job loop.
+> - **Not built:** automatic emotion tags (plain narration only; the allow-list forbids anger/shouting).
+>
+> **Bugs that cost a day, all fixed with tests (details: DECISIONS "Colab lane VMs live ~1 hour..."):** lane_ctl counted
+> CLI update notices as live sessions (guard saw 4/2); the webapp container could not find `scripts/`; the HTML `<title>`
+> was read aloud ("Say-eight."); footnote digits were spoken; the matter filter deleted every Armed Struggle chapter; the
+> web path would have narrated the copyright page; a dead VM looked like an empty healthy probe and the loop spun 9 h;
+> Book Finder grabs "timed out" because the app hung up after 25 s (the IRC bot takes 55-65 s).
+> Rule: `scripts/ci_local.sh` before every push.
+
+
 > ## 2026-09-28 — Recommendations implemented — commit `d3f9b41`-style pass (docs, CI secret-scan, .env hygiene)
 >
 > Follow-on to the 2026-09-28 audit, four improvements shipped (and #7 status

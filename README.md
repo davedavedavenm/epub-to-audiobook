@@ -53,6 +53,14 @@ requires a separately authorised environment-gated session.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
+## Render lanes and the automatic book audit
+
+Long books render on a GPU **lane** (Colab via khpi5, never on the app host). Before any GPU time is spent, every book
+passes an automatic **preflight** (`scripts/book_preflight.py`: front/back matter, leaked file names, duplicate chapters,
+copyright pages, junk text; prints estimated hours and Colab units) and is refused with a reason if it is defective.
+The current voice for new books is Higgs TTS 3 (`higgs_cillian_irish`); see OPERATIONS.md "Higgs / Colab lane runbook"
+and ENGINES.md. Colab removes lane VMs after ~1 h, so renders checkpoint chunk audio and resume on a fresh VM.
+
 ## Features
 
 ### TTS Engines

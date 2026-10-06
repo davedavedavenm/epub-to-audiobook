@@ -34,6 +34,16 @@ Following extensive auditions on Modal Cloud GPUs across *Breakneck* and *The Ar
 
 ---
 
+## October 2026: Cillian on Higgs TTS 3 (`higgs_cillian_irish`)
+
+Zero-shot clone from the same 28 s Cillian reference (`chatterbox/voices/cillian_irish.wav`). Dave's verdicts:
+tough-Irish paragraph and plain quotes "perfectly decent"; an `<|emotion:anger|>` quote "awesome, super emotive" but
+*shouty is not wanted* (mild emotions only); mixed Armed Struggle opening: accent "great/fantastic" in every arm,
+per-sentence generation rejected ("clipped sentences strung together"), paragraph chunks "super super good"; Say Nothing
+ch.4 "perfect"; a 40-name Belfast/Irish names clip "all sounds great". Preview cached from ch.4
+(`/api/preview/higgs_cillian_irish`). Fish `fish_cillian_irish` remains the locked recipe that produced the delivered
+Armed Struggle (its text still has spoken footnote numerals; see STATUS 2026-10-06).
+
 ## The quality gate
 
 **The objective is a great-sounding audiobook.** Naturalness, authentic accent,

@@ -84,6 +84,9 @@ Sources: [runtime](https://github.com/FireRedTeam/FireRedTTS3), [weights](https:
 
 ## Watch log
 
+### 06 October 2026 - Colab lane VMs now last ~1 hour - **platform change; render design adapted**
+- 3 of 3 lane VMs created through `google-colab-cli` were pruned by Colab 60-61 min after creation (history events `session_terminated reason=pruned`; the keep-alive RPC still answered 200). In September the same setup ran 24 h. No vendor notice found; the CLI's bundled docs still describe only a 24 h cap. Consequence: chunk checkpointing + automatic VM relaunch (OPERATIONS runbook). Re-check if Colab changes policy; if VMs live long again the checkpoints are harmless overhead.
+
 ### 05 October 2026 — Higgs TTS 3 on Colab L4 — **WORKS; emotion-tagged quote "awesome"; candidate for dramatic passages**
 - Reopened the 2026-09-20 closure (T4 fp16 collapsed): Colab L4 runs it cleanly. Working recipe in `scripts/higgs3_colab_l4.py` (py3.12 venv, vllm/vllm-omni 0.30.0 from PyPI, TRITON_ATTN, bf16). RTF 1.2–1.9; ~1.8 units.
 - Dave: A–C (plain paragraph, plain quote, sadness+slow) all "perfectly decent"; D (`<|emotion:anger|>`) "super super emotive". Open: ASR check, full-chapter long-form drift, Boson consent-clause review for the Cillian clone. Colab also lists A100/G4 as eligible on this plan (H100 not).

@@ -1,5 +1,10 @@
 # Cillian Recipe — Fish S2 Pro Production Method (LOCKED 2026-09-22)
 
+> **2026-10-06 note:** this Fish S2 Pro recipe produced the delivered *Armed Struggle* and stays locked for
+> reproduction. **New Cillian books use Higgs TTS 3** (`higgs_cillian_irish`: paragraph chunks, per-chunk gates, gain-only
+> output, preflight, checkpoints) - see DECISIONS "Higgs lane pipeline..." and OPERATIONS "Higgs / Colab lane runbook".
+> The Fish text prep shipped spoken footnote numerals and chopped sentences; `as_prep.py` is fixed (new renders only).
+
 This is the locked, proven production method for **The Armed Struggle: The Story of
 the IRA** narrated by the **Cillian Murphy** voice, and the baseline recipe for any
 book narrated with this voice. Every element below was adopted through Dave's
