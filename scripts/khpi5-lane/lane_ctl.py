@@ -225,6 +225,7 @@ def cmd_submit(tag: str) -> None:
         die(f"lane_probe.py / lane_launch.py missing beside {HERE}")
 
     scope = scope_for(tag)
+    (CACHE / f"progress-{tag}.json").unlink(missing_ok=True)
     try:
         names = list_sessions()
     except RuntimeError as e:
@@ -248,6 +249,11 @@ def cmd_submit(tag: str) -> None:
               "/content/as_bundle.zip", timeout=1200)
         colab("upload", "-s", scope, str(jd / "runner.py"),
               "/content/runner.py", timeout=300)
+        # Optional scope written by the webapp on a RESUBMIT: only the chapters not yet
+        # banked, so a fresh VM never re-renders finished chapters.
+        if (jd / "as_chapters.txt").is_file():
+            colab("upload", "-s", scope, str(jd / "as_chapters.txt"),
+                  "/content/as_chapters.txt", timeout=120)
     except RuntimeError as e:
         die(f"upload to {scope} failed: {e}")
 
@@ -310,10 +316,22 @@ def cmd_progress(tag: str) -> None:
     try:
         payload = exec_probe(scope)
     except Exception as e:
-        # An unreachable bridge is reported as a probe error, not a crash:
-        # fish_lane counts consecutive failures before giving up.
-        emit({"state": {}, "remain": [], "alive": None, "dead_permanent": False,
-              "error": f"{type(e).__name__}: {e}", "log_tail": ""})
+        # An unreachable bridge is reported as a probe error, not a crash. If the VM
+        # itself is gone (Colab reclaimed / pruned it - seen 2026-10-06, exactly 1 h after
+        # `colab new`) say so explicitly: the caller must RESUBMIT, not keep polling a
+        # corpse. Before this, "gone" looked like a healthy probe with an empty state and
+        # the webapp spun silently for 9 hours.
+        gone = False
+        try:
+            gone = scope not in list_sessions()
+        except Exception:
+            pass
+        out = {"state": {}, "remain": [], "alive": None, "dead_permanent": False,
+               "error": f"{type(e).__name__}: {e}", "log_tail": ""}
+        if gone:
+            out["session_gone"] = True
+            (CACHE / f"progress-{tag}.json").unlink(missing_ok=True)
+        emit(out)
         return
     payload = _summarise(payload, jd, tag)
     text = json.dumps(payload, ensure_ascii=False)

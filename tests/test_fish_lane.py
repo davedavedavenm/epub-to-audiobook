@@ -166,6 +166,86 @@ def test_engine_for_voice_and_runner_selection():
     assert FL.runner_path().name == 'fish_colab_runner.py'
 
 
+class _FakeLane:
+    """Scripted lane_ctl: each `progress` call pops the next payload."""
+
+    def __init__(self, manifest, scripted):
+        self.manifest, self.scripted, self.cmds, self.chapters_files = manifest, list(scripted), [], []
+
+    def ssh(self, cmd, timeout=90):
+        self.cmds.append(cmd)
+        if cmd.strip() == 'echo $HOME':
+            return '/home/x'
+        if ' progress ' in cmd:
+            return json.dumps(self.scripted.pop(0))
+        if 'as_chapters.txt' in cmd:
+            self.chapters_files.append(cmd.split('echo ')[1].split(' >')[0])
+        return ''
+
+
+def _lane_manifest(n=3):
+    return {'engine': 'higgs', 'book_tag': 'bk', 'voice_tag': 'v',
+            'chapters': [{'slug': f'ch{i:02d}', 'index': i, 'title': f'T{i}', 'sents': 10, 'words': 500}
+                         for i in range(1, n + 1)]}
+
+
+def _run_colab(monkeypatch, tmp_path, scripted, n=3):
+    m = _lane_manifest(n)
+    fake = _FakeLane(m, scripted)
+    monkeypatch.setattr(FL, '_ssh', fake.ssh)
+    monkeypatch.setattr(FL, '_scp', lambda *a, **k: None)
+
+    def pull(remote, local):
+        Path(local).write_bytes(b'x' * 20000)
+    monkeypatch.setattr(FL, '_scp_pull', pull)
+    monkeypatch.setattr(FL, 'POLL_SECONDS', 0)
+    monkeypatch.setattr(FL.time, 'sleep', lambda s: None)
+    out = tmp_path / 'out'
+    out.mkdir()
+    ok, msg = FL.render_colab(tmp_path / 'b.zip', m, out)
+    return ok, msg, fake, out
+
+
+def test_colab_loop_relaunches_only_unbanked_chapters_when_the_vm_is_reclaimed(monkeypatch, tmp_path):
+    scripted = [
+        {'state': {'completed': ['ch01'], 'progress': {'ch01': 10, 'ch02': 3}}, 'remain': ['ch02', 'ch03']},
+        # Colab takes the VM away (lane_ctl: session_gone)
+        {'state': {}, 'remain': [], 'alive': None, 'session_gone': True, 'error': 'gone'},
+        # fresh VM renders the remaining two
+        {'state': {'completed': ['ch02', 'ch03'], 'progress': {'ch02': 10, 'ch03': 10}}, 'remain': []},
+    ]
+    ok, msg, fake, out = _run_colab(monkeypatch, tmp_path, scripted)
+    assert ok, msg
+    submits = [c for c in fake.cmds if ' submit ' in c]
+    assert len(submits) == 2, fake.cmds
+    # the resubmit rendered ONLY what was not banked (ch01 was already harvested)
+    assert fake.chapters_files == ['ch02,ch03'], fake.chapters_files
+    assert len(list(out.glob('*.mp3'))) == 3
+
+
+def test_colab_loop_counts_error_json_as_a_failed_probe(monkeypatch, tmp_path):
+    bad = {'state': {}, 'remain': [], 'alive': None, 'dead_permanent': False,
+           'error': 'RuntimeError: bridge down'}
+    ok, msg, fake, out = _run_colab(monkeypatch, tmp_path, [bad] * 10)
+    assert not ok and 'unreachable' in msg      # used to spin forever on this payload
+
+
+def test_colab_loop_gives_up_after_too_many_reclaims(monkeypatch, tmp_path):
+    gone = {'state': {}, 'remain': [], 'session_gone': True, 'error': 'gone'}
+    ok, msg, fake, out = _run_colab(monkeypatch, tmp_path, [gone] * (FL.MAX_VM_RELAUNCHES + 3))
+    assert not ok and 'reclaimed' in msg
+    assert len([c for c in fake.cmds if ' submit ' in c]) == FL.MAX_VM_RELAUNCHES + 1
+
+
+def test_lane_wallclock_cap_scales_with_the_book(monkeypatch):
+    monkeypatch.setattr(LN, '_cfg', lambda k, d='': '' if k == 'FISH_LANE_MAX_HOURS' else d)
+    big = {'chapters': [{'words': 125000}]}               # ~14 audio hours (Say Nothing)
+    assert FL._max_hours('colab', big) > 30
+    assert FL._max_hours('colab', {'chapters': [{'words': 3000}]}) == 12.0
+    monkeypatch.setattr(LN, '_cfg', lambda k, d='': '9' if k == 'FISH_LANE_MAX_HOURS' else d)
+    assert FL._max_hours('colab', big) == 9.0              # an explicit setting always wins
+
+
 def test_repo_root_finds_scripts_in_both_layouts(tmp_path):
     # container layout: /app/fish_lane.py with /app/scripts beside it (NOT one level up)
     app = tmp_path / 'app'

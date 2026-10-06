@@ -40,6 +40,7 @@ POLL_SECONDS = 60           # state is saved every 20 sentences (~7 min); 60 s p
 MAX_CRASH_RELAUNCHES = 2    # crash relaunches (a "10h budget" clean exit is NOT a crash)
 STUDIO_START_TIMEOUT = 900  # Lightning cold start + machine provisioning
 LANE_FAILS_BEFORE_ERROR = 5 # consecutive probe failures before giving up
+MAX_VM_RELAUNCHES = 8       # Colab reclaims of the VM (each resubmits only unbanked chapters)
 
 
 def _repo_root(here=None) -> Path:
@@ -156,12 +157,23 @@ def _mp3_name(manifest, slug: str) -> str:
     return f'{book}_{slug}_{voice}.mp3'
 
 
-def _max_hours(lane: str) -> float:
+def _max_hours(lane: str, manifest: dict | None = None) -> float:
+    """Wall-clock cap for one lane job. An explicit FISH_LANE_MAX_HOURS always wins; with
+    none set the cap scales with the book (a flat 12 h would have stopped a 14-hour
+    audiobook, which needs ~20 GPU-hours, half way): ~1.5 GPU-h per audio hour (Fish is
+    slower, Higgs faster), x1.6 headroom for VM relaunches, +2 h, never below 12."""
     try:
         import lanes as L
-        return float(L._cfg('FISH_LANE_MAX_HOURS', '12') or 12)
+        explicit = (L._cfg('FISH_LANE_MAX_HOURS', '') or '').strip()
+        if explicit:
+            return float(explicit)
     except Exception:
-        return 12.0
+        pass
+    if manifest:
+        words = sum(int(c.get('words') or 0) for c in manifest.get('chapters', []))
+        audio_h = words / 150 / 60
+        return max(12.0, round(audio_h * 1.5 * 1.6 + 2, 1))
+    return 12.0
 
 
 # --------------------------------------------------------------------------
@@ -394,7 +406,7 @@ def render_colab(bundle: Path, manifest: dict, out_dir: Path,
     fails = 0
     stopped = False
     t_start = time.time()
-    max_hours = _max_hours('colab')
+    max_hours = _max_hours('colab', manifest)
 
     def stop_job():
         nonlocal stopped
@@ -411,8 +423,18 @@ def render_colab(bundle: Path, manifest: dict, out_dir: Path,
         _ssh(f'mkdir -p {job_dir}/out')
         _scp(bundle, f'{job_dir}/as_bundle.zip')
         _scp(runner_path(manifest.get('engine', 'fish')), f'{job_dir}/runner.py')
-        _ssh(f'bash -lc "{ctl} submit {job_tag}"', timeout=300)
-        _log(log, f'lane colab: session submitted ({job_tag}); cold start ≈ 5-10 min')
+        def submit_remaining(why: str):
+            """(Re)submit the job rendering ONLY chapters not banked yet. Used for the first
+            submit of a resumed job and after Colab takes the VM away."""
+            remaining = [s for s, d in targets.items() if d not in harvested]
+            if len(remaining) < len(targets):
+                _ssh(f'bash -lc "echo {",".join(remaining)} > {job_dir}/as_chapters.txt"')
+            _ssh(f'bash -lc "{ctl} submit {job_tag}"', timeout=300)
+            _log(log, f'lane colab: {why} ({job_tag}); {len(remaining)}/{len(targets)} chapters '
+                      f'to render; cold start ≈ 5-10 min')
+
+        submit_remaining('session submitted')
+        vm_relaunches = 0
 
         while True:
             time.sleep(POLL_SECONDS)
@@ -421,6 +443,10 @@ def render_colab(bundle: Path, manifest: dict, out_dir: Path,
                 return False, f'lane budget cap ({max_hours} h) reached; session stopped — resume with Retry'
             try:
                 payload = json.loads(_ssh(f'bash -lc "{ctl} progress {job_tag}"'))
+                if payload.get('error') and not payload.get('state') and not payload.get('session_gone'):
+                    # lane_ctl reports an unreachable bridge as JSON with exit 0; that is a
+                    # failed probe, not a healthy empty state (this spun for 9 h on 2026-10-06).
+                    raise RuntimeError(str(payload['error'])[:300])
                 fails = 0
             except Exception as e:
                 fails += 1
@@ -430,8 +456,35 @@ def render_colab(bundle: Path, manifest: dict, out_dir: Path,
                     return False, f'colab bridge unreachable: {e}'
                 continue
 
+            if payload.get('session_gone'):
+                # Colab reclaimed/pruned the VM (seen 1 h after start). Chapters already
+                # banked are safe on this side; start a fresh VM for the rest.
+                if len(harvested) < len(targets):
+                    vm_relaunches += 1
+                    if vm_relaunches > MAX_VM_RELAUNCHES:
+                        stop_job()
+                        return False, (f'colab VM was reclaimed {vm_relaunches} times; giving up '
+                                       f'with {len(harvested)}/{len(targets)} chapters banked — '
+                                       f'Retry resumes from there')
+                    _log(log, f'lane colab: VM gone (reclaimed by Colab) — relaunch '
+                              f'{vm_relaunches}/{MAX_VM_RELAUNCHES}')
+                    try:
+                        submit_remaining('VM relaunched')
+                    except Exception as e:
+                        _log(log, f'lane colab: relaunch failed ({e}); will retry')
+                        vm_relaunches -= 1
+                        fails += 1
+                        if fails >= LANE_FAILS_BEFORE_ERROR:
+                            return False, f'colab relaunch failed: {e}'
+                    continue
+
             state = payload.get('state') or {}
             done, completed = _state_done(state)
+            # progress shown = chunks of banked chapters + the live VM's in-flight chapter
+            banked_units = sum(int(c.get('sents') or 0) for c in manifest.get('chapters', [])
+                               if targets.get(c['slug']) in harvested)
+            done = banked_units + sum(int(v or 0) for k, v in (state.get('progress') or {}).items()
+                                      if targets.get(k) not in harvested)
 
             for slug in sorted(completed):
                 dest = targets.get(slug)
@@ -451,7 +504,9 @@ def render_colab(bundle: Path, manifest: dict, out_dir: Path,
             if on_status:
                 on_status('running', (time.time() - t_start) / 60, (done, total))
 
-            if len(completed) >= len(targets) and len(harvested) == len(targets):
+            # `completed` only covers the CURRENT VM, so after a relaunch it is a subset;
+            # everything harvested is the authority.
+            if len(harvested) == len(targets):
                 try:
                     _ssh(f'bash -lc "{ctl} done {job_tag}"', timeout=60)
                 finally:
