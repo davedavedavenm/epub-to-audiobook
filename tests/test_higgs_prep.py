@@ -169,3 +169,19 @@ def test_matter_filter_on_the_real_armed_struggle_chapter_list():
     why = {s["title"]: s["why"] for s in skipped}
     assert "Contents" in why and "List of Abbreviations" in why and "Notes and References" in why
     assert "Index" in why and "Bibliography" in why
+
+
+def test_matter_filter_recognises_imprint_pages_by_text_and_strips_the_job_id_prefix():
+    import fish_bundle as fb
+    cl = [{"title": "ARMED STRUGGLE", "words": 1238, "snippet": "Superb . . . the first full history of the IRA"},
+          {"title": "Armed Struggle", "words": 229, "snippet": "First published two thousand three by Macmillan ISBN"},
+          {"title": "Preface", "words": 1900, "snippet": "Funerals. The first was for IRA man"},
+          {"title": "ONE The Irish Revolution", "words": 15871, "snippet": "x"},
+          {"title": "TWO New States", "words": 15095, "snippet": "x"}]
+    # webapp job file name, exactly as the lane derives it
+    kept, skipped = fb.filter_matter(cl, book_title="Armed Struggle - Richard English")
+    assert [c["title"] for c in kept] == ["Preface", "ONE The Irish Revolution", "TWO New States"]
+    assert {s["why"] for s in skipped} >= {"imprint/copyright page"}
+    # even with NO usable title, the copyright page is caught by its text
+    kept2, _ = fb.filter_matter(cl, book_title=None)
+    assert "Armed Struggle" not in [c["title"] for c in kept2]

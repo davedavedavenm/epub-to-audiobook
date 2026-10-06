@@ -100,6 +100,14 @@ def audit(manifest: dict, payloads: dict) -> dict:
                 digits.append(f"{c['slug']}#{i + 1}: {m.group(0)}")
         long_chunks += sum(1 for ch in p.get("chunks", []) if ch.get("words", 0) >= 70)
 
+    # An ISBN / URL / imprint line in the first chapters is a copyright page about to be read aloud.
+    imprint = re.compile(r"\bISBN\b|www\.[a-z0-9-]+\.|first published|all rights reserved|©", re.I)
+    for c in chapters[:3]:
+        hits = [t for t in _sentences(payloads[c["slug"]])[:40] if imprint.search(t)]
+        if hits:
+            errors.append({"rule": "front-matter-leak",
+                           "msg": f"{c['slug']} '{c['title'][:30]}' contains an imprint/ISBN/URL line "
+                                  f"(a copyright page would be narrated): {hits[0][:60]!r}"})
     if sent_total and junk_total / sent_total > 0.01:
         errors.append({"rule": "junk-heavy",
                        "msg": f"{junk_total}/{sent_total} sentences look like URLs/credits/symbols",

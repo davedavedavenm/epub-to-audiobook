@@ -122,6 +122,13 @@ _CUT_TITLE = re.compile(
     re.I)
 
 
+# Copyright / imprint pages are recognised by their TEXT, not only their title: a webapp job's file
+# name ("81b98898_Armed Struggle - Richard English.epub") defeats title matching, and the first
+# Armed Struggle web run would have narrated "www.panmacmillan.com" and the ISBN (2026-10-06).
+_FRONT_SNIPPET = re.compile(
+    r"first published|this (electronic |paperback )?edition published|all rights reserved|\bISBN\b|"
+    r"©|printed (in|by)|cataloguing[- ]in[- ]publication|www\.[a-z0-9-]+\.(com|co\.uk|org)",
+    re.I)
 NARRATIVE_WORDS_BEFORE_CUT = 8000   # back matter is only recognised after this much real text
 MIN_KEPT_FRACTION = 0.5             # refuse to drop more than half of a book
 
@@ -155,6 +162,10 @@ def filter_matter(chapter_list: list, keep_matter: bool = False,
             break
         if _SKIP_TITLE.match(title):
             skipped.append({"title": title, "why": "front/back matter"})
+            continue
+        if (narrative_words < NARRATIVE_WORDS_BEFORE_CUT and words < 3000
+                and _FRONT_SNIPPET.search(str(c.get("snippet") or ""))):
+            skipped.append({"title": title, "why": "imprint/copyright page"})
             continue
         # Title/half-title/copyright pages carry the BOOK'S title before any real text.
         if (narrative_words < NARRATIVE_WORDS_BEFORE_CUT and words < 3000 and title_key
@@ -257,7 +268,7 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
     lex = load_lexicon()
     chapter_list = _chapters.list_renderable_chapters(str(epub_path))
     chapter_list, skipped_matter = filter_matter(chapter_list, keep_matter,
-                                                 book_title=title or epub_path.stem)
+                                                 book_title=re.sub(r"^[0-9a-f]{8}_", "", title or epub_path.stem))
 
     payloads: dict = {}
     manifest_chapters = []

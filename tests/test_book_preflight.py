@@ -100,3 +100,10 @@ def test_say_nothing_and_armed_struggle_bundles_would_pass_but_the_old_bugs_woul
     man["chapters"][1]["title"] = "Index"
     rep = bp.audit(man, pay)
     assert not rep["ok"] and {"leaked-filename", "matter-in-body"} <= rules(rep, "errors")
+
+
+def test_imprint_page_in_the_first_chapters_is_refused():
+    """The webapp-path Armed Struggle failure: copyright page kept as chapter 2."""
+    man, pay = good()
+    pay["ch02"]["sents"][1]["text"] = "ISBN nine hundred and seventy-eight, www.panmacmillan.com"
+    assert "front-matter-leak" in rules(bp.audit(man, pay), "errors")
