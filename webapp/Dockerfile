@@ -50,7 +50,7 @@ COPY scripts/convert_book.py ./scripts/convert_book.py
 # lexicon via ROOT/fixtures, so the whole fixtures/ dir comes with it.
 COPY scripts/fish_bundle.py scripts/as_prep.py scripts/fish_colab_runner.py ./scripts/
 # Higgs TTS 3 lane engine: chunker (imported by fish_bundle) + the VM-side runner.
-COPY scripts/higgs_prep.py scripts/higgs_colab_runner.py ./scripts/
+COPY scripts/higgs_prep.py scripts/higgs_colab_runner.py scripts/book_preflight.py ./scripts/
 COPY fixtures/ ./fixtures/
 # The narration reference the bundle derives its quote crop from (tracked in
 # the repo alongside the other accent narrator WAVs).

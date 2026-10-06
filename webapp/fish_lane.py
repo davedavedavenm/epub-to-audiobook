@@ -109,6 +109,10 @@ def lane_ready(lane: str) -> tuple:
     return True, ''
 
 
+class PreflightRefused(Exception):
+    """The automatic book audit found a defect that would waste GPU time."""
+
+
 def _build_bundle(epub_path, start, end, log, engine='fish'):
     """Build the as_bundle.zip for the requested chapter range (1-based renderable
     indexes, the same numbers the job picker shows). Returns (zip_path, manifest)."""
@@ -119,6 +123,13 @@ def _build_bundle(epub_path, start, end, log, engine='fish'):
     tmp = Path(tempfile.mkdtemp(prefix='fishjob_'))
     z = tmp / 'as_bundle.zip'
     manifest = fish_bundle.build_bundle(epub_path, z, start=start, end=end, engine=engine)
+    import book_preflight
+    pre = manifest.get('preflight') or {}
+    if pre:
+        for line in book_preflight.format_report(pre).splitlines():
+            _log(log, line)
+        if not pre.get('ok') and not os.environ.get('FISH_PREFLIGHT_OVERRIDE'):
+            raise PreflightRefused('; '.join(f"{e['rule']}: {e['msg']}" for e in pre['errors'])[:600])
     _log(log, f"lane: bundle built ({manifest['bytes']} bytes, "
               f"{len(manifest['chapters'])} chapters, "
               f"{len(manifest.get('digit_runs', []))} bare digit runs)")
@@ -540,7 +551,10 @@ def render_on_lane(epub_path, voice, lane, start, end, out_dir,
     ready, why = lane_ready(lane)
     if not ready:
         return False, why
-    bundle, manifest = _build_bundle(epub_path, start, end, log, engine=engine_for_voice(voice))
+    try:
+        bundle, manifest = _build_bundle(epub_path, start, end, log, engine=engine_for_voice(voice))
+    except PreflightRefused as e:
+        return False, f'Preflight refused this book before any GPU time was spent: {e}'
     if not manifest.get('chapters'):
         return False, f'no renderable chapters in range {start}-{end}'
 

@@ -266,7 +266,7 @@ def test_repo_root_finds_scripts_in_both_layouts(tmp_path):
 def test_dockerfile_ships_every_script_the_lane_needs():
     df = (ROOT / 'webapp' / 'Dockerfile').read_text(encoding='utf-8')
     for f in ('fish_bundle.py', 'as_prep.py', 'fish_colab_runner.py', 'higgs_prep.py',
-              'higgs_colab_runner.py'):
+              'higgs_colab_runner.py', 'book_preflight.py'):
         assert f in df, f'{f} missing from webapp/Dockerfile - lane jobs would die in the container'
     for d in ('fixtures/', 'chatterbox/voices/cillian_irish.wav'):
         assert d in df

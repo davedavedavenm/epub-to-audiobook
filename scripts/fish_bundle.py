@@ -39,6 +39,7 @@ for _p in (str(ROOT), str(ROOT / "scripts"), str(ROOT / "webapp")):
         sys.path.insert(0, _p)
 
 from as_prep import load_lexicon, prep  # noqa: E402
+import book_preflight  # noqa: E402
 import higgs_prep  # noqa: E402
 
 DEFAULT_NARRATION_REF = ROOT / "chatterbox" / "voices" / "cillian_irish.wav"
@@ -85,7 +86,7 @@ _DROP_CAP = re.compile(r'<span[^>]*class="[^"]*dropcap[^"]*"[^>]*>([A-Za-z])</sp
 _TAGS = re.compile(r"<[^>]+>")
 # Digits attached to uppercase letters are acronym readings the lexicon or
 # listener expects verbatim (MI6, M60, B52); a BARE digit run is the defect.
-_BARE_DIGITS = re.compile(r"(?<![A-Za-z])\d+(?![A-Za-z])")
+_BARE_DIGITS = re.compile(r"(?<![A-Za-z0-9])\d+(?![A-Za-z])")
 
 
 def chapter_text(html: str) -> str:
@@ -314,6 +315,9 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
         "digit_runs": digits,
     }
 
+    # Automatic audit BEFORE anything is rendered; the lane refuses the job on errors.
+    manifest["preflight"] = book_preflight.audit(manifest, payloads)
+
     narr, quote, texts = read_refs(narration_ref)
 
     out_zip.parent.mkdir(parents=True, exist_ok=True)
@@ -348,6 +352,9 @@ def main(argv=None) -> int:
     print(f"bundle: {m['bundle']} ({m['bytes']} bytes)")
     for c in m["chapters"]:
         print(f"  {c['slug']}  {c['sents']:5} sents  {c['words']:6} words  {c['title'][:60]}")
+    print(book_preflight.format_report(m["preflight"]))
+    if not m["preflight"]["ok"]:
+        return 3
     if m["digit_runs"]:
         print(f"WARNING: {len(m['digit_runs'])} bare digit run(s) survive prep:")
         for d in m["digit_runs"][:10]:
