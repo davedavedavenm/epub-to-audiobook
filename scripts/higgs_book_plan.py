@@ -45,3 +45,17 @@ def spent_usd(gpu_seconds: float, containers_started: int) -> float:
     return round((gpu_seconds + containers_started * CONTAINER_START_S) * L4_USD_PER_S, 2)
 
 
+
+
+def pace_outliers(rows: list, fast: float = 0.85, slow: float = 1.6, min_words: int = 15) -> list:
+    """rows = [(chunk_index, words, seconds)] for ONE chapter -> indexes to re-render.
+
+    A chunk spoken much faster than the chapter's own median pace almost always lost words (the model
+    stopped early: Armed Struggle Preface chunk 23, 105 words in 29.2 s = 0.278 s/word vs median 0.368,
+    18 words missing); much slower usually means babble or a loop. Short chunks are ignored (headings)."""
+    import statistics
+    paced = [(i, s / w) for i, w, s in rows if w >= min_words and s > 0]
+    if len(paced) < 3:
+        return []
+    med = statistics.median(p for _, p in paced)
+    return [i for i, p in paced if p < fast * med or p > slow * med]

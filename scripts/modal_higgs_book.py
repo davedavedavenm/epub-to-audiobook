@@ -40,6 +40,7 @@ for _p in (str(ROOT / "scripts"), str(ROOT / "webapp")):
 MODEL = "bosonai/higgs-audio-v3-tts-4b"
 PORT = 8095
 SEEDS = (42, 43, 44, 45, 46)
+MIN_S_PER_WORD = 0.29   # Cillian/Higgs speaks ~0.37 s/word; faster than this a chunk lost words
 
 app = modal.App("higgs-book")
 
@@ -132,7 +133,7 @@ class Higgs:
             except Exception as e:
                 err = str(e)[:200]
                 continue
-            ok, m = hr.gate_chunk(w, sr, it["words"])
+            ok, m = hr.gate_chunk(w, sr, it["words"], min_s_per_word=MIN_S_PER_WORD)
             score = m.get("end", 9) if m.get("why") in (None, "abrupt end") else 99
             if best is None or ok or score < best[2]:
                 best = (w, m, score, ok, seed, sr)
@@ -195,7 +196,8 @@ def main(argv=None) -> int:
     # driver-only imports: this module is also imported INSIDE the Modal image (image build + containers),
     # where these local helpers are not present
     import fish_bundle
-    from higgs_book_plan import L4_USD_PER_S, estimate_usd, load_bundle, plan_batches, spent_usd
+    from higgs_book_plan import (L4_USD_PER_S, estimate_usd, load_bundle, pace_outliers, plan_batches,
+                                 spent_usd)
 
     ap = argparse.ArgumentParser(description="Render a book with Higgs TTS 3 on Modal")
     ap.add_argument("epub")
@@ -241,12 +243,12 @@ def main(argv=None) -> int:
            "started": time.strftime("%Y-%m-%d %H:%M:%S")}
     containers = min(a.containers, len(batches))
     round_size = containers * 3
-    with modal.enable_output(), app.run():
-        worker = Higgs()
+    def render_all(worker, batches) -> bool:
+        """Render every batch in rounds; False if the spend cap stopped it."""
         for r0 in range(0, len(batches), round_size):
             if spent_usd(run["gpu_s"], containers) > a.budget:
                 print(f"STOPPED: spend cap ${a.budget} reached (est ${spent_usd(run['gpu_s'], containers)})")
-                break
+                return False
             for res in worker.render.map(batches[r0:r0 + round_size], order_outputs=False, return_exceptions=True):
                 if isinstance(res, Exception):
                     print("batch error:", str(res)[:300], file=log, flush=True)
@@ -267,6 +269,38 @@ def main(argv=None) -> int:
             print(f"{time.strftime('%H:%M:%S')} round {r0 // round_size + 1}: {run['chunks']} chunks, "
                   f"{run['flagged']} flagged, {run['failed']} failed, ~${spent_usd(run['gpu_s'], containers)}, "
                   f"GPU-s per audio-s {run['gpu_s'] / max(run['audio_s'], 1):.2f}", flush=True)
+        return True
+
+    def pace_check() -> int:
+        """Delete chunks spoken far faster/slower than their chapter's median pace (lost words / babble)."""
+        import soundfile as sf
+        redo = 0
+        for c in man["chapters"]:
+            rows = []
+            for i, ch in enumerate(pay[c["slug"]]["chunks"], 1):
+                f = chunk_dir / c["slug"] / f"{i:04d}.wav"
+                if f.exists():
+                    rows.append((i, ch["words"], sf.info(str(f)).duration))
+            for i in pace_outliers(rows):
+                (chunk_dir / c["slug"] / f"{i:04d}.wav").unlink()
+                print(f"pace check: re-rendering {c['slug']}#{i}", file=log, flush=True)
+                redo += 1
+        return redo
+
+    with modal.enable_output(), app.run():
+        worker = Higgs()
+        for pass_no in range(1, 4):
+            if pass_no > 1:
+                redo = pace_check()
+                batches = plan_batches(man, pay, chunk_dir, a.batch)
+                for b in batches:
+                    b["parallel"] = a.parallel
+                print(f"pass {pass_no}: {redo} chunk(s) failed the pace check; {len(batches)} batch(es) to render",
+                      flush=True)
+                if not batches:
+                    break
+            if not render_all(worker, batches):
+                break
 
     done = []
     for c in man["chapters"]:

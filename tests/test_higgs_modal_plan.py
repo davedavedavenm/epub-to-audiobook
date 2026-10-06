@@ -75,3 +75,27 @@ def test_missing_chunk_is_skipped_and_gain_respects_peak():
     assert ha.loudness_gain_db(-26.0, -3.0) == 1.0         # +6 dB wanted, peak ceiling allows only +1
     assert ha.loudness_gain_db(-14.0, -10.0) == -6.0
     assert ha.loudness_gain_db(None, None) == 0.0
+
+
+def test_pace_outliers_catch_the_real_truncated_chunk():
+    # Armed Struggle Preface: median ~0.368 s/word; chunk 23 had 105 words in 29.2 s (18 words lost)
+    rows = [(i, 60, 60 * 0.37) for i in range(1, 20)] + [(23, 105, 29.2), (24, 1, 0.9), (25, 50, 50 * 0.7)]
+    out = hp.pace_outliers(rows)
+    assert 23 in out and 25 in out          # truncated (too fast) and babble/loop (too slow)
+    assert 24 not in out                    # one-word heading ignored
+    assert hp.pace_outliers([(1, 60, 22.0), (2, 60, 22.0)]) == []   # too few chunks to judge
+
+
+def test_gate_floor_is_configurable():
+    import os
+    import tempfile
+    os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
+    import higgs_colab_runner as hr
+    t = np.arange(int(29.2 * SR)) / SR
+    w = (0.2 * np.sin(2 * np.pi * 180 * t) * (0.6 + 0.4 * np.sin(2 * np.pi * 3 * t))).astype(np.float32)
+    k = int(0.4 * SR)
+    w[-k:] *= np.linspace(1, 0, k)
+    w[:int(0.2 * SR)] *= np.linspace(0, 1, int(0.2 * SR)) ** 3
+    assert hr.gate_chunk(w, SR, 105)[0] is True                       # old 0.18 floor let it through
+    ok, m = hr.gate_chunk(w, SR, 105, min_s_per_word=0.29)
+    assert not ok and "duration" in m["why"]

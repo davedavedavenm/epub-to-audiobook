@@ -118,7 +118,7 @@ def _rms(x):
     return float(np.sqrt(np.mean(x ** 2))) if len(x) else 0.0
 
 
-def gate_chunk(w, sr, words):
+def gate_chunk(w, sr, words, min_s_per_word=0.18):
     """Return (ok, metrics). ``w`` is mono float32."""
     import numpy as np
     d = len(w) / sr
@@ -131,7 +131,7 @@ def gate_chunk(w, sr, words):
     m.update(rms=round(rms, 4), md=round(md, 4), peak=round(pk, 3))
     if not (0.005 < rms < 0.5 and md > 0.001 and 0.05 < pk < 0.999):
         return False, {**m, "why": "health/clipping"}
-    if not (0.18 * words <= d <= 1.1 * words + 3.0):
+    if not (min_s_per_word * words <= d <= 1.1 * words + 3.0):
         return False, {**m, "why": f"duration {d:.1f}s for {words} words"}
     body = _rms(w[int(0.3 * sr): max(int(0.3 * sr) + 1, len(w) - int(0.3 * sr))]) + 1e-9
     end_ratio = _rms(w[-int(0.05 * sr):]) / body
