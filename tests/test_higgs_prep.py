@@ -156,7 +156,11 @@ def test_matter_filter_on_the_real_armed_struggle_chapter_list():
     _s.path.insert(0, str(ROOT / "webapp"))
     import chapters
     import fish_bundle as fb
-    cl = chapters.list_renderable_chapters(str(ROOT / "fixtures" / "armed_struggle.epub"))
+    epub = ROOT / "fixtures" / "armed_struggle.epub"
+    if not epub.exists():   # a copyrighted book: present on Dave's machine, not in the GitHub repo
+        import pytest
+        pytest.skip("fixtures/armed_struggle.epub not in this checkout")
+    cl = chapters.list_renderable_chapters(str(epub))
     kept, skipped = fb.filter_matter(cl, book_title="Armed Struggle")
     titles = [c["title"] for c in kept]
     assert any(t.startswith("Preface") for t in titles) and any(t.startswith("CONCLUSION") for t in titles)
