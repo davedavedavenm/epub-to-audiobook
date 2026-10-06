@@ -185,3 +185,89 @@ def test_matter_filter_recognises_imprint_pages_by_text_and_strips_the_job_id_pr
     # even with NO usable title, the copyright page is caught by its text
     kept2, _ = fb.filter_matter(cl, book_title=None)
     assert "Armed Struggle" not in [c["title"] for c in kept2]
+
+
+# --- library-corpus findings (187 real EPUBs, 2026-10-06) ---------------------
+
+def test_file_name_titles_shared_by_many_chapters_are_not_matter():
+    """Bonfire of the Vanities: 8 body files titled 'index' (from index_split_00x) were cut as the Index."""
+    import fish_bundle as fb
+    cl = [{"title": "Prologue", "words": 9000}] + [{"title": "index", "words": 25000, "back_matter": True}
+                                                    for _ in range(8)] + [{"title": "Epilogue", "words": 1700}]
+    kept, _ = fb.filter_matter(cl)
+    assert len(kept) == 10
+    # a single genuine Index after real chapters is still cut
+    cl2 = [{"title": f"Chapter {i}", "words": 5000} for i in range(1, 6)] + [{"title": "Index", "words": 9000}]
+    assert len(fb.filter_matter(cl2)[0]) == 5
+
+
+def test_strip_imprint_removes_copyright_lines_from_the_first_chapters_only():
+    import fish_bundle as fb
+    sents = [{"text": "Copyright (c) two thousand one by Tim Winton.", "para": 0, "quote": False},
+             {"text": "ISBN nine seven eight.", "para": 0, "quote": False},
+             {"text": "He walked to the shore and looked out over the grey water for a long time.", "para": 1, "quote": False}]
+    later = [{"text": "She said the copyright had expired long ago on the old song and laughed.", "para": 0, "quote": False}]
+    pay = {"ch01": {"sents": [dict(x) for x in sents]}, "ch02": {"sents": []}, "ch03": {"sents": []},
+           "ch09": {"sents": [dict(x) for x in later]}}
+    removed = fb.strip_imprint(pay, ["ch01", "ch02", "ch03", "ch09"])
+    assert removed == 2 and len(pay["ch01"]["sents"]) == 1
+    assert len(pay["ch09"]["sents"]) == 1                 # ch09 is beyond the first chapters: untouched
+
+
+def test_spine_fallback_reads_books_the_chapter_detector_misses(tmp_path):
+    import sys as _s
+    _s.path.insert(0, str(ROOT / "tests"))
+    from test_fish_lane import _make_epub
+    import fish_bundle as fb
+    epub = tmp_path / "b.epub"
+    _make_epub(epub)
+    cl = fb.spine_chapters(epub)
+    assert [c["title"] for c in cl] == ["Chapter One", "Chapter Two", "Chapter Three"]
+    assert all(c["words"] >= 100 and c["href"].endswith(".xhtml") for c in cl)
+
+
+def test_symbol_junk_rule_ignores_arrows_but_catches_symbol_soup():
+    import book_preflight as bp
+    rx = bp._JUNK["symbols"]
+    assert not rx.search("--> and <shanice@mail.co.uk> and a | b")
+    assert rx.search("{{{ ### ~~~ }}}")
+
+
+def test_spine_fallback_trusts_media_type_not_file_extension(tmp_path):
+    """The War of Art ships content as .html_split_000, Interpreter of Maladies as .xml."""
+    import zipfile as zf
+    import fish_bundle as fb
+    body = "<html><body><h1>Resistance</h1><p>" + ("The writer sits down and the fear arrives. " * 40) + "</p></body></html>"
+    epub = tmp_path / "odd.epub"
+    with zf.ZipFile(epub, "w") as z:
+        z.writestr("mimetype", "application/epub+zip")
+        z.writestr("META-INF/container.xml",
+                   '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles>'
+                   '<rootfile full-path="OPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>')
+        z.writestr("OPS/c01.xml", body)
+        z.writestr("OPS/part.html_split_001", body.replace("Resistance", "Turning Pro"))
+        z.writestr("OPS/content.opf",
+                   '<package xmlns="http://www.idpf.org/2007/opf"><manifest>'
+                   '<item id="a" href="c01.xml" media-type="application/xhtml+xml"/>'
+                   '<item id="b" href="part.html_split_001" media-type="application/xhtml+xml"/>'
+                   '<item id="c" href="cover.jpeg" media-type="image/jpeg"/></manifest>'
+                   '<spine><itemref idref="a"/><itemref idref="b"/><itemref idref="c"/></spine></package>')
+    cl = fb.spine_chapters(epub)
+    assert [c["title"] for c in cl] == ["Resistance", "Turning Pro"]
+
+
+def test_long_copyright_paragraph_is_stripped_but_prose_is_not():
+    import fish_bundle as fb
+    legal = ("All rights reserved. No part of this book may be reproduced or transmitted in any form or by "
+             "any means without permission in writing from the publisher, except by a reviewer who may quote "
+             "brief passages. The moral right of the author has been asserted. This is a work of fiction and "
+             "any resemblance to real persons is purely coincidental and unintended by the author.")
+    prose = "He had reproduced the map from memory, and he laid it on the table between them in the lamplight."
+    pay = {"ch01": {"sents": [{"text": legal, "para": 0, "quote": False}, {"text": prose, "para": 1, "quote": False}]}}
+    assert fb.strip_imprint(pay, ["ch01"]) == 1 and pay["ch01"]["sents"][0]["text"] == prose
+
+
+def test_preflight_ignores_repeated_file_name_titles():
+    import book_preflight as bp
+    c = [{"slug": f"ch{i}", "title": "index", "words": 5000} for i in range(4)]
+    assert bp._repeated_title(c, c[0]) and not bp._repeated_title(c[:2], c[0])

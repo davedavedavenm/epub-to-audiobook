@@ -41,10 +41,17 @@ _JUNK = {
     "email": re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b"),
     "isbn": re.compile(r"\bISBN\b|\b97[89][- ]?\d{1,5}[- ]?\d+", re.I),
     "credit": re.compile(r"\((?:[^()]*[/,] ?)?(?:AP|PA|Getty|Alamy|Reuters|Corbis|Shutterstock|REX|Mirrorpix)\b[^()]*\)\s*$", re.I),
-    "symbols": re.compile(r"[<>{}|\\_~^*#@]{2,}|[<>{}|]"),
+    "symbols": re.compile(r"[<>{}|\\_~^*#@=]{3,}"),
 }
 _BARE_DIGITS = re.compile(r"(?<![A-Za-z0-9])\d+(?![A-Za-z])")
 _OK_SHORT = re.compile(r"(prologue|preface|foreword|introduction|epigraph|afterword|epilogue|conclusion|dedication)", re.I)
+
+
+def _repeated_title(chapters: list, c: dict) -> bool:
+    """A title shared by 3+ chapters is a file name leaking through (Bonfire: 8 body files 'index')."""
+    t = re.sub(r"[^a-z0-9]", "", str(c.get("title") or "").lower())
+    return bool(t) and sum(1 for x in chapters
+                           if re.sub(r"[^a-z0-9]", "", str(x.get("title") or "").lower()) == t) >= 3
 
 
 def _sentences(payload: dict) -> list[str]:
@@ -88,7 +95,7 @@ def audit(manifest: dict, payloads: dict) -> dict:
         if _LEAK.match(first.strip()):
             errors.append({"rule": "leaked-filename",
                            "msg": f"{c['slug']} starts with a file-name style leak: {first[:60]!r}"})
-        if _MATTER_TITLE.match(str(c.get("title") or "").strip()):
+        if _MATTER_TITLE.match(str(c.get("title") or "").strip()) and not _repeated_title(chapters, c):
             errors.append({"rule": "matter-in-body", "msg": f"{c['slug']} is titled {c['title']!r}"})
         for i, t in enumerate(sents):
             for kind, rx in _JUNK.items():

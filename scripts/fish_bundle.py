@@ -122,6 +122,78 @@ _CUT_TITLE = re.compile(
     re.I)
 
 
+def spine_chapters(epub_path) -> list:
+    """Chapter list built straight from the EPUB spine, for books where the app's chapter detector
+    finds nothing (5 of 187 library books, e.g. The War of Art, Interpreter of Maladies). Each
+    reading-order document with >= 100 words becomes a chapter; the title is its first heading."""
+    import posixpath
+    import xml.etree.ElementTree as ET
+    from urllib.parse import unquote
+    out = []
+    with zipfile.ZipFile(epub_path) as z:
+        names = set(z.namelist())
+        try:
+            root = ET.fromstring(z.read("META-INF/container.xml"))
+            opf_path = next(e.get("full-path") for e in root.iter() if e.tag.endswith("rootfile"))
+            opf = ET.fromstring(z.read(opf_path))
+        except Exception:
+            return []
+        base = posixpath.dirname(opf_path)
+        items, mtypes = {}, {}
+        for e in opf.iter():
+            if e.tag.endswith("}item") or e.tag == "item":
+                items[e.get("id")] = e.get("href")
+                mtypes[e.get("id")] = (e.get("media-type") or "").lower()
+        order = [e.get("idref") for e in opf.iter() if e.tag.endswith("itemref") and e.get("linear") != "no"]
+        for idref in order:
+            href = items.get(idref)
+            if not href:
+                continue
+            path = posixpath.normpath(posixpath.join(base, unquote(href)))
+            # trust the declared media type, not the extension (books ship content as .xml or .html_split_000)
+            if path not in names or mtypes.get(idref) not in ("application/xhtml+xml", "text/html"):
+                continue
+            raw = z.read(path).decode("utf-8", errors="replace")
+            text = chapter_text(raw)
+            words = len(text.split())
+            if words < 100:
+                continue
+            m = re.search(r"<h[1-3][^>]*>(.*?)</h[1-3]>", raw, re.I | re.S)
+            title = re.sub(r"<[^>]+>", " ", m.group(1)) if m else ""
+            title = re.sub(r"\s+", " ", htmlmod.unescape(title)).strip() or f"Chapter {len(out) + 1}"
+            out.append({"index": len(out) + 1, "title": title[:120], "words": words, "href": path,
+                        "snippet": " ".join(text.split()[:60]), "back_matter": False})
+    return out
+
+
+_IMPRINT_LINE = re.compile(
+    r"first published|this (electronic |paperback )?edition published|all rights reserved|ISBN|"
+    r"©|printed (in|by)|cataloguing[- ]in[- ]publication|www[.][a-z0-9-]+[.]|"
+    r"copyright\s*(©|[(]c[)]|[0-9]|by\b)|moral right|library of congress|british library", re.I)
+
+
+_IMPRINT_STRONG = re.compile(r"all rights reserved|moral right|ISBN|reproduced|publication data|www[.]", re.I)
+
+
+def strip_imprint(payloads: dict, slugs: list, first_n: int = 3, scan: int = 60) -> int:
+    """Remove copyright/imprint SENTENCES from the first chapters (short lines only), in place.
+    8 of 187 library books kept their copyright page as a chapter; stripping the lines is safer than
+    refusing the book. Returns how many sentences were removed."""
+    removed = 0
+    for slug in slugs[:first_n]:
+        sents = payloads[slug]["sents"]
+        keep = []
+        for i, s in enumerate(sents):
+            n_words = len(s["text"].split())
+            if i < scan and _IMPRINT_LINE.search(s["text"]) and (
+                    n_words < 45 or (n_words < 130 and _IMPRINT_STRONG.search(s["text"]))):
+                removed += 1
+                continue
+            keep.append(s)
+        payloads[slug]["sents"] = keep
+    return removed
+
+
 # Copyright / imprint pages are recognised by their TEXT, not only their title: a webapp job's file
 # name ("81b98898_Armed Struggle - Richard English.epub") defeats title matching, and the first
 # Armed Struggle web run would have narrated "www.panmacmillan.com" and the ISBN (2026-10-06).
@@ -151,16 +223,23 @@ def filter_matter(chapter_list: list, keep_matter: bool = False,
     if keep_matter:
         return list(chapter_list), []
     title_key = _norm_title(book_title or "")
+    # A title shared by 3+ chapters ("index", "index", "index"...) is a FILE NAME leaking through
+    # (Bonfire of the Vanities: 8 body files called index_split_00x), not matter.
+    from collections import Counter
+    repeated = {t for t, n in Counter(_norm_title(c.get("title")) for c in chapter_list).items()
+                if t and n >= 3}
     kept, skipped, narrative_words = [], [], 0
     total = sum(int(c.get("words") or 0) for c in chapter_list) or 1
     for pos, c in enumerate(chapter_list):
         title = re.sub(r"\s+", " ", str(c.get("title") or "")).strip()
         words = int(c.get("words") or 0)
-        if narrative_words >= NARRATIVE_WORDS_BEFORE_CUT and (_CUT_TITLE.match(title) or c.get("back_matter")):
+        is_repeated = _norm_title(title) in repeated
+        if (narrative_words >= NARRATIVE_WORDS_BEFORE_CUT and not is_repeated
+                and (_CUT_TITLE.match(title) or c.get("back_matter"))):
             skipped.extend({"title": str(x.get("title") or ""), "why": "back matter (cut)"}
                            for x in chapter_list[pos:])
             break
-        if _SKIP_TITLE.match(title):
+        if _SKIP_TITLE.match(title) and not is_repeated:
             skipped.append({"title": title, "why": "front/back matter"})
             continue
         if (narrative_words < NARRATIVE_WORDS_BEFORE_CUT and words < 3000
@@ -267,6 +346,8 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
     out_zip = Path(out_zip)
     lex = load_lexicon()
     chapter_list = _chapters.list_renderable_chapters(str(epub_path))
+    if not chapter_list:                       # the app's detector found nothing: read the spine
+        chapter_list = spine_chapters(epub_path)
     chapter_list, skipped_matter = filter_matter(chapter_list, keep_matter,
                                                  book_title=re.sub(r"^[0-9a-f]{8}_", "", title or epub_path.stem))
 
@@ -311,6 +392,9 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
         raise ValueError(f"no renderable chapters found in {epub_path.name} "
                          f"(range start={start} end={end})")
 
+    stripped = strip_imprint(payloads, [c["slug"] for c in manifest_chapters])
+    for c in manifest_chapters:
+        c["words"] = sum(len(t["text"].split()) for t in payloads[c["slug"]]["sents"])
     digits = scan_digit_runs(payloads)
     manifest = {
         "book": title or _tagify(epub_path.stem),
@@ -323,6 +407,7 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
         "recipe": RECIPE_HIGGS if engine == "higgs" else RECIPE,
         "chapters": manifest_chapters,
         "skipped": skipped_matter,
+        "imprint_sentences_stripped": stripped,
         "digit_runs": digits,
     }
 
