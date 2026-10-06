@@ -12,6 +12,32 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## Colab lane VMs live ~1 hour: render with chunk checkpoints, audit first, CI-check before push — Active (2026-10-06)
+
+**Measured, 3 of 3 VMs on 2026-10-06:** Colab removed each lane VM (`session_terminated reason=pruned`)
+60-61 minutes after creation (06:47->07:48, 16:45->17:46, 16:45->17:45 UTC), with the runner healthy and
+keep-alive answering 200. The same setup ran 24 h in September, so this is a Google-side policy change; it is
+NOT a bug here. Consequences and settled rules:
+1. **Whole-chapter banking cannot work** (a 3 h chapter never fits a 1 h VM). The Higgs runner packs finished
+   chunks into `ckpt_<slug>_<lo>-<hi>.tgz` (every 10 chunks / 2 min); `lane_ctl progress` downloads them to
+   khpi5 on each poll; `lane_ctl submit` uploads the unbanked chapters' checkpoints to the next VM, whose
+   runner restores them and resumes mid-chapter. At most ~3 min of work is lost per VM.
+2. **Cost model:** each VM ~8 min cold start (pip + model load) + ~52 min useful. A book costs roughly
+   audio-hours x 1.4 x 1.54 units x 1.15 overhead (Armed Struggle ~42, Say Nothing ~34 units). Two books at once
+   do not fit a ~70 unit balance - render one, the other after units renew or on another provider.
+3. **The webapp loop must never trust "no error":** `lane_ctl progress` reports a dead VM as `session_gone` and
+   an unreachable bridge as error JSON (exit 0); `render_colab` treats both as failures, resubmits only unbanked
+   chapters (max 60 relaunches, wall cap scales with the book), and never spins silently.
+4. **Preflight audit (`scripts/book_preflight.py`) is mandatory** and runs inside every lane job before any GPU is
+   spent: refuses leaked file-name titles, duplicate chapters, matter-as-chapter, imprint/ISBN/URL lines in the
+   first chapters, junk-heavy text, empty books; warns on giant/tiny chapters, digits, junk sentences; prints
+   estimated audio hours / GPU hours / units. `fish_bundle.filter_matter` is word-count based, recognises
+   imprint pages by text, and raises rather than drop more than half a book (the title-count version deleted every
+   chapter of Armed Struggle).
+5. **Never push without `scripts/ci_local.sh`** (clean checkout of HEAD, pinned ruff, CI's exact deps, full tests).
+   Three red CI runs in one day came from tests that passed only in the working folder (untracked copyrighted
+   fixture, numpy missing in CI).
+
 ## Higgs lane pipeline is wired end to end; per-chunk gates and book-text audit are mandatory — Active (2026-10-06)
 
 `higgs_cillian_irish` is a lane voice (engine key `fish`, so validation/lane UI are shared;
