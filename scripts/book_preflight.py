@@ -10,7 +10,7 @@ discovered by listening:
     duplicate         two chapters carry the same text (an untitled duplicate file)
     matter-in-body    a kept chapter is named like Notes/Index/Bibliography/Contents/Copyright
     junk-heavy        > 1 % of sentences are URLs, e-mails, ISBNs, photo credits or symbol soup
-    tiny-book         < 2,000 words in total (almost certainly a bad extraction)
+    tiny-book         < 300 words in total (almost certainly a bad extraction)
   WARNINGS (job runs; they are written to the job log and the QA report)
     giant-chapter     a chapter > 4x the median (a notes/index section that slipped through)
     tiny-chapter      a chapter < 150 words that is not a prologue/preface/epigraph
@@ -62,7 +62,8 @@ def audit(manifest: dict, payloads: dict) -> dict:
 
     words = [int(c.get("words") or 0) for c in chapters]
     total_words = sum(words)
-    if total_words < 2000:
+    # Only a near-empty extraction is refused: a deliberate single-chapter render (~1,000 words) is legitimate.
+    if total_words < 300:
         errors.append({"rule": "tiny-book", "msg": f"only {total_words} words in total"})
 
     # duplicates (same text under two spine entries)

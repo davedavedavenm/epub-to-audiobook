@@ -61,6 +61,9 @@ def test_empty_and_tiny_books_are_refused():
     assert "no-chapters" in rules(bp.audit({"chapters": []}, {}), "errors")
     man, pay = book([("Chapter 1", ["Short."])])
     assert "tiny-book" in rules(bp.audit(man, pay), "errors")
+    # a deliberate single-chapter render (~1,000 words) must NOT be refused (it blocked the rehearsal)
+    man, pay = book([("Chapter 4", [PROSE] * 12)])
+    assert "tiny-book" not in rules(bp.audit(man, pay), "errors")
 
 
 def test_junk_heavy_is_refused_but_a_few_junk_sentences_only_warn():
