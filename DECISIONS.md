@@ -12,6 +12,33 @@ Status values: **Active** (current) · **Superseded** (replaced, kept for histor
 · **Evolving** (settled position exists but is expected to keep moving — check
 the linked doc for the latest measurement before relying on it).
 
+## Higgs lane pipeline is wired end to end; per-chunk gates and book-text audit are mandatory — Active (2026-10-06)
+
+`higgs_cillian_irish` is a lane voice (engine key `fish`, so validation/lane UI are shared;
+`webapp/fish_lane.engine_for_voice` picks the Higgs bundle + `scripts/higgs_colab_runner.py`).
+Proven on a real chapter through the same `lane_ctl.sh` the webapp uses: Say Nothing ch.4,
+22 chunks, 0 failed, 0 flagged, 8 min GPU for 6.0 min audio, ASR WER 1.75 % (only UK/US spelling
+and stray-apostrophe tokens), ~0.5 Colab unit. Dave: "perfect" apart from the opening words.
+
+Settled rules:
+1. **Generation unit = paragraph chunk (<=70 words), never a sentence**; consecutive heading
+   lines are one chunk; gaps 0.3 s within / 0.5 s across paragraphs (`scripts/higgs_prep.py`).
+2. **Every chunk is gated** (health, clipping, duration, abrupt end <=0.25) with seed re-rolls
+   42..46; the best attempt is kept and flagged if none passes. **Output is gain-only.**
+3. **Emotion tags are an allow-list** (`higgs_prep.ALLOWED_EMOTIONS`); anger/shouting can never
+   reach the audio (Dave: loved the emotion, not the shouty one). No auto-tagger is built;
+   plain narration is the default.
+4. **Front/back matter is never rendered** (`fish_bundle.filter_matter`; manifest `skipped[]`).
+   Say Nothing's detector listed Index/Notes/Bibliography as chapters (~7 h wasted audio).
+5. **Never narrate**: HTML `<title>` (it produced "Say-eight."), standalone footnote digits,
+   photo-credit lines; publisher `chapter_number` elements become "Chapter N". Editorial
+   `[brackets]` are unwrapped (Higgs skips bracketed words). Audit a new book's bundle text
+   (chapter openings, URLs/symbols, digit scan) before any GPU is spent.
+6. **Lane control plane fix:** `lane_ctl.py` counted the Colab CLI's "new version available"
+   notices as live sessions (phantom sessions named `colab`), so the 2-slot guard saw 4/2 and
+   refused every submit - the real reason the webapp lane had never run a job. Fixed; the
+   controller is tracked in `scripts/khpi5-lane/` (deploy = copy to `~/as-lane/`).
+
 ## Higgs TTS 3 works on a Colab L4; emotion tags give a standout dramatic read — Active (2026-10-05)
 
 Reverses the 2026-09-20 "not runnable on free hardware" closure for the
