@@ -77,6 +77,10 @@ RECIPE_HIGGS = {
     "allowed_emotions": sorted(higgs_prep.ALLOWED_EMOTIONS),
 }
 
+_HEAD = re.compile(r"<head\b.*?</head>", re.I | re.S)
+_CHAPTER_NUMBER = re.compile(
+    r'<(p|div|span|h[1-6])[^>]*class="[^"]*chapter[_-]?(?:number|num|no)\b[^"]*"[^>]*>\s*(\d{1,3})\s*</\1>',
+    re.I | re.S)
 _DROP_CAP = re.compile(r'<span[^>]*class="[^"]*dropcap[^"]*"[^>]*>([A-Za-z])</span>')
 _TAGS = re.compile(r"<[^>]+>")
 # Digits attached to uppercase letters are acronym readings the lexicon or
@@ -88,6 +92,13 @@ def chapter_text(html: str) -> str:
     """Strip a spine doc to plain text exactly like regenerate_as_book.py did
     for the Armed Struggle payloads (dropcaps unwrapped, tags -> newlines)."""
     html = _DROP_CAP.sub(r"\1", html)
+    # <head>/<title> is never narrated: Say Nothing's chapter files carry <title>Say-8</title>
+    # and the first chunk of the rendered chapter was "Say-eight. An Abduction." (heard by Dave
+    # 2026-10-06). The same leak put "Armed Struggle" at the top of every AS chapter.
+    html = _HEAD.sub("", html)
+    # Publisher chapter-number elements (<p class="chapter_number">1</p>) become "Chapter 1";
+    # otherwise the standalone-digit-line filter in as_prep (footnote markers) would delete them.
+    html = _CHAPTER_NUMBER.sub(lambda m: f"<p>Chapter {m.group(2)}</p>", html)
     html = _TAGS.sub("\n", html)
     return htmlmod.unescape(html)
 

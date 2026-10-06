@@ -108,3 +108,20 @@ def test_matter_filter_is_conservative_about_real_chapters():
     kept, _ = fb.filter_matter([{"title": "Notes"}, {"title": "Chapter 1"}])
     assert [c["title"] for c in kept] == ["Chapter 1"]
     assert len(fb.filter_matter([{"title": "Notes"}, {"title": "Index"}], keep_matter=True)[0]) == 2
+
+
+def test_chapter_text_drops_head_title_and_keeps_chapter_number():
+    import fish_bundle as fb
+    from as_prep import prep
+    html = ('<html><head><title>Say-8</title><link href="x.css"/></head><body>'
+            '<p class="chapter_number">1</p><h1 class="chapter_head"><a href="#">An Abduction</a></h1>'
+            '<p class="open_para">Jean McConville was thirty-eight when she disappeared.</p>'
+            '<p class="chapter_number">PROLOGUE</p></body></html>')
+    text = fb.chapter_text(html)
+    assert "Say-8" not in text and "Chapter 1" in text and "PROLOGUE" in text
+    texts = [s["text"] for s in prep(text, {})]
+    assert texts[0] == "Chapter one" and "An Abduction" in texts[1], texts
+    ch = hp.build_chunks(prep(text, {}))
+    assert ch[0]["heading"] and ch[0]["text"].startswith("Chapter one. An Abduction")
+    # footnote-style standalone digits are still dropped
+    assert "two" not in [s["text"].strip(". ").lower() for s in prep("Text here.\n\n2\n\nMore text follows.", {})]

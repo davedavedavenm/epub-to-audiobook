@@ -113,6 +113,12 @@ ABBR = ["Mr", "Mrs", "Ms", "Dr", "Prof", "St", "Sr", "Jr", "Col", "Gen", "Lt", "
 PLACEHOLDER = "\ue000"
 
 
+# Photo credit lines in picture sections: "Gerry Adams, politician (Jacqueline Arzt/AP/REX/Shutterstock)".
+_CREDIT = re.compile(
+    r"\((?:[^()]*[/,] ?)?(?:AP|PA|Getty|Alamy|Reuters|Corbis|Shutterstock|REX|Mirrorpix|"
+    r"Bridgeman|Topfoto|Camera Press|Press Association)\b[^()]*\)\s*$", re.I)
+
+
 def dec_plural_early(dd: int) -> str:
     """60 -> "sixties", 0 -> "hundreds" (used for ’60s style decades)."""
     return "hundreds" if dd == 0 else under100(dd)[:-1] + "ies"
@@ -224,6 +230,9 @@ def prep(raw: str, lexicon: dict) -> list[dict]:
 
     paras = [p.strip() for p in re.split(r"\n\s*\n", raw) if p.strip()
              and not re.fullmatch(r"\d{1,3}", p.strip())]
+    # Single line breaks inside a paragraph come from inline tags (italic titles, links):
+    # "at the headquarters of \nThe Times\n in London" -> one line, no space before punctuation.
+    paras = [re.sub(r" +([,.;:!?])", r"\1", re.sub(r"[ \t]*\n[ \t]*", " ", p)) for p in paras]
 
     def protect(text):
         for a in ABBR:
@@ -251,6 +260,8 @@ def prep(raw: str, lexicon: dict) -> list[dict]:
             else:
                 merged.append(buf)
         for s in merged:
+            if _CREDIT.search(s):
+                continue  # photo credit / caption line - never narrated
             in_quote = ("‘" in s) or bool(re.search(r"(?<![A-Za-z])’", s))
             flat.append({"text": s, "para": pid, "quote": in_quote})
     return flat
@@ -284,6 +295,11 @@ if __name__ == "__main__":
     assert "early sixties" in _x and "Y N S" not in _x and "YNS six four nine K" in _x, _x
     assert "IRA twelve volunteers" in " ".join(t["text"] for t in prep("The IRA 12 volunteers met.", {}))
     assert "ninety-eight" in _x and not re.search(r"\d", _x), _x
+    # line breaks from inline tags and photo credit lines (Say Nothing audit, 2026-10-06)
+    _y = [t["text"] for t in prep(
+        "At the headquarters of \nThe Times\n in London, a phone rang.\n\n"
+        "Gerry Adams, politician (Jacqueline Arzt/AP/REX/Shutterstock)\n\nIt was done.", {})]
+    assert _y == ["At the headquarters of The Times in London, a phone rang.", "It was done."], _y
     # footnote numerals and editorial brackets (2026-10-05)
     _t = prep("Before [Easter] Week was finished I had changed.\n\n2\n\nIt was a truly dramatic event [sic] indeed.", {})
     _txt = " ".join(x["text"] for x in _t)
