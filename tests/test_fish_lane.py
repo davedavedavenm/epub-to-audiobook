@@ -131,6 +131,46 @@ def test_bundle_contract(mini_epub, tmp_path):
         assert payload['sents'], 'no sentences prepped'
 
 
+def test_higgs_bundle_contract(mini_epub, tmp_path):
+    out = tmp_path / 'h.zip'
+    m = fish_bundle.build_bundle(mini_epub, out, engine='higgs')
+    assert m['engine'] == 'higgs' and m['voice_tag'] == 'cillian_higgs'
+    assert m['recipe']['engine'] == 'higgs-tts-3' and 'anger' not in m['recipe']['allowed_emotions']
+    with zipfile.ZipFile(out) as z:
+        payload = json.loads(z.read('payloads/ch01.json'))
+        assert payload['chunks'], 'higgs payloads must carry chunks'
+        covered = [k for c in payload['chunks'] for k in c['sents']]
+        assert covered == list(range(len(payload['sents'])))
+        assert {'refs/cillian_irish.wav', 'refs/refs.json'} <= set(z.namelist())
+    ch = m['chapters'][0]
+    # progress is reported per CHUNK for higgs, so the manifest must count chunks
+    assert ch['sents'] == len(payload['chunks']) and ch['sentences'] == len(payload['sents'])
+    assert FL._total_sents(m) == sum(c['sents'] for c in m['chapters'])
+
+
+def test_higgs_tagger_cannot_introduce_anger(mini_epub, tmp_path):
+    out = tmp_path / 'h.zip'
+    m = fish_bundle.build_bundle(mini_epub, out, engine='higgs',
+                                 tagger=lambda sents: {i: 'anger' for i in range(len(sents))})
+    with zipfile.ZipFile(out) as z:
+        for slug in (c['slug'] for c in m['chapters']):
+            for ch in json.loads(z.read(f'payloads/{slug}.json'))['chunks']:
+                assert '<|emotion:anger' not in (ch.get('tagged') or ch['text'])
+
+
+def test_engine_for_voice_and_runner_selection():
+    assert FL.engine_for_voice('higgs_cillian_irish') == 'higgs'
+    assert FL.engine_for_voice('fish_cillian_irish') == 'fish'
+    assert FL.runner_path('higgs').name == 'higgs_colab_runner.py'
+    assert FL.runner_path('fish').name == 'fish_colab_runner.py'
+    assert FL.runner_path().name == 'fish_colab_runner.py'
+
+
+def test_higgs_voice_registered_on_the_lane_engine():
+    v = appmod.all_voices()['higgs_cillian_irish']
+    assert v['engine'] == 'fish' and v['accent'] == 'Irish'
+
+
 def test_bundle_quote_crop_is_exact_tail_of_narration():
     """The quote reference must be the tail of the TRACKED narration clip —
     byte-identical PCM frames to the deployed crop (recipe lock)."""

@@ -113,6 +113,11 @@ ABBR = ["Mr", "Mrs", "Ms", "Dr", "Prof", "St", "Sr", "Jr", "Col", "Gen", "Lt", "
 PLACEHOLDER = "\ue000"
 
 
+def dec_plural_early(dd: int) -> str:
+    """60 -> "sixties", 0 -> "hundreds" (used for ’60s style decades)."""
+    return "hundreds" if dd == 0 else under100(dd)[:-1] + "ies"
+
+
 def prep(raw: str, lexicon: dict) -> list[dict]:
     # Footnote reference numerals arrive as standalone 1-3 digit lines. They MUST be
     # removed before digits become words: the later paragraph filter runs after number
@@ -180,6 +185,13 @@ def prep(raw: str, lexicon: dict) -> list[dict]:
                  lambda m: f"{year_words(int(m.group(1)))} to {year_words(int(m.group(2))) if len(m.group(2)) == 4 else short_year_words(m.group(2))}",
                  raw)
     raw = re.sub(r"\b(\d{4})\b", lambda m: year_words(int(m.group(1))), raw)
+    # apostrophe decades: "early ’60s" -> "early sixties" (must run before the ’98 rule)
+    raw = re.sub(r"[‘’'](\d0)s\b", lambda m: dec_plural_early(int(m.group(1))), raw)
+    # UK number plates: "YNS 649K" -> digits spoken one at a time
+    raw = re.sub(r"\b([A-Z]{3}) (\d{1,3})([A-Z])\b",
+                 lambda m: m.group(1) + " " + " ".join(_ONES[int(d)] for d in m.group(2))
+                 + " " + m.group(3),
+                 raw)
     # short-form quote years: ’98 / '45 (Irish-historic context)
     raw = re.sub(r"[‘’'](\d{2})\b", lambda m: short_year_words(m.group(1)), raw)
     raw = re.sub(r"£(\d{1,3}(?:,\d{3})+|\d+)\s*million",
@@ -267,6 +279,11 @@ if __name__ == "__main__":
     assert year_words(2002) == "two thousand and two"
     assert num_words(4500) == "four thousand five hundred"
     assert num_words(55000) == "fifty-five thousand"
+    # apostrophe decades and UK plates (Say Nothing, 2026-10-06)
+    _x = " ".join(t["text"] for t in prep("In the early ’60s a car, plate YNS 649K, was seen. It was ’98 then.", {}))
+    assert "early sixties" in _x and "Y N S" not in _x and "YNS six four nine K" in _x, _x
+    assert "IRA twelve volunteers" in " ".join(t["text"] for t in prep("The IRA 12 volunteers met.", {}))
+    assert "ninety-eight" in _x and not re.search(r"\d", _x), _x
     # footnote numerals and editorial brackets (2026-10-05)
     _t = prep("Before [Easter] Week was finished I had changed.\n\n2\n\nIt was a truly dramatic event [sic] indeed.", {})
     _txt = " ".join(x["text"] for x in _t)

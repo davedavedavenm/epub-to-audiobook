@@ -47,9 +47,18 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def runner_path() -> Path:
-    p = os.environ.get('FISH_RUNNER') or str(_repo_root() / 'scripts' / 'fish_colab_runner.py')
+def runner_path(engine: str = 'fish') -> Path:
+    if engine == 'higgs':
+        p = os.environ.get('HIGGS_RUNNER') or str(_repo_root() / 'scripts' / 'higgs_colab_runner.py')
+    else:
+        p = os.environ.get('FISH_RUNNER') or str(_repo_root() / 'scripts' / 'fish_colab_runner.py')
     return Path(p)
+
+
+def engine_for_voice(voice) -> str:
+    """'higgs' for the Higgs voices, else the locked Fish recipe. Both ride the same lane
+    contract (bundle -> runner -> as_state.json -> harvested mp3s)."""
+    return 'higgs' if str(voice or '').startswith('higgs') else 'fish'
 
 
 def _log(log, msg):
@@ -90,7 +99,7 @@ def lane_ready(lane: str) -> tuple:
     return True, ''
 
 
-def _build_bundle(epub_path, start, end, log):
+def _build_bundle(epub_path, start, end, log, engine='fish'):
     """Build the as_bundle.zip for the requested chapter range (1-based renderable
     indexes, the same numbers the job picker shows). Returns (zip_path, manifest)."""
     scripts = _repo_root() / 'scripts'
@@ -99,7 +108,7 @@ def _build_bundle(epub_path, start, end, log):
     import fish_bundle
     tmp = Path(tempfile.mkdtemp(prefix='fishjob_'))
     z = tmp / 'as_bundle.zip'
-    manifest = fish_bundle.build_bundle(epub_path, z, start=start, end=end)
+    manifest = fish_bundle.build_bundle(epub_path, z, start=start, end=end, engine=engine)
     _log(log, f"lane: bundle built ({manifest['bytes']} bytes, "
               f"{len(manifest['chapters'])} chapters, "
               f"{len(manifest.get('digit_runs', []))} bare digit runs)")
@@ -218,7 +227,7 @@ def render_lightning(bundle: Path, manifest: dict, out_dir: Path,
         _run(studio, f'mkdir -p {ws}/out && rm -f {ws}/as_state.json {ws}/render.log')
         _log(log, f'lane lightning: uploading bundle to {ws}…')
         studio.upload_file(str(bundle), f'{ws}/as_bundle.zip')
-        studio.upload_file(str(runner_path()), f'{ws}/runner.py')
+        studio.upload_file(str(runner_path(manifest.get('engine', 'fish'))), f'{ws}/runner.py')
 
         def launch():
             _run(studio, f'cd {ws} && FISH_BASE={ws} nohup python3 runner.py '
@@ -392,7 +401,7 @@ def render_colab(bundle: Path, manifest: dict, out_dir: Path,
         _log(log, f'lane colab: pushing bundle to {job_dir} on {L._cfg("COLAB_SSH_HOST")}')
         _ssh(f'mkdir -p {job_dir}/out')
         _scp(bundle, f'{job_dir}/as_bundle.zip')
-        _scp(runner_path(), f'{job_dir}/runner.py')
+        _scp(runner_path(manifest.get('engine', 'fish')), f'{job_dir}/runner.py')
         _ssh(f'bash -lc "{ctl} submit {job_tag}"', timeout=300)
         _log(log, f'lane colab: session submitted ({job_tag}); cold start ≈ 5-10 min')
 
@@ -467,7 +476,7 @@ def render_on_lane(epub_path, voice, lane, start, end, out_dir,
     ready, why = lane_ready(lane)
     if not ready:
         return False, why
-    bundle, manifest = _build_bundle(epub_path, start, end, log)
+    bundle, manifest = _build_bundle(epub_path, start, end, log, engine=engine_for_voice(voice))
     if not manifest.get('chapters'):
         return False, f'no renderable chapters in range {start}-{end}'
 

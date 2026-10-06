@@ -696,6 +696,12 @@ VOICES = {
     # reference (expressive crop) is applied automatically by the recipe, so it
     # is not a separate user-facing voice.
     'fish_cillian_irish': {'name': 'Cillian Murphy (Irish, Fish S2 Pro)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'fish'},
+    # Higgs TTS 3 on the same GPU lanes (scripts/higgs_colab_runner.py): paragraph chunks,
+    # abrupt-end gate with seed re-roll, mild emotion tags only, gain-only output. Rides the
+    # 'fish' lane engine so job validation, lane resolution and the lane UI are shared;
+    # webapp/fish_lane.engine_for_voice() picks the Higgs bundle/runner from the voice id.
+    # Preview is a cut of the listened-to Armed Struggle opening (Dave: "super super good").
+    'higgs_cillian_irish': {'name': 'Cillian Murphy (Irish, Higgs 3)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'fish'},
 
     # ============ FREE CPU CANDIDATES (OFFICIAL CATALOGUES) ============
     # Pocket's upstream catalogue does not publish reliable accent/gender

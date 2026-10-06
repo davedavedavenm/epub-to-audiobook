@@ -39,6 +39,7 @@ for _p in (str(ROOT), str(ROOT / "scripts"), str(ROOT / "webapp")):
         sys.path.insert(0, _p)
 
 from as_prep import load_lexicon, prep  # noqa: E402
+import higgs_prep  # noqa: E402
 
 DEFAULT_NARRATION_REF = ROOT / "chatterbox" / "voices" / "cillian_irish.wav"
 REF_TEXTS = ROOT / "fixtures" / "fish_ref_texts.json"
@@ -63,6 +64,19 @@ RECIPE = {
                  "highshelf=f=7500:gain=-2.0:width=1.0,loudnorm=I=-20:TP=-2:LRA=11",
 }
 
+RECIPE_HIGGS = {
+    "engine": "higgs-tts-3",
+    "model": "bosonai/higgs-audio-v3-tts-4b",
+    "runtime": "vllm==0.30.0 vllm-omni==0.30.0 (py3.12 venv), bf16, TRITON_ATTN",
+    "seeds": [42, 43, 44, 45, 46],
+    "chunk_max_words": higgs_prep.MAX_WORDS,
+    "gap_chunk": 0.3,
+    "gap_paragraph": 0.5,
+    "gates": "health, clipping, duration sanity, abrupt end (<=0.25) with seed re-roll",
+    "mastering": "gain-only to ~-20 LUFS, sample peak <= -2 dBFS; no EQ, no dynamic loudnorm",
+    "allowed_emotions": sorted(higgs_prep.ALLOWED_EMOTIONS),
+}
+
 _DROP_CAP = re.compile(r'<span[^>]*class="[^"]*dropcap[^"]*"[^>]*>([A-Za-z])</span>')
 _TAGS = re.compile(r"<[^>]+>")
 # Digits attached to uppercase letters are acronym readings the lexicon or
@@ -76,6 +90,42 @@ def chapter_text(html: str) -> str:
     html = _DROP_CAP.sub(r"\1", html)
     html = _TAGS.sub("\n", html)
     return htmlmod.unescape(html)
+
+
+# Front/back matter is never narrated. Found on Say Nothing (2026-10-06): the chapter
+# detector listed Copyright, Contents, Acknowledgements, Notes (23k words), an untitled
+# 26k-word duplicate, Bibliography and Index as chapters = ~7 h of wasted GPU audio.
+_SKIP_TITLE = re.compile(
+    r"^(copyright(\s+page)?|contents|table of contents|title page|half[- ]?title|cover|"
+    r"dedication|also by .*|by the same author|about the authors?|praise for .*|"
+    r"acknowledge?ments?|notes?|endnotes?|(a )?notes? on (the )?(sources?|text)|"
+    r"(select(ed)? )?bibliography|further reading|sources|index|permissions|credits|"
+    r"(photo(graph)? )?credits|(list of )?illustrations|maps?|glossary|colophon)$",
+    re.I)
+# Once one of these appears after real chapters, nothing that follows is narrative.
+_CUT_TITLE = re.compile(
+    r"^(acknowledge?ments?|notes?|endnotes?|(a )?notes? on (the )?(sources?|text)|"
+    r"(select(ed)? )?bibliography|further reading|sources|index|about the authors?)$",
+    re.I)
+
+
+def filter_matter(chapter_list: list, keep_matter: bool = False) -> tuple[list, list]:
+    """(narrative chapters, skipped [{title, why}]). A chapter list is in spine order."""
+    if keep_matter:
+        return list(chapter_list), []
+    kept, skipped, narrative = [], [], 0
+    for pos, c in enumerate(chapter_list):
+        title = re.sub(r"\s+", " ", str(c.get("title") or "")).strip()
+        if narrative >= 3 and _CUT_TITLE.match(title):
+            skipped.extend({"title": str(x.get("title") or ""), "why": "back matter (cut)"}
+                           for x in chapter_list[pos:])
+            break
+        if _SKIP_TITLE.match(title):
+            skipped.append({"title": title, "why": "front/back matter"})
+            continue
+        kept.append(c)
+        narrative += 1
+    return kept, skipped
 
 
 def _tagify(name: str) -> str:
@@ -141,18 +191,28 @@ def scan_digit_runs(payloads: dict) -> list:
 
 def build_bundle(epub_path, out_zip, title: str | None = None,
                  start: int | None = None, end: int | None = None,
-                 narration_ref: Path | None = None) -> dict:
+                 narration_ref: Path | None = None, engine: str = "fish",
+                 tagger=None, keep_matter: bool = False) -> dict:
     """Build the bundle zip at *out_zip* and return the manifest dict.
 
     *start*/*end* are 1-based renderable-chapter indexes (the same numbering
     the job picker shows); None means the whole book.
+
+    *engine* ``"fish"`` (locked Cillian recipe) or ``"higgs"``. For Higgs each payload also
+    carries ``chunks`` (scripts/higgs_prep.build_chunks) and the manifest's per-chapter
+    ``sents`` is the CHUNK count, because the runner banks and reports progress per chunk.
+    *tagger* (optional, Higgs only) is ``callable(sents) -> {sentence_index: emotion}``;
+    only emotions in higgs_prep.ALLOWED_EMOTIONS ever reach the audio.
     """
+    if engine not in ("fish", "higgs"):
+        raise ValueError(f"unknown engine {engine!r}")
     import chapters as _chapters  # webapp/chapters.py (on sys.path)
 
     epub_path = Path(epub_path)
     out_zip = Path(out_zip)
     lex = load_lexicon()
     chapter_list = _chapters.list_renderable_chapters(str(epub_path))
+    chapter_list, skipped_matter = filter_matter(chapter_list, keep_matter)
 
     payloads: dict = {}
     manifest_chapters = []
@@ -173,10 +233,21 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
             slug = f"ch{idx:02d}"
             payloads[slug] = {"slug": slug, "title": c.get("title") or f"Chapter {idx}",
                               "sents": sents}
+            n_units = len(sents)
+            if engine == "higgs":
+                chunks = higgs_prep.build_chunks(sents)
+                tags = tagger(sents) if tagger else None
+                for ch in chunks:
+                    tagged = higgs_prep.apply_tags(sents, ch, tags)
+                    if tagged != ch["text"]:
+                        ch["tagged"] = tagged
+                payloads[slug]["chunks"] = chunks
+                n_units = len(chunks)
             manifest_chapters.append({
                 "slug": slug, "index": idx,
                 "title": payloads[slug]["title"],
-                "sents": len(sents),
+                "sents": n_units,
+                "sentences": len(sents),
                 "words": sum(len(s["text"].split()) for s in sents),
             })
 
@@ -188,12 +259,14 @@ def build_bundle(epub_path, out_zip, title: str | None = None,
     manifest = {
         "book": title or _tagify(epub_path.stem),
         "book_tag": _tagify(title or epub_path.stem),
+        "engine": engine,
         "voice": "cillian",
-        "voice_tag": "cillian",
+        "voice_tag": "cillian_higgs" if engine == "higgs" else "cillian",
         "source": epub_path.name,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "recipe": RECIPE,
+        "recipe": RECIPE_HIGGS if engine == "higgs" else RECIPE,
         "chapters": manifest_chapters,
+        "skipped": skipped_matter,
         "digit_runs": digits,
     }
 
@@ -224,9 +297,10 @@ def main(argv=None) -> int:
     ap.add_argument("--title", default=None)
     ap.add_argument("--start", type=int, default=None)
     ap.add_argument("--end", type=int, default=None)
+    ap.add_argument("--engine", choices=("fish", "higgs"), default="fish")
     a = ap.parse_args(argv)
     out = Path(a.out) if a.out else Path(a.epub).with_suffix(".as_bundle.zip")
-    m = build_bundle(a.epub, out, title=a.title, start=a.start, end=a.end)
+    m = build_bundle(a.epub, out, title=a.title, start=a.start, end=a.end, engine=a.engine)
     print(f"bundle: {m['bundle']} ({m['bytes']} bytes)")
     for c in m["chapters"]:
         print(f"  {c['slug']}  {c['sents']:5} sents  {c['words']:6} words  {c['title'][:60]}")
