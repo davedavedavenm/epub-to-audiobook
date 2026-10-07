@@ -43,6 +43,7 @@ def main() -> int:
     ap.add_argument("folder", help="folder of NNNN.wav chunk files")
     ap.add_argument("--ref", required=True)
     ap.add_argument("--weights", default=None, help="ve.safetensors (default: chatterbox-nano in the HF cache)")
+    ap.add_argument("--json", default=None, help="also write the per-chunk rows to this file")
     a = ap.parse_args()
     weights = a.weights or glob.glob("/data/hf/hub/models--ResembleAI--chatterbox-nano/snapshots/*/ve.safetensors")[0]
     ve = VoiceEncoder()
@@ -69,6 +70,9 @@ def main() -> int:
         rows.append({"chunk": os.path.basename(f), "dur": round(len(w) / sr, 1), "sim": sim,
                      "roll": None if roll is None else round(roll), "flags": flags})
         print(json.dumps(rows[-1]), flush=True)
+    if a.json:
+        with open(a.json, "w", encoding="utf-8") as f:
+            json.dump(rows, f, indent=1)
     sims = [r["sim"] for r in rows if r["sim"] is not None]
     print(json.dumps({"chunks": len(rows), "voice_flags": sum("voice" in r["flags"] for r in rows),
                       "muffled_flags": sum("muffled" in r["flags"] for r in rows),

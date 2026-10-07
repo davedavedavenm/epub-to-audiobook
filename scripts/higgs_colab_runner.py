@@ -51,9 +51,11 @@ SEEDS = (42, 43, 44, 45, 46)
 # ``extra_params`` (serving_speech.py), so it is sent explicitly to make the recipe visible.
 SAMPLING = {"temperature": 1.0, "top_k": 50}
 # Muffled / "speakerphone" takes: the Cillian reference keeps 95 % of its energy below ~4.7 kHz; about
-# half of raw Higgs takes roll off lower. Dave (2026-10-07) heard takes at 3.0-3.3 kHz as fine; the
-# opening chunks he called "speakerphone" rolled off at 1.8-2.5 kHz. The bar sits in that gap.
-MIN_ROLLOFF_HZ = 2700.0
+# half of raw Higgs takes roll off lower. Re-rolling rarely helps - on the first 300 Armed Struggle
+# chunks (2026-10-07) 106 first takes were under 2.7 kHz and 100 still were after 3 seeds (it follows the
+# passage, not the seed) - and Dave accepted the fixed Preface "B" with takes at 1.6-2.3 kHz in it.
+# Only takes below 1.8 kHz are re-rolled now; every take's roll-off stays in the chunk sidecar.
+MIN_ROLLOFF_HZ = 1800.0
 MIN_ROLLOFF_DUR_S = 3.0          # "NOTE." and other one-word chunks are too short to measure
 BUDGET_S = 10 * 3600
 BOOK_TAG, VOICE_TAG = "book", "cillian_higgs"

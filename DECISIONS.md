@@ -48,7 +48,7 @@ patches, "losing words", odd pauses. Each was measured and traced:
 |---|---|---|
 | cut-off, lost words | chunk 20 looped on a list of years and **skipped 25 words**; whole-chapter ASR still said 98.3 % (repeats counted as heard) | **every take is transcribed (Whisper small.en on the GPU) and aligned to its own text** (`scripts/chunk_asr_audit.py`); tail >= 3 or a dropped run >= 3 re-rolls, then **render sentence by sentence** and crossfade-join. A chapter-level ratio is never completeness proof. |
 | "not Cillian" | speaker-embedding similarity 0.81 vs 0.91-0.97 for the rest (Chatterbox voice encoder) | reject < 0.90 |
-| muffled / speakerphone | 95 % spectral roll-off 1.8-2.5 kHz (reference 4.7 kHz); ~half of raw takes roll off low; temperature does not change it | reject < **2.7 kHz** (Dave: 3.0-3.3 kHz "OK"); a take that is only muffled gets 3 seeds, word/voice faults get 5 + sentence fallback |
+| muffled / speakerphone | 95 % spectral roll-off 1.8-2.5 kHz (reference 4.7 kHz); ~half of raw takes roll off low; temperature does not change it; **re-rolling rarely fixes it** (first 300 book chunks: 106 muffled first takes, 100 still muffled after 3 seeds - it follows the passage) | re-roll only < **1.8 kHz** (Dave accepted Preface B with takes at 1.6-2.3 kHz; 3.0-3.3 kHz "OK"); a take that is only muffled gets 3 seeds, word/voice faults get 5 + sentence fallback; every take's roll-off is kept in its sidecar |
 | pauses mid-sentence, "losing words" | `chapter_text` turned every tag into a newline: footnote links / empty page anchors became paragraph breaks mid-sentence (Fish version too) | inline tags join; note/page-number markers dropped; library 14,659 -> 3,059 mid-sentence breaks, 187/187 pass |
 
 Also settled:
@@ -61,9 +61,15 @@ Also settled:
    2612 -> 2012 and would otherwise have joined old audio to new text.
 4. **Emotion tags are still not automatic.** The "super super good" emotive test (2026-10-05) was
    hand-tagged; no book render has had tags. Building a tagger is open.
-5. Measured cost with all gates on the Preface: 2.0-2.6 GPU-s per audio-s (~$1.8-2.1 per audio
-   hour) at the old 3.3 kHz bar; the 2.7 kHz bar + 3-seed muffled cap is expected lower - measure
-   on the next run before quoting a book price.
+5. **Cost truth comes from `modal billing`, not the driver.** The first book run (6 L4s, rounds of
+   18 batches) metered $1.91-3.01 per audio hour while the driver reported ~$1.07: each round waited
+   for its slowest batch, idle GPUs were billed and then scaled down, and every round paid new
+   ~7-minute cold starts. The driver now streams all batches through one `.map` and caps spend at
+   max(containers x wall clock x rate x 1.14, Modal's metered cost). The monthly summary also ran
+   ~$3.6 above the per-app report on 2026-10-07 (unexplained; budget against the summary).
+6. Armed Struggle split (2026-10-07): Preface = approved B; ch10-18 on Modal (inside the free credit,
+   `--partial-ok` cap); ch09 (already heard by Dave) on the Colab lane through the webapp's own
+   `render_colab` with the same bundle, then audited and adopted (`scripts/adopt_lane_chunks.py`).
 
 ## Higgs lane pipeline is wired end to end; per-chunk gates and book-text audit are mandatory — Active (2026-10-06)
 

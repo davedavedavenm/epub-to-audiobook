@@ -142,13 +142,13 @@ def test_muffled_take_is_rejected_and_full_band_take_passes():
     import tempfile
     os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
     import higgs_colab_runner as hr
-    ok, m = hr.gate_chunk(_band_noise(20, 2200), SR, 55)  # rolls off like Preface chunks 2-5 (1.8-2.5 kHz)
+    ok, m = hr.gate_chunk(_band_noise(20, 1300), SR, 55)  # far below the 1.8 kHz bar
     assert not ok and m["why"] == "muffled" and m["roll"] < hr.MIN_ROLLOFF_HZ
     ok, m = hr.gate_chunk(_band_noise(20, 8000), SR, 55)  # Cillian reference rolls off at ~4.7 kHz
     assert ok and m["roll"] > hr.MIN_ROLLOFF_HZ, m
-    assert hr.gate_chunk(_band_noise(1.5, 2200), SR, 1)[1].get("roll") is None   # too short to judge
-    muffled = hr.attempt_score(False, {"why": "muffled", "roll": 2200})
-    assert hr.attempt_score(False, {"why": "muffled", "roll": 3000}) < muffled < 99
+    assert hr.gate_chunk(_band_noise(1.5, 1300), SR, 1)[1].get("roll") is None   # too short to judge
+    muffled = hr.attempt_score(False, {"why": "muffled", "roll": 1300})
+    assert hr.attempt_score(False, {"why": "muffled", "roll": 1700}) < muffled < 99
     assert hr.attempt_score(True, {}) == 0
 
 
@@ -161,7 +161,7 @@ def test_take_penalty_ranks_missing_words_worst_and_ignores_soft_endings():
     assert hr.take_penalty(clean) == (0, "")              # 0.3 end ratio: complete per ASR, not re-rolled
     words, _ = hr.take_penalty({**clean, "asr_bad": True, "asr_tail": 8, "asr_cover": 0.88})
     voice, _ = hr.take_penalty({**clean, "sim": 0.813})
-    muffled, _ = hr.take_penalty({**clean, "roll": 2200})
+    muffled, _ = hr.take_penalty({**clean, "roll": 1300})
     cut, why = hr.take_penalty({**clean, "end": 1.9})
     assert words > voice > muffled > cut > 0 and why == "cut-off end"
     assert hr.take_penalty({"why": "duration 9.0s for 105 words"})[0] == 99.0
@@ -192,3 +192,35 @@ def test_chunk_asr_audit_catches_the_real_preface_failures():
     assert r2["bad"] and r2["drops"]
     ok = ca.audit_chunk(text, heard + "7 and the 1998 Belfast Agreement.")
     assert not ok["bad"], ok
+
+
+def test_adopt_lane_chunks_keeps_only_audited_passes(tmp_path, monkeypatch):
+    import subprocess
+    import adopt_lane_chunks as ad
+    assert ad.verdict(None, None) == (False, "no ASR audit")
+    assert ad.verdict({"bad": True}, None) == (False, "words")
+    assert ad.verdict({"bad": False}, {"sim": 0.81, "roll": 4000}) == (False, "voice")
+    assert ad.verdict({"bad": False}, {"sim": 0.95, "roll": 1500}) == (False, "muffled")
+    assert ad.verdict({"bad": False}, {"sim": 0.95, "roll": 2300})[0] is True   # Dave accepted 1.6-2.3 kHz
+    z = _book(tmp_path, chunk_counts=(3,))
+    d = tmp_path / "chunks" / "ch01"
+    d.mkdir(parents=True)
+    for i in (1, 2, 3):
+        (d / f"{i:04d}.wav").write_bytes(b"x")
+    (tmp_path / "asr.json").write_text(json.dumps([{"slug": "ch01", "i": 1, "bad": False, "cover": 1.0},
+                                                    {"slug": "ch01", "i": 2, "bad": True, "cover": 0.7}]))
+    (tmp_path / "voice.json").write_text(json.dumps([{"chunk": "0001.wav", "sim": 0.95, "roll": 4000}]))
+    out = subprocess.run([sys.executable, str(ROOT / "scripts" / "adopt_lane_chunks.py"), str(z), str(tmp_path / "chunks"),
+                          "ch01", "--asr", str(tmp_path / "asr.json"), "--voice", str(tmp_path / "voice.json")],
+                         capture_output=True, text=True, check=True)
+    assert json.loads(out.stdout.strip().splitlines()[-1])["adopted"] == 1
+    assert (d / "0001.json").exists() and not (d / "0002.wav").exists() and not (d / "0003.wav").exists()
+    # the adopted chunk is "current" for the Modal driver with the runner's sampling recipe
+    import os
+    import tempfile
+    os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
+    import higgs_colab_runner as hr
+    man, pay = hp.load_bundle(z)
+    recipe = f"bosonai/higgs-audio-v3-tts-4b {json.dumps(hr.SAMPLING, sort_keys=True)}"
+    todo = [it["i"] for b in hp.plan_batches(man, pay, tmp_path / "chunks", recipe=recipe) for it in b["items"]]
+    assert todo == [2, 3]

@@ -333,7 +333,8 @@ def main(argv=None) -> int:
     # where these local helpers are not present
     import fish_bundle
     import higgs_colab_runner as hr
-    from higgs_book_plan import L4_USD_PER_S, estimate_usd, load_bundle, metered_usd, plan_batches, spent_usd
+    from higgs_book_plan import (L4_USD_PER_S, OVERHEAD, estimate_usd, load_bundle, metered_usd, plan_batches,
+                                 spent_usd)
 
     ap = argparse.ArgumentParser(description="Render a book with Higgs TTS 3 on Modal")
     ap.add_argument("epub")
@@ -348,6 +349,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(ROOT / "scratch" / "modal_higgs"))
     ap.add_argument("--temperature", type=float, default=None,
                     help="override Boson's documented cloning temperature (0.8) - for listening A/Bs")
+    ap.add_argument("--partial-ok", action="store_true",
+                    help="start even if the estimate exceeds --budget; the cap still stops the run (resume later)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args(argv)
     sampling = dict(hr.SAMPLING, **({"temperature": a.temperature} if a.temperature is not None else {}))
@@ -372,7 +375,7 @@ def main(argv=None) -> int:
     est = estimate_usd(batches, min(a.containers, max(1, len(batches))))
     print(f"to render: {sum(len(b['items']) for b in batches)} chunks in {len(batches)} batches; "
           f"estimated ${est} (cap ${a.budget})")
-    if est > a.budget:
+    if est > a.budget and not a.partial_ok:
         print("REFUSED: estimate exceeds the cap - raise --budget deliberately or render fewer chapters")
         return 4
     if a.dry_run:
@@ -383,18 +386,22 @@ def main(argv=None) -> int:
     run = {"gpu_s": 0.0, "audio_s": 0.0, "chunks": 0, "flagged": 0, "failed": 0,
            "started": time.strftime("%Y-%m-%d %H:%M:%S")}
     containers = max(1, min(a.containers, len(batches)))   # >= 1 even when resuming a finished render
-    round_size = containers * 3
+    run_t0 = time.time()
+
     def render_all(worker, batches) -> bool:
-        """Render every batch in rounds; False if the spend cap stopped it."""
-        for r0 in range(0, len(batches), round_size):
-            spent = max(spent_usd(run["gpu_s"], containers), metered(run))
-            if spent > a.budget:
-                print(f"STOPPED: spend cap ${a.budget} reached (${spent}; metered ${run.get('metered_usd')})")
-                return False
-            for res in worker.render.map(batches[r0:r0 + round_size], order_outputs=False, return_exceptions=True):
-                if isinstance(res, Exception):
-                    print("batch error:", str(res)[:300], file=log, flush=True)
-                    continue
+        """Stream ALL batches through one .map; False if the spend cap stopped it.
+
+        Rounds were the cost bug (2026-10-07): each round waited for its slowest batch, the other GPUs
+        idled (billed) and, after 2 min idle, shut down - so every round paid fresh ~7 min cold starts.
+        Measured $1.91-3.01 per audio hour against the $1.07 the driver claimed. Streaming keeps every
+        container busy until the queue is empty. Spend = max(containers x wall clock x rate, Modal's
+        metered cost) - the first is what Modal bills at most, the second lags by up to an hour."""
+        last_meter, done_b = 0.0, 0
+        for res in worker.render.map(batches, order_outputs=False, return_exceptions=True):
+            done_b += 1
+            if isinstance(res, Exception):
+                print("batch error:", str(res)[:300], file=log, flush=True)
+            else:
                 run["gpu_s"] += res["wall_s"]
                 for it in res["items"]:
                     run["audio_s"] += it.get("audio_s", 0.0)
@@ -410,9 +417,19 @@ def main(argv=None) -> int:
                     run["flagged"] += 0 if it["ok"] else 1
                     if not it["ok"]:
                         print(f"flagged {it['slug']}#{it['i']}: {it['metrics']}", file=log, flush=True)
-            print(f"{time.strftime('%H:%M:%S')} round {r0 // round_size + 1}: {run['chunks']} chunks, "
-                  f"{run['flagged']} flagged, {run['failed']} failed, ~${spent_usd(run['gpu_s'], containers)}, "
-                  f"GPU-s per audio-s {run['gpu_s'] / max(run['audio_s'], 1):.2f}", flush=True)
+            run["wall_usd"] = round(containers * (time.time() - run_t0) * L4_USD_PER_S * OVERHEAD, 2)
+            if time.time() - last_meter > 600:
+                metered(run)
+                last_meter = time.time()
+            spent = max(run["wall_usd"], run.get("metered_usd") or 0.0)
+            if done_b % containers == 0 or done_b == len(batches):
+                print(f"{time.strftime('%H:%M:%S')} {done_b}/{len(batches)} batches: {run['chunks']} chunks, "
+                      f"{run['flagged']} flagged, {run['failed']} failed, spend <= ${spent} "
+                      f"(metered ${run.get('metered_usd')}), audio {run['audio_s'] / 3600:.2f} h", flush=True)
+            if spent > a.budget:
+                print(f"STOPPED: spend cap ${a.budget} reached (${spent}; metered ${run.get('metered_usd')})",
+                      flush=True)
+                return False
         return True
 
     def metered(run) -> float:
@@ -449,9 +466,11 @@ def main(argv=None) -> int:
         if mp3:
             done.append(mp3.name)
     metered(run)   # may lag the run by minutes; `modal billing report` gives the final figure
-    run.update(chapters_done=done, chapters_total=len(man["chapters"]), est_usd=spent_usd(run["gpu_s"], containers),
+    run.update(chapters_done=done, chapters_total=len(man["chapters"]), est_usd=max(run.get("wall_usd") or 0.0,
+                                                                                  spent_usd(run["gpu_s"], containers)),
                gpu_s_per_audio_s=round(run["gpu_s"] / max(run["audio_s"], 1), 2),
-               usd_per_audio_hour=round(run["gpu_s"] / max(run["audio_s"], 1) * 3600 * L4_USD_PER_S, 2))
+               usd_per_audio_hour=round(max(run.get("wall_usd") or 0.0, run.get("metered_usd") or 0.0)
+                                        / max(run["audio_s"] / 3600, 1e-6), 2))
     (book_dir / "run.json").write_text(json.dumps(run, indent=1))
     print(json.dumps(run, indent=1))
     return 0 if len(done) == len(man["chapters"]) else 5

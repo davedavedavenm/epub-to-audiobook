@@ -39,7 +39,14 @@ python scripts/modal_higgs_book.py BOOK.epub --title "T" --budget <USD cap insid
 - Output `scratch/modal_higgs/<book>/chunks/<slug>/NNNN.{wav,json}` (json = text key, verdict, every attempt with
   seed / why / roll-off / voice similarity), `chapters/NNN_<title>.mp3`, `run.json` (cost, GPU-s per audio-s), `run.log`.
 - Rerun the same command to resume: only chunks whose sidecar key (text + sampling) does not match are rendered.
-- `--budget` is a hard stop between rounds. The $30/month credit is the ceiling unless Dave approves more.
+- `--budget` is checked after every batch against max(containers x wall clock x rate, `modal billing report`
+  metered cost). `--partial-ok` starts a run whose estimate exceeds the cap; it stops cleanly and resumes later.
+  The $30/month credit is the ceiling unless Dave approves more. Check `modal billing summary` (the monthly
+  summary, which led the per-app report by ~$3.6 on 2026-10-07) before choosing a cap.
+- Lane chunks (Colab) join a Modal book only after the independent audits:
+  `chunk_asr_audit.py ... --json asr.json`, `voice_audit.py ... --json voice.json`, then
+  `python scripts/adopt_lane_chunks.py BUNDLE CHUNK_DIR SLUG --asr asr.json --voice voice.json`; failures are
+  deleted and the next Modal run re-renders them and assembles the chapter.
 - The first build after an image change takes ~3 min; container cold start ~6-8 min (vLLM + weights + Whisper).
 - **Independent check before delivery** (not the worker's own ASR): copy `chunks/<slug>`, the bundle zip,
   `scripts/chunk_asr_audit.py` and `webapp/qa_asr.py` into the webapp container on Zorin and run
