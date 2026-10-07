@@ -151,6 +151,13 @@ def test_runner_loop_end_to_end_with_fake_server(tmp_path, monkeypatch):
         assert mp3.exists() and mp3.stat().st_size > 5000, mp3
         assert st["progress"][c["slug"]] == c["sents"]           # progress counts CHUNKS
         assert st["meta"][c["slug"]]["warns"] == 0               # every re-roll came out clean
+        # every chunk, including the chapter's last ones, is inside a published checkpoint
+        import tarfile
+        packed = set()
+        for t in (base / "out").glob(f"ckpt_{c['slug']}_*.tgz"):
+            with tarfile.open(t) as tf:
+                packed |= {m.name for m in tf.getmembers()}
+        assert packed == {f"{c['slug']}/{i:04d}.wav" for i in range(1, c["sents"] + 1)}, sorted(packed)
     assert 43 in calls["seeds"] and calls["seeds"].count(42) == calls["seeds"].count(43)
     with zipfile.ZipFile(bundle) as z:
         assert "payloads/ch01.json" in z.namelist()

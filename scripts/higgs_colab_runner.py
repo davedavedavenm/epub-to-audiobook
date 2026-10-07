@@ -418,7 +418,10 @@ def main():
                     (wdir / f"{i:04d}.WARN").write_text(json.dumps(m))
                     log(f"  [{slug} {i}] WARN kept best attempt: {m}")
             st["progress"][slug] = i
-            if i > ck_hi and (i - ck_hi >= CKPT_EVERY_CHUNKS or time.time() - ck_t >= CKPT_EVERY_S):
+            # the chapter's last chunk always closes a checkpoint: otherwise the final few chunks exist
+            # only inside the chapter mp3 (2026-10-07 fill job: 6 chunks, incl. every 1-chunk chapter)
+            if i > ck_hi and (i - ck_hi >= CKPT_EVERY_CHUNKS or time.time() - ck_t >= CKPT_EVERY_S
+                              or i == len(chunks)):
                 name = write_checkpoint(slug, ck_hi + 1, i, wdir)
                 if name:
                     st.setdefault("ckpts", []).append(name)
@@ -456,10 +459,9 @@ def main():
                         "-codec:a", "libmp3lame", "-b:a", "192k", str(mp3)], check=True)
         raw.unlink()
         fails = len(list(wdir.glob("*.FAIL")))
-        # the finished chapter mp3 supersedes this chapter's checkpoints
-        for n in [n for n in st.get("ckpts", []) if n.startswith(f"ckpt_{slug}_")]:
-            st["ckpts"].remove(n)
-            (OUT / n).unlink(missing_ok=True)
+        # Checkpoints are KEPT after the chapter mp3 exists: they used to be deleted here, so the last
+        # few chunks of every chapter never reached the lane (a fill job that needs the chunk wavs lost
+        # 6, 2026-10-07). lane_ctl only re-uploads checkpoints of unfinished chapters, so this costs nothing.
         st["completed"].append(slug)
         st.setdefault("meta", {})[slug] = {"sec": round(len(full) / sr, 1), "sents": len(chunks),
                                            "fails": fails, "warns": warns, "gain_db": round(gain, 2)}
