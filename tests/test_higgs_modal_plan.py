@@ -48,8 +48,11 @@ def test_plan_resumes_and_never_regenerates(tmp_path):
 def test_cost_estimate_and_cap_are_sane():
     batches = [{"items": [{"words": 150 * 60}]}]   # one audio hour of words
     est = hp.estimate_usd(batches, containers=1)
-    assert 1.0 < est < 1.6                         # ~1.5 GPU-h at $0.80 + one cold start
-    assert hp.spent_usd(3600, 0) == round(3600 * hp.L4_USD_PER_S, 2)
+    assert 1.3 < est < 1.8                         # ~1.6 GPU-h at $0.80 + one cold start + CPU/memory
+    assert hp.spent_usd(3600, 0) == round(3600 * hp.L4_USD_PER_S * hp.OVERHEAD, 2)
+    rows = [{"object_id": "ap-1", "cost": "0.93"}, {"object_id": "ap-1", "cost": "0.09"},
+            {"object_id": "ap-2", "cost": "5"}]
+    assert hp.metered_usd(rows, "ap-1") == 1.02
 
 
 def _tone(seconds):

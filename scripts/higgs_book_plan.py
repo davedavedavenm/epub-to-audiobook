@@ -7,8 +7,10 @@ import zipfile
 from pathlib import Path
 
 L4_USD_PER_S = 0.000222              # modal.com/pricing, checked 2026-10-06 ($0.80/h)
-GPU_S_PER_AUDIO_S = 1.5              # measured RTF 1.2-1.9 on an L4, one request at a time (Colab, same runtime)
-CONTAINER_START_S = 360              # image pull + vLLM start + weights load, per container (estimate)
+GPU_S_PER_AUDIO_S = 1.6              # Modal, 4 concurrent requests: 0.96 with no re-rolls, 2.0-2.6 with all gates at
+                                     # the old 3.3 kHz muffled bar (2026-10-07); 1.6 until the final settings are measured
+CONTAINER_START_S = 600              # cold start (~7 min: image, vLLM, weights, Whisper) + 2 min idle before scale-down
+OVERHEAD = 1.14                      # CPU + memory billed on top of the L4 (modal billing report, 2026-10-07)
 
 
 def load_bundle(zip_path: Path) -> tuple[dict, dict]:
@@ -58,11 +60,16 @@ def plan_batches(man: dict, pay: dict, chunk_dir: Path, batch_size: int = 8, rec
 def estimate_usd(batches: list, containers: int) -> float:
     words = sum(it["words"] for b in batches for it in b["items"])
     gpu_s = words / 150 * 60 * GPU_S_PER_AUDIO_S + containers * CONTAINER_START_S
-    return round(gpu_s * L4_USD_PER_S, 2)
+    return round(gpu_s * L4_USD_PER_S * OVERHEAD, 2)
 
 
 def spent_usd(gpu_seconds: float, containers_started: int) -> float:
-    return round((gpu_seconds + containers_started * CONTAINER_START_S) * L4_USD_PER_S, 2)
+    return round((gpu_seconds + containers_started * CONTAINER_START_S) * L4_USD_PER_S * OVERHEAD, 2)
+
+
+def metered_usd(report_rows: list, app_id: str) -> float:
+    """Modal's own metered cost for one app run, from `modal billing report --json` rows."""
+    return round(sum(float(r.get("cost") or 0) for r in report_rows if r.get("object_id") == app_id), 2)
 
 
 

@@ -27,6 +27,28 @@ STATUS.md.**
   reported overall `ok` at app revision
   `9dcff344cdd935089887e56db76f88b7238603a0`.
 
+## Higgs on Modal runbook (2026-10-07) - the route for whole books
+
+Driver runs on Windows (`modal` CLI authenticated); everything else is in the image.
+
+```
+python scripts/modal_higgs_book.py BOOK.epub --title "T" --start 8 --end 8 --budget 1 --dry-run   # bundle + preflight + estimate
+python scripts/modal_higgs_book.py BOOK.epub --title "T" --start 8 --end 8 --budget 2.5            # one-chapter rehearsal
+python scripts/modal_higgs_book.py BOOK.epub --title "T" --budget <USD cap inside the credit>      # whole book
+```
+- Output `scratch/modal_higgs/<book>/chunks/<slug>/NNNN.{wav,json}` (json = text key, verdict, every attempt with
+  seed / why / roll-off / voice similarity), `chapters/NNN_<title>.mp3`, `run.json` (cost, GPU-s per audio-s), `run.log`.
+- Rerun the same command to resume: only chunks whose sidecar key (text + sampling) does not match are rendered.
+- `--budget` is a hard stop between rounds. The $30/month credit is the ceiling unless Dave approves more.
+- The first build after an image change takes ~3 min; container cold start ~6-8 min (vLLM + weights + Whisper).
+- **Independent check before delivery** (not the worker's own ASR): copy `chunks/<slug>`, the bundle zip,
+  `scripts/chunk_asr_audit.py` and `webapp/qa_asr.py` into the webapp container on Zorin and run
+  `python chunk_asr_audit.py b.zip <dir> <slug>` - expect `"truncated": 0, "mid_drops": 0`. Copy into a folder
+  the container user can write, or write the log to `/tmp`. `scripts/voice_audit.py` (chatterbox-nano container)
+  re-scores voice similarity and roll-off.
+- Known noise: transformers warns that `chunk_length_s` long-form Whisper is experimental; on the Preface its verdicts
+  matched the independent faster-whisper audit.
+
 ## Higgs / Colab lane runbook (2026-10-06) - supersedes the 24 h assumptions below
 
 **One click:** Convert screen -> voice `higgs_cillian_irish`, render target Lane, lane Colab, format M4B. The webapp

@@ -1,5 +1,20 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-10-07 - Armed Struggle moves to Modal; per-take word/voice/muffled checks; text extraction fixed
+>
+> - **DONE:** Colab Armed Struggle job stopped (chunks kept at khpi5 `~/as-lane/keep/armed_struggle_colab_20261006`).
+>   `scripts/modal_higgs_book.py` renders on Modal L4 (parallel containers, resume, hard `--budget`).
+> - **VERIFIED (machine) + Dave's ear:** fixed Preface, temperature 1.0 (Dave's pick "b"): independent per-chunk ASR
+>   0 truncated / 0 dropped; voice match >= 0.90 on every chunk; Dave: "seems fine", borderline-muffled spots "OK".
+>   Details and the four defects behind his first listen: DECISIONS "Higgs on Modal...".
+> - **VERIFIED:** library audit after the inline-tag fix: 187/187 pass, mid-sentence paragraph breaks 14,659 -> 3,059.
+> - **NOT DONE:** full Armed Struggle Modal render, M4B, ABS swap, moving Dave's position (3 h 09 m 55 s, Chapter 2).
+>   Cost per audio hour with the final gate settings is not measured yet; the run's `--budget` must stay inside
+>   the remaining $30/month Modal credit.
+> - **Not built:** automatic emotion tags (the loved emotive test was hand-tagged). Say Nothing on hold (Dave).
+> - Zorin: full update sweep + reboot, RustDesk/conky 100 % CPU fixes, Infisical runtime auth migrated
+>   (`zorin/changelog/2026-10-07.md`); this repo deployed at `4b0f919`.
+
 > ## 2026-10-06 - Higgs TTS 3 is the production engine for new books; Colab lane rebuilt around a 1-hour VM limit
 >
 > **State at the end of the day (claim levels kept apart):**

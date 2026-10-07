@@ -38,6 +38,33 @@ NOT a bug here. Consequences and settled rules:
    Three red CI runs in one day came from tests that passed only in the working folder (untracked copyrighted
    fixture, numpy missing in CI).
 
+## Higgs on Modal: temperature 1.0, per-take word/voice/muffled gates, inline-tag text fix — Active (2026-10-07)
+
+Dave listened to the first Modal Preface (11 min, 110-word chunks, V3 joins) and heard: a
+cut-off at "199x" plus a voice change (8:16), a non-Cillian voice (10:40), speakerphone/muffled
+patches, "losing words", odd pauses. Each was measured and traced:
+
+| Heard | Cause (measured) | Rule now |
+|---|---|---|
+| cut-off, lost words | chunk 20 looped on a list of years and **skipped 25 words**; whole-chapter ASR still said 98.3 % (repeats counted as heard) | **every take is transcribed (Whisper small.en on the GPU) and aligned to its own text** (`scripts/chunk_asr_audit.py`); tail >= 3 or a dropped run >= 3 re-rolls, then **render sentence by sentence** and crossfade-join. A chapter-level ratio is never completeness proof. |
+| "not Cillian" | speaker-embedding similarity 0.81 vs 0.91-0.97 for the rest (Chatterbox voice encoder) | reject < 0.90 |
+| muffled / speakerphone | 95 % spectral roll-off 1.8-2.5 kHz (reference 4.7 kHz); ~half of raw takes roll off low; temperature does not change it | reject < **2.7 kHz** (Dave: 3.0-3.3 kHz "OK"); a take that is only muffled gets 3 seeds, word/voice faults get 5 + sentence fallback |
+| pauses mid-sentence, "losing words" | `chapter_text` turned every tag into a newline: footnote links / empty page anchors became paragraph breaks mid-sentence (Fish version too) | inline tags join; note/page-number markers dropped; library 14,659 -> 3,059 mid-sentence breaks, 187/187 pass |
+
+Also settled:
+1. **Sampling = temperature 1.0, top_k 50, sent explicitly** in `extra_params`. Dave chose B (1.0)
+   over A (0.8, Boson's model-card cloning example) on the fixed Preface. vllm-omni 0.30.0 only takes
+   sampling through `extra_params`; its Higgs profile default is 1.0 / top_p 0.95 / top_k 50.
+2. **Abrupt end is a hard fault only above 0.8** end/body loudness: at 0.25 it re-rolled chunks the
+   ASR showed complete (cost without benefit). Pace-check passes are removed (ASR supersedes).
+3. **Resume is keyed on text + sampling** (`NNNN.json` sidecar); a text fix renumbered AS chunks
+   2612 -> 2012 and would otherwise have joined old audio to new text.
+4. **Emotion tags are still not automatic.** The "super super good" emotive test (2026-10-05) was
+   hand-tagged; no book render has had tags. Building a tagger is open.
+5. Measured cost with all gates on the Preface: 2.0-2.6 GPU-s per audio-s (~$1.8-2.1 per audio
+   hour) at the old 3.3 kHz bar; the 2.7 kHz bar + 3-seed muffled cap is expected lower - measure
+   on the next run before quoting a book price.
+
 ## Higgs lane pipeline is wired end to end; per-chunk gates and book-text audit are mandatory — Active (2026-10-06)
 
 `higgs_cillian_irish` is a lane voice (engine key `fish`, so validation/lane UI are shared;

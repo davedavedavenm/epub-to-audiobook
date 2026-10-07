@@ -333,7 +333,7 @@ def main(argv=None) -> int:
     # where these local helpers are not present
     import fish_bundle
     import higgs_colab_runner as hr
-    from higgs_book_plan import L4_USD_PER_S, estimate_usd, load_bundle, plan_batches, spent_usd
+    from higgs_book_plan import L4_USD_PER_S, estimate_usd, load_bundle, metered_usd, plan_batches, spent_usd
 
     ap = argparse.ArgumentParser(description="Render a book with Higgs TTS 3 on Modal")
     ap.add_argument("epub")
@@ -387,8 +387,9 @@ def main(argv=None) -> int:
     def render_all(worker, batches) -> bool:
         """Render every batch in rounds; False if the spend cap stopped it."""
         for r0 in range(0, len(batches), round_size):
-            if spent_usd(run["gpu_s"], containers) > a.budget:
-                print(f"STOPPED: spend cap ${a.budget} reached (est ${spent_usd(run['gpu_s'], containers)})")
+            spent = max(spent_usd(run["gpu_s"], containers), metered(run))
+            if spent > a.budget:
+                print(f"STOPPED: spend cap ${a.budget} reached (${spent}; metered ${run.get('metered_usd')})")
                 return False
             for res in worker.render.map(batches[r0:r0 + round_size], order_outputs=False, return_exceptions=True):
                 if isinstance(res, Exception):
@@ -414,7 +415,20 @@ def main(argv=None) -> int:
                   f"GPU-s per audio-s {run['gpu_s'] / max(run['audio_s'], 1):.2f}", flush=True)
         return True
 
+    def metered(run) -> float:
+        """Modal's real metered cost for this app run (GPU + CPU + memory); 0 if the report is unavailable."""
+        try:
+            import datetime as dt
+            end = (dt.date.today() + dt.timedelta(days=2)).isoformat()   # the report needs --start AND --end
+            out = subprocess.run(["modal", "billing", "report", "--start", run["started"][:10], "--end", end,
+                                  "--json"], capture_output=True, text=True, timeout=120)
+            run["metered_usd"] = metered_usd(json.loads(out.stdout), run.get("app_id"))
+        except Exception as e:
+            print("billing report unavailable:", str(e)[:120], file=log, flush=True)
+        return run.get("metered_usd") or 0.0
+
     with modal.enable_output(), app.run():
+        run["app_id"] = app.app_id
         worker = Higgs()
         # passes 2-3 only re-plan chunks that came back with no audio at all; every returned take has
         # already been checked word-by-word (ASR), voice and bandwidth inside the worker
@@ -434,6 +448,7 @@ def main(argv=None) -> int:
         mp3 = assemble_chapter(c, pay[c["slug"]], chunk_dir, chap_dir, recipe)
         if mp3:
             done.append(mp3.name)
+    metered(run)   # may lag the run by minutes; `modal billing report` gives the final figure
     run.update(chapters_done=done, chapters_total=len(man["chapters"]), est_usd=spent_usd(run["gpu_s"], containers),
                gpu_s_per_audio_s=round(run["gpu_s"] / max(run["audio_s"], 1), 2),
                usd_per_audio_hour=round(run["gpu_s"] / max(run["audio_s"], 1) * 3600 * L4_USD_PER_S, 2))
