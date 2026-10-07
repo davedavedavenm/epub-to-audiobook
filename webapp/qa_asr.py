@@ -38,6 +38,7 @@ import re
 import json
 import difflib
 import logging
+import unicodedata
 from pathlib import Path
 
 try:
@@ -86,6 +87,10 @@ def normalize_words(text: str) -> list[str]:
     list suitable for alignment. Numbers are canonicalised so digit vs spelled
     forms don't register as differences."""
     text = (text or "").lower().replace('&', ' and ')
+    # Fold accents before tokenising: `_WORD_RE` is ASCII, so "seán" split into "se" + "n" and
+    # "macstiofáin" into two tokens - an Irish name list then looked like 3+ dropped words against
+    # Whisper's "Sean McSteafon" (Armed Struggle ch.3 audit, 2026-10-07; the audio was complete).
+    text = ''.join(ch for ch in unicodedata.normalize('NFKD', text) if not unicodedata.combining(ch))
 
     # Unicode punctuation -> ASCII, BEFORE tokenising.
     #

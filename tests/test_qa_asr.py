@@ -45,6 +45,19 @@ def test_decade_digits_vs_spoken_decade_do_not_diverge():
     assert r['wer'] == 0.0, r['divergences']
 
 
+def test_accented_irish_names_are_one_token_each():
+    """'Seán MacStiofáin' tokenised as 'se n macstiof in' and a complete name list looked like
+    dropped words against Whisper's spelling (Armed Struggle ch.3, 2026-10-07)."""
+    q = _load()
+    assert q.normalize_words("Seán MacStiofáin, Ó Brádaigh") == ['sean', 'macstiofain', 'o', 'bradaigh']
+    import sys
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    import chunk_asr_audit as ca
+    r = ca.audit_chunk("included Seán MacStiofáin, Ruree oh Brawdee and Daithi O’Connell. All three",
+                       "included Sean McSteafon, Ruré Obradi, and Deithi O'Connell. All three")
+    assert not r["bad"], r
+
+
 def test_dropped_number_piece_is_caught():
     """The '1976 heard as nineteen seventy' bug (final digit dropped) must
     surface as a divergence — this is the class QA Layer 2 exists to catch."""
