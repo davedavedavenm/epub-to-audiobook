@@ -150,6 +150,36 @@ def test_chapter_text_drops_head_title_and_keeps_chapter_number():
     assert "two" not in [s["text"].strip(". ").lower() for s in prep("Text here.\n\n2\n\nMore text follows.", {})]
 
 
+def test_footnote_links_and_page_anchors_do_not_split_a_paragraph():
+    """Armed Struggle Preface (heard 2026-10-07): every tag became a newline, so a footnote link or an
+    empty page anchor made a paragraph break mid-sentence - each half was spoken as a finished
+    sentence with a 0.45 s pause. Markup copied from the real EPUB (index_split_013.html)."""
+    import fish_bundle as fb
+    from as_prep import prep
+    html = ('<p class="calibre_6">Its pre-history and early generations have been studied in admirably '
+            'rigorous fashion,<a id="filepos52203" href="index_split_032.html#filepos1167705">'
+            '<sup class="calibre20">2</sup></a> and the <span class="italic">pre</span>-Provisional IRA has '
+            'been impressively contextualized. But, while the book is thus based on <a id="filepos54213"></a>'
+            'comprehensive scholarly work, it is accessible. See <a href="notes.html#n7">7</a> below.</p>'
+            '<p class="calibre_6">Second paragraph (<i>Rebel Heart</i>) here.</p>')
+    sents = prep(fb.chapter_text(html), {})
+    assert len({s["para"] for s in sents}) == 2, [(s["para"], s["text"]) for s in sents]
+    text = " ".join(s["text"] for s in sents)
+    assert "rigorous fashion, and the pre-Provisional IRA" in text
+    assert "thus based on comprehensive scholarly work" in text
+    assert "two" not in text.lower().split() and "seven" not in text.lower() and "See below." in text
+    assert "(Rebel Heart) here." in text
+    # inline tags join; block tags still separate
+    assert fb.chapter_text("<p>One<br/>two</p><p>Three</p>").count("\n") >= 2
+    # cases found by the whole-library count (2026-10-07)
+    assert fb.chapter_text('f<span class="u">u</span>n, comp<b>u</b>ter') == "fun, computer"   # Why Q Needs U
+    assert fb.chapter_text('her<a href="notes.xhtml">219</a>, she loathes<span>6</span> it') == "her, she loathes it"
+    assert fb.chapter_text('the <span class="pg">125</span>an') == "the an"           # inline page number
+    assert fb.chapter_text("<span>FOX</span><span>Local exhibition</span><span>8 PM</span>") == \
+        "FOX Local exhibition 8 PM"
+    assert fb.chapter_text("10<sup>th</sup>, in <span>1916</span>, the 1990<i>s</i>") == "10th, in 1916, the 1990s"
+
+
 def test_matter_filter_on_the_real_armed_struggle_chapter_list():
     """Regression: the entry-count version dropped EVERY chapter of this book."""
     import sys as _s

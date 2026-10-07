@@ -84,6 +84,19 @@ _CHAPTER_NUMBER = re.compile(
     re.I | re.S)
 _DROP_CAP = re.compile(r'<span[^>]*class="[^"]*dropcap[^"]*"[^>]*>([A-Za-z])</span>')
 _TAGS = re.compile(r"<[^>]+>")
+# Footnote references (<a href><sup>2</sup></a>, <sup><a>2</a></sup>, bare <sup>2</sup>) are not
+# narrated. Inline tags join text instead of breaking it: when every tag became a newline, an empty
+# page anchor or a footnote link left a blank line = a paragraph break in the middle of a sentence
+# (Armed Struggle Preface: "rigorous fashion, | and the pre-Provisional IRA", each half spoken as a
+# finished sentence with a 0.45 s pause - heard by Dave 2026-10-07).
+_NOTEREF = re.compile(
+    r"<a\b[^>]*>\s*<sup\b[^>]*>\s*[\d*†‡§]{1,4}\s*</sup>\s*</a>"
+    r"|<sup\b[^>]*>\s*<a\b[^>]*>\s*[\d*†‡§]{1,4}\s*</a>\s*</sup>"
+    r"|<sup\b[^>]*>\s*[\d*†‡§]{1,4}\s*</sup>"
+    r"|<a\b[^>]*>\s*\[?[\d*†‡§]{1,4}\]?\s*</a>", re.I)   # a link that is only a number = note/page ref
+_INLINE_TAG = re.compile(
+    r"</?(?:a|abbr|b|bdi|bdo|big|cite|code|del|dfn|em|font|i|img|ins|kbd|mark|q|s|samp|small|"
+    r"span|strike|strong|sub|sup|time|tt|u|var|wbr)\b[^>]*>", re.I)
 # Digits attached to uppercase letters are acronym readings the lexicon or
 # listener expects verbatim (MI6, M60, B52); a BARE digit run is the defect.
 _BARE_DIGITS = re.compile(r"(?<![A-Za-z0-9])\d+(?![A-Za-z])")
@@ -100,8 +113,20 @@ def chapter_text(html: str) -> str:
     # Publisher chapter-number elements (<p class="chapter_number">1</p>) become "Chapter 1";
     # otherwise the standalone-digit-line filter in as_prep (footnote markers) would delete them.
     html = _CHAPTER_NUMBER.sub(lambda m: f"<p>Chapter {m.group(2)}</p>", html)
+    html = _NOTEREF.sub("", html)
+    # An inline tag joins its neighbours ("f<span>u</span>n" -> "fun", Why Q Needs U) unless the join
+    # would glue a word to a number or a capital ("exhibition<span>8 PM", "Fox</span><span>Local"):
+    # those are styled lines, so they keep a space.
+    # A 1-3 digit number that is the whole content of an inline tag is a note/page marker
+    # ("loathes<span>6</span>", "<span>125</span>an"); the old every-tag-is-a-line text put it on
+    # its own line and as_prep dropped it, so drop it here too.
+    html = _INLINE_TAG.sub("\x00", html)
+    html = re.sub(r"\x00+[ \t]*\d{1,3}[ \t]*\x00+", "\x00", html)
+    html = re.sub(r"(?<=[a-z])\x00+(?=[A-Z0-9])|(?<=[A-Z])\x00+(?=[A-Z][a-z])|(?<=[A-Za-z])\x00+(?=\d)",
+                  " ", html)
+    html = html.replace("\x00", "")
     html = _TAGS.sub("\n", html)
-    return htmlmod.unescape(html)
+    return re.sub(r"[ \t]{2,}", " ", htmlmod.unescape(html))   # "See <a>7</a> below" -> "See below"
 
 
 # Front/back matter is never narrated. Found on Say Nothing (2026-10-06): the chapter
