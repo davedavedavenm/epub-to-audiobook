@@ -19,7 +19,7 @@ import numpy as np
 import soundfile as sf
 
 MIN_VOICE_SIM = 0.90          # same thresholds as the Modal worker (scripts/modal_higgs_book.py)
-MIN_ROLLOFF_HZ = 3300.0
+MIN_ROLLOFF_HZ = 1800.0     # higgs_colab_runner.MIN_ROLLOFF_HZ (Dave accepted 1.6-2.3 kHz takes)
 
 
 def rolloff_hz(w, sr, frac=0.95):

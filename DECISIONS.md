@@ -67,6 +67,11 @@ Also settled:
    ~7-minute cold starts. The driver now streams all batches through one `.map` and caps spend at
    max(containers x wall clock x rate x 1.14, Modal's metered cost). The monthly summary also ran
    ~$3.6 above the per-app report on 2026-10-07 (unexplained; budget against the summary).
+   **The monthly summary lags by up to an hour.** On 2026-10-07 a retry wrapper set its cap as
+   "$28 minus the summary" while the summary still missed the previous run's last hour; the month
+   ended at $32.14 metered and **$2.02 was billed to Dave**. Rule: before any Modal run, the cap is
+   credit - summary - (the last hour's burn of every run that ended < 2 h ago) - $3 margin, and a
+   run that needs more than that waits for Dave's OK or goes to Colab.
 6. Armed Struggle split (2026-10-07): Preface = approved B; ch10-18 on Modal (inside the free credit,
    `--partial-ok` cap); ch09 (already heard by Dave) on the Colab lane through the webapp's own
    `render_colab` with the same bundle, then audited and adopted (`scripts/adopt_lane_chunks.py`).

@@ -351,6 +351,8 @@ def main(argv=None) -> int:
                     help="override Boson's documented cloning temperature (0.8) - for listening A/Bs")
     ap.add_argument("--partial-ok", action="store_true",
                     help="start even if the estimate exceeds --budget; the cap still stops the run (resume later)")
+    ap.add_argument("--assemble-only", action="store_true",
+                    help="no Modal at all: assemble every chapter whose chunks are all present and current ($0)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args(argv)
     sampling = dict(hr.SAMPLING, **({"temperature": a.temperature} if a.temperature is not None else {}))
@@ -380,6 +382,11 @@ def main(argv=None) -> int:
         return 4
     if a.dry_run:
         return 0
+    if a.assemble_only:
+        done = [mp3.name for c in man["chapters"]
+                if (mp3 := assemble_chapter(c, pay[c["slug"]], chunk_dir, chap_dir, recipe))]
+        print(f"assembled {len(done)}/{len(man['chapters'])}: {done}")
+        return 0 if len(done) == len(man["chapters"]) else 5
 
     book_dir.mkdir(parents=True, exist_ok=True)
     log = (book_dir / "run.log").open("a", encoding="utf-8")
