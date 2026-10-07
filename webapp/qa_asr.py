@@ -53,6 +53,7 @@ _WORD_RE = re.compile(r"[a-z0-9']+")
 # ordinal written as a digit ("14th", "1st", "21st") — Whisper often emits these
 # where the audio said the word ("fourteenth"), so canonicalise both to words.
 _ORD_RE = re.compile(r"^(\d+)(?:st|nd|rd|th)$")
+_DECADE_RE = re.compile(r"^(\d0|\d{3}0)s$")
 
 
 def _expand_number(tok: str) -> list[str]:
@@ -106,7 +107,14 @@ def normalize_words(text: str) -> list[str]:
         # "shant" says nothing about how the audio sounded.
         tok = tok.replace("'", "") or tok
         m = _ORD_RE.match(tok)
-        if tok.isdigit():
+        dec = _DECADE_RE.match(tok)
+        if dec and _HAS_N2W:
+            # Whisper writes "1930s"/"60s" where the text (as_prep) says "nineteen thirties"/"sixties"
+            words = _expand_number(dec.group(1))
+            last = words[-1]
+            words[-1] = last[:-1] + "ies" if last.endswith("y") else last + "s"
+            out.extend(words)
+        elif tok.isdigit():
             out.extend(_expand_number(tok))
         elif m and _HAS_N2W:
             try:

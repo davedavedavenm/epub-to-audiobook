@@ -18,15 +18,35 @@ def load_bundle(zip_path: Path) -> tuple[dict, dict]:
     return man, pay
 
 
-def plan_batches(man: dict, pay: dict, chunk_dir: Path, batch_size: int = 8) -> list:
+def chunk_key(text: str, recipe: str = "") -> str:
+    """Identity of a chunk's audio: its exact text plus the sampling recipe that rendered it."""
+    import hashlib
+    return hashlib.sha1(f"{recipe}\n{text}".encode("utf-8")).hexdigest()[:16]
+
+
+def chunk_is_current(chunk_dir: Path, slug: str, i: int, key: str) -> bool:
+    """A wav counts as done only if its sidecar says it was rendered from THIS text and recipe.
+    Resume used to trust any NNNN.wav; after a text fix renumbered the chunks (Armed Struggle,
+    2026-10-07: 2612 -> 2012) that would have joined old audio onto new text."""
+    wav, side = chunk_dir / slug / f"{i:04d}.wav", chunk_dir / slug / f"{i:04d}.json"
+    if not (wav.exists() and side.exists()):
+        return False
+    try:
+        return json.loads(side.read_text(encoding="utf-8")).get("key") == key
+    except (OSError, ValueError):
+        return False
+
+
+def plan_batches(man: dict, pay: dict, chunk_dir: Path, batch_size: int = 8, recipe: str = "") -> list:
     """Batches of chunks that are NOT on disk yet (so a rerun resumes, never regenerates)."""
     batches = []
     for c in man["chapters"]:
         slug, items = c["slug"], []
         for i, ch in enumerate(pay[slug]["chunks"], 1):
-            if (chunk_dir / slug / f"{i:04d}.wav").exists():
+            if chunk_is_current(chunk_dir, slug, i, chunk_key(ch.get("tagged") or ch["text"], recipe)):
                 continue
-            items.append({"i": i, "text": ch.get("tagged") or ch["text"], "words": ch["words"]})
+            text = ch.get("tagged") or ch["text"]
+            items.append({"i": i, "text": text, "words": ch["words"], "key": chunk_key(text, recipe)})
             if len(items) == batch_size:
                 batches.append({"slug": slug, "items": items})
                 items = []

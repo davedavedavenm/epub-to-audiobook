@@ -18,11 +18,14 @@ SR = 24000
 
 
 def speechlike(seconds, amp=0.2, tail=0.4):
-    """Noise-modulated tone with a natural fade-out tail."""
+    """Harmonic-rich voiced tone (energy to ~5 kHz, like real speech - a bare sine would fail the
+    muffled gate) with a natural fade-out tail."""
     n = int(seconds * SR)
     t = np.arange(n) / SR
     rng = np.random.default_rng(1)
-    sig = amp * np.sin(2 * np.pi * 180 * t) * (0.6 + 0.4 * np.sin(2 * np.pi * 3 * t))
+    voiced = sum(np.sin(2 * np.pi * 180 * k * t) / np.sqrt(k) for k in range(1, 28))
+    voiced /= np.abs(voiced).max()
+    sig = amp * voiced * (0.6 + 0.4 * np.sin(2 * np.pi * 3 * t))
     sig += 0.02 * rng.standard_normal(n)
     env = np.ones(n)
     k = min(int(tail * SR), n)

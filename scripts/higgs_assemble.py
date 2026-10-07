@@ -9,6 +9,8 @@ Then a single gain to ~-20 LUFS with sample peak <= -2 dBFS (gain-only: no EQ, n
 """
 from __future__ import annotations
 
+import re
+
 import numpy as np
 
 TRIM_DB = -55.0
@@ -17,6 +19,14 @@ FADE_IN_S = 0.02
 FADE_OUT_S = 0.09
 XFADE_S = 0.07
 PARA_GAP_S = 0.45
+
+
+_SENT_END = re.compile(r"(?:(?<=[.!?])|(?<=[.!?][’”\"')]))\s+")
+
+
+def split_sentences(text: str) -> list:
+    """Sentences of a chunk, for the render-each-sentence fallback (closing quotes stay attached)."""
+    return [s.strip() for s in _SENT_END.split(text or "") if s and s.strip()]
 
 
 def trim(w: np.ndarray, sr: int, thr_db: float = TRIM_DB, pad_s: float = TRIM_PAD_S) -> np.ndarray:

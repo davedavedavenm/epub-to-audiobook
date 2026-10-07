@@ -38,6 +38,7 @@ def test_plan_resumes_and_never_regenerates(tmp_path):
     (chunk_dir / "ch01").mkdir(parents=True)
     for i in (1, 2, 3):
         (chunk_dir / "ch01" / f"{i:04d}.wav").write_bytes(b"x")
+        (chunk_dir / "ch01" / f"{i:04d}.json").write_text(json.dumps({"key": hp.chunk_key(f"text {i - 1}")}))
     b2 = hp.plan_batches(man, pay, chunk_dir, batch_size=2)
     todo = [(x["slug"], it["i"]) for x in b2 for it in x["items"]]
     assert ("ch01", 1) not in todo and ("ch01", 4) in todo and len(todo) == 5
@@ -96,6 +97,95 @@ def test_gate_floor_is_configurable():
     k = int(0.4 * SR)
     w[-k:] *= np.linspace(1, 0, k)
     w[:int(0.2 * SR)] *= np.linspace(0, 1, int(0.2 * SR)) ** 3
-    assert hr.gate_chunk(w, SR, 105)[0] is True                       # old 0.18 floor let it through
-    ok, m = hr.gate_chunk(w, SR, 105, min_s_per_word=0.29)
+    assert hr.gate_chunk(w, SR, 105, min_rolloff_hz=None)[0] is True  # old 0.18 floor let it through
+    ok, m = hr.gate_chunk(w, SR, 105, min_s_per_word=0.29, min_rolloff_hz=None)
     assert not ok and "duration" in m["why"]
+
+
+def test_resume_rejects_audio_rendered_from_other_text_or_sampling(tmp_path):
+    man, pay = hp.load_bundle(_book(tmp_path, chunk_counts=(2,)))
+    d = tmp_path / "chunks" / "ch01"
+    d.mkdir(parents=True)
+    (d / "0001.wav").write_bytes(b"x")                     # legacy wav, no sidecar -> not trusted
+    (d / "0002.wav").write_bytes(b"x")
+    (d / "0002.json").write_text(json.dumps({"key": hp.chunk_key("OLD text before the fix")}))
+    todo = [it["i"] for b in hp.plan_batches(man, pay, tmp_path / "chunks") for it in b["items"]]
+    assert todo == [1, 2]
+    (d / "0002.json").write_text(json.dumps({"key": hp.chunk_key("text 1", "t1.0")}))
+    todo = [it["i"] for b in hp.plan_batches(man, pay, tmp_path / "chunks", recipe="t0.8") for it in b["items"]]
+    assert todo == [1, 2]                                  # same text, different sampling -> re-render
+    (d / "0002.json").write_text(json.dumps({"key": hp.chunk_key("text 1", "t0.8")}))
+    todo = [it["i"] for b in hp.plan_batches(man, pay, tmp_path / "chunks", recipe="t0.8") for it in b["items"]]
+    assert todo == [1]
+
+
+def _band_noise(seconds, cutoff_hz, seed=0):
+    rng = np.random.default_rng(seed)
+    n = int(seconds * SR)
+    spec = np.fft.rfft(rng.standard_normal(n))
+    f = np.fft.rfftfreq(n, 1 / SR)
+    spec[f > cutoff_hz] = 0
+    spec *= 1 / np.sqrt(1 + f / 300.0)                     # speech-like tilt
+    w = np.fft.irfft(spec, n).astype(np.float32)
+    w *= 0.1 / np.sqrt(np.mean(w ** 2))
+    k = int(0.4 * SR)
+    w[-k:] *= np.linspace(1, 0, k)
+    w[:k] *= np.linspace(0, 1, k)
+    return w
+
+
+def test_muffled_take_is_rejected_and_full_band_take_passes():
+    import os
+    import tempfile
+    os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
+    import higgs_colab_runner as hr
+    ok, m = hr.gate_chunk(_band_noise(20, 2200), SR, 55)  # rolls off like Preface chunks 2-5 (1.8-2.5 kHz)
+    assert not ok and m["why"] == "muffled" and m["roll"] < hr.MIN_ROLLOFF_HZ
+    ok, m = hr.gate_chunk(_band_noise(20, 8000), SR, 55)  # Cillian reference rolls off at ~4.7 kHz
+    assert ok and m["roll"] > hr.MIN_ROLLOFF_HZ, m
+    assert hr.gate_chunk(_band_noise(1.5, 2200), SR, 1)[1].get("roll") is None   # too short to judge
+    muffled = hr.attempt_score(False, {"why": "muffled", "roll": 2200})
+    assert hr.attempt_score(False, {"why": "muffled", "roll": 3000}) < muffled < 99
+    assert hr.attempt_score(True, {}) == 0
+
+
+def test_take_penalty_ranks_missing_words_worst_and_ignores_soft_endings():
+    import os
+    import tempfile
+    os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
+    import higgs_colab_runner as hr
+    clean = {"end": 0.3, "start": 0.01, "roll": 4600, "sim": 0.95, "asr_bad": False}
+    assert hr.take_penalty(clean) == (0, "")              # 0.3 end ratio: complete per ASR, not re-rolled
+    words, _ = hr.take_penalty({**clean, "asr_bad": True, "asr_tail": 8, "asr_cover": 0.88})
+    voice, _ = hr.take_penalty({**clean, "sim": 0.813})
+    muffled, _ = hr.take_penalty({**clean, "roll": 2200})
+    cut, why = hr.take_penalty({**clean, "end": 1.9})
+    assert words > voice > muffled > cut > 0 and why == "cut-off end"
+    assert hr.take_penalty({"why": "duration 9.0s for 105 words"})[0] == 99.0
+
+
+def test_split_sentences_keeps_closing_quotes():
+    assert ha.split_sentences("It was “done.” Then the IRA ceasefires of nineteen ninety-four! And?") == \
+        ["It was “done.”", "Then the IRA ceasefires of nineteen ninety-four!", "And?"]
+
+
+def test_chunk_asr_audit_catches_the_real_preface_failures():
+    sys.path.insert(0, str(ROOT / "webapp"))
+    import chunk_asr_audit as ca
+    # modal t0.8 chunk 18: stopped after "1994 and 1990"
+    text = ("It details the IRA's role in a process involving milestones such as the nineteen ninety-three "
+            "Anglo-Irish Joint Declaration, the IRA ceasefires of nineteen ninety-four and nineteen "
+            "ninety-seven and the nineteen ninety-eight Belfast Agreement.")
+    heard = ("It details the IRA's role in a process involving milestones such as the 1993 Anglo-Irish Joint "
+             "Declaration, the IRA ceasefires of 1994 and 1990")
+    r = ca.audit_chunk(text, heard)
+    assert r["bad"] and r["tail"] >= 3
+    # modal t1.0 chunk 20: a whole sentence skipped mid-chunk, then the chunk ended normally
+    text2 = ("and the nineteen ninety-eight Belfast Agreement. This section also offers the first fully "
+             "researched consideration of why the IRA so dramatically shifted ground during the peace process "
+             "of the nineteen nineties.")
+    heard2 = "and the 1993. During the peace process of the 1990s."
+    r2 = ca.audit_chunk(text2, heard2)
+    assert r2["bad"] and r2["drops"]
+    ok = ca.audit_chunk(text, heard + "7 and the 1998 Belfast Agreement.")
+    assert not ok["bad"], ok

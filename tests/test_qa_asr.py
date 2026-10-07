@@ -36,6 +36,15 @@ def test_ordinal_word_vs_digit_not_a_divergence():
     assert r['wer'] == 0.0, f"ordinal word/digit produced false divergences: {r['divergences']}"
 
 
+def test_decade_digits_vs_spoken_decade_do_not_diverge():
+    """Whisper writes '1930s' / '60s'; as_prep's text says 'nineteen thirties' / 'sixties'. Seen as a
+    false 3-word 'drop' in the per-chunk audit of the Armed Struggle Preface (2026-10-07)."""
+    q = _load()
+    r = q.diff_report("during the nineteen thirties, nineteen forties and sixties",
+                      "during the 1930s, 1940s and 60s")
+    assert r['wer'] == 0.0, r['divergences']
+
+
 def test_dropped_number_piece_is_caught():
     """The '1976 heard as nineteen seventy' bug (final digit dropped) must
     surface as a divergence — this is the class QA Layer 2 exists to catch."""

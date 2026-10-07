@@ -44,6 +44,17 @@ VENV = BASE / "h3env"
 MODEL = "bosonai/higgs-audio-v3-tts-4b"
 PORT = 8095
 SEEDS = (42, 43, 44, 45, 46)
+# Sampling: temperature 1.0, top_k 50 - Dave's listening pick on 2026-10-07 (AS Preface A/B, "b") over
+# Boson's model-card cloning example ("temperature": 0.8, "top_k": 50; bosonai/higgs-audio-v3-tts-4b
+# README, read 2026-10-07). 1.0 is also vllm-omni 0.30.0's deploy-profile default
+# (higgs_multimodal_qwen3.yaml); the speech endpoint takes temperature/top_p/top_k only through
+# ``extra_params`` (serving_speech.py), so it is sent explicitly to make the recipe visible.
+SAMPLING = {"temperature": 1.0, "top_k": 50}
+# Muffled / "speakerphone" takes: the Cillian reference keeps 95 % of its energy below ~4.7 kHz; about
+# half of raw Higgs takes roll off lower. Dave (2026-10-07) heard takes at 3.0-3.3 kHz as fine; the
+# opening chunks he called "speakerphone" rolled off at 1.8-2.5 kHz. The bar sits in that gap.
+MIN_ROLLOFF_HZ = 2700.0
+MIN_ROLLOFF_DUR_S = 3.0          # "NOTE." and other one-word chunks are too short to measure
 BUDGET_S = 10 * 3600
 BOOK_TAG, VOICE_TAG = "book", "cillian_higgs"
 ORDER: list = []
@@ -118,7 +129,67 @@ def _rms(x):
     return float(np.sqrt(np.mean(x ** 2))) if len(x) else 0.0
 
 
-def gate_chunk(w, sr, words, min_s_per_word=0.18):
+def rolloff_hz(w, sr, frac=0.95):
+    """Frequency below which ``frac`` of the speech energy lies (loud frames only)."""
+    import numpy as np
+    n, hop = 2048, 1024
+    if len(w) < n * 2:
+        return None
+    frames = np.lib.stride_tricks.sliding_window_view(w, n)[::hop] * np.hanning(n)
+    spec = np.abs(np.fft.rfft(frames, axis=1)) ** 2
+    energy = spec.sum(axis=1)
+    p = spec[energy > np.percentile(energy, 40)].mean(axis=0)
+    cum = np.cumsum(p) / max(float(p.sum()), 1e-12)
+    return float(np.fft.rfftfreq(n, 1 / sr)[min(int(np.searchsorted(cum, frac)), len(cum) - 1)])
+
+
+def attempt_score(ok, m):
+    """Lower is better, for keeping the best of several seeds when none passes."""
+    if ok:
+        return 0.0
+    if m.get("why") == "abrupt end":
+        return m.get("end", 9)
+    if m.get("why") == "muffled":
+        return 10.0 - m.get("roll", 0) / 1000.0
+    if m.get("why") == "voice":                     # wrong-sounding speaker: worse than muffled
+        return 10.0 + (1.0 - m.get("sim", 0)) * 10.0
+    return 99.0
+
+
+HARD_FAILS = ("too short", "health/clipping")
+
+
+def take_penalty(m, min_rolloff_hz=MIN_ROLLOFF_HZ, min_voice_sim=0.90, max_end_ratio=0.8):
+    """Modal worker's verdict on one take: (penalty, reasons); 0 = accept. Lower is better when every
+    seed fails. ``m`` = gate_chunk metrics plus roll (Hz), sim (voice match) and asr_* (per-chunk ASR).
+
+    Ordered by what Dave hears as worst: missing words (AS Preface chunk 20: 25 words never spoken),
+    then a voice that is not Cillian, then muffled, then a cut-off last syllable. The end-loudness
+    ratio is only a hard fault above 0.8 (stops mid-word): at 0.25 it re-rolled 4 Preface chunks the
+    ASR showed were complete, which was most of the 2.6 attempts/chunk measured on 2026-10-07."""
+    why = m.get("why") or ""
+    if why in HARD_FAILS or why.startswith("duration"):
+        return 99.0, why
+    p, reasons = 0.0, []
+    if m.get("asr_bad"):
+        p += 30.0 + m.get("asr_tail", 0) + 20.0 * (1.0 - m.get("asr_cover", 1.0))
+        reasons.append("words")
+    if m.get("sim") is not None and m["sim"] < min_voice_sim:
+        p += 10.0 + (min_voice_sim - m["sim"]) * 50.0
+        reasons.append("voice")
+    if m.get("roll") is not None and m["roll"] < min_rolloff_hz:
+        p += 5.0 + (min_rolloff_hz - m["roll"]) / 1000.0
+        reasons.append("muffled")
+    if m.get("end", 0) > max_end_ratio:
+        p += 3.0 + m["end"]
+        reasons.append("cut-off end")
+    if m.get("start", 0) > 0.5:
+        p += 2.0
+        reasons.append("abrupt start")
+    return round(p, 3), "+".join(reasons)
+
+
+def gate_chunk(w, sr, words, min_s_per_word=0.18, min_rolloff_hz=MIN_ROLLOFF_HZ):
     """Return (ok, metrics). ``w`` is mono float32."""
     import numpy as np
     d = len(w) / sr
@@ -141,6 +212,12 @@ def gate_chunk(w, sr, words, min_s_per_word=0.18):
         return False, {**m, "why": "abrupt end"}
     if start_ratio > 0.5:
         return False, {**m, "why": "abrupt start"}
+    if min_rolloff_hz and d >= MIN_ROLLOFF_DUR_S:
+        roll = rolloff_hz(w, sr)
+        if roll is not None:
+            m["roll"] = round(roll)
+            if roll < min_rolloff_hz:
+                return False, {**m, "why": "muffled"}
     return True, m
 
 
@@ -275,7 +352,7 @@ def main():
                 r = requests.post(f"http://127.0.0.1:{PORT}/v1/audio/speech", json={
                     "model": MODEL, "input": text, "response_format": "wav",
                     "ref_audio": ref_url, "ref_text": ref_text,
-                    "max_new_tokens": 2048, "seed": seed}, timeout=900)
+                    "max_new_tokens": 2048, "seed": seed, "extra_params": SAMPLING}, timeout=900)
                 r.raise_for_status()
                 import io
                 w, sr = sf.read(io.BytesIO(r.content), dtype="float32")
@@ -323,7 +400,7 @@ def main():
                     log(f"  [{slug} {i}] seed {seed} error: {str(e)[:100]}")
                     continue
                 ok, m = gate_chunk(w, sr, ch["words"])
-                score = m.get("end", 9) if m.get("why") in (None, "abrupt end") else 99
+                score = attempt_score(ok, m)
                 if best is None or ok or score < best[2]:
                     best = (w, m, score, ok, seed)
                 if ok:
