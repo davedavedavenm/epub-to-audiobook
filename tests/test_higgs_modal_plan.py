@@ -245,7 +245,7 @@ def test_lane_fill_in_stage_and_place_round_trip(tmp_path):
     run = lambda *args: subprocess.run([sys.executable, str(ROOT / "scripts" / "lane_fill_in.py"), *map(str, args)],
                                        capture_output=True, text=True, check=True).stdout
     rep = json.loads(run("stage", z, chunks, stage))
-    assert rep == {"chx01": {"chapter": "ch01", "chunks": 1, "first": [2]}}
+    assert rep == {"chx01": {"chapter": "ch01", "chunks": 1, "fill_items": 1, "first": [2]}}
     man, pay = hp.load_bundle(stage / "as_bundle.zip")
     assert [c["slug"] for c in man["chapters"]] == ["chx01"] and pay["chx01"]["chunks"][0]["text"] == "text 1"
     import re
@@ -259,3 +259,38 @@ def test_lane_fill_in_stage_and_place_round_trip(tmp_path):
     assert (chunks / "ch01" / "0002.wav").read_bytes() == b"new"
     full_man, full_pay = hp.load_bundle(z)
     assert hp.plan_batches(full_man, full_pay, chunks, recipe=recipe) == []
+
+
+
+def test_lane_fill_in_split_joins_sentences_only_when_all_passed(tmp_path):
+    import os
+    import subprocess
+    import tempfile
+    os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
+    import higgs_colab_runner as hr
+    import soundfile as sf
+    man = {"book_tag": "bk", "chapters": [{"slug": "ch01", "index": 1, "title": "T1"}]}
+    text = "The ceasefires of nineteen ninety-four. And the Belfast Agreement."
+    pay = {"ch01": {"chunks": [{"text": text, "words": 10, "para": 0}]}}
+    z = tmp_path / "b.zip"
+    with zipfile.ZipFile(z, "w") as zz:
+        zz.writestr("manifest.json", json.dumps(man))
+        zz.writestr("payloads/ch01.json", json.dumps(pay["ch01"]))
+    chunks, stage = tmp_path / "chunks", tmp_path / "stage"
+    run = lambda *args: subprocess.run([sys.executable, str(ROOT / "scripts" / "lane_fill_in.py"), *map(str, args)],
+                                       capture_output=True, text=True, check=True).stdout
+    rep = json.loads(run("stage", z, chunks, stage, "--split"))
+    assert rep["chs01"]["chunks"] == 1 and rep["chs01"]["fill_items"] == 2
+    x = stage / "chunks" / "chs01"
+    x.mkdir(parents=True)
+    for k in (1, 2):
+        sf.write(str(x / f"{k:04d}.wav"), _tone(1.0), SR, subtype="PCM_16")
+    (x / "0001.json").write_text("{}")                     # only sentence 1 adopted -> nothing placed
+    assert json.loads(run("place", stage, chunks)) == {"ch01": {"placed": 0, "of": 1}}
+    (x / "0002.json").write_text("{}")
+    assert json.loads(run("place", stage, chunks)) == {"ch01": {"placed": 1, "of": 1}}
+    side = json.loads((chunks / "ch01" / "0001.json").read_text())
+    recipe = f"bosonai/higgs-audio-v3-tts-4b {json.dumps(hr.SAMPLING, sort_keys=True)}"
+    assert side["key"] == hp.chunk_key(text, recipe) and side["metrics"]["parts"] == 2
+    joined = sf.info(str(chunks / "ch01" / "0001.wav")).duration
+    assert joined > 1.5                                    # two ~1.4 s parts, crossfaded
