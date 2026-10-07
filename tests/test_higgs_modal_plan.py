@@ -226,30 +226,36 @@ def test_adopt_lane_chunks_keeps_only_audited_passes(tmp_path, monkeypatch):
     assert todo == [2, 3]
 
 
-def test_lane_fill_in_stages_only_current_chunks_and_incomplete_chapters(tmp_path):
+def test_lane_fill_in_stage_and_place_round_trip(tmp_path):
     import os
     import subprocess
-    import tarfile
     import tempfile
     os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
     import higgs_colab_runner as hr
     z = _book(tmp_path, chunk_counts=(3, 2))
     recipe = f"bosonai/higgs-audio-v3-tts-4b {json.dumps(hr.SAMPLING, sort_keys=True)}"
-    for slug, idx in (("ch01", (1, 2, 3)), ("ch02", (1, 2))):
-        d = tmp_path / "chunks" / slug
+    chunks = tmp_path / "chunks"
+    for slug, idx in (("ch01", (1, 3)), ("ch02", (1, 2))):      # ch01 chunk 2 missing
+        d = chunks / slug
         d.mkdir(parents=True)
         for i in idx:
             (d / f"{i:04d}.wav").write_bytes(b"x")
-            text = f"text {i - 1}"
-            key = hp.chunk_key(text, recipe) if (slug, i) != ("ch01", 2) else "stale"
-            (d / f"{i:04d}.json").write_text(json.dumps({"key": key}))
+            (d / f"{i:04d}.json").write_text(json.dumps({"key": hp.chunk_key(f"text {i - 1}", recipe)}))
     stage = tmp_path / "stage"
-    out = subprocess.run([sys.executable, str(ROOT / "scripts" / "lane_fill_in.py"), str(z),
-                          str(tmp_path / "chunks"), str(stage)], capture_output=True, text=True, check=True)
-    rep = json.loads(out.stdout)
-    assert rep["chapters"] == ["ch01"] and rep["missing"]["ch01"]["first"] == [2]
-    with tarfile.open(next((stage / "out").glob("ckpt_ch01_*.tgz"))) as tf:
-        assert sorted(m.name for m in tf.getmembers()) == ["ch01/0001.wav", "ch01/0003.wav"]
-    with zipfile.ZipFile(stage / "as_bundle.zip") as zz:
-        assert [c["slug"] for c in json.loads(zz.read("manifest.json"))["chapters"]] == ["ch01"]
-        assert "payloads/ch02.json" not in zz.namelist()
+    run = lambda *args: subprocess.run([sys.executable, str(ROOT / "scripts" / "lane_fill_in.py"), *map(str, args)],
+                                       capture_output=True, text=True, check=True).stdout
+    rep = json.loads(run("stage", z, chunks, stage))
+    assert rep == {"chx01": {"chapter": "ch01", "chunks": 1, "first": [2]}}
+    man, pay = hp.load_bundle(stage / "as_bundle.zip")
+    assert [c["slug"] for c in man["chapters"]] == ["chx01"] and pay["chx01"]["chunks"][0]["text"] == "text 1"
+    import re
+    assert re.fullmatch(r"ch\w+/\d{4}\.wav", "chx01/0001.wav")          # runner checkpoint filter
+    # lane output for fill chunk 1, adopted in the stage dir (same text -> same key as the original)
+    x = stage / "chunks" / "chx01"
+    x.mkdir(parents=True)
+    (x / "0001.wav").write_bytes(b"new")
+    (x / "0001.json").write_text(json.dumps({"key": hp.chunk_key("text 1", recipe)}))
+    assert json.loads(run("place", stage, chunks)) == {"ch01": {"placed": 1, "of": 1}}
+    assert (chunks / "ch01" / "0002.wav").read_bytes() == b"new"
+    full_man, full_pay = hp.load_bundle(z)
+    assert hp.plan_batches(full_man, full_pay, chunks, recipe=recipe) == []

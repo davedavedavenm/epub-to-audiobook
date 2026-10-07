@@ -1,21 +1,25 @@
-"""lane_fill_in.py - stage a Colab-lane job that renders ONLY the missing chunks of a Modal book.
+"""lane_fill_in.py - render ONLY a Modal book's missing chunks on the Colab lane, without checkpoints.
 
-For every chapter with chunks that are missing or not current (no sidecar whose key matches the text +
-sampling), this writes:
-  <stage>/as_bundle.zip                 the bundle cut down to those chapters (same chunking/text)
-  <stage>/out/ckpt_<slug>_0001-NNNN.tgz  every current chunk of those chapters, as lane checkpoints
-The Colab runner restores the checkpoints and renders only the gaps (see higgs_colab_runner
-restore_checkpoints). Copy <stage> to khpi5 ~/as-lane/jobs/<tag>/ and drive it with the webapp's
-fish_lane.render_colab under that tag. The new chunks then go through chunk_asr_audit.py,
-voice_audit.py and adopt_lane_chunks.py like any lane output.
+  stage BUNDLE CHUNK_DIR STAGE   -> STAGE/as_bundle.zip + STAGE/mapping.json
+      For every chapter with chunks that are missing or not current (no sidecar whose key matches
+      text + sampling), the staged bundle has a fill chapter "chx<NN>" holding just those chunks, in
+      order, with the original text (so the chunk keys are identical). mapping.json maps fill index ->
+      original index. Run it through the webapp lane loop (fish_lane.render_colab).
+  place STAGE CHUNK_DIR
+      After the fill chunks were extracted to STAGE/chunks/chx<NN>/ and adopted there
+      (chunk_asr_audit.py + voice_audit.py + adopt_lane_chunks.py against STAGE/as_bundle.zip), copy every
+      adopted wav + sidecar to its original position. Unadopted ones stay missing for the next round.
 
-    python scripts/lane_fill_in.py FULL_BUNDLE.zip CHUNK_DIR STAGE_DIR
+Why no checkpoints: restoring a chapter's existing chunks meant uploading them to each Colab VM, and
+Colab's upload API failed on them (HTTP 500 on a 90 MB archive, HTTP 503 part-way through 55 x 12 MB,
+2026-10-07). A fill chapter needs nothing but the bundle.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import shutil
 import sys
 import tempfile
 import zipfile
@@ -24,45 +28,71 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
-def main() -> int:
+def stage(bundle: Path, chunk_dir: Path, out: Path, model: str) -> dict:
     os.environ.setdefault("FISH_BASE", tempfile.mkdtemp())
     import higgs_colab_runner as hr
     from higgs_book_plan import chunk_is_current, chunk_key, load_bundle
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("bundle")
-    ap.add_argument("chunk_dir")
-    ap.add_argument("stage")
-    ap.add_argument("--model", default="bosonai/higgs-audio-v3-tts-4b")
-    a = ap.parse_args()
-    man, pay = load_bundle(Path(a.bundle))
-    recipe = f"{a.model} {json.dumps(hr.SAMPLING, sort_keys=True)}"
-    chunk_dir, stage = Path(a.chunk_dir), Path(a.stage)
-    (stage / "out").mkdir(parents=True, exist_ok=True)
-    keep, report = [], {}
-    for c in man["chapters"]:
+    man, pay = load_bundle(bundle)
+    recipe = f"{model} {json.dumps(hr.SAMPLING, sort_keys=True)}"
+    out.mkdir(parents=True, exist_ok=True)
+    chapters, payloads, mapping = [], {}, {}
+    for n, c in enumerate(man["chapters"]):
         slug, chunks = c["slug"], pay[c["slug"]]["chunks"]
-        current = [i for i, ch in enumerate(chunks, 1)
-                   if chunk_is_current(chunk_dir, slug, i, chunk_key(ch.get("tagged") or ch["text"], recipe))]
-        missing = [i for i in range(1, len(chunks) + 1) if i not in set(current)]
-        if not missing:
+        todo = [i for i, ch in enumerate(chunks, 1)
+                if not chunk_is_current(chunk_dir, slug, i, chunk_key(ch.get("tagged") or ch["text"], recipe))]
+        if not todo:
             continue
-        keep.append(slug)
-        report[slug] = {"missing": len(missing), "first": missing[:12]}
-        # only CURRENT wavs go into the checkpoint: a stale or failed wav must be re-rendered
-        tmp = Path(tempfile.mkdtemp()) / slug
-        tmp.mkdir(parents=True)
-        for i in current:
-            (tmp / f"{i:04d}.wav").write_bytes((chunk_dir / slug / f"{i:04d}.wav").read_bytes())
-        if current:
-            hr.write_checkpoint(slug, 1, len(chunks), tmp, out=stage / "out")
-    with zipfile.ZipFile(a.bundle) as z, zipfile.ZipFile(stage / "as_bundle.zip", "w", zipfile.ZIP_DEFLATED) as o:
-        m2 = dict(man, chapters=[c for c in man["chapters"] if c["slug"] in keep])
-        for n in z.namelist():
-            if n == "manifest.json" or (n.startswith("payloads/") and Path(n).stem not in keep):
+        # must still match the runner's checkpoint filter (`ch\w+/NNNN.wav`), or a replacement VM
+        # would not restore what the previous one rendered
+        x = "chx" + (slug[2:] if slug.startswith("ch") else slug)
+        chapters.append({**c, "slug": x, "index": 900 + n, "title": f"fill {slug}"})
+        payloads[x] = {**pay[slug], "slug": x, "title": f"fill {slug}", "chunks": [chunks[i - 1] for i in todo]}
+        mapping[x] = {"slug": slug, "orig": todo}
+    with zipfile.ZipFile(bundle) as z, zipfile.ZipFile(out / "as_bundle.zip", "w", zipfile.ZIP_DEFLATED) as o:
+        for name in z.namelist():
+            if name == "manifest.json" or name.startswith("payloads/"):
                 continue
-            o.writestr(n, z.read(n))
-        o.writestr("manifest.json", json.dumps(m2, ensure_ascii=False, indent=1))
-    print(json.dumps({"chapters": keep, "missing": report}, indent=1))
+            o.writestr(name, z.read(name))
+        for x, p in payloads.items():
+            o.writestr(f"payloads/{x}.json", json.dumps(p, ensure_ascii=False))
+        o.writestr("manifest.json", json.dumps({**man, "chapters": chapters}, ensure_ascii=False, indent=1))
+    (out / "mapping.json").write_text(json.dumps(mapping, indent=1), encoding="utf-8")
+    return {x: {"chapter": m["slug"], "chunks": len(m["orig"]), "first": m["orig"][:12]} for x, m in mapping.items()}
+
+
+def place(stage_dir: Path, chunk_dir: Path) -> dict:
+    mapping = json.loads((stage_dir / "mapping.json").read_text(encoding="utf-8"))
+    placed = {}
+    for x, m in mapping.items():
+        n = 0
+        for k, orig in enumerate(m["orig"], 1):
+            src = stage_dir / "chunks" / x / f"{k:04d}"
+            if src.with_suffix(".json").exists() and src.with_suffix(".wav").exists():   # adopted only
+                dst = chunk_dir / m["slug"] / f"{orig:04d}"
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(src.with_suffix(".wav"), dst.with_suffix(".wav"))
+                shutil.copyfile(src.with_suffix(".json"), dst.with_suffix(".json"))
+                n += 1
+        placed[m["slug"]] = {"placed": n, "of": len(m["orig"])}
+    return placed
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    s = sub.add_parser("stage")
+    s.add_argument("bundle")
+    s.add_argument("chunk_dir")
+    s.add_argument("stage")
+    s.add_argument("--model", default="bosonai/higgs-audio-v3-tts-4b")
+    p = sub.add_parser("place")
+    p.add_argument("stage")
+    p.add_argument("chunk_dir")
+    a = ap.parse_args()
+    if a.cmd == "stage":
+        print(json.dumps(stage(Path(a.bundle), Path(a.chunk_dir), Path(a.stage), a.model), indent=1))
+    else:
+        print(json.dumps(place(Path(a.stage), Path(a.chunk_dir)), indent=1))
     return 0
 
 
