@@ -29,8 +29,33 @@ TAIL_BAD = 3          # >= 3 source words missing at the end = truncated
 DROP_RUN_BAD = 3      # >= 3 consecutive words missing mid-chunk
 
 
+_RESPELL = None
+
+
+def _respellings() -> dict:
+    """pronunciation respelling -> canonical spelling, from the Irish lexicon the text prep applies.
+    Whisper writes the canonical form ('Sinn Fein'), the chunk text says 'Shin Fayn': without this every
+    respelled name reads as dropped words (Armed Struggle ch.1 fill, 2026-10-08)."""
+    global _RESPELL
+    if _RESPELL is None:
+        _RESPELL = {}
+        here = os.path.dirname(os.path.abspath(__file__))
+        for f in (os.path.join(here, "irish_pronunciation_lexicon.json"),
+                  os.path.join(here, "..", "fixtures", "irish_pronunciation_lexicon.json"),
+                  "/app/fixtures/irish_pronunciation_lexicon.json"):
+            if os.path.exists(f):
+                with open(f, encoding="utf-8") as fh:
+                    for canon, spoken in json.load(fh).items():
+                        if not canon.startswith("_") and isinstance(spoken, str):
+                            _RESPELL.setdefault(spoken, canon)
+                break
+    return _RESPELL
+
+
 def audit_chunk(source: str, transcript: str) -> dict:
     import qa_asr
+    for spoken, canon in sorted(_respellings().items(), key=lambda kv: -len(kv[0])):
+        source = source.replace(spoken, canon)
     rep = qa_asr.diff_report(source, transcript)
     n = rep["n_source"]
     s = qa_asr.normalize_words(source)

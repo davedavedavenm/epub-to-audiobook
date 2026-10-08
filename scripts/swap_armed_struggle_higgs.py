@@ -103,16 +103,21 @@ def chapter_files(man) -> list:
 
 
 def check_audits(man, pay):
+    # explicit, reasoned exceptions only (e.g. Whisper hears "Black and Tans" as "blackened hands" on
+    # every take); every one is reported to Dave with its timestamp
+    acc_f = BOOK / "audit" / "accepted.json"
+    accepted = json.loads(acc_f.read_text(encoding="utf-8")) if acc_f.exists() else {}
     for c in man["chapters"]:
         f = BOOK / "audit" / f"{c['slug']}.asr.json"
         if not f.exists():
             sys.exit(f"ABORT: no independent ASR audit for {c['slug']} ({f})")
         rows = json.loads(f.read_text(encoding="utf-8"))
         n = len(pay[c["slug"]]["chunks"])
-        bad = [r["i"] for r in rows if r.get("bad")]
+        bad = [r["i"] for r in rows if r.get("bad") and str(r["i"]) not in accepted.get(c["slug"], {})]
         if len(rows) != n or bad:
             sys.exit(f"ABORT: {c['slug']} audit covers {len(rows)}/{n} chunks, bad={bad[:10]}")
-    log(f"independent ASR audit: all {len(man['chapters'])} chapters, every chunk complete")
+    log(f"independent ASR audit: all {len(man['chapters'])} chapters, every chunk complete"
+        + (f"; accepted exceptions: {accepted}" if accepted else ""))
 
 
 def chunk_start_in_chapter(slug, pay, idx, words_in) -> float:

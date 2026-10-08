@@ -89,3 +89,18 @@ def test_short_words_not_suggested():
     q = _load()
     r = q.diff_report("a cat sat", "a bat sat")
     assert q.suggest_lexicon(r['divergences']) == {}  # 'cat'->'bat' too similar/short-ish
+
+
+def test_respelled_names_and_uk_spelling_are_not_drops():
+    """Chunk text carries the pronunciation lexicon's respellings; Whisper writes the real names and
+    US spelling. Armed Struggle ch.1 fill (2026-10-08): 'Shin Fayn organisation' and 'Kummun na Bann'
+    failed the word check on every seed although the audio was complete."""
+    import sys
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    import chunk_asr_audit as ca
+    r = ca.audit_chunk("a political adjunct to the Shin Fayn organisation.",
+                       "a political adjunct to the Sinn Fein organization.")
+    assert not r["bad"] and r["tail"] == 0, r
+    r = ca.audit_chunk("By nineteen twenty-two little, apparently, had changed: The Kummun na Bann.",
+                       "By 1922, little apparently had changed. The Cumann na mBan.")
+    assert not r["bad"], r

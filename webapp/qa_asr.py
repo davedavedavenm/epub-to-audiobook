@@ -111,6 +111,8 @@ def normalize_words(text: str) -> list[str]:
         # MISPRONUNCIATION, and whether the transcriber wrote "shan't" or
         # "shant" says nothing about how the audio sounded.
         tok = tok.replace("'", "") or tok
+        # UK/US spelling is not a divergence: the book says "organisation", Whisper "organization"
+        tok = re.sub(r"is(e|ed|es|ing|ation|ations)$", lambda m: "iz" + m.group(1), tok)
         m = _ORD_RE.match(tok)
         dec = _DECADE_RE.match(tok)
         if dec and _HAS_N2W:

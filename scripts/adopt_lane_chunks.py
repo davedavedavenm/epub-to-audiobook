@@ -27,13 +27,13 @@ MIN_ROLLOFF_HZ = 1800.0
 MIN_VOICE_DUR_S = 3.0
 
 
-def verdict(asr: dict | None, voice: dict | None) -> tuple[bool, str]:
+def verdict(asr: dict | None, voice: dict | None, lenient: bool = False, accept_words: bool = False) -> tuple[bool, str]:
     """(keep?, reason). A chunk without an ASR row is never adopted (completeness unproven)."""
     if asr is None:
         return False, "no ASR audit"
-    if asr.get("bad"):
+    if asr.get("bad") and not accept_words:
         return False, "words"
-    if voice:
+    if voice and not lenient:
         if voice.get("sim") is not None and voice["sim"] < MIN_VOICE_SIM                 and (voice.get("dur") or MIN_VOICE_DUR_S) >= MIN_VOICE_DUR_S:
             return False, "voice"
         if voice.get("roll") is not None and voice["roll"] < MIN_ROLLOFF_HZ:
@@ -54,33 +54,44 @@ def main() -> int:
     ap.add_argument("--asr", required=True)
     ap.add_argument("--voice", required=True)
     ap.add_argument("--model", default="bosonai/higgs-audio-v3-tts-4b")
+    ap.add_argument("--lenient", action="store_true",
+                    help="keep a take whose words are all present even if muffled / voice-low (recorded)")
+    ap.add_argument("--accept-words", default="",
+                    help="comma list of fill indices whose words flag is a known ASR mismatch (recorded)")
     a = ap.parse_args()
+    accept = {int(x) for x in a.accept_words.split(",") if x.strip()}
     _, pay = load_bundle(Path(a.bundle))
     recipe = f"{a.model} {json.dumps(hr.SAMPLING, sort_keys=True)}"   # what the lane runner sent
     asr = {r["i"]: r for r in json.loads(Path(a.asr).read_text(encoding="utf-8")) if r.get("slug") == a.slug}
     voice = {int(r["chunk"][:4]): r for r in json.loads(Path(a.voice).read_text(encoding="utf-8"))}
     d = Path(a.chunk_dir) / a.slug
     kept = dropped = 0
+    accepted: dict = {}
     reasons: dict = {}
     for i, ch in enumerate(pay[a.slug]["chunks"], 1):
         wav = d / f"{i:04d}.wav"
         if not wav.exists():
             continue
-        keep, why = verdict(asr.get(i), voice.get(i))
+        keep, why = verdict(asr.get(i), voice.get(i), a.lenient, i in accept)
+        strict_keep, strict_why = verdict(asr.get(i), voice.get(i))
         if keep:
             text = ch.get("tagged") or ch["text"]
             (d / f"{i:04d}.json").write_text(json.dumps({
                 "key": chunk_key(text, recipe), "ok": True,
                 "metrics": {"source": "colab-lane", "asr_cover": asr[i]["cover"],
-                            "sim": (voice.get(i) or {}).get("sim"), "roll": (voice.get(i) or {}).get("roll")}}),
+                            "sim": (voice.get(i) or {}).get("sim"), "roll": (voice.get(i) or {}).get("roll"),
+                            **({"accepted_despite": strict_why} if not strict_keep else {})}}),
                 encoding="utf-8")
             kept += 1
+            if not strict_keep:
+                accepted[i] = strict_why
         else:
             wav.unlink()
             (d / f"{i:04d}.json").unlink(missing_ok=True)
             dropped += 1
             reasons[why] = reasons.get(why, 0) + 1
-    print(json.dumps({"slug": a.slug, "adopted": kept, "dropped_for_rerender": dropped, "why": reasons}))
+    print(json.dumps({"slug": a.slug, "adopted": kept, "dropped_for_rerender": dropped, "why": reasons,
+                      "accepted_despite": accepted}))
     return 0
 
 
