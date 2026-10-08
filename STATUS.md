@@ -1,5 +1,19 @@
 # Project Status & Remaining Tasks
 
+> ## 2026-10-08 - Armed Struggle (Higgs / Cillian clone) swapped into Audiobookshelf
+>
+> - **DONE + VERIFIED (machine):** 11 chapters, 15.44 h, every chunk passed the independent per-chunk ASR audit
+>   (1 recorded exception: ch.1 chunk 91, Whisper hears "the Black and Tans" as "the blackened hands" on every
+>   take). Old Fish m4b kept at docker-vm `/opt/stacks/audiobookshelf/AS_SUPERSEDED_fish_2026-10-08/`.
+>   Dave's position moved BY CONTENT: 11,394.7 s (Fish) -> 10,736.2 s; the new file at that point says
+>   "...circled and houses searched. Hundreds of pedestrians and city workers were stopped..." (ASR-checked).
+> - **OPEN (Dave):** ABS has not re-read the item (API token in the stack .env is dead, no watcher pickup):
+>   Armed Struggle -> menu -> Re-Scan, then confirm 11 chapters / 15.44 h. Ch.1 takes kept despite muffled /
+>   voice flags (Dave already heard ch.1): 0:56:06, 1:06:34, 1:07:21, 1:08:38, 1:14:29; plus 0:55:41.
+> - Cost: Modal $32.14 metered in October, **$2.02 billed** (my cap used a lagging total); Colab ~16 units.
+> - Made it work (all in DECISIONS): Colab-lane fill-ins with sentence splitting, new seeds per retry round,
+>   audit fixes (accents, respellings, UK spelling, differently-spelled endings), checkpoint completeness.
+
 > ## 2026-10-07 - Armed Struggle moves to Modal; per-take word/voice/muffled checks; text extraction fixed
 >
 > - **DONE:** Colab Armed Struggle job stopped (chunks kept at khpi5 `~/as-lane/keep/armed_struggle_colab_20261006`).

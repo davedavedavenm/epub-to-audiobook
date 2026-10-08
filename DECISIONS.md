@@ -38,6 +38,24 @@ NOT a bug here. Consequences and settled rules:
    Three red CI runs in one day came from tests that passed only in the working folder (untracked copyrighted
    fixture, numpy missing in CI).
 
+## Finishing a book on the Colab lane: fill chapters, new seeds, kept rejects, recorded exceptions — Active (2026-10-08)
+
+Armed Struggle was finished on free Colab after the Modal credit ran out. What it took (each rule paid for):
+1. **Fill chapters, not checkpoints** (`scripts/lane_fill_in.py`): a bundle holding only the missing chunks;
+   uploading existing chunks as checkpoints failed Colab's upload API (HTTP 500/503).
+2. **Retry rounds must use new seeds** (manifest `"seeds"`): with 42..46 the same text gives the same audio,
+   so a retry reproduced all 25 rejected takes exactly.
+3. **Split what keeps failing** (`--split`): sentence-by-sentence fill items, joined back with the V3
+   crossfade only when every sentence passed; long lists split at list items (ch. Conclusion #153).
+4. **Every chunk reaches a checkpoint** (runner): the last chunks of a chapter used to exist only in the mp3.
+5. **Audit fixes before re-rendering**: fold accents, reverse the pronunciation lexicon ("Shin Fayn" vs
+   "Sinn Fein"), UK/US -ise/-ize, and a truncation counts only words the audio did NOT say. Voice
+   similarity is judged only on clips >= 3 s. Rejected takes are kept (`.rejected.wav`) so a rule fix can
+   re-check them. Four of the five late-night re-render rounds were spent on audit false alarms.
+6. **Exceptions are explicit**: `--lenient` keeps a complete take that is muffled/voice-low (sidecar
+   `accepted_despite`); a words exception needs `audit/accepted.json` with a reason, and the swap prints it.
+7. Colab orphans (`[?]` sessions) block relaunches and bill: reap them (`~/as-lane/orphan_reaper.sh`).
+
 ## Higgs on Modal: temperature 1.0, per-take word/voice/muffled gates, inline-tag text fix — Active (2026-10-07)
 
 Dave listened to the first Modal Preface (11 min, 110-word chunks, V3 joins) and heard: a
