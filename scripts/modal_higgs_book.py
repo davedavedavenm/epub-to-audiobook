@@ -213,7 +213,8 @@ class Higgs:
                 roll = hr.rolloff_hz(w, sr)
                 if roll is not None:
                     m["roll"] = round(roll)
-            m["sim"] = self.voice_sim(w, sr)
+            # voice similarity is only meaningful on >= 3 s (adopt_lane_chunks.MIN_VOICE_DUR_S)
+            m["sim"] = self.voice_sim(w, sr) if len(w) / sr >= 3.0 else None
             m.update(self.asr_check(text, w, sr))
         pen, why = hr.take_penalty(m, min_voice_sim=MIN_VOICE_SIM)
         m["why"] = why or None

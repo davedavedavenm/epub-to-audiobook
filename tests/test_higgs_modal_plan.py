@@ -200,6 +200,9 @@ def test_adopt_lane_chunks_keeps_only_audited_passes(tmp_path, monkeypatch):
     assert ad.verdict(None, None) == (False, "no ASR audit")
     assert ad.verdict({"bad": True}, None) == (False, "words")
     assert ad.verdict({"bad": False}, {"sim": 0.81, "roll": 4000}) == (False, "voice")
+    assert ad.verdict({"bad": False}, {"sim": 0.81, "roll": 4000, "dur": 12.0}) == (False, "voice")
+    assert ad.verdict({"bad": False}, {"sim": 0.85, "roll": None, "dur": 2.4})[0] is True   # too short to judge
+    assert ad.verdict({"bad": True}, {"sim": 0.95, "roll": None, "dur": 2.4}) == (False, "words")
     assert ad.verdict({"bad": False}, {"sim": 0.95, "roll": 1500}) == (False, "muffled")
     assert ad.verdict({"bad": False}, {"sim": 0.95, "roll": 2300})[0] is True   # Dave accepted 1.6-2.3 kHz
     z = _book(tmp_path, chunk_counts=(3,))

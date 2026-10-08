@@ -21,6 +21,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 MIN_VOICE_SIM = 0.90      # same bars as scripts/modal_higgs_book.py / higgs_colab_runner.take_penalty
 MIN_ROLLOFF_HZ = 1800.0
+# Voice similarity is only judged on clips >= 3 s (as roll-off is): on 2-3 s sentence clips the speaker
+# embedding scored 0.84-0.89 for takes with every word present, while the whole chunks Dave heard as
+# "not Cillian" scored 0.81 against 0.91-0.97 (2026-10-08, Armed Struggle fill rounds 2-4).
+MIN_VOICE_DUR_S = 3.0
 
 
 def verdict(asr: dict | None, voice: dict | None) -> tuple[bool, str]:
@@ -30,7 +34,7 @@ def verdict(asr: dict | None, voice: dict | None) -> tuple[bool, str]:
     if asr.get("bad"):
         return False, "words"
     if voice:
-        if voice.get("sim") is not None and voice["sim"] < MIN_VOICE_SIM:
+        if voice.get("sim") is not None and voice["sim"] < MIN_VOICE_SIM                 and (voice.get("dur") or MIN_VOICE_DUR_S) >= MIN_VOICE_DUR_S:
             return False, "voice"
         if voice.get("roll") is not None and voice["roll"] < MIN_ROLLOFF_HZ:
             return False, "muffled"

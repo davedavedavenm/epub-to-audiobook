@@ -65,7 +65,7 @@ def main() -> int:
         e = embed(w, sr)
         sim = None if e is None else round(float(np.dot(ref, e)), 3)
         roll = rolloff_hz(w, sr) if len(w) / sr >= 3.0 else None
-        flags = [n for n, bad in (("voice", sim is not None and sim < MIN_VOICE_SIM),
+        flags = [n for n, bad in (("voice", sim is not None and sim < MIN_VOICE_SIM and len(w) / sr >= 3.0),
                                   ("muffled", roll is not None and roll < MIN_ROLLOFF_HZ)) if bad]
         rows.append({"chunk": os.path.basename(f), "dur": round(len(w) / sr, 1), "sim": sim,
                      "roll": None if roll is None else round(roll), "flags": flags})
