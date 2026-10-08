@@ -286,3 +286,61 @@ def test_second_vm_resumes_from_checkpoints_without_regenerating(tmp_path, monke
     book_chunks = sum(c["sents"] for c in man["chapters"])
     assert regenerated <= book_chunks - 2, (regenerated, book_chunks)
     assert list((base / "out").glob("*.mp3"))
+
+
+@pytest.mark.skipif(not __import__("shutil").which("ffmpeg"), reason="ffmpeg not installed")
+def test_bundle_seeds_override_the_default_sequence(tmp_path, monkeypatch):
+    """A retry round must draw NEW takes: with fixed seeds the same text gives the same audio, and fill
+    round 3 (2026-10-08) reproduced all 25 rejected sentences exactly."""
+    import io
+    import json
+    import shutil
+    import zipfile
+
+    import requests
+    import soundfile as sf
+
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_fish_lane import _make_epub
+    import fish_bundle
+
+    epub = tmp_path / "b.epub"
+    _make_epub(epub)
+    bundle = tmp_path / "as_bundle.zip"
+    fish_bundle.build_bundle(epub, bundle, engine="higgs")
+    with zipfile.ZipFile(bundle) as z:
+        files = {n: z.read(n) for n in z.namelist()}
+    mf = json.loads(files["manifest.json"])
+    mf["seeds"] = [101, 102]
+    files["manifest.json"] = json.dumps(mf).encode()
+    base = Path(hr.BASE)
+    for f in base.glob("*"):
+        if f.is_file():
+            f.unlink()
+    for d in ("payloads", "wavs", "out", "refs", "transcripts"):
+        shutil.rmtree(base / d, ignore_errors=True)
+    (base / "out").mkdir()
+    (base / "wavs").mkdir()
+    with zipfile.ZipFile(base / "as_bundle.zip", "w") as z:
+        for n, b in files.items():
+            z.writestr(n, b)
+    seeds = []
+
+    def fake_post(url, json=None, timeout=None):
+        seeds.append(json["seed"])
+        buf = io.BytesIO()
+        sf.write(buf, speechlike(max(1.5, len(json["input"].split()) * 0.4)), SR, format="WAV")
+
+        class R:
+            content = buf.getvalue()
+
+            def raise_for_status(self):
+                pass
+        return R()
+
+    monkeypatch.setattr(hr, "SEEDS", hr.SEEDS)            # restored after the test (main() rebinds it)
+    monkeypatch.setattr(requests, "post", fake_post)
+    monkeypatch.setattr(hr, "bootstrap_env", lambda: None)
+    monkeypatch.setattr(hr, "start_server", lambda: hr._SRV.__setitem__("proc", _FakeProc()))
+    hr.main()
+    assert seeds and set(seeds) == {101}                  # clean first take with the bundle's first seed

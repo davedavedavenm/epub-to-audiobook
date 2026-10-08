@@ -316,12 +316,15 @@ def gain_only(full, sr, wav_path):
 # ----------------------------------------------------------------------------
 
 def main():
-    global BOOK_TAG, VOICE_TAG, ORDER
+    global BOOK_TAG, VOICE_TAG, ORDER, SEEDS
     if not BUNDLE.exists():
         raise SystemExit(f"as_bundle.zip missing at {BASE}")
     with zipfile.ZipFile(BUNDLE) as zf:
         zf.extractall(BASE)
     mf = json.loads((BASE / "manifest.json").read_text(encoding="utf-8"))
+    # A retry bundle names its own seeds: with the fixed 42..46 the same text gives the SAME audio, so a
+    # re-render round reproduced every rejected take exactly (Armed Struggle fill round 3, 2026-10-08).
+    SEEDS = tuple(int(s) for s in mf.get("seeds") or SEEDS)
     ORDER = [c["slug"] for c in mf["chapters"]]
     BOOK_TAG = mf.get("book_tag") or BOOK_TAG
     VOICE_TAG = mf.get("voice_tag") or VOICE_TAG
