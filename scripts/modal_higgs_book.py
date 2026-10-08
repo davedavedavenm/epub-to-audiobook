@@ -375,6 +375,11 @@ def main(argv=None) -> int:
     batches = plan_batches(man, pay, chunk_dir, a.batch, recipe)
     for b in batches:
         b["parallel"], b["sampling"] = a.parallel, sampling
+    if a.assemble_only:          # no Modal at all - no estimate, no cap
+        done = [mp3.name for c in man["chapters"]
+                if (mp3 := assemble_chapter(c, pay[c["slug"]], chunk_dir, chap_dir, recipe))]
+        print(f"assembled {len(done)}/{len(man['chapters'])}: {done}")
+        return 0 if len(done) == len(man["chapters"]) else 5
     est = estimate_usd(batches, min(a.containers, max(1, len(batches))))
     print(f"to render: {sum(len(b['items']) for b in batches)} chunks in {len(batches)} batches; "
           f"estimated ${est} (cap ${a.budget})")
@@ -383,11 +388,6 @@ def main(argv=None) -> int:
         return 4
     if a.dry_run:
         return 0
-    if a.assemble_only:
-        done = [mp3.name for c in man["chapters"]
-                if (mp3 := assemble_chapter(c, pay[c["slug"]], chunk_dir, chap_dir, recipe))]
-        print(f"assembled {len(done)}/{len(man['chapters'])}: {done}")
-        return 0 if len(done) == len(man["chapters"]) else 5
 
     book_dir.mkdir(parents=True, exist_ok=True)
     log = (book_dir / "run.log").open("a", encoding="utf-8")
