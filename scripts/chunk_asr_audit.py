@@ -66,9 +66,13 @@ def audit_chunk(source: str, transcript: str) -> dict:
     drops = [d for d in rep["divergences"] if d["type"] in ("drop", "sub")
              and len(d["source"]) - len(d["heard"]) >= DROP_RUN_BAD and d["at"] < last]
     tail = n - last
-    return {"cover": round(rep["n_match"] / max(n, 1), 3), "tail": tail, "words": n,
+    # words the audio DID say after the last match (a name spelled differently, e.g. "The Kummun na Bann"
+    # heard as "the Kumanna ban") are not a truncation; a cut-off has nothing (or much less) after it
+    last_h = (blocks[-1].b + blocks[-1].size) if blocks else 0
+    unheard = tail - (len(h) - last_h)
+    return {"cover": round(rep["n_match"] / max(n, 1), 3), "tail": tail, "tail_unheard": unheard, "words": n,
             "drops": [d["context"] for d in drops][:3],
-            "bad": tail >= TAIL_BAD or bool(drops)}
+            "bad": unheard >= TAIL_BAD or bool(drops)}
 
 
 def main() -> int:

@@ -86,7 +86,9 @@ def main() -> int:
             if not strict_keep:
                 accepted[i] = strict_why
         else:
-            wav.unlink()
+            # kept as .rejected.wav (not deleted): a later audit-rule fix can re-check it instead of
+            # forcing another render (2026-10-08: two re-renders were spent only because rejects were gone)
+            wav.replace(d / f"{i:04d}.rejected.wav")
             (d / f"{i:04d}.json").unlink(missing_ok=True)
             dropped += 1
             reasons[why] = reasons.get(why, 0) + 1

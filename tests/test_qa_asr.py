@@ -104,3 +104,14 @@ def test_respelled_names_and_uk_spelling_are_not_drops():
     r = ca.audit_chunk("By nineteen twenty-two little, apparently, had changed: The Kummun na Bann.",
                        "By 1922, little apparently had changed. The Cumann na mBan.")
     assert not r["bad"], r
+
+
+
+def test_a_differently_spelled_ending_is_not_a_truncation_but_a_cut_off_is():
+    import sys
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    import chunk_asr_audit as ca
+    ok = ca.audit_chunk("had changed: The Kummun na Bann...", "had changed the Kumanna ban.")
+    assert not ok["bad"] and ok["tail_unheard"] < 3, ok
+    cut = ca.audit_chunk("I managed to block the inside door...", "I managed to block.")   # ch.4 #156, real
+    assert cut["bad"] and cut["tail_unheard"] == 3, cut
