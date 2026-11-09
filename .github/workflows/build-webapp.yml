@@ -32,6 +32,7 @@ jobs:
           context: .
           file: ./webapp/Dockerfile
           push: true
+          provenance: false
           tags: |
             ghcr.io/${{ github.repository_owner }}/epub-to-audiobook-webapp:latest
           platforms: linux/amd64

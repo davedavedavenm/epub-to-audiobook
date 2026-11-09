@@ -4,6 +4,7 @@ WORKDIR /app
 ARG APP_VERSION=dev
 ARG APP_GIT_SHA=unknown
 ARG APP_BUILD_TIME=unknown
+LABEL org.opencontainers.image.source="https://github.com/davedavedavenm/epub-to-audiobook"
 LABEL org.opencontainers.image.version=$APP_VERSION
 LABEL org.opencontainers.image.revision=$APP_GIT_SHA
 LABEL org.opencontainers.image.created=$APP_BUILD_TIME
