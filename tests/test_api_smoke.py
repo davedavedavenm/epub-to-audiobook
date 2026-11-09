@@ -78,6 +78,64 @@ def test_library_list(client):
     assert isinstance(data, (list, dict))
 
 
+def test_library_dedup_and_clean_titles(client, tmp_path, monkeypatch):
+    import app as appmod
+
+    lib_dir = tmp_path / 'library'
+    up_dir = tmp_path / 'uploads'
+    lib_dir.mkdir()
+    up_dir.mkdir()
+    monkeypatch.setattr(appmod, 'LIBRARY_DIR', lib_dir)
+    monkeypatch.setattr(appmod, 'UPLOAD_DIR', up_dir)
+
+    # Multi-format bundle (should collapse to 1 entry preferring .epub)
+    (lib_dir / 'Chuck Klosterman - The Nineties- A Book.epub').write_bytes(b'epub-bytes')
+    (lib_dir / 'Chuck Klosterman - The Nineties- A Book.azw3').write_bytes(b'azw3-bytes')
+    (lib_dir / 'Chuck Klosterman - The Nineties- A Book.mobi').write_bytes(b'mobi-bytes')
+
+    # Tag & case variants (should collapse to 1 entry with cleaned title)
+    (lib_dir / 'Helen Czerski - Storm in a Teacup- The Physics of Everyday Life (retail) (epub).epub').write_bytes(b'12345')
+    (lib_dir / 'Helen Czerski - Storm in a Teacup (v5.0) (US).epub').write_bytes(b'123')
+
+    # Series volumes (must NOT collapse into each other)
+    (lib_dir / 'Zach Bohannon - Empty Bodies (Book 1) (retail).epub').write_bytes(b'b1')
+    (lib_dir / 'Zach Bohannon - Empty Bodies (Book 2) (retail).epub').write_bytes(b'b2')
+    (lib_dir / 'Will Durant - The Age of Napoleon (The Story of Civilization, Volume XI).epub').write_bytes(b'v11')
+    (lib_dir / 'Will Durant - The Age of Reason Begins (The Story of Civilization, Volume VII).epub').write_bytes(b'v7')
+
+    # Standalone grabbed book in uploads vs per-job upload copy
+    (up_dir / 'Zeinab Badawi - An African History of Africa (retail) (epub).epub').write_bytes(b'badawi')
+    (up_dir / 'a1b2c3d4_Internal_Job_Copy.epub').write_bytes(b'jobcopy')
+    (up_dir / 'Some_Book_tts.epub').write_bytes(b'ttscopy')
+
+    r = client.get('/api/library')
+    assert r.status_code == 200
+    books = r.get_json()
+    titles = [b['title'] for b in books]
+
+    # Klosterman appears once as epub
+    klosterman = [b for b in books if 'Klosterman' in b['title']]
+    assert len(klosterman) == 1
+    assert klosterman[0]['format'] == 'epub'
+
+    # Czerski appears once without (retail) (epub) junk tags
+    czerski = [b for b in books if 'Czerski' in b['title']]
+    assert len(czerski) == 1
+    assert '(retail)' not in czerski[0]['title'].lower()
+    assert '(epub)' not in czerski[0]['title'].lower()
+
+    # Series books remain distinct
+    bohannon = [b for b in books if 'Bohannon' in b['title']]
+    assert len(bohannon) == 2
+    durant = [b for b in books if 'Durant' in b['title']]
+    assert len(durant) == 2
+
+    # Standalone grabbed book in UPLOAD_DIR is surfaced, internal job copies are excluded
+    assert any('Badawi' in t for t in titles)
+    assert not any('Internal' in t for t in titles)
+    assert not any('_tts' in t for t in titles)
+
+
 def test_gpu_status(client):
     r = client.get('/api/gpu/status')
     assert r.status_code in (200, 403)

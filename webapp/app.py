@@ -7449,31 +7449,140 @@ def _delete_abs_item_for_path(target: str, job_id: str | None = None) -> bool:
 
 # ============ Library Routes ============
 
+_FORMAT_RANK = {
+    '.epub': 0,
+    '.azw3': 1,
+    '.mobi': 2,
+    '.fb2': 3,
+    '.docx': 4,
+    '.pdf': 5,
+    '.html': 6,
+    '.htm': 7,
+    '.txt': 8,
+}
+
+_JUNK_PAREN_RE = re.compile(
+    r'\(\s*('
+    r'retail|epub|mobi|azw3|pdf|fb2|us|uk|au|ca|s|'
+    r'v\d+(?:\.\d+)*|ebook[^)]*|unabridged|illustrations?|'
+    r'\d{4}|fixed|scan|ocr|converted'
+    r')\s*\)',
+    re.IGNORECASE,
+)
+
+
+def _clean_library_title(stem: str) -> str:
+    """Clean raw ebook filename stem into a human-friendly library display title."""
+    s = (stem or '').replace('_', ' ')
+    prev = None
+    while prev != s:
+        prev = s
+        s = _JUNK_PAREN_RE.sub('', s).strip()
+    s = re.sub(r'\s*\[[^\]]*\]\s*', ' ', s).strip()
+    s = re.sub(r'\s+', ' ', s).strip(' -_')
+    return s or stem
+
+
+def _library_dedup_key(stem: str) -> str:
+    """Canonical author+title key that collapses format/tag/subtitle variants
+    while preserving series volume / book / part numbers."""
+    s = _clean_library_title(stem).lower()
+    # Extract any explicit volume/book/part/novella designator anywhere in the title
+    # before stripping subtitles so Volume III vs Volume VII or Book 1 vs Book 2 stay distinct.
+    vol_matches = re.findall(
+        r'\b(?:book|vol\.?|volume|part|novella)\s+(?:\d+|[ivxlcdm]+)\b',
+        s,
+    )
+    vol_token = ' '.join(vol_matches)
+
+    if ' - ' in s:
+        author, rest = s.split(' - ', 1)
+    else:
+        author, rest = '', s
+
+    author_norm = re.sub(r'[^a-z0-9]+', ' ', author).strip()
+    # Normalize middle initials: "hunter s thompson" -> "hunter thompson" only if >=3 tokens and middle is 1 char
+    a_tokens = author_norm.split()
+    if len(a_tokens) == 3 and len(a_tokens[1]) == 1:
+        author_norm = f"{a_tokens[0]} {a_tokens[2]}"
+
+    # Strip subtitle after ': ' or '- ' in the title portion
+    base_title = re.split(r'[:\-]\s+', rest, maxsplit=1)[0]
+    # Also strip ' From the ' / ' A Novel' / ' A History' trailing subtitle clauses when preceded by >=3 words
+    m_sub = re.match(r'^((?:\S+\s+){2,}\S+)\s+(?:from\s+the|a\s+novel|a\s+history|a\s+memoir|a\s+true\s+story)\b', base_title)
+    if m_sub:
+        base_title = m_sub.group(1)
+    # Remove parenthetical series notes unless they contain the volume token
+    base_title = re.sub(r'\([^)]*\)', ' ', base_title)
+    title_norm = re.sub(r'[^a-z0-9]+', ' ', base_title).strip()
+    # Strip leading article ("the", "a", "an") for matching only when title has other words
+    t_tokens = title_norm.split()
+    if len(t_tokens) > 1 and t_tokens[0] in ('the', 'a', 'an'):
+        title_norm = ' '.join(t_tokens[1:])
+
+    return f"{author_norm}||{title_norm}||{vol_token}"
+
+
+def _is_Library_candidate_in_uploads(file_path: Path) -> bool:
+    """True when a file in UPLOAD_DIR is a standalone grabbed book (e.g. from Book Finder)
+    rather than an internal per-job copy (`<8-hex>_...`, `*_tts.epub`, or article temp)."""
+    name = file_path.name
+    stem = file_path.stem
+    if stem.endswith('_tts') or name.startswith('.'):
+        return False
+    if re.match(r'^[0-9a-f]{8}_', name):
+        return False
+    return True
+
+
+def _is_allowed_library_path(p: Path) -> bool:
+    """Allow paths inside LIBRARY_DIR or standalone books inside UPLOAD_DIR."""
+    try:
+        resolved = p.resolve()
+    except Exception:
+        return False
+    for base in (LIBRARY_DIR, UPLOAD_DIR):
+        try:
+            if resolved.is_relative_to(base.resolve()):
+                return True
+        except AttributeError:
+            # Python < 3.9 fallback
+            base_str = str(base.resolve())
+            res_str = str(resolved)
+            if res_str == base_str or res_str.startswith(base_str + os.sep):
+                return True
+        except Exception:
+            continue
+    return False
+
+
 @app.route('/api/library')
 def list_library():
-    """List available ebooks in the library directory.
+    """List available ebooks in the library directory (deduplicated across formats/variants).
 
     Returns list of books with:
-    - title: Book name (filename without extension)
+    - title: Book name (cleaned display title)
     - path: Full path for conversion
     - format: File format (epub, pdf, mobi, etc.)
     - size: File size in bytes
     - status: 'available', 'converting', or 'completed'
     - progress: Conversion progress if converting
     """
-    if not LIBRARY_DIR.exists():
+    if not LIBRARY_DIR.exists() and not UPLOAD_DIR.exists():
         return jsonify([])
 
-    books = []
     all_jobs = get_all_jobs()
 
-    # Build a map of book names to their job status
+    # Build a map of book names (both raw stem and cleaned title) to their job status
     job_status_map = {}
     for job in all_jobs:
-        book_name = job.get('book_name', '').lower()
+        raw_book_name = (job.get('book_name') or '').strip()
+        if not raw_book_name:
+            continue
         status = job.get('status', '')
         progress = job.get('progress_percent', 0)
 
+        entry = None
         if status == 'completed':
             # Only trust a 'completed' record if the rendered audio still exists.
             # A leftover job row whose output was deleted (or a partial test
@@ -7482,35 +7591,86 @@ def list_library():
             out = (job.get('output_dirname') or '').strip()
             out_dir = OUTPUT_DIR / out if out else None
             if out_dir and out_dir.is_dir() and any(out_dir.glob('*.mp3')):
-                job_status_map[book_name] = {'status': 'completed', 'progress': 100}
+                entry = {'status': 'completed', 'progress': 100}
         elif status in ('queued', 'converting', 'converting PDF', 'converting to audio'):
-            job_status_map[book_name] = {'status': 'converting', 'progress': progress or 0}
+            entry = {'status': 'converting', 'progress': progress or 0}
 
-    # Scan library directory for ebooks
-    for ext in SUPPORTED_FORMATS:
-        for file_path in LIBRARY_DIR.glob(f'**/*{ext}'):
-            if file_path.is_file():
-                st = file_path.stat()
-                title = file_path.stem
-                title_lower = title.lower()
+        if entry:
+            job_status_map[raw_book_name.lower()] = entry
+            job_status_map[_clean_library_title(raw_book_name).lower()] = entry
+            job_status_map[_library_dedup_key(raw_book_name)] = entry
 
-                # Check job status
-                job_info = job_status_map.get(title_lower, {'status': 'available', 'progress': 0})
+    candidates = []
+    if LIBRARY_DIR.exists():
+        for ext in SUPPORTED_FORMATS:
+            for file_path in LIBRARY_DIR.glob(f'**/*{ext}'):
+                if file_path.is_file() and not file_path.name.startswith('.'):
+                    candidates.append((file_path, ext.lower(), True))
 
-                books.append({
-                    'title': title,
-                    'path': str(file_path),
-                    'format': ext.lstrip('.'),
-                    'size': st.st_size,
-                    # Used for client-side sorting/filtering; epoch seconds.
-                    'modified_ts': int(st.st_mtime),
-                    'status': job_info['status'],
-                    'progress': job_info['progress']
-                })
+    if UPLOAD_DIR.exists():
+        for ext in SUPPORTED_FORMATS:
+            for file_path in UPLOAD_DIR.glob(f'*{ext}'):
+                if file_path.is_file() and _is_Library_candidate_in_uploads(file_path):
+                    candidates.append((file_path, ext.lower(), False))
+
+    deduped: dict[str, dict] = {}
+    for file_path, ext, in_library_dir in candidates:
+        try:
+            st = file_path.stat()
+        except OSError:
+            continue
+        raw_stem = file_path.stem
+        clean_title = _clean_library_title(raw_stem)
+        dkey = _library_dedup_key(raw_stem)
+
+        job_info = (
+            job_status_map.get(raw_stem.lower())
+            or job_status_map.get(clean_title.lower())
+            or job_status_map.get(dkey)
+            or {'status': 'available', 'progress': 0}
+        )
+
+        item = {
+            'title': clean_title,
+            'path': str(file_path),
+            'format': ext.lstrip('.'),
+            'size': st.st_size,
+            # Used for client-side sorting/filtering; epoch seconds.
+            'modified_ts': int(st.st_mtime),
+            'status': job_info['status'],
+            'progress': job_info['progress'],
+            '_rank': (
+                _FORMAT_RANK.get(ext, 99),
+                0 if in_library_dir else 1,
+                0 if raw_stem == clean_title else 1,
+                -st.st_size,
+            ),
+        }
+
+        existing = deduped.get(dkey)
+        if existing is None:
+            deduped[dkey] = item
+        else:
+            # Prefer better format (.epub > .azw3 > .mobi), then LIBRARY_DIR over UPLOAD_DIR,
+            # then cleaner filename, then larger file size. Preserve completed/converting status.
+            if item['_rank'] < existing['_rank']:
+                if existing['status'] != 'available' and item['status'] == 'available':
+                    item['status'] = existing['status']
+                    item['progress'] = existing['progress']
+                deduped[dkey] = item
+            else:
+                if existing['status'] == 'available' and item['status'] != 'available':
+                    existing['status'] = item['status']
+                    existing['progress'] = item['progress']
+
+    books = []
+    for item in deduped.values():
+        item.pop('_rank', None)
+        books.append(item)
 
     # Most recently added/modified first, so freshly-grabbed books surface at
     # the top (was alphabetical, which buried new arrivals).
-    books.sort(key=lambda x: x.get('modified_ts', 0), reverse=True)
+    books.sort(key=lambda x: (x.get('modified_ts', 0), x.get('title', '')), reverse=True)
     return jsonify(books)
 
 
@@ -7971,14 +8131,13 @@ def library_cover():
         return ('', 400)
     try:
         p = Path(path_str).resolve()
-        if not str(p).startswith(str(LIBRARY_DIR.resolve())) or not p.exists():
+        if not _is_allowed_library_path(p) or not p.exists():
             return ('', 404)
         if p.suffix.lower() != '.epub':
             return ('', 404)
         data, mime = _extract_epub_cover(p)
         if not data:
             return ('', 404)
-        from flask import Response
         return Response(data, mimetype=mime, headers={'Cache-Control': 'public, max-age=86400'})
     except Exception:
         return ('', 500)
@@ -7995,8 +8154,7 @@ def library_preview():
 
     try:
         requested_path = Path(file_path_str).resolve()
-        library_base = LIBRARY_DIR.resolve()
-        if not str(requested_path).startswith(str(library_base)):
+        if not _is_allowed_library_path(requested_path):
             return jsonify({'error': 'Unauthorized path access'}), 403
     except Exception:
         return jsonify({'error': 'Invalid path'}), 400

@@ -170,7 +170,7 @@ def _library_search_terms(filename: str):
 
 
 def _scp_from_docker_vm(remote_path: str, local_dest: str) -> bool:
-    cmd = ["scp"] + _SSH_OPTS + [f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_path}", local_dest]
+    cmd = ["scp", "-p"] + _SSH_OPTS + [f"{OPENBOOKS_SSH_USER}@{OPENBOOKS_SSH_HOST}:{remote_path}", local_dest]
     res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     return res.returncode == 0 and os.path.exists(local_dest) and os.path.getsize(local_dest) > 0
 
