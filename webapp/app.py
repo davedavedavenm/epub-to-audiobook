@@ -2608,6 +2608,19 @@ def get_voice_preview(voice_id: str) -> Path:
             response.raise_for_status()
             with open(preview_path, 'wb') as f:
                 f.write(response.content)
+        elif engine == 'audition':
+            # These voices have heard, pre-seeded previews but no synthesis route.
+            return None
+        elif engine == 'deepgram':
+            proxy_base = os.environ.get('TTS_PROXY_URL', 'http://tts-proxy:8882')
+            response = requests.post(
+                f"{proxy_base}/j/preview/v1/audio/speech",
+                json={'model': 'deepgram', 'input': ptext, 'voice': voice_id,
+                      'response_format': 'mp3'},
+                timeout=int(os.environ.get('PREVIEW_TIMEOUT', '600')),
+            )
+            response.raise_for_status()
+            preview_path.write_bytes(response.content)
         elif engine == 'inworld':
             # Call Inworld TTS API via tts-proxy
             proxy_base = os.environ.get('TTS_PROXY_URL', 'http://tts-proxy:8882')
@@ -8463,6 +8476,8 @@ def batch_convert_library():
                       if voice_option in ('default', 'keep') else voice_option)
     if resolved_voice not in all_voices():
         return jsonify({'error': 'Unknown narrator'}), 400
+    if all_voices()[resolved_voice].get('audition_only'):
+        return jsonify({'error': 'This GPU voice is a cached audition; book conversion is not integrated'}), 400
     # Same refuse-at-POST rule as the single-book path: batch never sets
     # render_target (it defaults to 'local'), so a fish voice here would only
     # be discovered at job start by get_engine_url()'s tombstone. Refuse the

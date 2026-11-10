@@ -62,3 +62,26 @@ def test_unknown_deepgram_voice_never_becomes_orion(monkeypatch):
     monkeypatch.setattr(proxy, 'get_setting', lambda key: 'test-key')
     with pytest.raises(ValueError, match='substitution'):
         asyncio.run(proxy.get_deepgram_audio('Example.', 'deepgram_typo'))
+
+
+def test_flux_preview_uses_proxy_not_kokoro(monkeypatch, tmp_path):
+    import app as web
+    calls = []
+
+    class Reply:
+        content = b'test-audio' * 1000
+
+        def raise_for_status(self):
+            pass
+
+    def post(url, **kwargs):
+        calls.append((url, kwargs))
+        return Reply()
+
+    monkeypatch.setattr(web, 'PREVIEWS_DIR', tmp_path)
+    monkeypatch.setattr(web.requests, 'post', post)
+    result = web.get_voice_preview('deepgram_flux_jack')
+    assert result and result.read_bytes() == Reply.content
+    assert '/j/preview/v1/audio/speech' in calls[0][0]
+    assert calls[0][1]['json']['voice'] == 'deepgram_flux_jack'
+    assert calls[0][1]['json']['model'] == 'deepgram'
