@@ -30,6 +30,15 @@ https://huggingface.co/kyutai/tts-voices. Phonon voice catalogue is pinned to
 `0ee17205f254b5abc43b266c8a0f215565c352f7` (Apache-2.0).
 No reference recordings, model weights, book excerpts or previews are in git.
 
+Kitten's official runtime also uses the ResembleAI Chatterbox Turbo S3 decoder
+(not its text-to-speech model). Its download is pinned by this adapter to
+`749d1c1a46eb10492095d68fbcf55691ccf137cd`, file
+`s3gen_meanflow.safetensors`, SHA256
+`d65cb687a2ed581ee6cc297e919ffefa63386944f42364ae13b78a594945514f`.
+Official source/licence: https://huggingface.co/ResembleAI/chatterbox-turbo (MIT).
+The adapter adds a `revision` argument to the runtime's decoder downloader;
+inference code and decoder settings remain upstream defaults.
+
 ## Setup
 
 Enable `ENABLE_NARRATORS_PROFILE=1` in the deployment's private `.env` and use

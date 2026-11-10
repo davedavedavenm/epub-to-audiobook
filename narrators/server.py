@@ -74,7 +74,14 @@ def _load(family):
                 from silencio2 import Silencio2TTS
                 model = Silencio2TTS.from_pretrained(folder, device='cpu')
             elif family == 'kitten':
+                from functools import partial
+                from huggingface_hub import hf_hub_download
                 from kittenml import KittenTTS
+                from kittenml.kittentts2 import vocoder
+                # kittenml 0.9.7 otherwise downloads this auxiliary decoder
+                # from main. Pin the official weights used by the audition.
+                vocoder.hf_hub_download = partial(
+                    hf_hub_download, revision='749d1c1a46eb10492095d68fbcf55691ccf137cd')
                 model = KittenTTS(folder, device='cpu', weights='packed')
             else:
                 raise ValueError('Unknown family')
