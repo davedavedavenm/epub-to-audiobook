@@ -356,6 +356,27 @@ services:
   # explicit number/currency input profile passed the short listening screen;
   # this remains opt-in until a full-book gate is heard. All 21 official
   # English presets are exposed and cached before the UI offers Play.
+  # Exact heard November models, CPU-only and isolated from existing services.
+  cpu-narrators:
+    build:
+      context: .
+      dockerfile: narrators/Dockerfile
+    container_name: cpu-narrators
+    logging: *default-logging
+    restart: unless-stopped
+    cpus: 4.0
+    mem_limit: 12g
+    memswap_limit: 12g
+    environment:
+      - CUDA_VISIBLE_DEVICES=
+      - NARRATOR_THREADS=4
+      - HF_TOKEN_PATH=/run/secrets/hf_token
+    volumes:
+      - narrator-cache:/data/hf
+      - ./data/narrator-hf-token:/run/secrets/hf_token:ro
+    profiles:
+      - narrators
+
   pocket-tts:
     build:
       context: ./pocket
@@ -473,6 +494,7 @@ services:
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
       - VIBEVOICE_URL=${VIBEVOICE_URL:-http://vibevoice-tts:8010/v1}
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
+      - CPU_NARRATORS_URL=${CPU_NARRATORS_URL:-http://cpu-narrators:8016/v1}
       - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
       - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
       - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}
@@ -594,6 +616,7 @@ services:
       - TADA_URL=${TADA_URL:-http://tada-tts:8005/v1}
       - VIBEVOICE_URL=${VIBEVOICE_URL:-http://vibevoice-tts:8010/v1}
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
+      - CPU_NARRATORS_URL=${CPU_NARRATORS_URL:-http://cpu-narrators:8016/v1}
       - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
       - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
       - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}
@@ -705,6 +728,7 @@ networks:
     internal: true
 
 volumes:
+  narrator-cache:
   kokoro-cache:
   chatterbox-cache:
   tada-cache:

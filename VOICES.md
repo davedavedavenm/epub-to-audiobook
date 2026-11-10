@@ -1,5 +1,21 @@
 # Voices and accents
 
+## 10 November 2026 — Latest CPU ratings and collective shortlist
+
+Latest 416-word votes: Like Stuart Bell, Edwin, Freya, Imogen, Bill Boerst,
+Caro Davy, Arthur and Hugh; Maybe Harriet and Isabella. Isabella's newer Maybe
+supersedes her earlier short-take Like. Jack remains the leading hosted voice.
+The current collective shortlist has 19 Likes: 11 CPU, five Deepgram Flux and
+three GPU auditions. Maya accents are unsuitable for Badawi specifically.
+
+Add exact November model identities and cached heard previews to the app.
+Do not silently substitute old Pocket/Kitten models or Aura for Flux. The three
+GPU entries remain audition-only until a full-book lane is integrated/verified;
+no GPU call or full book was authorized by this catalogue update. Default
+narrator is unchanged. Expression/casting boundaries and pinned official
+provenance are recorded in `narrators/README.md`.
+
+
 **Last updated: 2026-09-19.** What works, what does not, and the wrong turns —
 recorded so nobody walks back down them. Every claim here was heard or measured,
 not reasoned about; where something is untested it says so.

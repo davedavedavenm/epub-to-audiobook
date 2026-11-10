@@ -77,6 +77,7 @@ VIBEVOICE_URL = os.environ.get('VIBEVOICE_URL', 'http://vibevoice-tts:8010/v1')
 QWEN3_URL = os.environ.get('QWEN3_URL', 'http://qwen3-tts:8011/v1')
 POCKET_URL = os.environ.get('POCKET_URL', 'http://pocket-tts:8012/v1')
 KITTEN_URL = os.environ.get('KITTEN_URL', 'http://kitten-tts:8013/v1')
+CPU_NARRATORS_URL = os.environ.get('CPU_NARRATORS_URL', 'http://cpu-narrators:8016/v1')
 GEMINI_TTS_URL = os.environ.get('GEMINI_TTS_URL', 'http://gemini-tts:8014/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
@@ -432,6 +433,8 @@ def _run_audio_asr_verify_sample(job_id: str, epub_filename: str, output_dirname
 
 # TTS Engines configuration
 TTS_ENGINES = {
+    'cpu_narrators': {'name': 'Liked CPU narrators', 'description': 'Exact November audition models, local CPU', 'url_env': 'CPU_NARRATORS_URL', 'default_url': 'http://cpu-narrators:8016/v1'},
+    'audition': {'name': 'Liked GPU auditions', 'description': 'Cached auditions; book conversion not integrated'},
     'kokoro': {
         'name': 'Kokoro',
         'description': 'Fast legacy/compatibility TTS; retired from quality contention',
@@ -745,6 +748,9 @@ VOICES = {
     'deepgram_pandora': {'name': 'Pandora — articulate (Deepgram)', 'accent': 'British', 'gender': 'Female', 'engine': 'deepgram'},
     'deepgram_hyperion': {'name': 'Hyperion — natural (Deepgram)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'deepgram'},
 }
+
+from liked_voices import LIKED_VOICES  # noqa: E402
+VOICES.update(LIKED_VOICES)
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
 # Kaggle GPU sample-renderer and this app use byte-identical text.
@@ -2659,7 +2665,7 @@ def get_voice_preview(voice_id: str) -> Path:
             part.write_bytes(proc.stdout)
             os.replace(part, preview_path)
         elif engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
-                        'pocket', 'kitten'):
+                        'pocket', 'kitten', 'cpu_narrators'):
             # Direct preview from an isolated local engine service.
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
             # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
@@ -2670,6 +2676,7 @@ def get_voice_preview(voice_id: str) -> Path:
                     else QWEN3_URL if engine == 'qwen3'
                     else GEMINI_TTS_URL if engine == 'gemini'
                     else POCKET_URL if engine == 'pocket'
+                    else CPU_NARRATORS_URL if engine == 'cpu_narrators'
                     else KITTEN_URL if engine == 'kitten'
                     else TADA_URL if engine == 'tada'
                     else CHATTERBOX_NANO_URL if engine == 'chatterbox_nano'
@@ -2971,6 +2978,10 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         return VIBEVOICE_URL, 'microsoft/VibeVoice-1.5B'
     elif tts_engine == 'qwen3':
         return QWEN3_URL, 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'
+    elif tts_engine == 'audition':
+        raise ValueError('This GPU voice is a cached audition; book conversion is not integrated')
+    elif tts_engine == 'cpu_narrators':
+        return CPU_NARRATORS_URL, 'tts-1'
     elif tts_engine == 'pocket':
         return POCKET_URL, 'pocket-tts-2.1'
     elif tts_engine == 'kitten':
@@ -2991,7 +3002,7 @@ def text_profile_for_engine(tts_engine: str) -> str:
     respellings. Keeping this mapping centralized makes preview, first render
     and recovery use the same input contract.
     """
-    if tts_engine in ('pocket', 'kitten', 'gemini', 'deepgram'):
+    if tts_engine in ('pocket', 'kitten', 'gemini', 'deepgram', 'cpu_narrators'):
         return 'explicit'
     if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3', 'fish'):
         # 'fish' never reaches convert_book (the lane path preps with as_prep.py
@@ -4502,7 +4513,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # polluted ETA metrics produced absurd timeouts (375m for a ~14h book,
         # incident 2026-07-07). Floor the timeout at char_count/4 chars-per-sec.
         if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
-                          'pocket', 'kitten'):
+                          'pocket', 'kitten', 'cpu_narrators'):
             floor_seconds = int(char_count / 4.0)
             if timeout_seconds < floor_seconds:
                 timeout_seconds = floor_seconds
@@ -4625,7 +4636,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
                 append_job_log(job_id,
                                f"NOTE: speed {tts_speed}x requested, but Gemini pacing is "
                                f"pinned by the heard style prompt; the request remains at 1.0x.")
-            elif tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten'):
+            elif tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'pocket', 'kitten', 'cpu_narrators'):
                 cmd.extend(['--speed', str(tts_speed)])
                 append_job_log(job_id,
                                f"NOTE: speed {tts_speed}x requested, but {tts_engine} has no "
@@ -4915,9 +4926,10 @@ def check_engines_health(max_age=20):
         'qwen3': f"{QWEN3_URL.rstrip('/')}/audio/voices",
         'pocket': f"{POCKET_URL.rstrip('/')}/audio/voices",
         'kitten': f"{KITTEN_URL.rstrip('/')}/audio/voices",
+        'cpu_narrators': f"{CPU_NARRATORS_URL.rstrip('/')}/audio/voices",
         'gemini': f"{GEMINI_TTS_URL.rstrip('/')}/audio/voices",
     }
-    out = {}
+    out = {'audition': False}
     for eng, url in probes.items():
         try:
             r = requests.get(url, timeout=3)
@@ -6290,6 +6302,8 @@ def start_conversion():
 
     if voice not in all_voices():
         return jsonify({'error': 'Invalid voice selected'}), 400
+    if all_voices()[voice].get('audition_only'):
+        return jsonify({'error': 'This GPU voice is a cached audition; book conversion is not integrated'}), 400
 
     if voice2 and voice2 not in all_voices():
         return jsonify({'error': 'Invalid secondary voice selected'}), 400
@@ -8271,6 +8285,8 @@ def convert_from_library():
 
         file_path = Path(file_path_str)
         voice = data.get('voice', DEFAULT_VOICE)
+        if all_voices().get(voice, {}).get('audition_only'):
+            return jsonify({'error': 'This GPU voice is a cached audition; book conversion is not integrated'}), 400
         voice2 = (data.get('voice2') or '').strip() or None
         custom_regex = (data.get('custom_regex') or '').strip() or None
         newline_mode = data.get('newline_mode', 'double')

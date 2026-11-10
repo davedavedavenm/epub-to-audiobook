@@ -1111,7 +1111,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     function engineConfigured(e) { return !engineUnconfigured[e]; }
     // Voices we are willing to offer as a choice at all.
     function selectableVoices() {
-        return Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine) && v.preview_cached === true);
+        return Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine) && !v.audition_only && v.preview_cached === true);
     }
     let libraryBooks = [];
     let selectedFile = null;
@@ -1477,6 +1477,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     }
 
     const ENGINE_LABELS = {
+        'cpu_narrators': 'LIKED CPU NARRATORS (November models)',
         'breeze': 'BREEZE 2 (Modal Serverless GPU — Studio Clones)',
         'qwen3': 'QWEN3-TTS (Modal Serverless GPU — Emotive)',
         'chatterbox_nano': 'CHATTERBOX NANO (Fast CPU — Default)',
@@ -2133,7 +2134,15 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
 
-        container.innerHTML = cloudStrip + modalInfoBanner + compareCard + cloneCard + engines.map(engine => {
+        const liked = Object.entries(voices).filter(([id, v]) => v.liked && v.preview_cached === true);
+        const likedSection = `<section class="card" id="liked-voices" style="margin-bottom:28px;">
+            <h2>Your liked voices</h2><p>Saved from your listening verdicts. Exact model versions; newer verdicts take precedence.</p>
+            <div class="voices-grid">${liked.map(([id, v]) => `<div class="voice-card">
+                <div><div class="voice-name">${escapeHtml(v.name)}</div>
+                <div class="voice-meta">${v.audition_only ? 'GPU audition only · book conversion not connected' : (v.engine === 'cpu_narrators' ? 'Local CPU' : 'Deepgram credit')}${v.note ? ' · '+escapeHtml(v.note) : ''}</div></div>
+                <button class="preview-btn" onclick="playVoicePreview('${id}', this)" aria-label="Listen to liked ${escapeHtml(v.name)}">&#9654;</button>
+            </div>`).join('')}</div></section>`;
+        container.innerHTML = likedSection + cloudStrip + modalInfoBanner + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const up = engineUp(engine);
             const isModal = MODAL_GPU_ENGINES.includes(engine);

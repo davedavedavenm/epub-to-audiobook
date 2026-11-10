@@ -215,6 +215,7 @@ async def get_inworld_audio(text: str, voice: str) -> bytes:
 
 
 DEEPGRAM_VOICE_MAP = {
+    **{f'deepgram_flux_{name}': f'flux-{name}-en' for name in ('jack', 'colin', 'rufus', 'conor', 'sean')},
     'deepgram_orion': 'aura-2-orion-en',
     'deepgram_orpheus': 'aura-2-orpheus-en',
     'deepgram_arcas': 'aura-2-arcas-en',
@@ -257,7 +258,10 @@ async def _deepgram_chunk(text: str, model_id: str, api_key: str) -> bytes:
         'Authorization': f'Token {api_key}',
         'User-Agent': 'EpubToAudiobook/1.0'
     }
-    url = f"https://api.deepgram.com/v1/speak?model={model_id}&encoding=mp3"
+    version = 'v2' if model_id.startswith('flux-') else 'v1'
+    url = f"https://api.deepgram.com/{version}/speak?model={model_id}&encoding=mp3"
+    if version == 'v2':
+        url += '&expressivity=0&speed=1' 
     payload = {'text': text}
 
     async with httpx.AsyncClient(timeout=60) as client:
@@ -275,8 +279,8 @@ async def get_deepgram_audio(text: str, voice: str) -> bytes:
     model_id = DEEPGRAM_VOICE_MAP.get(voice, voice)
     if model_id.startswith('deepgram_'):
         model_id = model_id.replace('deepgram_', '')
-    if not model_id.startswith('aura-') and not model_id.startswith('aura-2-'):
-        model_id = 'aura-2-orion-en'
+    if not model_id.startswith(('aura-', 'flux-')):
+        raise ValueError('Unknown Deepgram voice; refusing a silent voice substitution')
 
     chunks = _split_for_deepgram(text)
     parts = []
