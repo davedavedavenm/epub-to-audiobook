@@ -2140,7 +2140,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             <div class="voices-grid">${liked.map(([id, v]) => `<div class="voice-card">
                 <div><div class="voice-name">${escapeHtml(v.name)}</div>
                 <div class="voice-meta">${v.audition_only ? 'GPU audition only · book conversion not connected' : (v.engine === 'cpu_narrators' ? 'Local CPU' : 'Deepgram credit')}${v.note ? ' · '+escapeHtml(v.note) : ''}</div></div>
-                <button class="preview-btn" onclick="playVoicePreview('${id}', this)" aria-label="Listen to liked ${escapeHtml(v.name)}">&#9654;</button>
+                <button class="btn" onclick="playVoicePreview('${id}', this)" aria-label="Listen to liked ${escapeHtml(v.name)}">&#9654;</button>
             </div>`).join('')}</div></section>`;
         container.innerHTML = likedSection + cloudStrip + modalInfoBanner + compareCard + cloneCard + engines.map(engine => {
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);

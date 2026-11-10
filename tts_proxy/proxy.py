@@ -261,7 +261,7 @@ async def _deepgram_chunk(text: str, model_id: str, api_key: str) -> bytes:
     version = 'v2' if model_id.startswith('flux-') else 'v1'
     url = f"https://api.deepgram.com/{version}/speak?model={model_id}&encoding=mp3"
     if version == 'v2':
-        url += '&expressivity=0&speed=1' 
+        url += '&expressivity=0&speed=1'
     payload = {'text': text}
 
     async with httpx.AsyncClient(timeout=60) as client:
