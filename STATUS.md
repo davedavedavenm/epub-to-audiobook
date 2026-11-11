@@ -11,6 +11,12 @@
   controlled Kitten second, preserved Kitten last. Exact clip mapping is in
   VOICES/DECISIONS and the local six-track player. Longer takes are not approved
   by this verdict.
+- **Qwen John app entry prepared:** the complete 63.78-second standard take is
+  cached as `qwen3_john_kani_audition`, SHA-256
+  `03fa42b3475117374acbae386066699a48d4ea8300223a0f4b30a96f0cd9ef4a`.
+  It belongs inside the existing Qwen Base model card, audition-only; Arthur
+  remains the representative. Its short-take Like does not approve this longer
+  preview. Registration/playback require the next whole-stack deployment.
 - **Preview migration:** 55/182 registered voices were current standard-v1 at
   this checkpoint, 166/166 configured previews cached. Nine Gemini replacements
   passed exact endpoint/hash verification; Puck refused and its old take remains.

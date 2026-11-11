@@ -758,7 +758,15 @@ VOICES['kitten2_john_kani_audition'] = {
     'name': 'John Kani reference (AI clone)', 'accent': 'South African reference',
     'gender': 'Male', 'engine': 'audition', 'audition_only': True,
     'catalogue_model': 'kitten2', 'preview_text_engine': 'cpu_narrators',
-    'note': 'Earlier short take liked, with accent drift. This full shared passage awaits your verdict; ASR flagged possible extra words.',
+    'note': 'Short comparison: controlled Kitten preferred to the preserved baseline; Qwen3 ranked best. This separate full passage awaits your verdict; ASR flagged possible extra words.',
+}
+VOICES['qwen3_john_kani_audition'] = {
+    'name': 'John Kani reference (AI clone)', 'accent': 'South African reference',
+    'gender': 'Male', 'engine': 'audition', 'audition_only': True,
+    'catalogue_model': 'qwen3_base', 'preview_text_engine': 'qwen3',
+    'liked': True, 'rating_date': '2026-11-11',
+    'rated_sample_id': 'john-kani-reference-short-40-words',
+    'note': 'Dave ranked the short Qwen3 comparison best, ahead of controlled and preserved Kitten. This longer Shared test v1 take awaits a separate verdict.',
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
