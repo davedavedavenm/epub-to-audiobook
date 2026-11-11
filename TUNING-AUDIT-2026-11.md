@@ -29,12 +29,43 @@ Read-only source audit prepared 2026-11-11. This document compares the exact ada
   [API/README](https://github.com/QwenLM/Qwen3-TTS) read before generation.
   Same John reference plus exact transcript; full conditioning
   (`x_vector_only_mode=False`), English, seed 42, bfloat16/SDPA, generation
-  defaults except the existing app's 4096-token ceiling. L4 requested through
-  authenticated Modal 1.5.5; no new login, no Vast. Runtime/model snapshots are
-  pinned and each clip records its actual settings. Rendering/quality remains
-  unverified until output is measured and auditioned.
+  defaults except the existing app's 4096-token ceiling. L4/A10 remained in
+  scheduling; L40S completed through authenticated Modal 1.5.5, without a new
+  login or Vast. John short/standard and Arthur standard durations are 15.12,
+  63.78 and 70.26 seconds; ASR found no multiword drop or missing ending.
+  CustomVoice Aiden (weights `0c0e3051f131929182e2c023b9537f8b1c68adfe`)
+  also completed at 69.1 seconds. All apps stopped, billed cost zero, existing
+  credit consumed. Runtime/model snapshots and actual settings are retained
+  with each clip. Dave ranked the short Qwen take above controlled Kitten,
+  then the preserved baseline; this does not approve the separate longer takes.
 
 ## Material findings first
+
+### Additional GPU source audit (11 November)
+
+Breeze's official runtime `breezeblue-ai/breeze-tts` was inspected at
+`daa6cb2efe5471f09369229f322d20bb956cb3c3`, weights
+`BreezeBlue/Breeze-TTS-2` at `3e28c5151381a722f1d8661b4118c298caa77aa4`.
+The older project renderer supplies materially mismatched reference transcripts
+for five of its six voices and applies undocumented post-EQ. ASR identifies
+these mismatches but cannot supply authoritative source transcripts for the
+uncertain tails. Arthur's matching transcript is in `qwen3/ref_transcripts.json`.
+Historical Breeze runtime/weight revisions were not pinned, so remain unknown.
+
+The current [Breeze license](https://huggingface.co/BreezeBlue/Breeze-TTS-2/blob/3e28c5151381a722f1d8661b4118c298caa77aa4/LICENSE)
+requires explicit speaker consent for named-speaker imitation. None was found
+for these references; that clone batch was not launched. A fictional, reference-
+free Voice Design evaluation is a separate experiment, not a replacement labelled
+as an existing speaker. Its [official inference interface](https://github.com/breezeblue-ai/breeze-tts/blob/daa6cb2efe5471f09369229f322d20bb956cb3c3/infer.py)
+defaults to CFG 1; the README recommends CFG 4 for instruction-following. Log
+the actual override and check output-token capacity against the full passage.
+
+The current [Higgs TTS 3 model card](https://huggingface.co/bosonai/higgs-tts-3-4b)
+also explicitly prohibits cloning without consent. No new named-reference
+Higgs audition was launched. This audit does not retroactively establish
+historical licensing/provenance or alter the locked reproduction recipe.
+
+The findings below describe the earlier CPU/Flux audit.
 
 1. **Chatterbox Turbo/Nano receive controls that their pinned runtime ignores.** The project server passes `exaggeration=0.5` and `cfg_weight=0.5` to Turbo/Nano, matching its own environment defaults and comments. At the exact pinned source commit, Turbo `generate()` warns that CFG, `min_p`, and exaggeration are unsupported and ignored. The app never passes `min_p`; the runtime default is `0.00`. Do not describe those adapter values as effective Turbo/Nano tuning. Runtime defaults that do affect generation include temperature `0.8`, top-p `0.95`, repetition penalty `1.2`, top-k `1000`, and `norm_loudness=True`.
 2. **Chatterbox model weights are not revision-pinned by the runtime.** `from_pretrained()` calls `snapshot_download()` without `revision`, and the multilingual implementation explicitly sets revision to `main`. The audited deployed services are Turbo and Nano; V3 is not running. Installed Turbo code SHA-256 reported by the parent is `2f27e8ff2fa35181fdd2849367fb96ecc2cb87a1088ca7520c8bd51946599f08`, and its installed `direct_url.json` identifies commit `5de7a54aa4e5e2baadb0182dde554908b48b85c2`; the model weights themselves remain mutable-main provenance.

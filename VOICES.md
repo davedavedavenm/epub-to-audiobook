@@ -1,5 +1,16 @@
 # Voices and accents
 
+## 11 November 2026 — John reference short comparison heard
+
+Dave: "kitten controlled was better, qwen 3 best, preserved worst".
+The matched 40-word ranking is **Qwen3 Base > controlled Kitten > preserved
+Kitten baseline**. Exact files: `qwen_john_kani_comparison.mp3`,
+`kitten2_john_kani_short_refprompt_off.mp3`, and
+`kitten-reference-retest/kitten_john_kani.mp3`. The second switches only
+`use_reference_prompt` off. This supersedes the earlier relative preference
+for the preserved take; it does not establish full-book accent stability or
+approve the separate standard-v1 takes. Preserve all three clips and receipts.
+
 ## 11 November 2026 — Heard standard-v1 verdicts and model-first comparison
 
 - Freya: positive; Hugh: decent.

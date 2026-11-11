@@ -516,9 +516,12 @@ VOICES = {
     'bm_v0george': {'name': 'George Classic', 'accent': 'British', 'gender': 'Male', 'engine': 'kokoro'},
     'bm_v0lewis': {'name': 'Lewis Classic', 'accent': 'British', 'gender': 'Male', 'engine': 'kokoro'},
     # European English (3 voices)
-    'ef_dora': {'name': 'Dora', 'accent': 'European', 'gender': 'Female', 'engine': 'kokoro'},
-    'em_alex': {'name': 'Alex', 'accent': 'European', 'gender': 'Male', 'engine': 'kokoro'},
-    'em_santa': {'name': 'Santa', 'accent': 'European', 'gender': 'Male', 'engine': 'kokoro'},
+    'ef_dora': {'name': 'Dora', 'accent': 'European', 'gender': 'Female', 'engine': 'kokoro',
+                'note': 'Native Spanish voice. The Kokoro wrapper infers Spanish phonemization from this voice ID while the shared sample text stays in English; Whisper therefore transcribes it phonetically. Listen to the exact preview before judging pronunciation.'},
+    'em_alex': {'name': 'Alex', 'accent': 'European', 'gender': 'Male', 'engine': 'kokoro',
+                'note': 'Native Spanish voice. The Kokoro wrapper infers Spanish phonemization from this voice ID while the shared sample text stays in English; Whisper therefore transcribes it phonetically. Listen to the exact preview before judging pronunciation.'},
+    'em_santa': {'name': 'Santa', 'accent': 'European', 'gender': 'Male', 'engine': 'kokoro',
+                 'note': 'Native Spanish voice. The Kokoro wrapper infers Spanish phonemization from this voice ID while the shared sample text stays in English; Whisper therefore transcribes it phonetically. Listen to the exact preview before judging pronunciation.'},
     # American Female (4 voices)
     'af_bella': {'name': 'Bella', 'accent': 'American', 'gender': 'Female', 'engine': 'kokoro'},
     'af_nova': {'name': 'Nova', 'accent': 'American', 'gender': 'Female', 'engine': 'kokoro'},

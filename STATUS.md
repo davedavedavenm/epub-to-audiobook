@@ -1,5 +1,22 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Widescreen live; John reference ranking recorded
+
+- **Deployed/verified:** `3e5027e6c97b3d971c223eebac9d13a0798b6f9c`, whole stack
+  via `scripts/deploy.sh`; webapp and worker healthy with matching revision.
+  Clean-checkout CI: 524 passed, one skipped. After a fresh page reload, actual
+  deployed CSS has no content-width cap on Voices: six columns at 2560px,
+  one at 390px, no horizontal overflow. No injected test stylesheet remained.
+- **Heard:** Dave ranks the matched short John-reference clips Qwen3 first,
+  controlled Kitten second, preserved Kitten last. Exact clip mapping is in
+  VOICES/DECISIONS and the local six-track player. Longer takes are not approved
+  by this verdict.
+- **Preview migration:** 55/182 registered voices were current standard-v1 at
+  this checkpoint, 166/166 configured previews cached. Nine Gemini replacements
+  passed exact endpoint/hash verification; Puck refused and its old take remains.
+  CPU checkpoint 37/83 paused safely for deployment and then resumed; migration
+  remains in progress, not complete. Previous cache audio is archived.
+
 ## 11 November 2026 — Model catalogue deployed; widescreen correction
 
 - **Deployed/verified:** `d035aa8`, webapp and worker both healthy at the same

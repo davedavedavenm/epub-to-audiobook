@@ -1,5 +1,18 @@
 # Decisions — EPUB to Audiobook
 
+## 11 November 2026 — John reference short comparison: Qwen leads — Active
+
+Dave's verdict: "kitten controlled was better, qwen 3 best, preserved worst".
+For the three matched 40-word auditions this ranks Qwen3 Base
+(`qwen_john_kani_comparison.mp3`) first, Kitten's controlled diagnostic
+(`kitten2_john_kani_short_refprompt_off.mp3`) second, and the preserved
+`kitten-reference-retest/kitten_john_kani.mp3` baseline last. Keep the baseline
+for comparison. The controlled Kitten take disables reference prompting; its
+other settings/reference are unchanged. This is a preference between those
+exact clips, not approval of the full standard readings or a long-form book.
+Qwen is the leading candidate for the next South African narration comparison;
+no production narrator/default changes follow automatically.
+
 ## 11 November 2026 — Voices uses the available screen width — Active
 
 The model-comparison catalogue must use widescreen space instead of inheriting
