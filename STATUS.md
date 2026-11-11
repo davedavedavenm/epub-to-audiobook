@@ -1,5 +1,25 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Shared Standard v1 GPU preview batches
+
+- **CosyVoice 3:** Four new audition-only clips (Arthur, Harriet, Edmund,
+  Beatrice) use the shared sample source SHA-256
+  `386e062ef7020b882240cf512ba7c886be75b3d20dede6b60360b5c1bf3d8dc7` and
+  CosyVoice-prepared text SHA-256
+  `447286b994ee94f9cdd67e0109d0cc71d2b616ce120034409bf208b738d2b553`.
+  All four promoted previews returned HTTP 200 and exact staged SHA-256 matches;
+  prior audio is archived. Unprompted Whisper small ASR reached each ending;
+  Beatrice has two mid-passage divergence flags (not confirmed audio errors).
+- **Gemini:** The bounded free-project batch used 10/10 daily requests: nine
+  complete, decoded previews; Puck returned a safety refusal and was not retried.
+  Billing was confirmed disabled for the dedicated project. No new human
+  listening verdict was recorded for these Standard v1 clips; Achernar's earlier
+  verdict applies to its earlier audition only.
+- **TADA:** No new GPU preview was rendered. Access to files at the official
+  Meta Llama tokenizer revision was denied with HTTP 403; no mirror workaround
+  was used. Existing previews remain available. There is no new TADA quality
+  verdict or cache replacement.
+
 ## 11 November 2026 — Controlled Kitten full passage retained separately
 
 The preferred short Kitten setting (`use_reference_prompt=False`) was extended
