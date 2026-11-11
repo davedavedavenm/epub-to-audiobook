@@ -1,8 +1,25 @@
 # Tuning audit: November 2026
 
-Read-only source audit prepared 2026-11-11. This document compares the exact adapters and revisions used by the liked-voices worktree with current official maintainer/vendor documentation and the pinned runtime implementations. It records implementation settings and documentary defaults; it does not claim a particular setting is optimal by reasoning alone. No renders, listening session, provider call, deployment, or operational change was performed for this audit.
+Source audit prepared 2026-11-11. This document compares the exact adapters and revisions used by the liked-voices worktree with current official maintainer/vendor documentation and the pinned runtime implementations. It records implementation settings and documentary defaults; it does not claim a particular setting is optimal by reasoning alone. The initial audit was read-only; follow-up sections distinguish actual experiments, measurements and listening verdicts.
 
 ## 11 November follow-up: shared passage and bounded clone experiments
+
+- **Isolated preparation environments:** the lean Modal/Kitten Python
+  environments lacked `num2words`; the optional fallback in the general text
+  normalizer silently produced different Cosy/Vibe payload hashes. This was
+  caught before their new audio was offered. Shared sample preparation now
+  requires that dependency explicitly, including modern profiles, and errors
+  instead of changing text. Prepare/freeze text in the app environment, then
+  pass JSON plus exact source/prepared hashes to inference. Native Maya/Vox
+  audition contracts deliberately receive raw source and are separate exceptions.
+- **TADA tokenizer boundary:** the existing adapter redirects to a community
+  Unsloth tokenizer; equivalence with Meta is unverified. Hugging Face model
+  metadata was readable, but actual official Meta tokenizer/config downloads
+  returned 403 (account not authorized). Metadata access was not file-access
+  permission. No new mirror was used to route around the denial, and the new
+  pinned-official TADA GPU batch remains blocked. Existing cached previews and
+  the historical adapter remain unchanged apart from correcting its unsupported
+  byte-identical comment; no old-quality root cause is established.
 
 - **Edge client:** 7.2.8 returned HTTP 403 before audio. Maintainer releases
   [7.3.0](https://github.com/rany2/edge-tts/releases/tag/7.3.0) and
@@ -22,6 +39,11 @@ Read-only source audit prepared 2026-11-11. This document compares the exact ada
   unprompted ASR covers all 40 words. Neither ASR nor duration establishes accent
   quality. The source-prepared payload was frozen outside the inference venv,
   which lacks some production normalizer dependencies.
+  The preferred short False setting was also extended to the full standard:
+  86.86 seconds audio, 521.1 seconds CPU4 inference. Independent ASR reached
+  the ending but flagged a possible missing distance phrase and repeated words.
+  It is retained as a separate local audition, not a silently approved app-cache
+  replacement. The timing is one observed run, not an isolated speed benchmark.
 - **Qwen GPU experiment:** official `QwenLM/Qwen3-TTS` commit
   `022e286b98fbec7e1e916cb940cdf532cd9f488e` (qwen-tts 0.1.1),
   `Qwen/Qwen3-TTS-12Hz-1.7B-Base` revision

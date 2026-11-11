@@ -66,6 +66,17 @@ def test_preparation_failure_never_silently_sends_raw_numbers(monkeypatch):
         sample_text_for('cpu_narrators')
 
 
+def test_missing_number_dependency_cannot_silently_change_shared_payload(monkeypatch):
+    import tts_preprocess
+
+    monkeypatch.setattr(tts_preprocess, 'HAS_NUM2WORDS', False)
+    for engine in ('cosyvoice', 'vibevoice', 'cpu_narrators'):
+        with pytest.raises(RuntimeError, match='num2words is required'):
+            sample_text_for(engine)
+    # Native raw-input auditions are an explicit contract, not a failure fallback.
+    assert sample_text_for('maya2') == SAMPLE_TEXT
+
+
 @pytest.mark.parametrize('voice_id, engine', [
     ('maya2_siddhant', 'maya2'), ('maya2_nivedita', 'maya2'),
     ('voxcpm2_peter', 'voxcpm2'),

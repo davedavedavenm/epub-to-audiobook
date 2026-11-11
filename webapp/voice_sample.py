@@ -80,7 +80,12 @@ def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
     if engine in RAW_AUDITION_ENGINES:
         return source
     try:
-        from tts_preprocess import normalize_text_for_tts, _is_letter_spacing
+        from tts_preprocess import normalize_text_for_tts, _is_letter_spacing, HAS_NUM2WORDS
+        if not HAS_NUM2WORDS:
+            raise RuntimeError(
+                'num2words is required for reproducible audition preparation; '
+                'prepare and freeze the payload in the application environment'
+            )
         lexicon = SAMPLE_LEXICON
         if engine in EXPLICIT_ENGINES:
             lexicon = {
@@ -94,4 +99,4 @@ def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
             expand_numbers=True if explicit else None,
         )
     except Exception as exc:
-        raise RuntimeError(f"Could not prepare shared sample for {engine}") from exc
+        raise RuntimeError(f"Could not prepare shared sample for {engine}: {exc}") from exc

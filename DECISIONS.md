@@ -20,6 +20,8 @@ the 1360px form-page width. Keep one representative per model; add columns as
 space permits, with readable cards and one column on mobile. Other forms and
 prose panels retain their own width constraints.
 
+## 11 November 2026 — Native audition input contracts — Active
+
 Audition-only Maya2 Native and VoxCPM2 declare their native raw-input contracts
 explicitly via `preview_text_engine` and `sample_text_for('maya2'/'voxcpm2')`.
 Neither has a book route, so do not invent book/preview parity. Internal model

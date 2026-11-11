@@ -6,8 +6,10 @@ name), using pre-baked transcripts in ref_transcripts.json. CPU by default;
 CUDA if available.
 
 Notes baked in from the proven local recipe:
-- TADA pulls the Llama-3.2-1B *tokenizer* (Meta-gated). Redirect to the
-  byte-identical ungated `unsloth/Llama-3.2-1B` mirror before importing tada.
+- This historical adapter redirects the Llama-3.2-1B tokenizer to the
+  community `unsloth/Llama-3.2-1B` mirror before importing tada. Tokenizer
+  equivalence has not been verified; do not describe this as official or
+  byte-identical. See ENGINES.md and TUNING-AUDIT-2026-11.md.
 - ~600-char passes keep long-form prosody while limiting pacing drift.
 """
 import io

@@ -40,6 +40,12 @@ test phrasing; they do not imply automatic speaker casting.
   documented numeric-text recommendation is `normalize=True`; VoxCPM2's current
   native default is `normalize=False`. This is not a fallback for missing
   dependencies or an inferred production preparation policy.
+- Prepare app-normalized payloads with the application dependencies installed,
+  then freeze the text and source/prepared hashes before sending to an isolated
+  model environment. Missing `num2words` must fail preparation explicitly: the
+  legacy normalizer's optional-dependency fallback can silently change the text,
+  including for modern engines. Do not recompute inside a lean Modal CLI or
+  inference environment and call the different result equivalent.
 - Read `DECISIONS.md`, `VOICES.md`, `PREPROCESSING.md`, and the exact upstream
   model/runtime documentation first. `TUNING-AUDIT-2026-11.md` records the current
   evidence, not perpetual permission to skip checking changed versions.

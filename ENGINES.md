@@ -364,9 +364,11 @@ Sources: [HumeAI/tada GitHub](https://github.com/HumeAI/tada) ·
   Anything else we tune is **[unverified]**.
 - **English encoder ASR.** For non-English refs the transcript MUST be
   provided (built-in ASR is English-only). Languages: ar,ch,de,es,fr,it,ja,pl,pt.
-- **Tokenizer**: pulls `meta-llama/Llama-3.2-1B` (gated). We redirect to the
-  byte-identical `unsloth/Llama-3.2-1B` [unverified byte-identical — works in
-  practice].
+- **Tokenizer**: pulls `meta-llama/Llama-3.2-1B` (gated). The historical
+  adapter redirects to community `unsloth/Llama-3.2-1B`; tokenizer equivalence
+  is unverified. Readable official Hub metadata does not imply access to its
+  files: the 11 November official-file check returned 403. The fresh official
+  GPU audition remains blocked on that authorization; see TUNING-AUDIT-2026-11.md.
 - **Output**: 24 kHz. Model ~1B params, needs ~6.5 GB peak RAM to load
   [measured, not official].
 

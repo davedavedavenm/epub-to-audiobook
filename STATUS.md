@@ -1,5 +1,19 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Controlled Kitten full passage retained separately
+
+The preferred short Kitten setting (`use_reference_prompt=False`) was extended
+to the shared standard with the same reference, seed, pinned model/decoder and
+remaining settings. Output is 86.86 seconds; local CPU4 inference took 521.1
+seconds plus 15.6 seconds loading. The earlier full True take remains intact.
+Independent Whisper small/int8, two threads, reached the ending but flagged
+possible omission of "three point five kilometres" and repeated words; these
+are listening checks, not an approved improvement or a new root-cause claim.
+The seven-track local comparison player identifies this limitation, all seven
+HTTP bodies matched local hashes, and the new clip played to 12.95/86.86 seconds
+with readyState 4. Single-player behavior and widescreen/mobile fit were checked;
+audio was left paused. This new full take has not replaced the app's Kitten take.
+
 ## 11 November 2026 — Qwen John available in the model catalogue
 
 - **Deployed/verified:** `11a7aeed0eb73c336063658f573264e04fd2a1ce`, webapp
