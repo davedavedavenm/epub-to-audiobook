@@ -224,8 +224,10 @@ def _representative(group: dict, members: list[tuple[str, dict]]) -> str | None:
     def cached(voice_id: str) -> bool:
         return by_id[voice_id].get('preview_cached') is True
 
-    for candidates in (preferred, [voice_id for voice_id, _ in members]):
-        for predicate in (current, cached):
+    # Prefer the shared passage across the whole model before falling back to
+    # an older preferred voice. Preferences break ties within each readiness tier.
+    for predicate in (current, cached):
+        for candidates in (preferred, [voice_id for voice_id, _ in members]):
             match = next((voice_id for voice_id in candidates if predicate(voice_id)), None)
             if match:
                 return match

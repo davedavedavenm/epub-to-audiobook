@@ -1,5 +1,19 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Live Breeze audition; representative selection correction
+
+Whole stack `1e57fdd` is healthy on webapp and worker after clean-checkout CI
+(528 passed, one skipped). All 184 voices are retained; 168/168 configured
+previews are cached, 135 use the shared standard. Breeze and Andrew exact GET
+bodies match their staged hashes. Actual browser layout at 2560px has six
+341.6px columns with no horizontal document overflow.
+
+The browser check exposed a presentation bug: an older preferred speaker could
+outrank a current shared take outside the preferred list. Breeze still showed
+old Arthur first despite the new Voice Design sample. The corrected model-wide
+readiness ordering has a regression test; it awaits the corrective deployment.
+No production narrator or voice preference is changed by this presentation rule.
+
 ## 11 November 2026 — CPU batch complete; final catalogue update prepared
 
 - All 83 entries in the six-engine CPU batch have full shared-passage artifacts;

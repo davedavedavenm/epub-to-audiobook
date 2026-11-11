@@ -45,6 +45,8 @@ identify pending/unconfigured/quota-limited entries. Never present older audio
 as the standard or count a credential as proof an engine can render. Reuse the
 same speaker where already supported, but do not imply different preset models
 can all clone the same speaker. Exact model/version remains the comparison unit.
+Within each model, any cached current-standard take outranks an older preferred
+voice as its representative; speaker preferences break ties within that tier.
 
 Latest standard-v1 listening: Freya positive; Hugh decent; Bill Boerst otherwise
 OK but misreads a.m. and 21 April; Chatterbox Turbo/Arthur good except the two

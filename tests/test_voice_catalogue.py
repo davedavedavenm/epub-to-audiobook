@@ -60,6 +60,23 @@ def test_old_cached_preview_is_distinguished_from_pending_and_current():
     assert (group['current_count'], group['earlier_count'], group['pending_count']) == (1, 1, 1)
 
 
+def test_new_shared_audition_represents_model_before_an_older_preferred_voice():
+    voices = {
+        'breeze_arthur': {
+            'name': 'Arthur', 'engine': 'breeze', 'preview_cached': True,
+            'preview_sample_current': False,
+        },
+        'breeze_fictional_voice_design': {
+            'name': 'Fictional narrator', 'engine': 'audition',
+            'catalogue_model': 'breeze2', 'audition_only': True,
+            'preview_cached': True, 'preview_sample_current': True,
+        },
+    }
+    group, = build_voice_catalogue(voices)
+    assert group['representative_id'] == 'breeze_fictional_voice_design'
+    assert group['other_voice_ids'] == ['breeze_arthur']
+
+
 def test_unknown_and_custom_voice_ids_are_preserved_without_model_guessing():
     voices = {
         'customer_clone_alpha': {'name': 'Alpha', 'engine': 'custom_engine', 'preview_cached': True},
