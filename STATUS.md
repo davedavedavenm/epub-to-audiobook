@@ -1,5 +1,68 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — CPU batch complete; final catalogue update prepared
+
+- All 83 entries in the six-engine CPU batch have full shared-passage artifacts;
+  the two earlier Arthur controls remain current too. Rosie is 84.6 seconds
+  (455.2 seconds CPU rendering), Silencio Peter 68.1 seconds (48.4 seconds).
+  Both new endpoints returned 200 with exact matching hashes. The temporary
+  SSH tunnel and ASR watcher are closed; the narrator service is healthy/idle.
+- At `6ebaa5f`, after Andrew's successful retry, 134/183 registered voices use
+  the shared standard; 167/167 configured previews are cached. Martin and
+  CosyVoice Beatrice remain explicitly warned auditions, not completeness passes.
+- Breeze's fictional audition is cached and its registration is prepared for
+  the next deployment. Earlier Rosie/Peter dislikes remain attached to the
+  earlier auditions; the new shared takes have no fresh human verdict.
+- Fish's official source changed its loader after the historical preview.
+  A bounded new take is being prepared with the official older runtime matching
+  the locked DualAR recipe and the unchanged official model snapshot. The old
+  clip has no revision receipt; timestamp/history inference is not proof of its
+  binary provenance. TADA's already-cached historical runtime is being inventoried
+  offline; official Meta file access remains denied, with no mirror download.
+
+## 11 November 2026 — Late Shared Standard v1 GPU follow-up
+
+- The earlier migration checkpoint below predates the final VoxCPM2/Breeze
+  checks. Maya2 Siddhant and Nivedita plus VoxCPM2 Peter have now been promoted
+  after the `6ebaa5f` native-input mapping deployment. All three exact preview
+  GETs returned HTTP 200 with full-body hashes matching the staged MP3s and
+  current `narrator-standard-v1` mappings.
+- VoxCPM2 Peter's 73.64-second audition has unprompted Whisper coverage 0.965,
+  no aligned drops, and no missing tail. ASR varied on an opening word, Li Na's
+  romanization, and date punctuation. No new human listening or production
+  verdict was recorded.
+- Edge Andrew (`en-US-AndrewNeural`) is no longer a no-audio-only entry: the
+  official community-client 7.3.1 list call included it; one exact Standard v1
+  retry rendered 68.664 seconds (MP3 SHA-256
+  `dbb592f3f3467ae19faa997b2e646875f619ed20087d1915d985e2933d429bb8`).
+  Whisper found no aligned drops but flagged date-order and Huawei/Xiaomi
+  transcript differences for listening; these are not pronunciation verdicts,
+  and no human quality verdict is recorded. The predecessor was archived; the
+  exact preview returned HTTP 200/hash match (receipt in
+  `TUNING-AUDIT-2026-11.md`).
+- Breeze-TTS-2's reference-free fictional Voice Design audition is 74.56 seconds
+  and complete through the end. Its exact MP3 and sample manifest are staged in
+  Zorin's preview directory, with local and remote hashes matching. The Breeze
+  ID's app registration is prepared but not deployed, so endpoint availability
+  remains pending. Whisper coverage is 0.97 with no aligned drops or missing tail, but
+  it decoded prepared `1,250` as `150`; listen to that number before any content
+  verdict. This is not a pronunciation finding. British was requested, not
+  established, and no human quality verdict is recorded.
+- The Breeze MP3 and sample manifest SHA-256 values match both local audition
+  files and Zorin's preinstalled cache. The endpoint was not queried; it remains
+  pending app registration and deployment.
+- Breeze's pinned v1.1 license permits non-commercial personal/evaluation use;
+  its defined commercial-purpose restrictions include production/product or
+  service use and require a separate written commercial license. The current
+  audiobook route is separately unintegrated and unapproved; do not infer a
+  personal-use ban from that product-state limitation. Full source/settings,
+  hashes, initial timeout and corrected 600-second completion are in
+  `TUNING-AUDIT-2026-11.md`.
+- Modal billing snapshot before Fish: metered USD 1.67639669, billed USD 0;
+  credits/egress offsets USD 1.67639669. This is cumulative, not per-model, and
+  excludes the remaining Fish work. Receipt:
+  `scratch/tts-nov11/modal-billing-before-fish-20261111.json`.
+
 ## 11 November 2026 — Preview migration checkpoint and completeness warnings
 
 - Live at `11a7aee`: 183 registered voices, 167/167 configured previews cached;

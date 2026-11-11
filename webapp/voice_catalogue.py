@@ -67,7 +67,7 @@ MODEL_GROUPS = (
     {
         'key': 'tada', 'title': 'TADA', 'model': 'TADA-1B · v8',
         'engine': 'tada', 'preferred': ('uk_male_minter_tada',),
-        'model_note': 'Shared-test refresh is awaiting upstream file-access approval. Earlier previews remain playable.',
+        'model_note': 'The historical runtime uses a community tokenizer; equivalence to the official tokenizer is unverified. Refreshing the official path awaits upstream file access.',
         'book_route': 'Integrated; profile is opt-in.',
     },
     {

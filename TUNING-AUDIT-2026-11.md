@@ -184,16 +184,14 @@ Project files: `narrators/server.py`, `narrators/requirements.txt`, `narrators/D
 - **Listening-only:** naturalness, pronunciation, accent impression, preferred pacing, performance over a particular book, and whether a reference voice sounds convincing. These claims require listening to the exact output. No generic quality assurance is made here.
 - **Not established:** newly rendered audio, live cache readiness/playability, full-book quality, or current live deployment state beyond the parent-provided Turbo/Nano runtime verification.
 
-## Remaining boundary outside this rendered cohort
+## Scope of the initial audit and subsequent corrections
 
-This audit covers the five November CPU families, Flux and Chatterbox. It is
-not a claim that all 165 historical catalogue entries have been retuned. A
-follow-up mapping inspection found that Breeze uses the historical modern
-sample preparation while `app.text_profile_for_engine` still falls through to
-legacy for Breeze. No Breeze audio or book was rendered in this cleanup; do not
-claim book/preview parity for that integration. Resolve it against the existing
-Breeze recipe before a future book run, without silently changing its measured
-pronunciation contract. The tested CPU and Chatterbox mappings are aligned.
+The initial documentary audit covered the five November CPU families, Flux
+and Chatterbox. The dated follow-ups below record later GPU renders and their
+separate provenance; none is a full-book quality approval. Breeze's shared
+modern text-profile mapping was aligned before its new Voice Design audition.
+Its book route remains unintegrated, so cached playback does not establish
+book/preview production parity.
 
 ## 11 November follow-up: Shared Standard v1 VibeVoice and Maya2 auditions
 
@@ -261,7 +259,96 @@ pronunciation contract. The tested CPU and Chatterbox mappings are aligned.
   Na's romanization and inserted a short `me` in Nivedita's middle passage;
   those disagreements are uncertain and are not a pronunciation finding.
 - These are private Shared Standard v1 audition files with exact render,
-  sample-hash, and ASR receipts. The new Maya IDs await their final application
-  mapping deployment before preview-cache promotion. No new human listening or
-  preference verdict is recorded for either engine; documentation, duration,
-  and ASR cannot establish naturalness, accent quality, or production fitness.
+  sample-hash, and ASR receipts. After deployment of the native-input mapping at
+  `6ebaa5f`, Maya2 Siddhant/Nivedita and VoxCPM2 Peter were promoted together;
+  all three exact preview GETs returned HTTP 200 with matching SHA-256 bodies
+  and current sample mappings. The ignored verification receipt is
+  `scratch/tts-nov11/promoted-preview-http-verification-verified-maya-voxcpm-promotion.json`.
+  No new human listening or preference verdict is recorded for these engines;
+  documentation, duration, and ASR cannot establish naturalness, accent quality,
+  or production fitness.
+
+## 11 November late follow-up: VoxCPM2 and Breeze fictional Voice Design
+
+- **VoxCPM2 / Peter Yearsley:** official runtime
+  [`OpenBMB/VoxCPM`](https://github.com/OpenBMB/VoxCPM/tree/300e4260b509066151d623dc9c0aa922cf82232b)
+  commit `300e4260b509066151d623dc9c0aa922cf82232b`, model
+  [`openbmb/VoxCPM2`](https://huggingface.co/openbmb/VoxCPM2/tree/7936080b41163874f38610f46f438e2c0757f9fd)
+  revision `7936080b41163874f38610f46f438e2c0757f9fd`; code and weights are
+  Apache-2.0. This was a private reference-conditioned audition using the
+  existing Peter reference (`uk_male_yearsley.wav`, SHA-256
+  `4099b7ad89ad5a0e010417da79e2312312d5b1900e3dc7791eddaa5353293524`) and its
+  verified transcript. On L40S/CUDA, the adapter made three paragraph calls
+  with 0.5-second gaps, `cfg_value=2`, 10 inference steps, seed 42,
+  `normalize=False`, `denoise=False`, `retry_badcase=False`, and `optimize=True`;
+  no other model defaults are inferred here. It produced 73.64 seconds, then a
+  24 kHz mono 160 kbit/s MP3. Unprompted Whisper small/int8 found no aligned
+  drops or missing tail (0.965 coverage); it varied on an opening word, the
+  romanization of Li Na, and date punctuation. Those are ASR uncertainties, not
+  pronunciation or sound-quality verdicts. The exact cache was promoted after
+  the mapping deploy and its served bytes were hash-verified. No new human
+  listening verdict is recorded.
+- **Breeze-TTS-2 / fictional Voice Design:** official inference runtime
+  [`breezeblue-ai/breeze-tts`](https://github.com/breezeblue-ai/breeze-tts/tree/daa6cb2efe5471f09369229f322d20bb956cb3c3)
+  commit `daa6cb2efe5471f09369229f322d20bb956cb3c3`; weights
+  [`BreezeBlue/Breeze-TTS-2`](https://huggingface.co/BreezeBlue/Breeze-TTS-2/tree/3e28c5151381a722f1d8661b4118c298caa77aa4)
+  revision `3e28c5151381a722f1d8661b4118c298caa77aa4`. The pinned model uses
+  BreezeBlue Research and Non-Commercial License Agreement v1.1 (2026-09-01),
+  [license text](https://huggingface.co/BreezeBlue/Breeze-TTS-2/blob/3e28c5151381a722f1d8661b4118c298caa77aa4/LICENSE): non-commercial personal,
+  educational, hobbyist and evaluation use is permitted; the agreement defines
+  commercial purpose to include production/product or service use and requires
+  a separate written commercial license for that use. This does not establish
+  that personal audiobook use is prohibited. Separately, Breeze is not yet an
+  integrated/approved book route. The audition ID's app registration has been
+  prepared, but endpoint availability still awaits deployment and verification.
+  The cache is not a claim of book support.
+
+  The take is a single reference-free fictional adult narrator prompt asking
+  for a lightly British accent; it does not imitate a real person, and the accent
+  is requested rather than verified. L40S, bfloat16, eager attention, guidance
+  4.0, seed 42, `max_new_tokens=1500`, `max_seq_len=2048`, repetition penalty
+  1.1, `fast_all` disabled; no parameter or style variants. The official
+  implementation documents a 12.5-token/s frame rate, so 1500 output tokens
+  permit up to 120 seconds; the result was a complete 74.56-second 24 kHz mono
+  take. The first client run's 200-second timeout expired; the same synthesis
+  settings with a 600-second bound completed in 213.49 seconds. This is a
+  timeout correction, not a model failure or a settings optimization.
+
+  Unprompted Whisper small/int8 reported 0.97 coverage, no aligned dropped span,
+  and no missing tail. It decoded the prepared `1,250 people invited` as `150
+  people invited`; treat that number difference as a listening flag, not a
+  pronunciation verdict. There is no human quality verdict, and ASR does not
+  establish the requested accent or naturalness. Both exact cache files were
+  preinstalled on Zorin only after confirming the target names were absent;
+  the MP3 SHA-256 is
+  `cb862bb168b85962f0404442ae5a2f12daf095a0ce7530e28b2c6fd92ac21164` and the
+  sample-manifest SHA-256 is
+  `c9dd80edf4e9d4aa03c459d0276f910abfbcfb735aa04408f204de347d0887e8` both
+  match local and remote copies. The ignored verification receipt is
+  `scratch/tts-nov11/breeze-preinstall-remote-verification.json`.
+  No Breeze endpoint was opened or represented as available before the pending
+  app deployment.
+
+  Billing snapshot saved before the remaining Fish run:
+  `scratch/tts-nov11/modal-billing-before-fish-20261111.json` (Modal summary at
+  23:10 UTC: metered USD 1.67639669, billed USD 0; USD 1.61 credits and USD
+  0.06639669 network-egress allowance offset). This is a cumulative workspace
+  snapshot, not a per-engine cost; later Fish usage is excluded.
+
+## 11 November late follow-up: Edge Andrew retry
+
+The earlier no-audio result is superseded: the official `rany2/edge-tts` 7.3.1
+tag (`360fa8e1de354e1dda74c09bd695887d6a44df74`) list call included
+`en-US-AndrewNeural` among 322 voices; this is a community client for Microsoft's
+Edge service, not an official Microsoft SDK. One bounded retry used the exact
+Edge Standard v1 payload hash `447286b994ee94f9cdd67e0109d0cc71d2b616ce120034409bf208b738d2b553`,
+client defaults (`+0%` rate/volume, `+0Hz` pitch), and no substitution; it
+rendered 68.664 seconds in 91.31 seconds (MP3 SHA-256
+`dbb592f3f3467ae19faa997b2e646875f619ed20087d1915d985e2933d429bb8`, sample
+manifest SHA-256 `c35b3e95596ffc85623219de6b935a0176d48e9d88d38cd46ce158fcd9bb9614`).
+Unprompted Whisper small/int8 found no aligned drops but flagged `tail_unheard=1`
+for `21 April`/`April 21st` and heard Huawei/Xiaomi as `HWH Wei`/`Shomi`; these
+are listening flags, not pronunciation or quality verdicts, and no human verdict
+is recorded; the predecessor was archived and the exact preview returned HTTP
+200 with the matching MP3 hash, as captured in
+`scratch/tts-nov11/promoted-preview-http-verification-verified-edge-andrew-promotion.json`.

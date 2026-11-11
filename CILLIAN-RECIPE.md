@@ -16,13 +16,23 @@ listening verdicts across 2026-09-20/22 (see `DECISIONS.md` and
 | Component | Value |
 |---|---|
 | Engine | Fish Speech **S2 Pro** (`fishaudio/s2-pro`, 4.4B Dual-AR + DAC codec) |
-| Hardware | **Primary: headless Colab L4 via `google-colab-cli` on khpi5** (~197 compute units ≈ 100+ GPU-h at 1.54 units/h measured). Fallback: Kaggle T4×2 (30 h weekly cap). NEVER Modal (zero credit, standing veto) or Lightning free GPU (payment-method wall, verified 2026-09-24) |
+| Hardware | **Production primary: headless Colab L4 via `google-colab-cli` on khpi5** (~197 compute units ≈ 100+ GPU-h at 1.54 units/h measured). Fallback: Kaggle T4×2 (30 h weekly cap). Lightning free GPU remains excluded (payment-method wall, verified 2026-09-24). The old zero-credit Modal veto is superseded only for the explicitly authorized, credit-covered November auditions below. |
 | Narration reference | `chatterbox/voices/cillian_irish.wav` (28s clip) — Dave: "perfect" |
 | Quote/dramatic reference | expressive crop `crop_expressive_tail.wav` (last 9.9s of the same clip) — Dave: "probably the best" |
 | Precision | L4/Ampere+: `torch.bfloat16` auto; T4 fallback: fp16 `--half` (no bf16 on sm_75) |
 | Temperature | **0.85** (narration AND quotes; 0.7 = flat, 1.0 = drifts American) |
 | Sampling | top_p 0.9, top_k 30, iterative_prompt, chunk_length 300, seed 42 (re-rolls 43/44) |
-| Licence | Boson-class non-commercial personal use; Fish licence terms per DECISIONS 2026-09-18 entry |
+| Licence | [Fish Audio Research License](https://huggingface.co/fishaudio/s2-pro/blob/main/LICENSE.md), 7 March 2026: noncommercial personal/evaluation use; commercial use requires separate written permission. Keep the exact licence/model revision with each new render. |
+
+### November shared-passage audition exception
+
+Dave explicitly authorized GPU auditions using existing Modal credits. The
+11 November S2 Pro comparison may use a bounded L40S run under the verified
+zero-net-spend boundary (see DECISIONS), with bf16 and the locked model/reference/
+sampling recipe. This does not change the production lane or authorize cash
+overage. Freeze `sample_text_for('fish')` for this shared test; do not apply the
+book-specific `as_prep.py` transformations a second time. Record exact source and
+weight revisions, preserve the old audition, and stop the temporary app afterward.
 
 ## Text preparation (in order)
 

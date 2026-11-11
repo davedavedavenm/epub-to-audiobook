@@ -236,6 +236,12 @@ work; do not make Dave sign in again merely to render another bounded sample.
 Official boundary: https://modal.com/docs/guide/budgets and
 https://modal.com/docs/sdk/py/latest/Workspace. No credential or budget changed.
 
+The 11 November all-model shared-passage request includes a bounded S2 Pro
+audition on these existing credits. This narrowly supersedes CILLIAN-RECIPE's
+older zero-credit Modal veto for this audition, preserving its model, references
+and sampling controls; production lanes/defaults remain unchanged. The input is
+the approved engine-prepared shared test, not a book-specific `as_prep` rerun.
+
 **New GPU audition boundary:** pinned official Fish Drama3, VoxCPM2 and Maya2
 Native ran on Modal credits. These are audition takes, not approved production
 engines. VoxCPM2's seed42 Zulu take has a large omission and is retained/flagged;

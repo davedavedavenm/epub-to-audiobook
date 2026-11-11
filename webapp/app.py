@@ -543,7 +543,7 @@ VOICES = {
 
     # American Edge Voices
     'en-US-AvaNeural': {'name': 'Ava', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
-    'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge', 'note': 'Earlier preview retained: the shared-test request returned no audio. No different voice was substituted.'},
+    'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
     'en-US-EmmaNeural': {'name': 'Emma', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
     'en-US-BrianNeural': {'name': 'Brian', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
     'en-US-AriaNeural': {'name': 'Aria', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
@@ -767,6 +767,12 @@ VOICES['qwen3_john_kani_audition'] = {
     'liked': True, 'rating_date': '2026-11-11',
     'rated_sample_id': 'john-kani-reference-short-40-words',
     'note': 'Dave ranked the short Qwen3 comparison best, ahead of controlled and preserved Kitten. This longer Shared test v1 take awaits a separate verdict.',
+}
+VOICES['breeze_fictional_voice_design'] = {
+    'name': 'Fictional narrator (Voice Design)', 'accent': 'British requested',
+    'gender': 'Male', 'engine': 'audition', 'audition_only': True,
+    'catalogue_model': 'breeze2', 'preview_text_engine': 'breeze',
+    'note': 'A newly designed voice with no speaker reference. Accent and naturalness await listening; ASR flagged the 1,250 passage. Private audition only.',
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the

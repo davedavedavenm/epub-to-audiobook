@@ -29,12 +29,12 @@ LIKED_VOICES = {
 LIKED_VOICES['kitten2_rosie'].update(
     liked=False,
     catalogue_status='disliked',
-    note='Dave found this take unsuitable; retained in the catalogue archive.',
+    note='Dave disliked an earlier audition of this voice. The new shared-passage take has not yet been rated; the earlier verdict is preserved.',
 )
 LIKED_VOICES['silencio2_peter'].update(
     liked=False,
     catalogue_status='disliked',
-    note='Dave found this take tiresome; retained in the catalogue archive.',
+    note='Dave found an earlier Peter audition tiresome. The new shared-passage take has not yet been rated; the earlier verdict is preserved.',
 )
 for _id, _note in {
     'phonon_edwin': 'Voice promising; Huawei and Xiaomi badly pronounced in Shared test v1.',
