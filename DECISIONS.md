@@ -1951,6 +1951,12 @@ engine pronounced a word badly. Human listening is authoritative for audible
 quality. The local Vibe Q8 clip proved the reverse-error case on 2026-07-29:
 Dave heard Huawei/Xiaomi as fine while Whisper produced “Swawe”/“Shaumi”.
 
+For the shared audition comparison, full-duration takes with uncertain missing
+passages may remain hearable with an explicit completeness warning, preserving
+the earlier cache and both ASR reports. Martin and CosyVoice Beatrice are such
+cases on 11 November: two ASRs flag middle passages. Their availability is not
+a completeness pass, a production approval, or evidence of a model root cause.
+
 **Why:** ASR has now failed in both directions—normalising an audibly wrong
 name back to the expected word, and transcribing an acceptable pronunciation
 as the wrong word. Removing ASR entirely would also remove the guard that caught

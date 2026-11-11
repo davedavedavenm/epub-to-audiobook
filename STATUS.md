@@ -1,5 +1,30 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Preview migration checkpoint and completeness warnings
+
+- Live at `11a7aee`: 183 registered voices, 167/167 configured previews cached;
+  121 on the shared standard after the twelve additional Turbo replacements.
+  Previous audio remains archived. The CPU queue stopped safely after 72/83
+  entries, before the next narrator request; no book jobs were active.
+- Two independent ASR passes flag uncertain middle passages in Martin and
+  CosyVoice Beatrice. These are warned auditions, not completeness passes or
+  model rejections. Martin is staged pending the warning-note deployment;
+  Beatrice is already cached and receives a stronger note in that deployment.
+- VibeVoice Arthur is cached/current; exact served SHA matches its 54.13-second
+  staged take, ASR reaches the ending with no aligned multiword drops. Its
+  historical production rejection is unchanged.
+- Maya Siddhant (67.70s) and Nivedita (81.86s) are staged, decoded and ASR-checked,
+  without aligned multiword drops or missing endings. They await deployment of
+  the explicit native-input mapping before cache promotion. This does not
+  supersede the earlier verdict that their accents do not suit this title.
+- Clean-checkout CI at `e119a90`: 528 passed, one skipped; Ruff passed. Later
+  warning-note changes require their own committed-HEAD check before push.
+- Still open: remaining Nano cache promotion, Rosie/Silencio, VoxCPM2 and the
+  bounded fictional Breeze diagnostic. TADA official tokenizer file access is
+  denied; Gemini has exhausted its daily free cap; Edge Andrew returned no
+  audio; Polly/Inworld are not configured. Named Breeze/Higgs clone restrictions
+  remain recorded in the tuning audit. No blanket all-voices completion claim.
+
 ## 11 November 2026 — Shared Standard v1 GPU preview batches
 
 - **CosyVoice 3:** Four new audition-only clips (Arthur, Harriet, Edmund,

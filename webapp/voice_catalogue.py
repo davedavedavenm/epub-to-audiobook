@@ -67,6 +67,7 @@ MODEL_GROUPS = (
     {
         'key': 'tada', 'title': 'TADA', 'model': 'TADA-1B · v8',
         'engine': 'tada', 'preferred': ('uk_male_minter_tada',),
+        'model_note': 'Shared-test refresh is awaiting upstream file-access approval. Earlier previews remain playable.',
         'book_route': 'Integrated; profile is opt-in.',
     },
     {
@@ -77,6 +78,7 @@ MODEL_GROUPS = (
     {
         'key': 'breeze2', 'title': 'Breeze', 'model': 'Breeze 2 · 3.5B',
         'engine': 'breeze', 'preferred': ('breeze_arthur', 'breeze_cillian_irish'),
+        'model_note': 'New named-reference tests require verified speaker permission under the current model terms. Earlier auditions are retained.',
         'book_route': 'Direct conversion is fail-closed; GPU lane support is not verified.',
     },
     {
@@ -102,11 +104,13 @@ MODEL_GROUPS = (
     {
         'key': 'higgs3', 'title': 'Higgs TTS', 'model': '3',
         'engine': 'fish', 'preferred': ('higgs_cillian_irish',),
+        'model_note': 'New named-reference tests require verified speaker permission under the current model terms. Earlier auditions are retained.',
         'book_route': 'Integrated through the shared GPU lane.',
     },
     {
         'key': 'maya2', 'title': 'Maya 2', 'model': 'Native voices',
         'engine': 'audition', 'preferred': ('maya2_siddhant', 'maya2_nivedita'),
+        'model_note': 'Shared test: native text normalization changes pence to cents in the pound amounts. Judge the voice separately from this known wording error.',
         'book_route': 'Audition only; book conversion is not integrated.',
     },
     {
@@ -117,6 +121,7 @@ MODEL_GROUPS = (
     {
         'key': 'gemini31', 'title': 'Gemini TTS', 'model': '3.1 Flash',
         'engine': 'gemini', 'preferred': ('gemini_achernar', 'gemini_zephyr'),
+        'model_note': 'Shared-test refreshes follow the free daily quota. Older previews remain available until refreshed.',
         'book_route': 'Integrated; free-tier credentials and quota apply.',
     },
     {

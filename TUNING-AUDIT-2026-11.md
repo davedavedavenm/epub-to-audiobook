@@ -194,3 +194,74 @@ legacy for Breeze. No Breeze audio or book was rendered in this cleanup; do not
 claim book/preview parity for that integration. Resolve it against the existing
 Breeze recipe before a future book run, without silently changing its measured
 pronunciation contract. The tested CPU and Chatterbox mappings are aligned.
+
+## 11 November follow-up: Shared Standard v1 VibeVoice and Maya2 auditions
+
+- **VibeVoice / Arthur (short audition only):** the official Microsoft
+  [`VibeVoice-1.5B` model card](https://huggingface.co/microsoft/VibeVoice-1.5B/tree/c00898d257e6b46004e3e2866a47534085fb685a)
+  and weights were pinned at `c00898d257e6b46004e3e2866a47534085fb685a`
+  (MIT). Inference used the community runtime at
+  [`07cb79feadd2d3fd7f47530d4c964a12857936a0`](https://github.com/vibevoice-community/VibeVoice/tree/07cb79feadd2d3fd7f47530d4c964a12857936a0)
+  (MIT); this is not Microsoft's TTS runtime. Its pinned processor reads
+  `language_model_pretrained_name` from the model's
+  [`preprocessor_config.json`](https://huggingface.co/microsoft/VibeVoice-1.5B/blob/c00898d257e6b46004e3e2866a47534085fb685a/preprocessor_config.json),
+  which names `Qwen/Qwen2.5-1.5B`; the processor code prioritizes that embedded
+  name over an override. The first attempt therefore failed before synthesis
+  because only the VibeVoice checkpoint had been fetched. The corrected
+  CPU-baked image separately pinned the Qwen tokenizer to
+  `8faed761d45a263340a0528343f099c05c9a4323` (Apache-2.0), rewrote the local
+  processor config to that snapshot, and initialized the complete processor
+  before requesting the GPU. Its four tokenizer asset hashes are in the render
+  receipt. A tokenizer class-name warning was emitted at preflight and render;
+  initialization and generation completed, but this audit does not infer that
+  the warning is harmless. Main-model configuration sets 20 DDPM inference
+  steps and the pinned inference method defaults CFG to 1.0. This audition
+  applied the prior fixed settings: L40S, fp16 weights, SDPA, CFG 2.0, 10 DDPM
+  steps, greedy decoding (`do_sample=False`), seed 12345, `max_new_tokens=None`
+  (the runtime derives its limit from the 64K context, with its default
+  `max_length_times=2` bound), one Arthur reference
+  (`uk_male_minter.wav`, SHA-256
+  `8774082c3acf6c215dc9307a4a9cce5fd50d4242fc9263534ed420675873e252`), and
+  one `Speaker 1:` passage call. Shared Standard v1 source is pinned by
+  `386e062ef7020b882240cf512ba7c886be75b3d20dede6b60360b5c1bf3d8dc7`; the
+  Vibe-specific prepared input hash is
+  `74de152cc1ed27890fbbcabc88f26d5cf360953e64e70a5d56d897ff1ceb0ee9`.
+  Result: 54.13 seconds, WAV then 160 kbit/s MP3. Unprompted Whisper small/int8
+  checked the final MP3 with 0.982 prepared-token coverage, no detected dropped
+  span, and no missing tail. This is a completeness check, not a listening or
+  pronunciation verdict. The existing VibeVoice long-form production rejection
+  remains in force; this single short audition does not change it.
+- **Maya2 Native / Siddhant and Nivedita:** official runtime
+  [`MayaResearch/maya2-native`](https://github.com/MayaResearch/maya2-native/tree/c6b376868e268551d065c4206193e96257bef4a1)
+  was pinned at `c6b376868e268551d065c4206193e96257bef4a1`; weights
+  [`maya-research/maya2-native`](https://huggingface.co/maya-research/maya2-native/tree/87a83efdd6551e038246b6b37836a6264713eec3)
+  at `87a83efdd6551e038246b6b37836a6264713eec3` (Apache-2.0). The pinned
+  runtime also fetched Mimi
+  [`89091b3e466eb6a9d11e537bf26b144f194978f7`](https://huggingface.co/kyutai/mimi/tree/89091b3e466eb6a9d11e537bf26b144f194978f7)
+  (CC-BY-4.0) and SpeechBrain ECAPA
+  [`0f99f2d0ebe89ac095bcc5903c4dd8f72b367286`](https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb/tree/0f99f2d0ebe89ac095bcc5903c4dd8f72b367286)
+  (Apache-2.0). Python 3.12 image versions: Torch/torchaudio 2.8.0+cu128,
+  Transformers 5.6.2, Triton 3.4.0, SpeechBrain 1.1.2. These are native
+  synthetic personas, not reference clones. The adapter used the raw
+  `maya2` Shared Standard v1 helper input/hash `386e062ef7020b882240cf512ba7c886be75b3d20dede6b60360b5c1bf3d8dc7`,
+  English, `normalize=True`, seed 42, one loaded model with `max_seats=1`, and
+  three paragraph calls joined with 0.5 seconds. The pinned official
+  [README](https://github.com/MayaResearch/maya2-native/blob/c6b376868e268551d065c4206193e96257bef4a1/README.md)
+  recommends normalization for numbers and symbols; this differs from an
+  older short audition that used `normalize=False` and did not contain the
+  numeric challenge passage. Maya internally normalized the three paragraphs;
+  the exact normalized text and SHA-256 (`fe315b330428d6b26c8c81613018ec45fb828acedfdf7e6f9039858480e4bca8`)
+  are recorded with each render. No other generation overrides were applied:
+  pinned implementation defaults include depth temperature 0.7/top-k 64,
+  codebook-0 temperature 0.9/top-k 64/top-p 1.0, and presence penalty 0.8
+  over a 12-frame window. Output was 67.70 seconds for Siddhant and 81.86
+  seconds for Nivedita, each joined to 24 kHz mono WAV and 160 kbit/s MP3.
+  Whisper small/int8 on each final MP3 returned no dropped spans and no
+  missing tail (coverage 0.971 and 0.976 respectively). ASR differed on Li
+  Na's romanization and inserted a short `me` in Nivedita's middle passage;
+  those disagreements are uncertain and are not a pronunciation finding.
+- These are private Shared Standard v1 audition files with exact render,
+  sample-hash, and ASR receipts. The new Maya IDs await their final application
+  mapping deployment before preview-cache promotion. No new human listening or
+  preference verdict is recorded for either engine; documentation, duration,
+  and ASR cannot establish naturalness, accent quality, or production fitness.

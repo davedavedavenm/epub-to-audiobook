@@ -543,7 +543,7 @@ VOICES = {
 
     # American Edge Voices
     'en-US-AvaNeural': {'name': 'Ava', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
-    'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
+    'en-US-AndrewNeural': {'name': 'Andrew', 'accent': 'American', 'gender': 'Male', 'engine': 'edge', 'note': 'Earlier preview retained: the shared-test request returned no audio. No different voice was substituted.'},
     'en-US-EmmaNeural': {'name': 'Emma', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
     'en-US-BrianNeural': {'name': 'Brian', 'accent': 'American', 'gender': 'Male', 'engine': 'edge'},
     'en-US-AriaNeural': {'name': 'Aria', 'accent': 'American', 'gender': 'Female', 'engine': 'edge'},
@@ -638,7 +638,7 @@ VOICES = {
     'mil_nicholson': {'name': 'Mil Nicholson (expressive, Dickens)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox', 'note': 'Shared test v1: ASR flagged possible repetition around ticket prices and the project cost. The ending is present; listen to check the repetition.'},
     'adrian_praetzellis': {'name': 'Adrian Praetzellis (adventure, storyteller)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'tadhg_hynes': {'name': 'Tadhg Hynes (rich, Hardy/Dickens)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'chatterbox'},
-    'martin_geeson': {'name': 'Martin Geeson (British male, classic prose)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox', 'note': 'Earlier preview retained: two independent transcript checks could not recover the project-cost sentence in the new shared take. That take is held for listening review; no model rejection.'},
+    'martin_geeson': {'name': 'Martin Geeson (British male, classic prose)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox', 'note': 'Needs listening: two independent ASR checks could not recover the project-cost sentence in this shared take. Possible missing passage; completeness has not passed. Earlier audio is archived.'},
     'nigel_boydell': {'name': 'Nigel Boydell (British male, characterful)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     # --- NO ACCENTED VOICES ON CHATTERBOX. THIS IS SETTLED. ---
     #
@@ -677,7 +677,7 @@ VOICES = {
     'uk_male_minter_cosyvoice': {'name': 'Arthur (CosyVoice)', 'accent': 'British', 'gender': 'Male', 'engine': 'cosyvoice'},
     'uk_female_golding_cosyvoice': {'name': 'Harriet (CosyVoice)', 'accent': 'British', 'gender': 'Female', 'engine': 'cosyvoice'},
     'uk_male_yearsley_cosyvoice': {'name': 'Edmund (CosyVoice)', 'accent': 'British', 'gender': 'Male', 'engine': 'cosyvoice'},
-    'uk_female_samuel_cosyvoice': {'name': 'Beatrice (CosyVoice)', 'accent': 'British', 'gender': 'Female', 'engine': 'cosyvoice', 'note': 'Shared test v1: ASR flagged two passages in the middle for listening review. The ending is present; these are transcript discrepancies, not a human quality verdict.'},
+    'uk_female_samuel_cosyvoice': {'name': 'Beatrice (CosyVoice)', 'accent': 'British', 'gender': 'Female', 'engine': 'cosyvoice', 'note': 'Needs listening: two independent ASR checks could not recover part of the opening story and flagged the election passage. Possible missing words; completeness has not passed. Earlier audio is archived.'},
     # ============ LONG-FORM GPU FINALISTS (LISTENED VOICE ONLY) ============
     # Only Arthur is registered: that is the reference actually heard in the
     # full-chapter audition. Do not imply the other reference voices have passed
