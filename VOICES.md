@@ -1,5 +1,22 @@
 # Voices and accents
 
+## 11 November 2026 — Heard standard-v1 verdicts and model-first comparison
+
+- Freya: positive; Hugh: decent.
+- Pocket 4/Bill Boerst: otherwise OK, but a.m. and 21 April are wrong.
+- Chatterbox Turbo/Arthur (`uk_male_minter`): good except the two flagged
+  numerical mix-ups. This now supersedes ASR-only uncertainty for those errors.
+- Deepgram voices: great.
+- Phonon/Edwin: promising voice, **bad Huawei and Xiaomi pronunciation**. Do not
+  downgrade this direct listening verdict to an ASR transcription caveat.
+
+No standout CPU winner and no engine-retirement decision. Dave wants one visible
+representative per model/version, not a Likes card or five/six presets per engine.
+All other voices must remain discoverable under the model, and every preview must
+use the shared passage or clearly report that regeneration is still pending.
+Kitten/John Kani remains the focus for a better South African clone; no accent
+fix has yet been heard or approved.
+
 ## 11 November 2026 — Comparable auditions and a smaller visible shortlist
 
 Use `AUDITION-STANDARD.md` for every new narrator comparison. The opening is a

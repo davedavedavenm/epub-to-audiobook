@@ -625,7 +625,7 @@ VOICES = {
 
     # ============ CHATTERBOX TURBO (LOCAL, VOICE-CLONED UK NARRATORS) ============
     # voice id MUST equal the wav file stem in chatterbox/voices/
-    'uk_male_minter': {'name': 'Arthur (UK, human-cloned)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
+    'uk_male_minter': {'name': 'Arthur (UK, human-cloned)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox', 'note': 'Dave: good; two numerical mix-ups in the shared passage.'},
     'uk_female_golding': {'name': 'Harriet (UK, human-cloned)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
     'uk_male_yearsley': {'name': 'Edmund (UK, human-cloned)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     'uk_female_samuel': {'name': 'Beatrice (UK, human-cloned)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox'},
@@ -664,7 +664,7 @@ VOICES = {
     'uk_male_yearsley_tada': {'name': 'Edmund — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
     'uk_female_samuel_tada': {'name': 'Beatrice — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
     # ============ CHATTERBOX NANO (LOCAL, SAME UK CLONES, ~3x CPU SPEED) ============
-    'uk_male_minter_nano': {'name': 'Arthur (Nano)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox_nano'},
+    'uk_male_minter_nano': {'name': 'Arthur (Nano)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox_nano', 'note': 'ASR flagged numbers; listen to check. This shared-passage take has not yet been heard by Dave.'},
     'uk_female_golding_nano': {'name': 'Harriet (Nano)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox_nano'},
     'uk_male_yearsley_nano': {'name': 'Edmund (Nano)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox_nano'},
     'uk_female_samuel_nano': {'name': 'Beatrice (Nano)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox_nano'},
@@ -751,6 +751,12 @@ VOICES = {
 
 from liked_voices import LIKED_VOICES  # noqa: E402
 VOICES.update(LIKED_VOICES)
+VOICES['kitten2_john_kani_audition'] = {
+    'name': 'John Kani reference (AI clone)', 'accent': 'South African reference',
+    'gender': 'Male', 'engine': 'audition', 'audition_only': True,
+    'catalogue_model': 'kitten2', 'preview_text_engine': 'cpu_narrators',
+    'note': 'Earlier short take liked, with accent drift. This full shared passage awaits your verdict; ASR flagged possible extra words.',
+}
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
 # Kaggle GPU sample-renderer and this app share a source and engine preparation.
@@ -759,6 +765,7 @@ from voice_sample import (  # noqa: E402
     ORDINARY_TEXT, CHALLENGE_TEXT, sample_text_for as _preview_text_for,
 )
 from preview_manifest import sample_info as _preview_sample_info, write_manifest as _write_preview_manifest  # noqa: E402
+from voice_catalogue import build_voice_catalogue  # noqa: E402
 
 PREVIEW_SAMPLE = {'id': SAMPLE_ID, 'sha256': SAMPLE_SHA256, 'text': PREVIEW_TEXT,
                   'ordinary_text': ORDINARY_TEXT, 'challenge_text': CHALLENGE_TEXT}
@@ -3004,6 +3011,12 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         return QWEN3_URL, 'Qwen/Qwen3-TTS-12Hz-1.7B-Base'
     elif tts_engine == 'audition':
         raise ValueError('This GPU voice is a cached audition; book conversion is not integrated')
+    elif tts_engine in ('breeze', 'cosyvoice', 'f5tts'):
+        # Existing GPU scripts produced these auditions, but there is no
+        # corresponding conversion endpoint here. A saved Modal credential is
+        # not a working book integration; never substitute Kokoro silently.
+        raise ValueError(f'{tts_engine} has GPU auditions but no integrated book endpoint; '
+                         'use its documented GPU renderer')
     elif tts_engine == 'cpu_narrators':
         return CPU_NARRATORS_URL, 'tts-1'
     elif tts_engine == 'pocket':
@@ -3026,14 +3039,8 @@ def text_profile_for_engine(tts_engine: str) -> str:
     respellings. Keeping this mapping centralized makes preview, first render
     and recovery use the same input contract.
     """
-    if tts_engine in ('pocket', 'kitten', 'gemini', 'deepgram', 'cpu_narrators'):
-        return 'explicit'
-    if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3', 'fish'):
-        # 'fish' never reaches convert_book (the lane path preps with as_prep.py
-        # instead); listed so any shared caller gets the spoken-numbers contract
-        # rather than the legacy phonetic one.
-        return 'modern'
-    return 'legacy'
+    from text_profiles import text_profile_for_engine as shared_profile
+    return shared_profile(tts_engine)
 
 
 def build_retry_cmd_from_job(job: dict) -> list[str]:
@@ -4924,7 +4931,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 @app.route('/')
 def index():
     """Main upload page."""
-    resp = make_response(render_template('index.html', voices=voices_for_client(), engines=TTS_ENGINES, sample=PREVIEW_SAMPLE))
+    voice_data = voices_for_client()
+    model_catalogue = build_voice_catalogue(voice_data, TTS_ENGINES)
+    resp = make_response(render_template(
+        'index.html', voices=voice_data, engines=TTS_ENGINES,
+        sample=PREVIEW_SAMPLE, model_catalogue=model_catalogue,
+    ))
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     resp.headers['Pragma'] = 'no-cache'
     resp.headers['Expires'] = '0'
@@ -5222,10 +5234,19 @@ def voices_for_client() -> dict:
     generation belongs to the throttled background warmer; the audition UI
     offers only previews already present in the persistent cache.
     """
+    catalogue = all_voices()
+    prepared_hashes = {
+        engine: sha256_hex_text(_preview_text_for(engine))
+        for engine in {info.get('preview_text_engine', info.get('engine', 'kokoro'))
+                       for info in catalogue.values()}
+    }
     return {
         voice_id: {**info, 'preview_cached': _preview_is_cached(voice_id),
-                   **_preview_sample_info(PREVIEWS_DIR / f'{voice_id}.mp3')}
-        for voice_id, info in all_voices().items()
+                   **_preview_sample_info(
+                       PREVIEWS_DIR / f'{voice_id}.mp3',
+                       prepared_hashes.get(info.get('preview_text_engine', info.get('engine', 'kokoro'))),
+                   )}
+        for voice_id, info in catalogue.items()
     }
 
 

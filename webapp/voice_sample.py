@@ -51,8 +51,7 @@ LEGACY_SAMPLE_TEXT = (
 # keep only the acronym letter-spacing class.
 from lexicon import SEED_PRONUNCIATION as SAMPLE_LEXICON  # noqa: E402
 
-MODERN_ENGINES = ("chatterbox", "chatterbox_nano", "tada", "breeze", "qwen3", "vibevoice", "fish")
-EXPLICIT_ENGINES = ("pocket", "kitten", "gemini", "deepgram", "cpu_narrators")
+from text_profiles import MODERN_ENGINES, EXPLICIT_ENGINES  # noqa: E402
 
 
 def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:

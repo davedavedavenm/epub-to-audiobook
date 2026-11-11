@@ -26,7 +26,7 @@ def write_manifest(audio_path: Path, prepared_text: str) -> None:
     os.replace(part, target)
 
 
-def sample_info(audio_path: Path) -> dict:
+def sample_info(audio_path: Path, expected_prepared_sha256: str | None = None) -> dict:
     earlier = {'preview_sample_current': False,
                'preview_sample_label': 'Earlier audition',
                'preview_sample_id': None}
@@ -35,6 +35,8 @@ def sample_info(audio_path: Path) -> dict:
         stat = audio_path.stat()
         if (manifest.get('sample_id') == SAMPLE_ID
                 and manifest.get('source_sha256') == SAMPLE_SHA256
+                and (expected_prepared_sha256 is None
+                     or manifest.get('prepared_sha256') == expected_prepared_sha256)
                 and manifest.get('audio_sha256') == _audio_hash(
                     str(audio_path), stat.st_mtime_ns, stat.st_size)):
             return {'preview_sample_current': True,

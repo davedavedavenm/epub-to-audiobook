@@ -18,7 +18,7 @@ vastai==1.5.4
 # ghcr.io/p0n1/epub_to_audiobook just to run its `edge-tts` binary, which meant
 # a container + image pull + a working docker CLI for one HTTP call — and it
 # broke outright when the CLI turned out to be missing (2026-07-25).
-edge-tts==7.2.8
+edge-tts==7.3.1
 # QA Layer 2 — structural ASR verification (webapp/qa_asr.py). This detects
 # missing/repeated/truncated/grossly wrong text; it does not grade voice quality.
 #

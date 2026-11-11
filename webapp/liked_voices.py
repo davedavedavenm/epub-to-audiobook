@@ -36,6 +36,14 @@ LIKED_VOICES['silencio2_peter'].update(
     catalogue_status='disliked',
     note='Dave found this take tiresome; retained in the catalogue archive.',
 )
+for _id, _note in {
+    'phonon_edwin': 'Voice promising; Huawei and Xiaomi badly pronounced in Shared test v1.',
+    'phonon_freya': 'Positive Shared test v1 verdict.',
+    'phonon_hugh': 'Decent in Shared test v1.',
+    'pocket4_bill_boerst': 'Otherwise OK; a.m. and 21 April misread in Shared test v1.',
+}.items():
+    LIKED_VOICES[_id].update(note=_note, rating_date='2026-11-11',
+                            rated_sample_id='narrator-standard-v1')
 for _name in ('jack', 'colin', 'rufus', 'conor', 'sean'):
     LIKED_VOICES[f'deepgram_flux_{_name}'] = {
         'name': f'{_name.title()} (Deepgram Flux)', 'accent': 'British',

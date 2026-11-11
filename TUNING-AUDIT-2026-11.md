@@ -2,6 +2,38 @@
 
 Read-only source audit prepared 2026-11-11. This document compares the exact adapters and revisions used by the liked-voices worktree with current official maintainer/vendor documentation and the pinned runtime implementations. It records implementation settings and documentary defaults; it does not claim a particular setting is optimal by reasoning alone. No renders, listening session, provider call, deployment, or operational change was performed for this audit.
 
+## 11 November follow-up: shared passage and bounded clone experiments
+
+- **Edge client:** 7.2.8 returned HTTP 403 before audio. Maintainer releases
+  [7.3.0](https://github.com/rany2/edge-tts/releases/tag/7.3.0) and
+  [7.3.1](https://github.com/rany2/edge-tts/releases/tag/7.3.1) document the updated
+  service protocol and locale-safe date parsing. Isolated 7.3.1 produced Ryan and
+  the Australian/UK samples successfully with default rate/pitch/volume; the app
+  dependency is now pinned to 7.3.1. This remains a community client, not a
+  Microsoft-supported synthesis API. Andrew returned no audio; all other presets
+  are being checked separately, without substituting a different voice.
+- **Kitten John Kani:** official KittenML 0.9.7, model
+  `c93cb7c271baa51d9ae8204d5277988906f235a2`, packed/stable, seed 42,
+  normalize enabled, decoder `749d1c1a46eb10492095d68fbcf55691ccf137cd`.
+  Reference SHA `8abbb7e6df836f2b08bc9af2fd498cc3ce3f067e4627a22ddb7c45164e70f8a6`.
+  Full standard: 79.59 seconds, CPU4, 983.1 seconds inference. ASR reached the
+  ending but flagged possible added Syria/repeated March. Short A/B changes only
+  documented `use_reference_prompt` True to False; B is 18.28 seconds and its
+  unprompted ASR covers all 40 words. Neither ASR nor duration establishes accent
+  quality. The source-prepared payload was frozen outside the inference venv,
+  which lacks some production normalizer dependencies.
+- **Qwen GPU experiment:** official `QwenLM/Qwen3-TTS` commit
+  `022e286b98fbec7e1e916cb940cdf532cd9f488e` (qwen-tts 0.1.1),
+  `Qwen/Qwen3-TTS-12Hz-1.7B-Base` revision
+  `fd4b254389122332181a7c3db7f27e918eec64e3`, Apache-2.0; official
+  [API/README](https://github.com/QwenLM/Qwen3-TTS) read before generation.
+  Same John reference plus exact transcript; full conditioning
+  (`x_vector_only_mode=False`), English, seed 42, bfloat16/SDPA, generation
+  defaults except the existing app's 4096-token ceiling. L4 requested through
+  authenticated Modal 1.5.5; no new login, no Vast. Runtime/model snapshots are
+  pinned and each clip records its actual settings. Rendering/quality remains
+  unverified until output is measured and auditioned.
+
 ## Material findings first
 
 1. **Chatterbox Turbo/Nano receive controls that their pinned runtime ignores.** The project server passes `exaggeration=0.5` and `cfg_weight=0.5` to Turbo/Nano, matching its own environment defaults and comments. At the exact pinned source commit, Turbo `generate()` warns that CFG, `min_p`, and exaggeration are unsupported and ignored. The app never passes `min_p`; the runtime default is `0.00`. Do not describe those adapter values as effective Turbo/Nano tuning. Runtime defaults that do affect generation include temperature `0.8`, top-p `0.95`, repetition penalty `1.2`, top-k `1000`, and `norm_loudness=True`.
@@ -92,3 +124,14 @@ Project files: `narrators/server.py`, `narrators/requirements.txt`, `narrators/D
 - **Audition setting only:** the code records the actual settings applied by the adapters. A non-default value's presence does not prove that it is better, and a no-op parameter does not constitute tuning.
 - **Listening-only:** naturalness, pronunciation, accent impression, preferred pacing, performance over a particular book, and whether a reference voice sounds convincing. These claims require listening to the exact output. No generic quality assurance is made here.
 - **Not established:** newly rendered audio, live cache readiness/playability, full-book quality, or current live deployment state beyond the parent-provided Turbo/Nano runtime verification.
+
+## Remaining boundary outside this rendered cohort
+
+This audit covers the five November CPU families, Flux and Chatterbox. It is
+not a claim that all 165 historical catalogue entries have been retuned. A
+follow-up mapping inspection found that Breeze uses the historical modern
+sample preparation while `app.text_profile_for_engine` still falls through to
+legacy for Breeze. No Breeze audio or book was rendered in this cleanup; do not
+claim book/preview parity for that integration. Resolve it against the existing
+Breeze recipe before a future book run, without silently changing its measured
+pronunciation contract. The tested CPU and Chatterbox mappings are aligned.

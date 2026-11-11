@@ -361,6 +361,39 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 .voice-sample-text strong{ font-family:var(--mono); font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); }
 .voice-sample-text p{ white-space:pre-wrap; line-height:1.55; margin:6px 0 0; }
 @media(max-width:560px){ .liked-shortlist{ padding:18px 16px; } .liked-group-heading{ align-items:flex-start; flex-direction:column; gap:3px; } }
+.model-catalogue{ margin:0 0 26px; }
+.model-catalogue-head{ display:flex; justify-content:space-between; align-items:end; gap:20px; flex-wrap:wrap; margin:0 0 14px; }
+.model-catalogue-head h2{ margin:0; font-size:1.25rem; letter-spacing:-.02em; }
+.model-catalogue-intro{ max-width:76ch; color:var(--text-secondary); font-size:.84rem; line-height:1.5; margin:5px 0 0; }
+.catalogue-search{ width:min(100%,300px); min-height:40px; padding:9px 12px; color:var(--text-primary); background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:9px; font:inherit; }
+.model-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr)); gap:12px; }
+.model-card{ min-width:0; padding:16px 17px; border:1px solid var(--border); border-radius:12px; background:var(--paper-raised); box-shadow:var(--shadow); }
+.model-title-row{ display:flex; justify-content:space-between; align-items:start; gap:12px; }
+.model-title{ margin:0; font-size:1rem; font-weight:750; line-height:1.25; }
+.model-version{ margin:3px 0 0; color:var(--text-secondary); font:600 .68rem var(--mono); }
+.model-count{ flex:none; color:var(--ink-3); font:600 .62rem var(--mono); text-align:right; }
+.model-route,.model-note,.voice-verdict{ margin:10px 0 0; color:var(--text-secondary); font-size:.78rem; line-height:1.45; }
+.model-route strong,.model-note strong,.voice-verdict strong{ color:var(--text-primary); font-weight:650; }
+.catalogue-voice{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px; padding:12px 0 0; border-top:1px solid var(--border); }
+.catalogue-voice-copy{ min-width:0; }
+.catalogue-voice-name{ overflow-wrap:anywhere; font-weight:720; font-size:.92rem; }
+.catalogue-voice-meta{ margin-top:3px; color:var(--ink-3); font:600 .61rem var(--mono); letter-spacing:.025em; }
+.sample-state{ display:inline-block; margin-top:6px; padding:3px 7px; border:1px solid var(--border); border-radius:20px; color:var(--text-secondary); font:600 .59rem var(--mono); }
+.sample-state.current{ color:var(--success); border-color:color-mix(in srgb,var(--success) 35%,var(--border)); }
+.sample-state.pending{ color:var(--ink-3); }
+.preview-btn:disabled{ cursor:not-allowed; opacity:.4; background:var(--bg-element); color:var(--ink-3); border-color:var(--border); }
+.model-voices{ margin-top:12px; border-top:1px solid var(--border); padding-top:10px; }
+.model-voices summary{ cursor:pointer; color:var(--text-secondary); font-size:.75rem; font-weight:650; }
+.model-voices[open] summary{ margin-bottom:6px; }
+.model-voice-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--border); }
+.model-voice-row:first-of-type{ border-top:0; }
+.model-voice-copy{ min-width:0; }
+.model-voice-copy strong{ display:block; overflow-wrap:anywhere; font-size:.78rem; }
+.model-voice-copy span{ display:block; margin-top:2px; color:var(--ink-3); font-size:.68rem; line-height:1.35; }
+.model-voice-row .preview-btn{ width:32px; height:32px; font-size:.76rem; }
+.model-empty{ margin-top:12px; padding:10px 0 0; border-top:1px solid var(--border); color:var(--ink-3); font-size:.77rem; }
+.catalogue-no-results{ display:none; color:var(--text-secondary); font-size:.86rem; padding:12px 2px; }
+@media(max-width:560px){ .model-grid{ grid-template-columns:1fr; } .model-card{ padding:14px; } }
 .compare-play{ width:100%; margin-top:12px; }
 @media(max-width:768px){
   .voice-player{ left:12px; right:12px; bottom:12px; width:auto; grid-template-columns:auto minmax(0,1fr) auto auto; gap:10px; }
@@ -1115,6 +1148,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 
     const voices = {{ voices | tojson }};
     const voiceSample = {{ sample | default({}) | tojson }};
+    const modelCatalogue = {{ model_catalogue | default([]) | tojson }};
     let engineHealth = {};   // engine -> bool (true=up); empty until loaded
     // engine -> reason string, for engines that can NEVER work without a
     // credential. Distinct from "offline": offline is a container you can
@@ -2049,7 +2083,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const allIds = usable.map(([id]) => id);
         const cmpA = online[0] || allIds[0] || '';
         const cmpB = online[1] || online[0] || allIds[1] || cmpA;
-        const uncachedConfigured = Object.entries(voices).filter(([id, v]) => engineConfigured(v.engine) && v.preview_cached !== true);
         const compareCard = `
             <div class="card" style="margin-bottom:32px;">
                 <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:18px; flex-wrap:wrap;">
@@ -2080,25 +2113,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 </div>
             </div>
         `;
-        // Engines missing credentials are listed once, at the bottom, as a
-        // plain statement of what they'd need — not as playable cards. They
-        // used to render as full voice cards with no sample and no way to
-        // work, which read as "broken" rather than "not set up" (#24).
-        const unconfiguredSection = Object.entries(engineUnconfigured).map(([engine, reason]) => {
-            const names = Object.entries(voices).filter(([id, v]) => v.engine === engine);
-            if (!names.length) return '';
-            return `
-                <div class="engine-section" style="opacity:0.5;">
-                    <div class="engine-header">${engine.toUpperCase()} ENGINE
-                        <span style="color:var(--ink-3); font-size:0.8rem;">● NOT CONFIGURED — ${escapeHtml(reason)}</span>
-                    </div>
-                    <div style="font-size:0.85rem; color:var(--ink-3); padding:6px 0 2px;">
-                        ${names.length} voice${names.length === 1 ? '' : 's'} hidden from the voice pickers until this is set up.
-                    </div>
-                </div>
-            `;
-        }).join('');
-
         const cloneCard = `
             <div class="card" style="margin-bottom:32px;">
                 <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:8px; flex-wrap:wrap;">
@@ -2145,11 +2159,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div>
                         <div style="font-weight:750; font-size:1.06rem; display:flex; align-items:center; gap:8px;">
                             <span style="font-size:1.15rem;">⚡</span>
-                            <span>Modal Serverless Cloud GPUs</span>
-                            <span style="font-size:0.72rem; font-weight:800; background:#8b5cf6; color:#fff; padding:2px 8px; border-radius:10px; text-transform:uppercase;">~$27/mo Free Tier</span>
+                            <span>Cloud audition accounts</span>
                         </div>
                         <div style="font-size:0.86rem; color:var(--text-secondary); margin-top:5px; line-height:1.45; max-width:85ch;">
-                            Powers <b>Breeze 2 (3.5B Studio Clones)</b> including Cillian Murphy, Arthur, Liam, Adrian, Karen Savage, and <b>Qwen3-TTS</b> emotive narration. Instant -20 LUFS mastered audition previews; full book renders scale in parallel across serverless NVIDIA L4/A10G GPUs.
+                            Account status and limits are listed here. A cached audition does not by itself mean that model has a book conversion route; check each model card above.
                         </div>
                     </div>
                     <button class="btn" style="font-size:0.82rem; padding:8px 14px;" onclick="switchTab('settings')">Settings &amp; Tokens</button>
@@ -2157,95 +2170,81 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
 
-        const liked = Object.entries(voices).filter(([id, v]) => v.liked && v.preview_cached === true);
-        const cachedById = new Map(liked);
-        const sampleBadge = v => v.preview_sample_label || (v.preview_cached ? 'Sample label unrecorded' : '');
-        const voiceCard = ([id, v], label = '', lead = false) => `
-            <div class="voice-card liked-card${lead ? ' lead' : ''}" data-voice-card="${id}">
-                <div><div class="voice-name">${escapeHtml(v.name)}</div>
-                    <div class="voice-meta">${escapeHtml(label || (v.audition_only ? 'GPU audition · book conversion unavailable' : v.engine === 'cpu_narrators' ? 'Local CPU' : 'Deepgram Flux'))}${sampleBadge(v) ? ` · ${escapeHtml(sampleBadge(v))}` : ''}</div>
-                    <div class="liked-card-note"><div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div><div class="paused-badge">Paused</div><div class="loading-badge">Loading cached sample…</div></div>
-                </div>
-                <button class="preview-btn" data-voice-button="${id}" onclick="playVoicePreview('${id}', this)" title="Listen to this cached voice" aria-label="Listen to ${escapeHtml(v.name)}"><span style="margin-left:2px">&#9654;</span></button>
-            </div>`;
-        const jack = cachedById.get('deepgram_flux_jack');
-        const edwin = cachedById.get('phonon_edwin');
-        const localOther = liked.filter(([id, v]) => v.engine === 'cpu_narrators' && id !== 'phonon_edwin');
-        const fluxOther = liked.filter(([id, v]) => v.engine === 'deepgram' && id !== 'deepgram_flux_jack');
-        const gpuLiked = liked.filter(([id, v]) => v.audition_only);
-        const archived = Object.entries(voices).filter(([id, v]) => v.catalogue_status === 'disliked' && v.preview_cached === true);
-        const likedSection = `<section class="card liked-shortlist" id="liked-voices" aria-labelledby="liked-voices-title">
-            <h2 id="liked-voices-title">Liked voices</h2>
-            <p>Heard and liked for short samples. Listen before choosing for a book; GPU entries are audition-only.</p>
-            ${jack ? `<div class="liked-group"><div class="liked-group-heading"><h3>Start here</h3><span>Jack · hosted Deepgram Flux</span></div><div class="liked-grid">${voiceCard(['deepgram_flux_jack', jack], 'Hosted · Deepgram Flux', true)}</div></div>` : ''}
-            ${edwin ? `<div class="liked-group"><div class="liked-group-heading"><h3>Local CPU</h3><span>Compare Edwin with Jack</span></div><div class="liked-grid">${voiceCard(['phonon_edwin', edwin], 'Local CPU · Phonon 31M', true)}</div>
-                ${localOther.length ? `<details class="liked-options"><summary>More local CPU likes (${localOther.length})</summary><div class="liked-grid">${localOther.map(item => voiceCard(item)).join('')}</div></details>` : ''}</div>` : ''}
-            ${fluxOther.length ? `<div class="liked-group"><details class="liked-options"><summary>Other hosted Deepgram Flux likes (${fluxOther.length})</summary><div class="liked-grid">${fluxOther.map(item => voiceCard(item)).join('')}</div></details></div>` : ''}
-            ${gpuLiked.length ? `<div class="liked-group"><details class="liked-options"><summary>GPU auditions (${gpuLiked.length}) · short takes only</summary><p style="color:var(--text-secondary); font-size:.78rem; margin:0 0 10px;">Full-book lane not integrated; these are not available for conversion.</p><div class="liked-grid">${gpuLiked.map(item => voiceCard(item, 'GPU audition · book conversion unavailable')).join('')}</div></details></div>` : ''}
-            ${archived.length ? `<details class="catalogue-archive"><summary>Previously shortlisted · verdict changed (${archived.length})</summary><div class="liked-grid">${archived.map(([id, v]) => `<div class="voice-card liked-card" data-voice-card="${id}"><div><div class="voice-name">${escapeHtml(v.name)}</div><div class="voice-meta">${escapeHtml(v.note || 'No longer shortlisted')}${sampleBadge(v) ? ` · ${escapeHtml(sampleBadge(v))}` : ''}</div><div class="speaking-badge">Speaking</div><div class="paused-badge">Paused</div><div class="loading-badge">Loading cached sample…</div></div><button class="preview-btn" data-voice-button="${id}" onclick="playVoicePreview('${id}', this)" aria-label="Listen to archived ${escapeHtml(v.name)}">&#9654;</button></div>`).join('')}</div></details>` : ''}
+        const sampleState = v => {
+            if (v.preview_sample_current === true) return {label: v.preview_sample_label || 'Shared test v1', cls: 'current'};
+            if (v.preview_cached === true) return {label: v.preview_sample_label || 'Earlier audition', cls: ''};
+            return {label: 'Preview pending', cls: 'pending'};
+        };
+        const previewButton = (id, v) => v.preview_cached === true
+            ? `<button class="preview-btn" type="button" data-voice-button="${escapeHtml(id)}" onclick="playVoicePreview('${escapeHtml(id)}', this)" title="Play cached preview" aria-label="Listen to ${escapeHtml(v.name)}"><span style="margin-left:2px">&#9654;</span></button>`
+            : `<button class="preview-btn" type="button" disabled title="Preview has not been cached" aria-label="Preview pending for ${escapeHtml(v.name)}">&#8212;</button>`;
+        const verdictHtml = v => {
+            if (v.catalogue_status) return `<div class="voice-verdict"><strong>Previous verdict · ${escapeHtml(v.catalogue_status)}</strong>${v.note ? ` — ${escapeHtml(v.note)}` : ''}</div>`;
+            return v.note ? `<div class="voice-verdict"><strong>Heard note</strong> — ${escapeHtml(v.note)}</div>` : '';
+        };
+        const modelCard = group => {
+            const id = group.representative_id;
+            const v = group.representative;
+            const memberIds = [id, ...(group.other_voice_ids || [])].filter(Boolean);
+            const configReason = engineUnconfigured[group.engine];
+            const unavailable = group.book_route || 'Book conversion route not recorded.';
+            const route = v?.audition_only
+                ? 'Audition only; this voice is not available for book conversion.'
+                : configReason ? `${unavailable} Not configured: ${configReason}` : unavailable;
+            const repHtml = v ? (() => {
+                const state = sampleState(v);
+                return `<div class="catalogue-voice" data-voice-card="${escapeHtml(id)}">
+                    <div class="catalogue-voice-copy"><div class="catalogue-voice-name">${escapeHtml(v.name)}</div>
+                    <div class="catalogue-voice-meta">Representative voice · ${escapeHtml(v.accent || 'Accent not recorded')}${v.gender ? ` · ${escapeHtml(v.gender)}` : ''}</div>
+                    <span class="sample-state ${state.cls}">${escapeHtml(state.label)}</span>
+                    ${verdictHtml(v)}
+                    <div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div><div class="paused-badge">Paused</div><div class="loading-badge">Loading cached sample…</div></div>
+                    ${previewButton(id, v)}</div>`;
+            })() : `<div class="model-empty">No registered voice yet. Model entry is retained for browsing.</div>`;
+            const siblings = (group.other_voice_ids || []).map(otherId => {
+                const other = voices[otherId];
+                if (!other) return '';
+                const state = sampleState(other);
+                const archived = other.catalogue_status ? `Previous verdict · ${other.catalogue_status}${other.note ? ` — ${other.note}` : ''}` : (other.note || '');
+                return `<div class="model-voice-row" data-voice-card="${escapeHtml(otherId)}"><div class="model-voice-copy"><strong>${escapeHtml(other.name)}</strong><span>${escapeHtml(state.label)}${archived ? ` · ${escapeHtml(archived)}` : ''}</span><div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div><div class="paused-badge">Paused</div><div class="loading-badge">Loading cached sample…</div></div>${previewButton(otherId, other)}</div>`;
+            }).join('');
+            const more = siblings ? `<details class="model-voices"><summary>Other voices in this model (${group.other_voice_ids.length})</summary>${siblings}</details>` : '';
+            const searchText = [group.title, group.model, group.key, ...memberIds.map(memberId => voices[memberId]?.name || memberId)].join(' ').toLowerCase();
+            return `<article class="model-card" data-model-card="${escapeHtml(searchText)}">
+                <div class="model-title-row"><div><h3 class="model-title">${escapeHtml(group.title)}</h3><div class="model-version">${escapeHtml(group.model)}</div></div>
+                    <div class="model-count">${group.voice_count} voice${group.voice_count === 1 ? '' : 's'}<br>${group.current_count} v1 · ${group.earlier_count} older · ${group.pending_count} pending</div></div>
+                ${group.model_note ? `<div class="model-note">${escapeHtml(group.model_note)}</div>` : ''}
+                <div class="model-route"><strong>Book conversion</strong> · ${escapeHtml(route)}</div>
+                ${repHtml}${more}</article>`;
+        };
+        const modelCards = modelCatalogue.map(modelCard).join('');
+        const catalogueSummary = `<section class="model-catalogue" aria-labelledby="model-catalogue-title">
+            <div class="model-catalogue-head"><div><h2 id="model-catalogue-title">Voices by model</h2>
+                <p class="model-catalogue-intro">Compare one voice from each model using the shared test. Expand a card to hear its other voices. Your previous verdicts and samples are kept.</p></div>
+                <input id="model-catalogue-search" class="catalogue-search" type="search" placeholder="Find a model or voice" aria-label="Find a model or voice" oninput="filterModelCatalogue(this.value)"></div>
+            <div class="model-grid">${modelCards}</div><div id="catalogue-no-results" class="catalogue-no-results">No model or voice matches that search.</div>
         </section>`;
-        const engineCatalogue = engines.map(engine => {
-            const engineVoices = usable.filter(([id, v]) => v.engine === engine);
-            const up = engineUp(engine);
-            const isModal = MODAL_GPU_ENGINES.includes(engine);
-            const isKaggle = KAGGLE_GPU_ENGINES.includes(engine);
-            let headerBadge = '';
-            if (isModal) {
-                if (up) {
-                    headerBadge = '<span style="color:#a78bfa; font-size:0.8rem; font-weight:700; background:rgba(139,92,246,0.15); padding:2px 8px; border-radius:12px; margin-left:8px;">● MODAL CLOUD GPU ACTIVE (~$27/mo free)</span>';
-                } else {
-                    headerBadge = '<span style="color:#f59e0b; font-size:0.8rem; font-weight:600; margin-left:8px;">● MODAL CLOUD GPU — configure Token in Settings</span>';
-                }
-            } else if (isKaggle && !up) {
-                headerBadge = '<span style="color:#a855f7; font-size:0.8rem; font-weight:700; background:rgba(168,85,247,0.12); padding:2px 8px; border-radius:12px; margin-left:8px;">● KAGGLE FREE GPU (~30h/wk)</span>';
-            } else if (!up) {
-                headerBadge = '<span style="color:var(--error); font-size:0.8rem; margin-left:8px;">● OFFLINE — service not running</span>';
-            } else {
-                headerBadge = '<span style="color:var(--success); font-size:0.8rem; margin-left:8px;">● READY</span>';
-            }
-            const engineTitle = ENGINE_LABELS[engine] || (engine.toUpperCase() + ' ENGINE');
-            return `
-                <div class="engine-section" style="${(up || isModal || isKaggle) ? '' : 'opacity:0.45;'}">
-                    <div class="engine-header">${engineTitle} ${headerBadge}</div>
-                    <div class="voices-grid">
-                        ${engineVoices.map(([id, v]) => `
-                            <div class="voice-card" data-voice-card="${id}">
-                                <div>
-                                    <div class="voice-name">${escapeHtml(v.name)}</div>
-                                    <div class="voice-meta">${v.accent} · ${v.gender}${sampleBadge(v) ? ` · ${escapeHtml(sampleBadge(v))}` : ''}${isModal ? ' · <span style="background:rgba(139,92,246,0.18); color:#a78bfa; padding:1px 6px; border-radius:4px; font-size:0.72rem; font-weight:700;">MODAL GPU</span>' : ''}</div>
-                                    <div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div>
-                                    <div class="paused-badge">Paused</div>
-                                    <div class="loading-badge">Loading cached sample…</div>
-                                </div>
-                                <button class="preview-btn" data-voice-button="${id}" onclick="playVoicePreview('${id}', this)" title="Listen to this voice" aria-label="Listen to ${escapeHtml(v.name)}">
-                                    <span style="margin-left: 2px;">&#9654;</span>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('') + (uncachedConfigured.length ? `
-            <div class="engine-section" style="opacity:.72;">
-                <div class="engine-header">PREVIEW CACHE
-                    <span style="color:var(--ink-3); font-size:.8rem;">${uncachedConfigured.length} voice${uncachedConfigured.length === 1 ? '' : 's'} preparing</span>
-                </div>
-                <div style="font-size:.85rem; color:var(--ink-3); padding:6px 0 2px;">
-                    These voices are intentionally absent from the pickers until their persisted samples are ready. A Play button never starts a cold synthesis job.
-                </div>
-            </div>` : '') + unconfiguredSection;
-        const browseAll = `<details class="catalogue-browse"><summary>Browse engine catalogue (${usable.length} cached selectable voices)</summary>
-            <p style="color:var(--text-secondary); font-size:.84rem; margin:0 0 16px;">The shortlist above keeps heard verdicts together. This catalogue retains the complete engine inventory, including voices without a current Like.</p>
-            ${engineCatalogue}</details>`;
         const samplePassage = voiceSample && (voiceSample.text || voiceSample.ordinary_text || voiceSample.challenge_text)
             ? `<details class="catalogue-browse shared-sample"><summary>Shared test passage${voiceSample.id ? ` · ${escapeHtml(voiceSample.id)}` : ''}</summary>
                 <p style="color:var(--text-secondary); font-size:.84rem; margin:0 0 12px;">The current audition labels identify previews verified against this passage. Older cached takes are retained and labelled separately.</p>
                 ${voiceSample.text && !voiceSample.ordinary_text && !voiceSample.challenge_text ? `<div class="voice-sample-text"><strong>Passage</strong><p>${escapeHtml(voiceSample.text)}</p></div>` : ''}
                 ${voiceSample.ordinary_text ? `<div class="voice-sample-text"><strong>Ordinary opening</strong><p>${escapeHtml(voiceSample.ordinary_text)}</p></div>` : ''}
                 ${voiceSample.challenge_text ? `<div class="voice-sample-text"><strong>Challenge passage</strong><p>${escapeHtml(voiceSample.challenge_text)}</p></div>` : ''}</details>` : '';
-        container.innerHTML = likedSection + samplePassage + browseAll + cloudStrip + modalInfoBanner + compareCard + cloneCard;
+        container.innerHTML = catalogueSummary + samplePassage + cloudStrip + modalInfoBanner + compareCard + cloneCard;
         loadCloneList();
         syncPreviewUi();
+    }
+
+    function filterModelCatalogue(query) {
+        const term = String(query || '').trim().toLowerCase();
+        let shown = 0;
+        document.querySelectorAll('#voices-content [data-model-card]').forEach(card => {
+            const matches = !term || card.dataset.modelCard.includes(term);
+            card.hidden = !matches;
+            if (matches) shown += 1;
+        });
+        const empty = document.getElementById('catalogue-no-results');
+        if (empty) empty.style.display = shown ? 'none' : 'block';
     }
 
     let _urlPreview = null;

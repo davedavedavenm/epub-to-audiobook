@@ -1,8 +1,34 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Correcting the model-comparison interpretation (in progress)
+
+Dave rejected the Likes-led redesign: remove that card and show one representative
+per exact model/version, with all sibling voices easy to reach. The 14/165 passage
+migration was incomplete for his request. Work now covers the whole catalogue,
+with honest current/pending/quota-limited coverage rather than hiding entries.
+The previous deployment below is historical, not completion of the corrected task.
+
+New human verdicts are in VOICES/DECISIONS: Edwin mispronounces Huawei/Xiaomi;
+Bill has a.m./21 April errors; Turbo is good except numerical mix-ups; Freya/Hugh
+are positive/decent and Deepgram great. Controlled Kitten/John work is proceeding.
+
 ## 11 November 2026 — Shared audition and catalogue cleanup
 
-- **Implemented; deployment verification pending:** approved versioned passage,
+- **Deployment proof:** whole-stack `scripts/deploy.sh` completed at commit
+  `efbc001ae73a0135af0a836f2f6d86ddbbd90cef`; webapp and worker both healthy
+  and report that revision. Clean-checkout CI: 511 passed, one skipped; Ruff
+  passed. No active jobs at deployment. `/api/voices`: **165/165 cached, 14
+  Shared test v1, 17 current Likes**. All 14 exact served MP3s were opened,
+  decoded and hash-matched to local manifests; their earlier files are retained
+  in `data/previews/archive/2026-11-11-before-standard-v1/`.
+- **Browser proof:** live shortlist shows only Jack and Edwin expanded; eight
+  other CPU Likes, four other Flux Likes, three GPU auditions and two changed
+  verdicts are collapsed. Jack played to 10.83s / 75.17s and Edwin to 9.62s /
+  67.96s with readyState 4 and no media error. Player left paused. Local player
+  http://127.0.0.1:8800/standard-v1/ also verified both clips advancing and
+  single-player behavior. It includes the two warned Chatterbox controls, whose
+  app previews were deliberately not replaced. No new listening verdict.
+- **Deployed and verified (machine):** approved versioned passage,
   mandatory agent instructions, ordinary/challenge separation, compact Likes and
   changed-verdict archive. Rosie and Silencio/Peter retained but unliked.
 - **Verified in targeted tests:** CPU narrator and Nano preview preparation now

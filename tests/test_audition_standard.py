@@ -28,6 +28,7 @@ def test_agreed_standard_is_versioned_and_unchanged():
 @pytest.mark.parametrize('engine', [
     'cpu_narrators', 'chatterbox', 'chatterbox_nano', 'tada', 'vibevoice',
     'qwen3', 'fish', 'pocket', 'kitten', 'gemini', 'deepgram', 'kokoro', 'edge',
+    'breeze', 'cosyvoice', 'f5tts', 'polly', 'inworld',
 ])
 def test_preview_preparation_matches_book_contract(engine):
     profile = text_profile_for_engine(engine)
@@ -47,6 +48,9 @@ def test_old_or_replaced_audio_cannot_claim_the_new_passage(tmp_path):
     assert not sample_info(audio)['preview_sample_current']
     write_manifest(audio, sample_text_for('cpu_narrators'))
     assert sample_info(audio)['preview_sample_current']
+    payload_hash = hashlib.sha256(sample_text_for('cpu_narrators').encode()).hexdigest()
+    assert sample_info(audio, payload_hash)['preview_sample_current']
+    assert not sample_info(audio, 'different-preparation')['preview_sample_current']
     audio.write_bytes(b'a different recording')
     assert not sample_info(audio)['preview_sample_current']
 

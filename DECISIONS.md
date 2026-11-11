@@ -1,5 +1,35 @@
 # Decisions — EPUB to Audiobook
 
+## 11 November 2026 — Model comparison replaces the misunderstood Likes layout — Active
+
+Dave explicitly corrected the preceding UI interpretation: **remove the Liked
+voices card** from Voices. Show **one representative voice per exact model and
+version**, with other voices accessible within that model. Do not hide all
+engines behind a global catalogue disclosure or limit the comparison to Likes.
+Preserve verdicts and voices; this is a layout change, not authorization to
+delete engines. Leave the separate Listening Desk alone.
+
+The shared passage must be usable across **all voices on all engines**, not just
+the 14 shortlisted previews. Count and show actual standard-v1 coverage; clearly
+identify pending/unconfigured/quota-limited entries. Never present older audio
+as the standard or count a credential as proof an engine can render. Reuse the
+same speaker where already supported, but do not imply different preset models
+can all clone the same speaker. Exact model/version remains the comparison unit.
+
+Latest standard-v1 listening: Freya positive; Hugh decent; Bill Boerst otherwise
+OK but misreads a.m. and 21 April; Chatterbox Turbo/Arthur good except the two
+flagged numerical mix-ups. Deepgram voices great. Edwin's voice is promising,
+but **Huawei and Xiaomi are badly pronounced**. These are human verdicts, not
+ASR uncertainty, and do not identify the cause. No standout CPU winner or engine
+retirement was decided. Continue the controlled John Kani/Kitten clone work;
+the earlier promising-but-drifting take remains the preserved baseline.
+
+Prevent the existing Breeze/CosyVoice/F5 book route from silently falling through
+to Kokoro: until an actual endpoint is integrated, their cached GPU auditions do
+not constitute a working book route. Breeze retains its historical modern
+sample contract (commit `8208420`); share the profile mapping with book/recovery
+callers rather than duplicating a conflicting legacy fallback.
+
 ## 11 November 2026 — Shared audition standard and compact shortlist — Active
 
 Dave approved `narrator-standard-v1`: ordinary English opening, then country and
@@ -9,7 +39,7 @@ All agents and general audition producers must use `sample_text_for(engine)` fro
 remain supplementary. Keep voice/naturalness verdicts separate from pronunciation.
 Historical hash-pinned reproductions retain their named legacy passage.
 
-Organize the catalogue without discarding history: Jack and Edwin first, other
+**Superseded layout interpretation; see the correction above.** Organize the catalogue without discarding history: Jack and Edwin first, other
 CPU and hosted Likes in collapsed groups, GPU auditions separate, full catalogue
 collapsed. Rosie and Silencio 2/Peter are no longer Likes; retain them in the
 changed-verdict archive. There are now **17 Likes: nine CPU, five Flux, three GPU

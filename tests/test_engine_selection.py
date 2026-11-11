@@ -38,6 +38,12 @@ def test_retired_piper_job_fails_closed():
         get_engine_url('piper', JOB_ID)
 
 
+@pytest.mark.parametrize('engine', ['breeze', 'cosyvoice', 'f5tts', 'audition'])
+def test_gpu_audition_without_book_endpoint_never_substitutes_kokoro(engine):
+    with pytest.raises(ValueError, match='audition'):
+        get_engine_url(engine, JOB_ID)
+
+
 def test_retired_piper_is_not_offered():
     assert 'piper' not in appmod.TTS_ENGINES
     assert not [voice for voice, info in appmod.VOICES.items()

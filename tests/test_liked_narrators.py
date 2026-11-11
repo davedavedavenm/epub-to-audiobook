@@ -30,14 +30,17 @@ def test_shortlist_respects_newer_verdicts_and_exact_models():
 def test_voice_catalogue_has_compact_groups_and_shared_sample_details():
     template_path = Path(__file__).resolve().parents[1] / 'webapp' / 'templates' / 'index.html'
     template = template_path.read_text(encoding='utf-8')
-    assert 'Start here' in template and 'deepgram_flux_jack' in template
-    assert 'phonon_edwin' in template and 'More local CPU likes' in template
-    assert 'Compare Edwin with Jack' in template
-    assert 'preferred CPU comparator' not in template
-    assert '<summary>GPU auditions' in template
-    assert 'Browse engine catalogue' in template
+    assert 'Liked voices' not in template
+    assert 'Voices by model' in template
+    assert 'representative_id' in Path(__file__).resolve().parents[1].joinpath('webapp', 'voice_catalogue.py').read_text(encoding='utf-8')
+    assert 'Other voices in this model' in template
+    assert 'deepgram_flux_jack' not in template  # Representative selection comes from metadata, not duplicated markup.
+    assert 'filterModelCatalogue' in template
     assert 'Shared test passage' in template and 'preview_sample_label' in template
     assert 'voiceSample.text' in template and 'escapeHtml(voiceSample.text)' in template
+    assert 'preview_sample_current' in template
+    assert 'playVoicePreview' in template and 'v.preview_cached === true' in template
+    assert 'modelCatalogue' in template and 'engineUnconfigured[group.engine]' in template
 
 
 def test_new_cpu_paths_do_not_fall_back_to_legacy_engine():
