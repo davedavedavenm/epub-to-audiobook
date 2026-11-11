@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Audiobook Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,8 +16,9 @@ body {
     background-size: 22px 22px; transition: background 0.4s, color 0.4s;
 }
 ::selection { background: var(--accent); color: #fff; }
-.app-main { flex: 1; margin-left: 288px; height: 100vh; overflow-y: auto !important; display: flex; flex-direction: column; }
+.app-main { flex: 1; min-width: 0; margin-left: 288px; height: 100vh; overflow-y: auto !important; display: flex; flex-direction: column; }
 .content-body { padding: 56px 64px 96px; max-width: 1360px; width: 100%; margin: 0 auto; flex: 1; }
+.content-body:has(#tab-voices.active) { max-width: none; padding-inline: clamp(20px, 2.5vw, 64px); padding-top: 32px; }
 
 .sidebar { width: 288px; background: var(--bg-sidebar); color: var(--text-on-dark); padding: 44px 26px; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000; border-right: 1px solid rgba(184,137,45,0.18); }
 .sidebar-brand { margin-bottom: 8px; font-family: var(--sans); font-size: 2.1rem; font-weight: 800; font-optical-sizing: auto; letter-spacing: -0.02em; line-height: 1; }
@@ -366,7 +368,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 .model-catalogue-head h2{ margin:0; font-size:1.25rem; letter-spacing:-.02em; }
 .model-catalogue-intro{ max-width:76ch; color:var(--text-secondary); font-size:.84rem; line-height:1.5; margin:5px 0 0; }
 .catalogue-search{ width:min(100%,300px); min-height:40px; padding:9px 12px; color:var(--text-primary); background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:9px; font:inherit; }
-.model-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr)); gap:12px; }
+.model-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:12px; }
 .model-card{ min-width:0; padding:16px 17px; border:1px solid var(--border); border-radius:12px; background:var(--paper-raised); box-shadow:var(--shadow); }
 .model-title-row{ display:flex; justify-content:space-between; align-items:start; gap:12px; }
 .model-title{ margin:0; font-size:1rem; font-weight:750; line-height:1.25; }
@@ -2180,7 +2182,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             : `<button class="preview-btn" type="button" disabled title="Preview has not been cached" aria-label="Preview pending for ${escapeHtml(v.name)}">&#8212;</button>`;
         const verdictHtml = v => {
             if (v.catalogue_status) return `<div class="voice-verdict"><strong>Previous verdict · ${escapeHtml(v.catalogue_status)}</strong>${v.note ? ` — ${escapeHtml(v.note)}` : ''}</div>`;
-            return v.note ? `<div class="voice-verdict"><strong>Heard note</strong> — ${escapeHtml(v.note)}</div>` : '';
+            return v.note ? `<div class="voice-verdict"><strong>Notes</strong> — ${escapeHtml(v.note)}</div>` : '';
         };
         const modelCard = group => {
             const id = group.representative_id;

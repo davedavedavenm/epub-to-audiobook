@@ -685,7 +685,7 @@ VOICES = {
     # ============ TOP-TIER MODAL GPU VOICES (2026 AUDITION WINNERS) ============
     # Pre-rendered on Modal GPU with broadcast mastering (-20 LUFS) and cached in PREVIEWS_DIR.
     'breeze_cillian_irish': {'name': 'Cillian Murphy (Irish Studio, Breeze 2)', 'accent': 'Irish', 'gender': 'Male', 'engine': 'breeze'},
-    'qwen3_aiden': {'name': 'Aiden (Expressive Non-Fiction, Qwen3-TTS)', 'accent': 'American', 'gender': 'Male', 'engine': 'qwen3'},
+    'qwen3_aiden': {'name': 'Aiden (Expressive Non-Fiction, Qwen3-TTS)', 'accent': 'American', 'gender': 'Male', 'engine': 'qwen3', 'audition_only': True},
     'breeze_liam_au': {'name': 'Liam (Australian / Irish, Breeze 2)', 'accent': 'Australian', 'gender': 'Male', 'engine': 'breeze'},
     'breeze_karen_savage': {'name': 'Karen Savage (Classic British Female, Breeze 2)', 'accent': 'British', 'gender': 'Female', 'engine': 'breeze'},
     'breeze_arthur': {'name': 'Arthur (Distinguished British Male, Breeze 2)', 'accent': 'British', 'gender': 'Male', 'engine': 'breeze'},
@@ -733,7 +733,7 @@ VOICES = {
     'pocket_stuart_bell': {'name': 'Stuart Bell (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
     'pocket_vera': {'name': 'Vera (Pocket)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'pocket'},
     'kitten_bella': {'name': 'Bella (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
-    'kitten_jasper': {'name': 'Jasper (Kitten — heard)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
+    'kitten_jasper': {'name': 'Jasper (Kitten — heard)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten', 'note': 'Shared test v1: ASR flagged the 1,250 and 875 passages. Listen to judge the numbers; this is not a human pronunciation verdict.'},
     'kitten_luna': {'name': 'Luna (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
     'kitten_bruno': {'name': 'Bruno (Kitten)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},
     'kitten_rosie': {'name': 'Rosie (Kitten — heard)', 'accent': 'English', 'gender': 'Unspecified', 'engine': 'kitten'},

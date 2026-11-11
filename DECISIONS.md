@@ -1,5 +1,12 @@
 # Decisions — EPUB to Audiobook
 
+## 11 November 2026 — Voices uses the available screen width — Active
+
+The model-comparison catalogue must use widescreen space instead of inheriting
+the 1360px form-page width. Keep one representative per model; add columns as
+space permits, with readable cards and one column on mobile. Other forms and
+prose panels retain their own width constraints.
+
 ## 11 November 2026 — Model comparison replaces the misunderstood Likes layout — Active
 
 Dave explicitly corrected the preceding UI interpretation: **remove the Liked

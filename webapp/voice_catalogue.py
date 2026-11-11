@@ -48,7 +48,6 @@ MODEL_GROUPS = (
         'engine': 'cpu_narrators',
         'preferred': ('kitten2_john_kani_audition', 'kitten2_rosie'),
         'book_route': 'Integrated for registered CPU presets; custom audition voices need a registered, approved route.',
-        'model_note': 'John Kani is shown only if its exact audition voice is registered and cached. A preset preview does not make it a custom clone.',
     },
     {
         'key': 'deepgram_aura2', 'title': 'Deepgram Aura-2', 'model': 'English voice catalogue',

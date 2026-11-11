@@ -1,5 +1,32 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Model catalogue deployed; widescreen correction
+
+- **Deployed/verified:** `d035aa8`, webapp and worker both healthy at the same
+  revision. Clean-checkout CI: 524 passed, one skipped; Ruff passed. Live browser
+  confirms 27 visible model cards, one representative per populated card, no
+  Liked voices card, all 182 registered voices retained (166 cached). Kitten John
+  played to 11.96/79.59 seconds, readyState 4, then was paused.
+- **Widescreen correction:** Dave flagged the inherited 1360px content cap.
+  Voices now uses the available main-panel width, fluid gutters and a responsive
+  grid. Browser preview: 6 columns at 2560px, 2 at 1366px and 1 at 390px; no
+  document/card horizontal overflow. Includes the missing mobile viewport tag.
+  This correction awaits the next whole-stack deployment.
+- **GPU completed:** Qwen Base John short 15.1s, John standard 63.8s and Arthur
+  standard 70.3s; Qwen CustomVoice Aiden 69.1s. L4/A10 remained in scheduling;
+  L40S succeeded. All audition apps stopped. Existing credits covered usage,
+  actual billed cost zero. All four passed unprompted ASR completeness; audible
+  accent/naturalness remains Dave's decision. Exact local receipts retained.
+- **Migration ongoing:** CPU generation and ASR/promotion remain serialized and
+  checkpointed. Five Aura-2 and 17 Edge samples rendered; Andrew returned no
+  audio. Gemini used 10/10 daily requests: nine decoded samples, Puck refused
+  with a safety error and was not retried. Google's billing API confirms billing
+  disabled for the dedicated project; Monitoring returned no usage series.
+- **Audition boundary:** Qwen Aiden uses CustomVoice; the integrated server
+  loads Base and cannot render that preset. It remains playable, but is excluded
+  from book-conversion choices. Jasper's number discrepancies remain ASR flags
+  for listening, not grounds to hide the exact shared-passage take.
+
 ## 11 November 2026 — Correcting the model-comparison interpretation (in progress)
 
 Dave rejected the Likes-led redesign: remove that card and show one representative
