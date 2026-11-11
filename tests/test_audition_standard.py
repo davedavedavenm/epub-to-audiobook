@@ -66,6 +66,21 @@ def test_preparation_failure_never_silently_sends_raw_numbers(monkeypatch):
         sample_text_for('cpu_narrators')
 
 
+@pytest.mark.parametrize('voice_id, engine', [
+    ('maya2_siddhant', 'maya2'), ('maya2_nivedita', 'maya2'),
+    ('voxcpm2_peter', 'voxcpm2'),
+])
+def test_native_audition_payload_is_explicit_without_claiming_a_book_route(voice_id, engine):
+    from app import all_voices
+
+    voice = all_voices()[voice_id]
+    assert voice['audition_only'] is True
+    assert voice['preview_text_engine'] == engine
+    assert sample_text_for(engine) == SAMPLE_TEXT
+    # The exception is restricted to named native audition contracts.
+    assert sample_text_for('audition') != SAMPLE_TEXT
+
+
 def test_general_preview_producers_use_shared_engine_text_and_manifest():
     root = Path(__file__).resolve().parents[1]
     approved = (root / 'evaluations' / 'new-engines' / 'render_approved_previews.py').read_text(encoding='utf-8')

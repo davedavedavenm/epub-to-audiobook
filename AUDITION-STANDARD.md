@@ -33,6 +33,13 @@ test phrasing; they do not imply automatic speaker casting.
   for the CPU narrator adapter and Deepgram, existing modern-engine treatment for
   Chatterbox, and the existing legacy lexicon for Kokoro/Edge. Record the exact
   prepared payload and its hash; do not claim these engine payloads are identical.
+- Audition-only Maya2 Native and VoxCPM2 have no book route. Their named helper
+  contracts (`sample_text_for('maya2')` / `sample_text_for('voxcpm2')`) return
+  the approved source for the native API; each voice declares that preview
+  contract explicitly. Record internal engine normalization separately: Maya's
+  documented numeric-text recommendation is `normalize=True`; VoxCPM2's current
+  native default is `normalize=False`. This is not a fallback for missing
+  dependencies or an inferred production preparation policy.
 - Read `DECISIONS.md`, `VOICES.md`, `PREPROCESSING.md`, and the exact upstream
   model/runtime documentation first. `TUNING-AUDIT-2026-11.md` records the current
   evidence, not perpetual permission to skip checking changed versions.

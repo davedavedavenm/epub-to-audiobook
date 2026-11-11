@@ -61,6 +61,7 @@ for _id, _name, _accent in (
     LIKED_VOICES[_id] = {
         'name': _name, 'accent': _accent, 'gender': 'Unspecified',
         'engine': 'audition', 'liked': True, 'audition_only': True,
+        'preview_text_engine': 'maya2' if _id.startswith('maya') else 'voxcpm2',
         'rating_date': '2026-11-10',
         'note': ('Liked short take; not suitable for Badawi' if _id.startswith('maya')
                  else 'Liked GPU audition; full-book integration pending'),

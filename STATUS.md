@@ -1,5 +1,20 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Qwen John available in the model catalogue
+
+- **Deployed/verified:** `11a7aeed0eb73c336063658f573264e04fd2a1ce`, webapp
+  and worker healthy; clean-checkout CI 524 passed, one skipped. No book/lane
+  jobs were active; CPU preview generation paused at index 45/83 and resumed.
+- **Exact playback:** `/api/preview/qwen3_john_kani_audition` returned 200 and
+  its SHA-256 matched the retained 63.78-second full standard take. The actual
+  app button played to 9.37 seconds, readyState 4, without a media error, and
+  was paused. It appears under Qwen Base's other voices; Arthur remains the
+  representative. The note preserves the separate short-take winning verdict.
+- **Coverage checkpoint:** 183 registered voices; 167/167 configured previews
+  cached. After all Kokoro and Pocket 2.1 replacements, 97 use standard-v1.
+  The remaining CPU queue, GPU cohorts and quota/unconfigured exceptions remain
+  open. Replacements archive previous audio and verify exact served hashes.
+
 ## 11 November 2026 — Widescreen live; John reference ranking recorded
 
 - **Deployed/verified:** `3e5027e6c97b3d971c223eebac9d13a0798b6f9c`, whole stack

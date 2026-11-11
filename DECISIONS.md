@@ -20,6 +20,14 @@ the 1360px form-page width. Keep one representative per model; add columns as
 space permits, with readable cards and one column on mobile. Other forms and
 prose panels retain their own width constraints.
 
+Audition-only Maya2 Native and VoxCPM2 declare their native raw-input contracts
+explicitly via `preview_text_engine` and `sample_text_for('maya2'/'voxcpm2')`.
+Neither has a book route, so do not invent book/preview parity. Internal model
+normalization stays separately documented: Maya's numeric-text recommendation
+is enabled; VoxCPM2 retains its documented default off. Unknown engines and
+preprocessing errors never use this raw-input exception. This preserves the
+approved source, not an assertion that all engines receive identical payloads.
+
 ## 11 November 2026 — Model comparison replaces the misunderstood Likes layout — Active
 
 Dave explicitly corrected the preceding UI interpretation: **remove the Liked

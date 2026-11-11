@@ -53,6 +53,11 @@ from lexicon import SEED_PRONUNCIATION as SAMPLE_LEXICON  # noqa: E402
 
 from text_profiles import MODERN_ENGINES, EXPLICIT_ENGINES  # noqa: E402
 
+# These have no integrated book path. Their audited native API receives source
+# text directly; engine-internal normalization is recorded with each render.
+# Never extend this exception to unknown engines or failed preprocessing.
+RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2')
+
 
 def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
     """The sample, put through the SAME preprocessing a real render of this engine
@@ -64,12 +69,16 @@ def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
         This is the arm Dave selected for Peter, Jasper and Rosie on 2026-08-14,
         and the safe contract for the number-dense Gemini audition.
       * kokoro/edge/polly -> numbers spelled out, which they need.
+      * maya2/voxcpm2 -> source text for their audition-only native API;
+        engine-internal normalization is separate, not a book-path claim.
     Sending raw text to every engine can make numeric frontends misread "$1.2
     billion" and you'd be judging a preprocessing bug, not the voice.
     """
     if sample_id not in (SAMPLE_ID, LEGACY_SAMPLE_ID):
         raise ValueError(f"Unknown audition sample: {sample_id}")
     source = SAMPLE_TEXT if sample_id == SAMPLE_ID else LEGACY_SAMPLE_TEXT
+    if engine in RAW_AUDITION_ENGINES:
+        return source
     try:
         from tts_preprocess import normalize_text_for_tts, _is_letter_spacing
         lexicon = SAMPLE_LEXICON
