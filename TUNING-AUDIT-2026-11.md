@@ -12,6 +12,17 @@ Read-only source audit prepared 2026-11-11. This document compares the exact ada
 
 ## Scope and provenance inspected
 
+Follow-up live verification on 11 November: the shared Zorin cache contains one
+snapshot each for Turbo (`749d1c1a46eb10492095d68fbcf55691ccf137cd`) and Nano
+(`71ccd1d0081b430592cea481f4307e764e07bc64`). All ten cached weight/conditioning
+files' SHA-256 values match their LFS blob identifiers. The Arthur reference WAV
+SHA-256 is `8774082c3acf6c215dc9307a4a9cce5fd50d4242fc9263534ed420675873e252`.
+This establishes the observed assets for these CPU controls; it does not fix the
+loader's future mutable-main behavior. Full local receipt:
+`scratch/tts-nov11/chatterbox-live-provenance.json`. Official snapshot trees:
+[Turbo](https://huggingface.co/ResembleAI/chatterbox-turbo/tree/749d1c1a46eb10492095d68fbcf55691ccf137cd),
+[Nano](https://huggingface.co/ResembleAI/chatterbox-nano/tree/71ccd1d0081b430592cea481f4307e764e07bc64).
+
 Project files: `narrators/server.py`, `narrators/requirements.txt`, `narrators/Dockerfile`, `narrators/README.md`, `webapp/liked_voices.py`, `tts_proxy/proxy.py`, `chatterbox/server.py`, `chatterbox/requirements.txt`, and the relevant engine decisions/voice notes. CPU adapter/runtime package pins are `pocket-tts==4.0.1`, `ptts==0.5.0`, `kittenml==0.9.7`, `transformers==4.57.1`, `tokenizers==0.22.2`, `torch==2.8.0+cpu`, and `torchaudio==2.8.0+cpu` (from the narrator image requirements/build). The CPU HTTP adapter is project-owned; the model runtimes are the upstream implementations listed below.
 
 ## CPU narrator families

@@ -11,9 +11,18 @@
 - **Documented audit:** `TUNING-AUDIT-2026-11.md` records exact runtime/model
   provenance and supported versus ignored controls. It does not establish
   optimal tuning or diagnose the Kitten/John accent drift.
-- **In progress:** standard-v1 CPU/Flux clips and unprompted completeness checks.
-  Human listening on these new takes remains open. No full-book render or GPU
-  resource has been started for this cleanup.
+- **Verified (machine):** 16 standard-v1 clips rendered: nine active CPU Likes,
+  five Flux Likes and Arthur through CPU Turbo/Nano. All decode and carry
+  audio-bound source/payload manifests. CPU shortlist ASR found no three-word
+  missing runs or unheard endings; isolated word/name/number discrepancies
+  remain. Flux transcripts reach the closing sentence. Chatterbox ASR flags
+  stronger number/currency mismatches and a garbled Nano ending: these controls
+  need listening, not a quality-pass label. Local evidence and player directory:
+  `evaluations/new-engines/output/november-2026-south-africa/standard-v1/`.
+- **Measured cost:** five Flux requests used $0.2322 promotional credit
+  ($125.1536 before, $124.9214 after), matching 5 × 1,032 characters ×
+  $0.045/1,000. CPU renders incurred no cloud charge. Human listening on all new
+  takes remains open. No full-book render or GPU resource was started.
 
 ## 11 November 2026 — Comparison server restored and playback verified
 

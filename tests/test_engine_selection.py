@@ -121,9 +121,9 @@ def test_explicit_candidate_previews_use_explicit_numeric_profile():
     for engine in ('pocket', 'kitten', 'gemini'):
         out = appmod._preview_text_for(engine)
         assert '$1.2' not in out
-        assert 'one point two billion dollars' in out
-        assert 'fifty two percent' in out
-        assert 'one point five gigawatts' in out
+        assert 'one point two million dollars' in out
+        assert 'seven point five percent' in out
+        assert 'three point five kilometres' in out
 
 
 def test_gemini_failure_never_enters_automatic_retry(monkeypatch):
