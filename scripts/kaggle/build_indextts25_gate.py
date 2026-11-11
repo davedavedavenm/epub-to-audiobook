@@ -352,7 +352,7 @@ print("INDEXTTS25_GATE_COMPLETE", json.dumps(manifest, ensure_ascii=False), flus
 def source_texts() -> tuple[str, str]:
     sys.path.insert(0, str(ROOT / "webapp"))
     try:
-        from voice_sample import SAMPLE_TEXT
+        from voice_sample import LEGACY_SAMPLE_TEXT as SAMPLE_TEXT
 
         return SAMPLE_TEXT, PREPARED_TEXT
     finally:

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Render controlled Chatterbox model and human-reference diagnostics.
 
+Historical reproduction: this deliberately retains the old Apple passage and
+its immutable hashes. New auditions use AUDITION-STANDARD.md.
 This is an evaluation harness, not an app voice-cache path.  Every arm uses
 the exact same production-normalized hard passage, seed and server chunker.
 The three model arms share Arthur; the accent arms change only the declared
@@ -201,10 +203,10 @@ def _production_sample_text(expand_numbers: bool = False) -> str:
     script = (
         "import base64; from voice_sample import sample_text_for; "
         + (
-            "from voice_sample import SAMPLE_TEXT, SAMPLE_LEXICON; "
+            "from voice_sample import LEGACY_SAMPLE_TEXT as SAMPLE_TEXT, SAMPLE_LEXICON; "
             "from tts_preprocess import normalize_text_for_tts; "
             f"text = normalize_text_for_tts(SAMPLE_TEXT, lexicon=SAMPLE_LEXICON, modern=True{numeric_arg}); "
-            if expand_numbers else "text = sample_text_for('chatterbox'); "
+            if expand_numbers else "text = sample_text_for('chatterbox', sample_id='legacy-apple-2026'); "
         )
         + "print(base64.b64encode(text.encode('utf-8')).decode('ascii'))"
     )

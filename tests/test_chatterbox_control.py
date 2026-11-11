@@ -13,7 +13,7 @@ from voice_sample import sample_text_for  # noqa: E402
 
 
 def test_hard_passage_and_server_chunks_are_pinned():
-    text = sample_text_for("chatterbox")
+    text = sample_text_for("chatterbox", sample_id="legacy-apple-2026")
     evidence = control._chunk_evidence(text)
 
     assert len(text) == 1010

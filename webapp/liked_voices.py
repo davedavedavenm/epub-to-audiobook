@@ -24,6 +24,18 @@ LIKED_VOICES = {
           'rating_date': '2026-11-10'}
     for key, (name, model, _family, _speaker) in CPU_VOICES.items()
 }
+# Catalogue verdicts are separate from engine support: these voices remain
+# registered and available to browse, but are no longer part of the shortlist.
+LIKED_VOICES['kitten2_rosie'].update(
+    liked=False,
+    catalogue_status='disliked',
+    note='Dave found this take unsuitable; retained in the catalogue archive.',
+)
+LIKED_VOICES['silencio2_peter'].update(
+    liked=False,
+    catalogue_status='disliked',
+    note='Dave found this take tiresome; retained in the catalogue archive.',
+)
 for _name in ('jack', 'colin', 'rufus', 'conor', 'sean'):
     LIKED_VOICES[f'deepgram_flux_{_name}'] = {
         'name': f'{_name.title()} (Deepgram Flux)', 'accent': 'British',

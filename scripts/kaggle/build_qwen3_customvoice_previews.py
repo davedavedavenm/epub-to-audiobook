@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "scratch" / "qwen3_customvoice_previews" / "kernel"
-OUT.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(ROOT / "webapp"))
+from voice_sample import SAMPLE_ID, SAMPLE_SHA256, sample_text_for  # noqa: E402
 
-KERNEL_CODE = r'''import json
+SAMPLE_TEXT = sample_text_for("qwen3")
+
+KERNEL_CODE = r'''import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -47,12 +52,22 @@ model = Qwen3TTSModel.from_pretrained(
 supported_speakers = model.get_supported_speakers()
 print("Supported speakers:", supported_speakers)
 
-TEST_TEXT = (
-    "Silicon Valley can be an amazingly drab place. "
-    "The peninsula south of San Francisco has natural beauty, with rolling hills and coastal views, "
-    "but you strain to see them beyond so many corporate parking lots. "
-    "Mountain View and Menlo Park are bizarrely full of rug shops."
-)
+TEST_TEXT = __CANONICAL_SAMPLE_TEXT__
+SAMPLE_ID = __CANONICAL_SAMPLE_ID__
+SAMPLE_SHA256 = __CANONICAL_SAMPLE_SHA256__
+PREPARED_SHA256 = hashlib.sha256(TEST_TEXT.encode("utf-8")).hexdigest()
+print(f"Shared audition sample {SAMPLE_ID} ({SAMPLE_SHA256}); prepared {PREPARED_SHA256}")
+
+def write_sample_manifest(mp3_path):
+    manifest = {
+        "sample_id": SAMPLE_ID,
+        "source_sha256": SAMPLE_SHA256,
+        "prepared_sha256": PREPARED_SHA256,
+        "audio_sha256": hashlib.sha256(mp3_path.read_bytes()).hexdigest(),
+    }
+    mp3_path.with_suffix(".sample.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
 
 INSTRUCT = "Speak in a thoughtful, engaging, and measured tone suitable for an analytical non-fiction audiobook."
 
@@ -80,14 +95,28 @@ for spk in SPEAKERS_TO_TEST:
     mp3_path = OUT_DIR / f"qwen3_customvoice_{spk.lower()}.mp3"
     sf.write(str(wav_path), audio, sr)
     sh(["ffmpeg", "-y", "-i", str(wav_path), "-c:a", "libmp3lame", "-b:a", "128k", str(mp3_path)])
+    write_sample_manifest(mp3_path)
 
 print("\n=== Previews Complete ===")
 for f in sorted(OUT_DIR.iterdir()):
     print(f"  {f.name} ({f.stat().st_size:,} bytes)")
 '''
 
+def build_kernel() -> str:
+    kernel = (KERNEL_CODE
+              .replace("__CANONICAL_SAMPLE_TEXT__", json.dumps(SAMPLE_TEXT, ensure_ascii=False))
+              .replace("__CANONICAL_SAMPLE_ID__", json.dumps(SAMPLE_ID))
+              .replace("__CANONICAL_SAMPLE_SHA256__", json.dumps(SAMPLE_SHA256)))
+    if "__CANONICAL_" in kernel:
+        raise RuntimeError("Qwen preview kernel has unresolved sample placeholders")
+    compile(kernel, "run_previews.py", "exec")
+    return kernel
+
+
 def main():
-    (OUT / "run_previews.py").write_text(KERNEL_CODE, encoding="utf-8")
+    OUT.mkdir(parents=True, exist_ok=True)
+    kernel = build_kernel()
+    (OUT / "run_previews.py").write_text(kernel, encoding="utf-8")
     meta = {
         "id": "davedavedavedavenm/qwen3-customvoice-previews",
         "title": "qwen3-customvoice-previews",

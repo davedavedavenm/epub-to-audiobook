@@ -1,5 +1,126 @@
 # Voices and accents
 
+## 11 November 2026 — Comparable auditions and a smaller visible shortlist
+
+Use `AUDITION-STANDARD.md` for every new narrator comparison. The opening is a
+separate ordinary-voice test; the remainder tests names and numbers. Irish and
+Zulu pronunciation remain optional supplementary tracks. Older recordings retain
+their verdict and Earlier audition label until replaced with a verified standard
+reading; a prior Like does not approve the new take.
+
+Jack is the hosted leader. Edwin is the requested CPU comparison, not a claimed
+winner over all CPU speakers. The active shortlist is nine CPU voices, five Flux
+voices and three audition-only GPU voices. Rosie and the Silencio/Peter take are
+archived after Dave's newer objections. Pocket/Peter's older Like is separate;
+do not make more Peter clones or infer a blanket ban on a whole model family.
+
+See `TUNING-AUDIT-2026-11.md` for the exact implementation and official-source
+comparison. Supported controls and ASR completeness cannot prove naturalness or
+accent retention. The Kitten/John result remains promising but drifts; no new
+accent success is claimed.
+
+**Last updated: 2026-11-11.** What works, what does not, and the wrong turns —
+recorded so nobody walks back down them. Every claim here was heard or measured,
+not reasoned about; where something is untested it says so.
+
+
+## 11 November 2026 — John Kani Kitten take outstanding initially; accent drifts — Active
+
+Dave calls the new `kitten_john_kani.mp3` **outstanding**, but hears it become American at the end. Trevor Noah is too American; the same objection applies to Deon, Bonang and Cillian. Preserve this exact John take/reference as the promising comparison baseline. This does not approve a stable South African narrator or a full-book run; no production/default promotion.
+
+Verified device: CPU, four threads, 18.96 seconds of audio rendered in 127.41 seconds. Exact upstream path uses one 234-character synthesis chunk, reference prompting enabled, one John reference throughout, stable preset/seed 42, packed lossless weights and stock decoder. There is no second-voice selection or chunk join at the ending. That narrows the implementation possibilities but **does not establish why the accent changes**. Weak accent retention within generation is a hypothesis; CPU execution has not been demonstrated to cause it, and GPU execution alone is not a proven remedy. Evidence: ignored `kitten-reference-retest/accent-drift-audit.json` and `listening-verdict.json`. Official model card rechecked: https://huggingface.co/KittenML/kitten-tts-2 ; exact prior model/runtime provenance remains with the samples.
+
+## 11 November 2026 — Kitten reference retest delivered; listening verdict recorded above
+
+Five new Kitten takes of the **same 40-word passage**, compared side by side with the exact earlier takes. Four sources were replaced: John Kani / Gareth Cliff studio interview, Trevor Noah / publisher audiobook sample of *Into the Uncut Grass*, Bonang Matheba / Metro FM, Cillian / BBC Desert Island Discs. For Deon, ECR was unsuitable and CapeTalk/Hidden Lives candidates scored worse for noise; a different, longer complete answer from the original Pagecast source was selected instead. This is disclosed in the player, not presented as five replacement programmes.
+
+**Verified:** same model, revision, runtime, stable preset, seed 42 and text as the earlier Kitten batch; fresh reference paths/hashes/transcripts. KittenML/kitten-tts-2@c93cb7c271baa51d9ae8204d5277988906f235a2, kittenml 0.9.7, lossless packed weights, stock decoder@749d1c1a46eb10492095d68fbcf55691ccf137cd, normalize=True, CPU four threads. All five new takes decode and pass unprompted Whisper-small with 100% source-word coverage. Every one of the fifteen player audio URLs was downloaded and hash checked. Browser loaded 15/15 with readyState 4, no errors; new John playback advanced to 6.02 seconds and was paused. Player/offline copy opened; comparison tab retained. No GPU/API charge, deploy or push.
+
+**Noise screening only:** Microsoft DNSMOS P.835 predicted better background quality for every chosen reference. This does not prove speaker identity, accent retention, or naturalness. Dave subsequently supplied the listening verdict recorded above; the model cannot hear audio input. Reference transcripts are ASR-derived and remain an experimental limitation. No denoising, EQ or time stretching; one shared playback gain per old/new pair. The original synthesis WAVs are untouched. Public-facing source previews are short excerpts; the actual longer conditioning durations are labelled.
+
+| Reference | Conditioning duration | Background score old → new | New take / render |
+|---|---:|---:|---:|
+| John Kani | 19.40s | 2.09 → 4.16 | 18.96s / 127.4s |
+| Bonang Matheba | 23.18s | 3.53 → 3.87 | 17.76s / 120.8s |
+| Cillian | 21.40s | 3.53 → 3.87 | 18.32s / 130.8s |
+| Trevor Noah | 15.96s | 3.38 → 4.18 | 16.88s / 109.8s |
+| Deon Meyer | 18.75s | 3.40 → 3.99 | 17.32s / 115.4s |
+
+Player: http://127.0.0.1:8800/kitten-reference-retest/ . Ignored artifacts: `evaluations/new-engines/output/november-2026-south-africa/kitten-reference-retest/`, including source bounds/hashes, exact settings, ASR audits, comparison-integrity.json, reference-quality.json, pinned DNSMOS evidence (CC BY 4.0), Gradium evidence, online/offline players. Ratings remain local, not production favourites.
+
+**Phonon finding:** five free instant clones for noncommercial use, followed by an official export to Phonon safetensors for local CPU rendering, are documented. Gradium requires speaker consent; no celebrity voice was uploaded and no account-level free quota/export was tested. The unreleased speaker encoder prevents doing the creation step wholly locally or simply substituting Kaggle/Modal. See the current DECISIONS entry for pinned official evidence and pricing date.
+
+## 11 November 2026 — Accent audition failed; Kitten preferred; reference selection inadequate
+
+**Listening verdict:** Dave says these clones sound American, except John Kani who sounds British; **Kitten did better than Silencio**. This is a relative preference within these takes, not approval that the requested accents were retained. Dave also rejects the quality of the recordings chosen as cloning inputs. No narrator/default promotion follows.
+
+**Verified audit:** South African references were only 5.97–9.20 seconds (Deon 5.97, Trevor 6.12, Bonang 7.50, John 9.20), with Cillian 24.80 seconds. The supplied reference hashes match. No full-scale sample clipping was found, which does not establish acoustic suitability. Kitten's stock decoder repeats references shorter than 6 seconds, so Deon's clip was repeated internally; its decoder uses at most 10 seconds, while language-model prompting encodes the full reference. This repetition is documented implementation behaviour, not proof of the accent failure's cause.
+
+Official pinned Silencio weights, Kitten packed language-model weights and Kitten speaker-encoder weights all SHA256-match upstream Hugging Face LFS metadata. Kitten 0.9.7 used lossless packed weights, the stock/default decoder, stable preset and reference prompting enabled. Silencio used its exact WAV path, float32/default temperature 0.3, with fresh per-path caches. These renders called the upstream implementations directly, not the production app. No preset fallback or disabled reference conditioning was found. No EQ, pitch shift or time stretching was applied. Provenance and machine findings: ignored `accent-clones/failure-path-audit.json`.
+
+**Cause remains open:** poor source selection and imperfect reference transcripts confound this test. Duration alone is not sufficient diagnosis: the 24.8-second Cillian reference also failed in these CPU models and has prior successful Fish/Higgs history. Do not declare these engines incapable of accents from this test, or claim reference cleanup will necessarily fix them. A follow-up should compare old versus carefully selected clean references on the same model/text/settings before another broad batch; Kitten is Dave's preferred starting model.
+
+**Why Phonon/Klein were absent (official docs rechecked 11 November):** Phonon 31M can consume precomputed voices locally, but its separate speaker codec is not released. The official Transformers documentation explicitly says this local path cannot clone from a recording. Gradium Studio supplies hosted instant cloning; exporting a compatible voice for local CPU use is a separate option, not a wholly local cloning path. Studio was not called, costed or proven in this session. Klein X1.5-Pro documents 17 preset voices and experimental same-language blending; no released recording-to-clone route was found. Explain this distinction before narrowing a future audition.
+
+Primary sources: [Phonon model card](https://huggingface.co/gradium/phonon-31m-en), [official Transformers implementation documentation](https://huggingface.co/docs/transformers/main/en/model_doc/gradium_phonon_tts), [Phonon Python runtime](https://github.com/gradium-ai/xn-ptts/blob/main/ptts-pyo3/README.md), [Klein X1.5-Pro model card](https://huggingface.co/klein-ml/Klein-TTS-X1.5-Pro). Exact installed model revisions remain in `expression-test/cloning-support.json`; this finding supersedes its weaker statement that no local Phonon route was merely documented.
+
+
+## 11 November 2026 — Five-reference CPU accent-cloning audition
+
+John Kani, Trevor Noah, Deon Meyer and Bonang Matheba interview excerpts, plus the existing 24.8-second Cillian reference, were used for ten new local CPU takes: Silencio 2 and KittenTTS 2 for each speaker. No Rosie/Peter preset, emotion tags, GPU service, API charge, deployment or push. Same original 40-word ordinary nonfiction passage and seed 42; Kitten stable preset. No audible accent verdict is inferred from ASR.
+
+**Verified (machine):** all ten synthetic clips decoded and passed unprompted Whisper-small truncation/drop-run checks. Kitten source-word coverage was 100%; Silencio 92.5–100%, with minor substitutions and a possible extra fragment in Deon’s transcript. These ASR discrepancies are disclosed, not silently treated as perfect readings. All 15 audio URLs (five real references plus ten synthetic samples), the player and embedded offline copy were opened and checked; browser loaded all fifteen durations with readyState 4 and no errors; John Kani/Kitten playback advanced to 5.83 seconds, then was paused. The comparison tab is retained for Dave. Single-speaker references selected from identified interview responses; third-party reference excerpts are 15–25 words. Reference transcripts from ASR remain imperfect, especially Bonang's short radio clip. Original sources, bounds, hashes and exact model/runtime settings are retained locally.
+
+**Listening verdict received:** accent retention failed; Kitten was better than Silencio. See the newer audit above. The earlier Pocket/Cillian Americanisation verdict also remains in force. Local ratings do not update production favourites.
+
+Player: http://127.0.0.1:8800/accent-clones/ . Local-only output: `evaluations/new-engines/output/november-2026-south-africa/accent-clones/` (WAV/MP3, references, provenance, transcripts, audits, pinned cards, online/offline players).
+
+Authoritative model cards checked 11 November 2026: [Silencio 2](https://huggingface.co/BlueRoseLabs/Silencio-2/tree/20930f5f6a6bb564f2a8207152fd5c5d8eecff03), CC BY 4.0; [KittenTTS 2](https://huggingface.co/KittenML/kitten-tts-2/tree/c93cb7c271baa51d9ae8204d5277988906f235a2), Stellon Labs Community License, runtime kittenml 0.9.7, packed weights, default decoder pinned to `749d1c1a46eb10492095d68fbcf55691ccf137cd`.
+
+Reference sources: [John Kani / theatreVOICE](https://theatrevoice.com/audio/john-kani/), [Trevor Noah / 947](https://omny.fm/shows/947-breakfast/trevor-noah-makes-comedy-his-first-born-again), [Deon Meyer / Pagecast via True Crime South Africa](https://iono.fm/e/1504758), [Bonang Matheba / Lotus FM](https://omny.fm/shows/the-afternoon-take-over/bonang-matheba-interview).
+
+| Reference | Silencio 2 duration / render | Kitten 2 duration / render |
+|---|---:|---:|
+| John Kani | 13.12s / 3.1s | 17.28s / 112.3s |
+| Deon Meyer | 12.40s / 2.9s | 17.72s / 110.6s |
+| Bonang Matheba | 12.00s / 2.8s | 18.34s / 108.5s |
+| Cillian | 13.44s / 4.5s | 15.52s / 124.1s |
+| Trevor Noah | 11.84s / 2.8s | 15.44s / 88.9s |
+
+
+## 11 November 2026 — Rosie rejected; stop repeating Silencio/Peter; test real accent references
+
+Dave heard the ordinary/expressive A/B: **expression did not add much**. This is
+the verdict on these exact takes, not a claim that every emotion setting fails.
+**Rosie is disliked**, superseding her earlier short-take Like. Dave finds this
+particular **Silencio/Peter version tiresome**; stop using it for new auditions.
+Do not extend that voice verdict to every speaker in Kitten or Silencio.
+
+Dave requests Cillian's accent and multiple South African celebrity references,
+with enough alternatives to listen to all. Use genuine human references and
+label synthetic tests explicitly. The October Pocket/Cillian result remains
+“nice but very American”; do not present that failed accent as newly solved.
+Test the newer clone-capable models and leave accent retention to Dave's ear.
+
+## 11 November 2026 — Expressive A/B; verdict received above
+
+Dave requested Rosie (KittenTTS 2) and Silencio 2 with and without expression.
+Four local CPU clips of an original 48-word scene are ready at
+http://127.0.0.1:8800/expression-test/ . Rosie uses stable/untagged versus
+expressive preset with excited, nervous and sad tags; Silencio's same Peter
+reference uses no tags versus happy, fear and sad tags. Words, voice, seed,
+paragraph boundaries and joins matched; gain shared within each pair. No sound
+events, no cherry-picking. Completeness checked; Dave subsequently heard these and found little added value (see the newer verdict above).
+
+Cloning scope: of the five model families behind Dave's eleven liked CPU voices,
+Pocket 100M, Silencio 2 and KittenTTS 2 document cloning from reference audio on CPU.
+Phonon offers cloning through Gradium Studio and local use of exported voice files;
+that is not a verified wholly local WAV-to-clone path. Klein X1.5-Pro documents
+presets/blending, not audio-reference cloning. This describes model capability,
+not a claim that all custom-reference uploads are wired into the app. Current
+primary URLs, exact model/runtime versions and licence boundaries are in local
+`expression-test/cloning-support.json`; Studio was not called or priced.
+
 ## 10 November 2026 — Latest CPU ratings and collective shortlist
 
 Latest 416-word votes: Like Stuart Bell, Edwin, Freya, Imogen, Bill Boerst,
@@ -13,12 +134,73 @@ Do not silently substitute old Pocket/Kitten models or Aura for Flux. The three
 GPU entries remain audition-only until a full-book lane is integrated/verified;
 no GPU call or full book was authorized by this catalogue update. Default
 narrator is unchanged. Expression/casting boundaries and pinned official
-provenance are recorded in `narrators/README.md`.
+provenance are recorded in `../epub-to-audiobook-liked-voices/narrators/README.md` (implementation worktree).
 
+## 10 November 2026 — Longer Badawi reading: Jack currently leads
 
-**Last updated: 2026-09-19.** What works, what does not, and the wrong turns —
-recorded so nobody walks back down them. Every claim here was heard or measured,
-not reasoned about; where something is untested it says so.
+Dave's 416-word listening verdict: **Flux Jack is winning so far**. The Indian
+Maya accents do not work for **this title**; earlier short-sample Likes do not
+approve them for the book. This is not a general ban on Indian accents.
+Next audition is CPU-only with broader speakers, explicitly moving beyond Peter.
+No new hosted synthesis or full-book conversion is requested.
+
+CPU follow-up rendered the same 416 words in Pocket100M/Bill Boerst, Caro Davy,
+Stuart Bell; Klein X1.5-Pro/Arthur, Isabella, Harriet; and Phonon31M float32/Hugh,
+Edwin, Freya, Imogen. No Peter takes. All ten passed machine completeness review,
+with independent ASR review of two false missing-name flags. Latest verdicts are recorded above; local player `http://127.0.0.1:8800/cpu-more/`.
+
+## 10 November 2026 — Ordinary narration votes (heard)
+
+On the 154-word Badawi passage, Dave selected:
+
+- **Like:** VoxCPM2/Peter; Maya2/Siddhant and Nivedita; Klein/Arthur and Isabella;
+  Silencio2/Peter; Pocket100M/Bill, Caro and Peter; Phonon31M/Hugh;
+  KittenTTS2/Rosie; Deepgram Flux/Colin, Jack, Rufus, Conor and Sean.
+- **Maybe:** Pocket18M/Peter; Flux/Maeve and Kit.
+- **No:** this Fish Drama3/Peter take; Klein's native preset labelled Edmund;
+  Flux/Gemma. FastDec18M/Peter remains unscored.
+
+Maya's Indian English accents were **acceptable options at this short stage**;
+the longer Badawi verdict above now governs this title. Normal narration approval
+does not approve Irish or Zulu pronunciation, or erase earlier take-specific ears.
+
+Dave says Klein Edmund sounds like a woman and is not Edmund. The requested
+preset, returned name, index9 and served file were checked; a separate official
+Transformers-path render reproduces the waveform (correlation0.9999989). The
+audible identity discrepancy is **open**, not fixed. This built-in Klein preset
+is not Fish's Peter/Edmund reference clone. Details and local evidence: DECISIONS,
+`scratch/tts-nov10/klein-upstream-check.json` and the retained upstream WAVs.
+
+## 10 November 2026 — November name-test verdicts and ordinary-prose requirement
+
+Dave: Klein-TTS X1.5-Pro / Edmund was the only tested voice to get Siobhán right,
+but Dáil Éireann was wrong. Most of the other CPU open-weight samples badly
+pronounced Huawei and the Chinese names. All auditioned Deepgram Flux voices
+failed Irish pronunciation. These heard failures do not identify the technical
+cause or settle ordinary narration quality. Keep earlier engine-specific verdicts.
+
+Ordinary English must be a distinct, primary audition: most books Dave chooses
+are not dense with Irish or Zulu names. South African places and Zulu terminology
+belong in separate optional tracks. Evaluate GPU candidates as well as CPU options.
+
+## 29 October 2026 — Pocket Cillian CPU clone: nice, but very American
+
+Dave heard the six-paragraph152.50s Pocket4.0.1 / October main model / four-step
+Cillian clone and called it **“nice but very American.”** The voice is listenable;
+the desired Irish accent has not passed. All source words were machine-checked,
+which says nothing about accent authenticity. Bill Boerst and Caro Davy remain
+“pretty robust” accepted preset choices; this verdict is specific to Cillian.
+
+Dave requested the same canonical24.8s Cillian WAV and same458words through
+Chatterbox Turbo on CPU for a proper same-speaker comparison. The earlier Arthur
+control is not that comparison. The old CPU Chatterbox/Cillian rejection stays
+historical; a new listening verdict is required for this exact take. Both engines
+receive the same reference file; Turbo's documented conditioning uses15s for its
+token prompt and10s for its vocoder. Do not infer accent preservation from the
+reference identity or try unsupported Turbo CFG/exaggeration controls.
+The checked171.48s Turbo take is now at `scratch/tts-oct28/output/cillian/index.html`
+alongside unchanged Pocket152.50s. Two affected parts were regenerated; source
+words and reference are unchanged. Turbo listening verdict remains pending.
 
 ## September 2026 Breakthrough: Breeze 2 Cillian Murphy Irish Winner; Qwen3 Aiden Emotive Winner; Cloud GPU Portfolio
 

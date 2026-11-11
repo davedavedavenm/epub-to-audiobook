@@ -753,8 +753,15 @@ from liked_voices import LIKED_VOICES  # noqa: E402
 VOICES.update(LIKED_VOICES)
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
-# Kaggle GPU sample-renderer and this app use byte-identical text.
-from voice_sample import SAMPLE_TEXT as PREVIEW_TEXT, sample_text_for as _preview_text_for  # noqa: E402
+# Kaggle GPU sample-renderer and this app share a source and engine preparation.
+from voice_sample import (  # noqa: E402
+    SAMPLE_TEXT as PREVIEW_TEXT, SAMPLE_ID, SAMPLE_SHA256,
+    ORDINARY_TEXT, CHALLENGE_TEXT, sample_text_for as _preview_text_for,
+)
+from preview_manifest import sample_info as _preview_sample_info, write_manifest as _write_preview_manifest  # noqa: E402
+
+PREVIEW_SAMPLE = {'id': SAMPLE_ID, 'sha256': SAMPLE_SHA256, 'text': PREVIEW_TEXT,
+                  'ordinary_text': ORDINARY_TEXT, 'challenge_text': CHALLENGE_TEXT}
 
 
 def _fix_db_permissions():
@@ -2681,7 +2688,9 @@ def get_voice_preview(voice_id: str) -> Path:
                         'pocket', 'kitten', 'cpu_narrators'):
             # Direct preview from an isolated local engine service.
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
-            # ~1.5 s/word on CPU, so the ~135-word sample takes ~3.5 min. The old
+            # ~1.5 s/word on CPU. The shared sample has 147 raw / 175 expanded
+            # words. Kitten 2 takes longer, hence the CPU narrator's 900s floor.
+            # The old
             # 180s cap was SHORTER than that, so every chatterbox sample was
             # generated, timed out, and thrown away — the cache could never fill
             # (2026-07-14). Be generous; this is a background job.
@@ -2702,7 +2711,8 @@ def get_voice_preview(voice_id: str) -> Path:
                     "voice": voice_id,
                     "response_format": "mp3"
                 },
-                timeout=int(os.environ.get('PREVIEW_TIMEOUT', '600'))
+                timeout=max(900 if engine == 'cpu_narrators' else 0,
+                            int(os.environ.get('PREVIEW_TIMEOUT', '600')))
             )
             response.raise_for_status()
             with open(preview_path, 'wb') as f:
@@ -2723,6 +2733,7 @@ def get_voice_preview(voice_id: str) -> Path:
             with open(preview_path, 'wb') as f:
                 f.write(response.content)
 
+        _write_preview_manifest(preview_path, ptext)
         return preview_path
     except Exception as e:
         app.logger.error(f"Failed to generate preview for {voice_id}: {e}")
@@ -4913,7 +4924,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 @app.route('/')
 def index():
     """Main upload page."""
-    resp = make_response(render_template('index.html', voices=voices_for_client(), engines=TTS_ENGINES))
+    resp = make_response(render_template('index.html', voices=voices_for_client(), engines=TTS_ENGINES, sample=PREVIEW_SAMPLE))
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     resp.headers['Pragma'] = 'no-cache'
     resp.headers['Expires'] = '0'
@@ -5212,7 +5223,8 @@ def voices_for_client() -> dict:
     offers only previews already present in the persistent cache.
     """
     return {
-        voice_id: {**info, 'preview_cached': _preview_is_cached(voice_id)}
+        voice_id: {**info, 'preview_cached': _preview_is_cached(voice_id),
+                   **_preview_sample_info(PREVIEWS_DIR / f'{voice_id}.mp3')}
         for voice_id, info in all_voices().items()
     }
 
@@ -5447,6 +5459,7 @@ def list_voices():
     return jsonify({
         'voices': voices,
         'engines': TTS_ENGINES,
+        'sample': PREVIEW_SAMPLE,
         'cache': {
             'configured_total': len(configured),
             'configured_ready': sum(

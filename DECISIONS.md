@@ -1,5 +1,93 @@
 # Decisions — EPUB to Audiobook
 
+## 11 November 2026 — Shared audition standard and compact shortlist — Active
+
+Dave approved `narrator-standard-v1`: ordinary English opening, then country and
+Chinese/English/African names, dates, times, percentages, currency and quantities.
+All agents and general audition producers must use `sample_text_for(engine)` from
+`webapp/voice_sample.py`; see `AUDITION-STANDARD.md`. Irish/Zulu and book excerpts
+remain supplementary. Keep voice/naturalness verdicts separate from pronunciation.
+Historical hash-pinned reproductions retain their named legacy passage.
+
+Organize the catalogue without discarding history: Jack and Edwin first, other
+CPU and hosted Likes in collapsed groups, GPU auditions separate, full catalogue
+collapsed. Rosie and Silencio 2/Peter are no longer Likes; retain them in the
+changed-verdict archive. There are now **17 Likes: nine CPU, five Flux, three GPU
+auditions**. The older 19-Like snapshot below is historical. This does not approve
+new render quality, remove engine services, or change the production narrator.
+
+`TUNING-AUDIT-2026-11.md` distinguishes vendor defaults, intentional supported
+overrides and unresolved tuning. Do not promise every setting was optimal:
+Pocket's four decode steps, Phonon's .45 temperature and Klein's .18-second pause
+need controlled listening to establish preference. Turbo/Nano ignore CFG and
+exaggeration; original/multilingual Chatterbox controls must not be presented as
+Turbo controls. Preserve the promising Kitten/John take; accent drift is not
+diagnosed or solved by this audit.
+
+New cache manifests bind the approved source and prepared text to each audio
+file. Keep older cached clips playable and label them Earlier audition. Preview
+preprocessing must follow the same engine contract as books, including the new
+CPU narrators and Chatterbox Nano; no silent raw-text fallback on preparation
+errors. Full cache migration is incremental, not a global cache wipe.
+
+Settled, closed questions for this repo. This is not a changelog — STATUS.md and
+OPERATIONS.md hold the narrative (what happened, listening tests, incidents).
+This file holds the current, settled position on each question, and its status.
+
+**Before proposing to change, redo, or re-open something, check here first.**
+If a session settles a new question or reverses one below, update this file in
+the same session — don't just log it in STATUS.md and leave this stale.
+
+Status values: **Active** (current) · **Superseded** (replaced, kept for history)
+· **Evolving** (settled position exists but is expected to keep moving — check
+the linked doc for the latest measurement before relying on it).
+
+
+## 11 November 2026 — John Kani Kitten take outstanding initially; accent drifts — Active
+
+Dave calls the new `kitten_john_kani.mp3` **outstanding**, but hears it become American at the end. Trevor Noah is too American; the same objection applies to Deon, Bonang and Cillian. Preserve this exact John take/reference as the promising comparison baseline. This does not approve a stable South African narrator or a full-book run; no production/default promotion.
+
+Verified device: CPU, four threads, 18.96 seconds of audio rendered in 127.41 seconds. Exact upstream path uses one 234-character synthesis chunk, reference prompting enabled, one John reference throughout, stable preset/seed 42, packed lossless weights and stock decoder. There is no second-voice selection or chunk join at the ending. That narrows the implementation possibilities but **does not establish why the accent changes**. Weak accent retention within generation is a hypothesis; CPU execution has not been demonstrated to cause it, and GPU execution alone is not a proven remedy. Evidence: ignored `kitten-reference-retest/accent-drift-audit.json` and `listening-verdict.json`. Official model card rechecked: https://huggingface.co/KittenML/kitten-tts-2 ; exact prior model/runtime provenance remains with the samples.
+
+## 11 November 2026 — Phonon free clone/export route confirmed in documentation — Active
+
+Gradium's current pricing and official cloning guide document five **instant** clones on the $0 Free tier for noncommercial use. The official `xn-ptts` helper creates a voice through Gradium, exports its embedding as Phonon-compatible safetensors, and the local CPU runtime accepts that voice file. This is a documented free hosted-clone/local-render route, not a wholly local recording-to-clone path; the separate speaker encoder remains unreleased. Kaggle/Modal GPUs do not remove that dependency. Professional cloning is a different, paid offering.
+
+The service requires the speaker's consent, including for publicly available recordings. These celebrity clips must not be submitted with a false consent declaration. No Gradium API call, account-quota check, or actual custom-voice export has been verified here. Price/terms checked 11 November 2026. This supersedes the earlier 'not costed' status, not the lack of an account-level test. GPU use for this audition is acceptable to Dave, but this Kitten retest ran locally with no cloud charge.
+
+Primary evidence: [pricing](https://gradium.ai/pricing), [cloning guide](https://gradium.ai/content/how-to-clone-a-voice-create-custom-voice), [official clone/export helper, pinned commit](https://github.com/gradium-ai/xn-ptts/blob/32c1554a8ce442d672de90fc82700bbdcf08d918/scripts/clone-voice.py), [local Python runtime](https://github.com/gradium-ai/xn-ptts/blob/32c1554a8ce442d672de90fc82700bbdcf08d918/ptts-pyo3/README.md). Local model: `gradium/phonon-31m-en@92741c5b07d085ff840e26fea8ce43110b87852f`, Apache-2.0; ptts 0.5.0. Pinned files/hashes: ignored `kitten-reference-retest/phonon-evidence/provenance.json`.
+
+Kitten's reference retest has now been heard: John is outstanding but drifts American at the end; the other four remain too American. See the newer verdict above. No narrator promotion.
+
+## 11 November 2026 — Accent audition failed; Kitten preferred; reference selection inadequate
+
+**Listening verdict:** Dave says these clones sound American, except John Kani who sounds British; **Kitten did better than Silencio**. This is a relative preference within these takes, not approval that the requested accents were retained. Dave also rejects the quality of the recordings chosen as cloning inputs. No narrator/default promotion follows.
+
+**Verified audit:** South African references were only 5.97–9.20 seconds (Deon 5.97, Trevor 6.12, Bonang 7.50, John 9.20), with Cillian 24.80 seconds. The supplied reference hashes match. No full-scale sample clipping was found, which does not establish acoustic suitability. Kitten's stock decoder repeats references shorter than 6 seconds, so Deon's clip was repeated internally; its decoder uses at most 10 seconds, while language-model prompting encodes the full reference. This repetition is documented implementation behaviour, not proof of the accent failure's cause.
+
+Official pinned Silencio weights, Kitten packed language-model weights and Kitten speaker-encoder weights all SHA256-match upstream Hugging Face LFS metadata. Kitten 0.9.7 used lossless packed weights, the stock/default decoder, stable preset and reference prompting enabled. Silencio used its exact WAV path, float32/default temperature 0.3, with fresh per-path caches. These renders called the upstream implementations directly, not the production app. No preset fallback or disabled reference conditioning was found. No EQ, pitch shift or time stretching was applied. Provenance and machine findings: ignored `accent-clones/failure-path-audit.json`.
+
+**Cause remains open:** poor source selection and imperfect reference transcripts confound this test. Duration alone is not sufficient diagnosis: the 24.8-second Cillian reference also failed in these CPU models and has prior successful Fish/Higgs history. Do not declare these engines incapable of accents from this test, or claim reference cleanup will necessarily fix them. A follow-up should compare old versus carefully selected clean references on the same model/text/settings before another broad batch; Kitten is Dave's preferred starting model.
+
+**Why Phonon/Klein were absent (official docs rechecked 11 November):** Phonon 31M can consume precomputed voices locally, but its separate speaker codec is not released. The official Transformers documentation explicitly says this local path cannot clone from a recording. Gradium Studio supplies hosted instant cloning; exporting a compatible voice for local CPU use is a separate option, not a wholly local cloning path. Studio was not called, costed or proven in this session. Klein X1.5-Pro documents 17 preset voices and experimental same-language blending; no released recording-to-clone route was found. Explain this distinction before narrowing a future audition.
+
+Primary sources: [Phonon model card](https://huggingface.co/gradium/phonon-31m-en), [official Transformers implementation documentation](https://huggingface.co/docs/transformers/main/en/model_doc/gradium_phonon_tts), [Phonon Python runtime](https://github.com/gradium-ai/xn-ptts/blob/main/ptts-pyo3/README.md), [Klein X1.5-Pro model card](https://huggingface.co/klein-ml/Klein-TTS-X1.5-Pro). Exact installed model revisions remain in `expression-test/cloning-support.json`; this finding supersedes its weaker statement that no local Phonon route was merely documented.
+
+
+## 11 November 2026 — Rosie rejected; stop repeating Silencio/Peter; test real accent references
+
+Dave heard the ordinary/expressive A/B: **expression did not add much**. This is
+the verdict on these exact takes, not a claim that every emotion setting fails.
+**Rosie is disliked**, superseding her earlier short-take Like. Dave finds this
+particular **Silencio/Peter version tiresome**; stop using it for new auditions.
+Do not extend that voice verdict to every speaker in Kitten or Silencio.
+
+Dave requests Cillian's accent and multiple South African celebrity references,
+with enough alternatives to listen to all. Use genuine human references and
+label synthetic tests explicitly. The October Pocket/Cillian result remains
+“nice but very American”; do not present that failed accent as newly solved.
+Test the newer clone-capable models and leave accent retention to Dave's ear.
+
 ## November liked narrators integrated — Active (2026-11-10)
 
 Latest 416-word votes: Like Stuart Bell, Edwin, Freya, Imogen, Bill Boerst,
@@ -13,20 +101,543 @@ Do not silently substitute old Pocket/Kitten models or Aura for Flux. The three
 GPU entries remain audition-only until a full-book lane is integrated/verified;
 no GPU call or full book was authorized by this catalogue update. Default
 narrator is unchanged. Expression/casting boundaries and pinned official
-provenance are recorded in `narrators/README.md`.
+provenance are recorded in `../epub-to-audiobook-liked-voices/narrators/README.md` (implementation worktree).
 
+## Badawi longer reading: Jack leads; broaden CPU speakers — Active (2026-11-10)
 
-Settled, closed questions for this repo. This is not a changelog — STATUS.md and
-OPERATIONS.md hold the narrative (what happened, listening tests, incidents).
-This file holds the current, settled position on each question, and its status.
+After the 416-word comparison, Dave says **Deepgram Flux Jack is winning so far**.
+Maya's Indian accents **do not work for this particular title**, *An African
+History of Africa*. This supersedes the earlier short-sample suitability for
+Badawi; it is not a blanket rejection of Indian voices for every book.
+Dave requests more CPU-only candidates and is tired of repeated Peter voices:
+broaden the speaker selection, with no further Peter clones in this audition.
+New synthesis must be local CPU; the already-rendered Jack take may serve as the
+comparison reference without another hosted call. No full-book narrator/default
+or conversion decision has been made.
 
-**Before proposing to change, redo, or re-open something, check here first.**
-If a session settles a new question or reverses one below, update this file in
-the same session — don't just log it in STATUS.md and leave this stale.
+## Ordinary narration audition: Dave's November ratings — Active (2026-11-10)
 
-Status values: **Active** (current) · **Superseded** (replaced, kept for history)
-· **Evolving** (settled position exists but is expected to keep moving — check
-the linked doc for the latest measurement before relying on it).
+Dave rated the new 154-word ordinary passage in the local player. Exact exported
+votes are retained locally as `dave-ratings-2026-11-10.json` beside the audio.
+These are **ordinary-narration verdicts**, not regional pronunciation approvals:
+
+- **Like (GPU):** VoxCPM2/Peter; Maya2 Native/Siddhant and Nivedita.
+- **Like (CPU):** Klein X1.5-Pro/Arthur and Isabella; Silencio2/Peter;
+  Pocket100M/Bill Boerst, Caro Davy and Peter; Phonon31M/Hugh; KittenTTS2/Rosie.
+- **Like (hosted):** Deepgram Flux/Colin, Jack, Rufus, Conor and Sean.
+- **Maybe:** Pocket18M/Peter; Deepgram Flux/Maeve and Kit.
+- **No:** this Fish Drama3/Peter take; Klein's preset labelled Edmund;
+  Deepgram Flux/Gemma. FastDec18M/Peter is unscored, not rejected.
+
+**At the short-sample stage, Indian accents were acceptable options.** Dave clarified that his
+question about Maya was asking why those voices were selected, not rejecting
+them. The later longer reading above rejects them for Badawi specifically. Do not
+replace them with speculative accent clones. Their original inclusion tested the
+newer official GPU model in its native voices.
+
+**Klein Edmund identity remains disputed:** Dave says this take sounds like a
+woman and is not Edmund. Browser source and HTTP/audio hashes match the intended
+file. The pinned official `AutoModel.from_pretrained` path was rerun for all three
+Klein voices: requested/returned names and speaker indices are Edmund9, Arthur10,
+Isabella7. Fresh Edmund audio has identical duration and waveform correlation
+0.9999989 with the audition (tiny numerical differences, not byte-identical).
+This rules out a simple file/voice-selection swap in this harness; it does not
+validate the audible identity or explain the upstream voice/gender discrepancy.
+Klein's native preset is also distinct from Fish's Peter/Edmund clone. Do not
+claim this fixed, relabel it as another known speaker, or invalidate Dave's ear.
+
+## November audition pronunciation verdict; separate ordinary narration from name tests — Active (2026-11-10)
+
+Dave heard the November audition. Of the tested voices, **Klein-TTS X1.5-Pro / Edmund**
+was the only one he identified as pronouncing **Siobhán** correctly, but it still
+failed **Dáil Éireann**. Most other open-weight CPU samples badly pronounced Huawei
+and the Chinese names. **All tested Deepgram Flux voices failed Irish pronunciation.**
+These are listening verdicts about the exact retained takes, not a proven root cause,
+not a blanket rejection of ordinary narration, and not a reversal of earlier heard
+Higgs/Breeze Irish results. No general pronunciation winner is established.
+
+Dave explicitly requests a **separate ordinary-English passage to judge voice quality**:
+most of his books will not be full of Irish or Zulu names. Regional-name challenges
+must remain separate, optional comparisons. New auditions should include better/newer
+or more efficient GPU options on free Kaggle or credit-only Modal, alongside CPU;
+CPU locality alone is not the selection criterion. The zero-cash budget remains.
+Audio, copyrighted extracts, players and scratch scripts remain local/ignored; any
+authorized cloud rendering uses private jobs, never public GitHub audio uploads.
+
+**Modal authentication and zero-cash evidence (2026-11-10):** the existing saved
+CLI profile already authenticates to `davedavedavenm`; ordinary renders and usage
+checks do not require another browser sign-in. The signed-in dashboard was read
+this session: **USD0 custom net-spend limit, USD30 usage limit and USD30 included
+credits**. CLI billing summaries and app/container listings work. Latest public
+SDK1.6.3 (PyPI checked this date) and its documented Workspace API expose billing
+but no workspace net-spend-limit getter; environment budgets are a different
+control and must not be represented as that getter. Use the saved CLI for routine
+work; do not make Dave sign in again merely to render another bounded sample.
+Official boundary: https://modal.com/docs/guide/budgets and
+https://modal.com/docs/sdk/py/latest/Workspace. No credential or budget changed.
+
+**New GPU audition boundary:** pinned official Fish Drama3, VoxCPM2 and Maya2
+Native ran on Modal credits. These are audition takes, not approved production
+engines. VoxCPM2's seed42 Zulu take has a large omission and is retained/flagged;
+its ordinary passage passes the machine completeness screen. Deepgram Kit's
+Zulu ending is also flagged; no automated pronunciation verdict follows.
+Kaggle's T4 CUDA probe succeeded, but L4 requests did not establish a usable L4
+lane (initial model jobs received CPU). Do not label downloaded older successful
+T4 output as proof that a later L4X1 request succeeded. Full-book lane suitability
+and new regional-pronunciation verdicts remain open; ordinary listening votes are
+recorded above.
+
+## Pocket Cillian is nice but very American; same-reference Turbo CPU comparison delivered — Evolving (2026-10-29)
+
+Dave heard Pocket/Cillian152.50s and called it **“nice but very American.”**
+Cloning/word completeness work, but Irish accent fidelity is not accepted.
+This does not reject the approved Bill Boerst/Caro Davy preset readings.
+Dave explicitly requested reopening Chatterbox Turbo/Cillian on the same six
+paragraphs, CPU only, using the exact same canonical reference file as Pocket
+for a same-speaker comparison. The earlier CPU Cillian rejection remains its
+historical listening boundary until this new take is heard. No parameter,
+reference or EQ workaround is assumed to restore the accent by reasoning.
+
+**New machine-checked Turbo/Cillian sample delivered:**171.48s versus the
+unchanged152.50s Pocket take, same458words/six paragraphs and identical canonical
+24.8s WAV (SHA256 `30606e0686349c48227ec51702e095c8ea269c52b81c724401d1a055617c5e3c`).
+Direct official Turbo code `5de7a54aa4e5e2baadb0182dde554908b48b85c2`, model
+`749d1c1a46eb10492095d68fbcf55691ccf137cd`, source/image fingerprints as below.
+Stock temperature0.8/top-p0.95/top-k1000/repetition-penalty1.2; no unsupported
+CFG/exaggeration tuning. Native PerTh watermark and reference normalization.
+Turbo internally conditions its speech prompt on the first15s, vocoder on10s,
+and voice embedding on the full file; the input WAV itself is identical to
+Pocket's. Same-source reference does not promise identical internal conditioning.
+
+Initial12 complete-sentence groups:10 strict passes; “claimed/claim” and
+“believed/believe” flags. Seeds43/44 for the short “claimed” group still failed
+small, medium and base recognizers. Rather than changing any word, paragraph4
+was regenerated as a single59-word input (within the existing speech-token cap;
+~19s audio). Seed42 failed other word checks; seed43 matched every source word.
+The other affected group (“believed”) uses seed43, with an independent medium
+exact transcript;44 also passes. Final11 retained units reconstruct all six
+paragraphs exactly, with no unmatched insertions/substitutions/omissions in the
+retained unprompted ASR matches. All rejected/raw/spare takes preserved. This
+is a word-gated assembly, not an automatically error-free engine claim.
+
+Zorin CPU only,4core/6GiB caps,nice10,CUDA hidden,network disabled,cached model
+read-only; own three ephemeral containers removed, production UI/Turbo/Nano
+health200 and UI~0.02s. No cloud calls/spend or production/default changes.
+Output gain only, .18s internal/.5s paragraph joins,192k MP3; no speed/pitch/EQ
+change. Final MP3 SHA256
+`37248c0af9c67af26c92ae4920b967ab2ecab9e113bf2f754ac9791e1f8cc70c`.
+Verified hashes/full decode/HTTP plus browser playback/near-end seek, both
+paragraph controls and displayed458words. Turbo accent/likeness still needs
+Dave's listening verdict; the previous CPU rejection is not silently reversed.
+Player: `scratch/tts-oct28/output/cillian/index.html`, ignored offline copy
+`evaluations/new-engines/output/october-2026-audition/cillian/listen.html`.
+Exact source/parameter authority: [pinned Turbo source](https://github.com/resemble-ai/chatterbox/blob/5de7a54aa4e5e2baadb0182dde554908b48b85c2/src/chatterbox/tts_turbo.py)
+and [MIT model card](https://huggingface.co/ResembleAI/chatterbox-turbo), read29 October.
+
+## Pocket CPU cloning unblocked; Cillian, Turbo and Deepgram same-text gate delivered — Evolving (2026-10-29)
+
+**Current listening boundary:** Dave calls the longer Bill Boerst and Caro Davy
+Pocket readings “pretty robust” and a possible new CPU winner; the requested
+Turbo comparison is ready but has no listening verdict yet. Faster Fish/Cillian
+is acceptable, with weaker accent, artefacts, voice changes and background noise.
+This is not a blanket rejection of the stronger earlier Fish recipe.
+
+- **Hugging Face access resolved legitimately:** khpi5's user/root HF caches,
+  selected MCP configuration/runtime locations and central secret-store HF slot
+  yielded no active alternative credential (the stored HF_TOKEN slot was blank).
+  The existing Windows token authenticated as `davedavem` but initially returned
+  403/GatedRepo, explicitly “not in the authorized list”. Dave completed the
+  model-access conditions himself; the exact checkpoint then downloaded. No gate
+  bypass, public-preset weight substitution or credential copied into chat/repo.
+- **Actual Pocket cloning, CPU only:** official Pocket4.0.1 code
+  `a922b912dfa366975294afb568d815b305acde5d`, `english_2026-10` cloning weights
+  `kyutai/pocket-tts@db04f0e653473e5c7333c69686ac92b7460b0c1d`, file
+  `languages/english_2026-10/model.safetensors`, 219029196 bytes,
+  SHA256 `bc96b82436c5ec00d3118ef3b01bc3358423e1766ecae3dca0aeea84789e7d74`.
+  Model reports `has_voice_cloning=True`; all parameters on CPU, CUDA hidden,
+  four CPU threads, temperature0.3 (October's documented recommendation), four
+  decode steps, seed42. No quantization option selected. Full24.8s canonical
+  Cillian reference SHA256 `30606e0686349c48227ec51702e095c8ea269c52b81c724401d1a055617c5e3c`,
+  exported voice conditioning reused with fresh state per paragraph. Reference
+  is below the documented30s truncation boundary. Windows Ryzen CPU, six
+  paragraphs/458words, **152.50s assembled audio**,210.436s synthesis plus6.25s
+  conditioning. All six pass strict word comparisons; no regeneration.
+  Code MIT, weights CC BY4.0 with published use restrictions; model access was
+  granted through the provider. **Dave’s Cillian verdict: “nice but very American.”** The voice is listenable,
+  but the desired Irish accent has not passed; do not promote it as an accent match.
+- **Turbo control:** same text, established Arthur/UK Minter reference (different
+  speaker, not a controlled same-speaker engine comparison). Official pinned
+  Chatterbox code `5de7a54aa4e5e2baadb0182dde554908b48b85c2`, Turbo350M weights
+  `ResembleAI/chatterbox-turbo@749d1c1a46eb10492095d68fbcf55691ccf137cd`,
+  runtime source SHA256 `2f27e8ff2fa35181fdd2849367fb96ecc2cb87a1088ca7520c8bd51946599f08`;
+  existing image `sha256:aa8ab718456dd82b9e840ecf5bb4473733e83e692c34bfb37719cdf7c9b7b809`.
+  Direct official `from_local`, CPU only on Zorin, separate ephemeral containers,
+ 4CPU/6GiB caps, nice10, network disabled, cached weights read-only. Defaults:
+  temperature0.8/top-p0.95/top-k1000/repetition-penalty1.2, native PerTh watermark,
+  reference normalization enabled. Turbo's source explicitly ignores CFG,
+  exaggeration and min-p; no claim those controls tuned this result. MIT.
+  Initial15 groups used seed42; one “claimed/claim” flag was replaced with seed43.
+  The final paragraph's “belief/beliefs” flag was repaired by generating the
+  complete39-word paragraph as one piece (seed43), avoiding four unnecessary
+  short resets. Alternate44 takes also preserved. Final **168.90s audio**,
+  all selected groups strict-pass. “centre/center” is explicitly treated as the
+  same spoken word, an orthographic normalization rather than a missing-word waiver.
+- **Deepgram reinstated:** it was missing from the earlier retained-engine table.
+  Direct balance API verified one project/one distinct USD balance,
+  **USD126.95741**,29 October20:41UTC; fresh20:47 read unchanged (billing can lag).
+  Pandora (`aura-2-pandora-en`) previously had an outstanding listening verdict;
+  the new same-text six-paragraph take is **164.22s**, all six strict-pass, no
+  regeneration. Official REST API, linear16/WAV/24kHz, no unsupported sampling
+  knobs or speaker substitution. Response model UUID
+  `fa95fd3d-06dd-4893-a975-87f597883dae`, request/model headers retained. The
+  provider counted2673 input characters: at current PAYG Aura2 USD0.030/1000,
+  the sample is **USD0.08019 credit usage estimated**, not a zero-price API call.
+  Immediate balance delta was0, so do not label that a settled zero charge.
+  Checked balance with USD1 reserve before requests, no paid fallback/top-up.
+  These are finite existing credits, not a recurring free allowance. For a
+ 100k-word/600k-character book, the current PAYG scenario is USD18 credits before
+  retries; count an actual book's characters for an exact input-cost estimate.
+- **Verification:** same source words/order asserted for all five players
+  (new Pocket/Cillian, Turbo/Arthur, Pandora; existing Bill/Caro). Unprompted
+  small and, where disputed, independent medium ASR compares omissions,
+  additions and substitutions. Final hashes/full MP3 decode/HTTP delivery and
+  browser playback, seeking and paragraph controls checked. Gain only,192k MP3;
+ .5s paragraph joins and .18s internal Turbo joins. Rejected/raw takes kept.
+  All own CPU containers removed; UI/Turbo/Nano health200, UI latency~0.02s.
+  Timing used different CPUs, so it is not a controlled engine-speed ranking.
+  No application source, deployment, default narrator or cloud-GPU state changed.
+
+**Free GPU spreading:** preserve source/chunk hashes and the same full-quality
+recipe across providers; compatible workers may render different saved chunks,
+then pause/resume across free quotas and credit resets. Do not pool VRAM across
+providers or mix Drama3/S2Pro/altered serving recipes as one narrator. Native
+Drama3's documented minimum48GB excludes the current ordinary Kaggle2x16GB T4
+allocation and Colab T4/L4 as configured. Original native Drama3 can use included
+Modal credits and any genuinely available compatible Colab allocation; that
+allocation/quota is not guaranteed. The already accepted S2Pro/Cillian recipe
+has separate Kaggle2T4 and ColabL4 paths. No new cloud run was started here.
+
+Evidence/player: ignored `scratch/tts-oct29/cpu-compare/`,
+`scratch/tts-oct28/output/cpu/index.html`, offline
+`evaluations/new-engines/output/october-2026-audition/cpu/listen.html`.
+Official sources read29 October: [Pocket pinned README](https://github.com/kyutai-labs/pocket-tts/blob/a922b912dfa366975294afb568d815b305acde5d/README.md),
+[Pocket model/access/licence](https://huggingface.co/kyutai/pocket-tts),
+[Turbo pinned source](https://github.com/resemble-ai/chatterbox/blob/5de7a54aa4e5e2baadb0182dde554908b48b85c2/src/chatterbox/tts_turbo.py),
+[Turbo model](https://huggingface.co/ResembleAI/chatterbox-turbo),
+[Deepgram REST/limits](https://developers.deepgram.com/docs/text-to-speech),
+[voices](https://developers.deepgram.com/docs/tts-models),
+[balance API](https://developers.deepgram.com/reference/manage/billing/list),
+[pricing](https://deepgram.com/pricing),
+[Kaggle current hardware](https://www.kaggle.com/discussions/product-announcements/735239),
+[Fish hardware](https://speech.fish.audio/install/).
+
+## Audiobook cash budget is zero; keep the broader acceptable engine portfolio — Active (2026-10-29)
+
+Dave clarified: **"I want low cost ... I do not want to pay for this."**
+Zero out-of-pocket cost is the governing requirement for further audiobook
+work. The previous GBP2/book paid fallback is superseded by this instruction;
+the temporary USD2 extra allowance applied only to the completed audition.
+
+- Prefer local CPU; otherwise explicitly selected free Kaggle quota, a genuinely
+  free hosted endpoint, or verified included Modal credits. Stop/checkpoint when
+  free capacity runs out. No auto-top-up, paid endpoint substitution, paid GPU
+  fallback or out-of-pocket overage. Slower, resumable runs are acceptable.
+- Modal remains an option, but its credit figure alone is insufficient to
+  establish a worst-case zero bill: billing data can lag. Its official separate
+  **Workspace spend limit** caps net charges after credits, and supports stopping
+  chargeable work while credit-covered work may continue. Require a verified
+  zero net-spend boundary before further Modal generation under this policy.
+  Dave subsequently supplied the Firefox Usage-limit screenshot: current
+  **Workspace spend limit USD0**, Usage limit USD30, USD24.40 credits used and
+  USD0 charges. This verifies the credit-only compute boundary for the approved
+  faster Fish test. No persistent volumes: the page explicitly excludes their
+  continuing storage charges from the workload stop. [Official budgets](https://modal.com/docs/guide/budgets).
+  **CLI follow-up:** installed client 1.5.5 was checked against latest stable
+  **1.6.3 (2026-10-27)**. The official wheel was checksum-verified and 1.6.3
+  installed in an isolated local environment for command/API inspection.
+  Billing still exposes only rates/report/summary; workspace settings expose
+  image-builder-version/default-environment, with no supported net-spend setter.
+  Existing CLI authentication works independently of Dave's Firefox session.
+  This agent did not change the dashboard setting. A lower-level
+  environment-budget read did not return and was cancelled; it is not evidence
+  of a working supported budget API. [Release notes](https://modal.com/docs/sdk/py/releases).
+- The recent two-engine sustained test was a narrowed experiment, not a
+  rejection of every other engine. **Retain Pocket, Phonon/Hugh, Kitten and
+  Ming's instruction-guided mode** with Dave's exact recorded verdicts. Ming's
+  tinny/artefacty cloning output and Kitten's disliked Saoirse voice do not
+  establish a blanket rejection of those engines. Fish Drama 3 retains its
+  positive short-quality verdict and unresolved reliability/cost boundary.
+- Existing accepted/bounded alternatives also remain: Nano/Beatrice, conditional
+  Turbo, Gemini/Achernar (dedicated unbilled project; slow quota-paced books),
+  Qwen/Aiden, earlier Fish S2 Pro/Cillian, Breeze/Cillian, Higgs/Cillian and the
+  still-open CosyVoice/F5/TADA evaluations at their recorded quality boundaries.
+  Historical supersession for one book is not a universal engine ban. Do not
+  reopen actual closed rejections such as Piper, Audio8 or NeuTTS Air implicitly.
+- Pocket's pinned public October checkpoint offers **21 English presets**;
+  Peter Yearsley was the controlled comparison voice, not a one-voice engine
+  limitation. Custom cloning uses a separate gated checkpoint. Access was subsequently
+  granted on29 October and CPU cloning verified; see the newer entry below.
+  Six additional preset auditions were generated on local CPU with the same
+  main100M/four-step/temperature0.3/seed42 settings; no cloud spend.
+  **Dave chose Bill Boerst and Caro Davy; other voices in this audition batch
+  were not preferred.** This is an 84-word audition verdict, not a whole-book
+  continuity pass or rejection of the Pocket engine.
+- Current Fish docs expose **`s2.1-pro-free`**, priced at zero and supporting
+  voice selection, subject to fair-use limits. It is S2.1, **not Drama 3**, and
+  neither personal whole-book fair-use capacity nor the exact Cillian result is
+  verified. Fish's hosted cloning guidance requires permission, explicitly
+  including celebrity voices. Do not promise hosted Cillian acceptance or send
+  that reference as an unannounced API experiment. No Fish API key is configured
+  in this local environment/repo. [Models](https://docs.fish.audio/developer-guide/models-pricing/models-overview),
+  [quickstart](https://docs.fish.audio/developer-guide/getting-started/quickstart),
+  [cloning requirements](https://docs.fish.audio/developer-guide/best-practices/voice-cloning).
+
+## Faster Fish/Cillian: word-gated six paragraphs delivered; lower credit cost is provisional — Evolving (2026-10-29)
+
+**Delivered machine-checked sample:** 458 original words / six paragraphs,
+**192.341 s**, same full 24.8-second Cillian reference and Drama3 backbone weights.
+**Dave's verdict:** acceptable (“it's ok”), but weaker accent, artefacts, voice
+changes and background noises. Retain this bounded option; it does not replace
+the stronger earlier Fish listening result.
+No production engine/default/deployment changed.
+
+- Runtime: SGLang-Omni Apache2 source `d9c3e708a613515e189134de119209f443c9ae19`,
+  SGLang0.5.22 / Torch2.14.1+cu130 / Python3.12. Maintainer-recommended registry
+  image `hongccc/sglang-omni@sha256:06ed306707bcf3d9e9beb5ba7ce66f09a666cac11c23455ece50c34199c0e985`
+  failed its own current requirements checker (eight unrelated base-image
+  conflicts). A clean environment installed the pinned source's `[fishaudio]`
+  extra using its documented protobuf override; the checker and CPU import
+  probes passed before GPU allocation. Final cached image
+  `im-H6hIvKQ80wrEmBQ5hrWfK0`; frozen dependency list retained in build evidence.
+- Backbone `fishaudio/drama-3@b2b5ee998034b2975720906c815e7fb0e9f007bd`,
+  BF16 residual / block-FP8 experts; **no int4 substitution**. Codec pinned to
+  `fishaudio/s2-pro@1de9996b6be38b745688de084d87a5633f714e4e` / codec.pth,
+  runtime FP16 decoding. Actual Drama3 model licence remains the Fish Audio
+  Community License rather than an assumed Apache grant; the earlier licence
+  boundary is unchanged. No hosted cloning upload/API experiment.
+- Reference SHA256 `30606e0686349c48227ec51702e095c8ea269c52b81c724401d1a055617c5e3c`;
+  transcript from the existing independent reference audit. Supported **reference
+  sampler**, temperature1.0 / top-p1.0 / epsilon-cutoff0.001 / no request top-k;
+  default argmax repetition fallback. This runtime rejects fixed seeds. Main
+  token top-k30 is explicitly warned against in upstream source/docs; its
+  semantics differ from the old native runtime. Engine request cap4,
+  first-frame graph cap4, prefill graphs disabled by documented control;
+  decode graphs/fused tower remain enabled, memory fractions stay0.70/0.10.
+- The first optimized-sampler experiment incorrectly carried the native low
+  temperature0.3/top-p0.7 into this runtime. It measured40.65s serial /12.11s
+  batch4, but only22/30 candidate clips passed strict ASR; whole clauses were
+  missing. **Rejected as a complete result or valid book-cost estimate.**
+- The documented reference recipe measured **59.014s serial** (first call28.75s,
+  including first-request compilation) and **12.726s batch4**, startup164.205s.
+  Strict pass counts:12/15 serial,11/15 batch. Four batch takes failed on
+  substitutions/additions; each had a passing serial counterpart. The final
+  assembly selects11 batch +4 serial takes from this exact recipe, with every
+  normalized source word matched by an unprompted small/base/independent-medium
+  transcript, no unmatched insertions or substitutions, healthy audio and
+  source/hash/order checks. Do not call the ungated recipe automatically reliable.
+  All rejected candidates retained. Gain only; .18s internal/.50s paragraph joins.
+- **Cost, measured29 October:** four experiment/build apps total **USD0.72241802
+  metered**, covered by credits/allowances; workspace bill remains **USD0**.
+  No persistent volumes created. Both GPU apps and both build apps stopped;
+  container list empty. No cash was authorized or charged for these tests.
+- **Book scenario, not a full-book measurement:** batch12.726s + the four selected
+  serial replacement calls7.173s = **19.899s synthesis for458 words**, about5.37x
+  less synthesis time than the prior native retained takes106.844s. At the
+  measured reserved H100+4CPU+64GiB rateUSD4.6512/h, this projects **USD5.61
+  credits per100,000 words**, plus startup, QA idle time, extra retries and I/O.
+  Startup alone~USD0.21; CPU QA ran after GPU shutdown here. Actual adaptive
+  batching/retry overhead and chapter-length quality remain unmeasured. This
+  makes the old USD50–60 native estimate inappropriate for this serving path,
+  but does **not** establish a guaranteed price or whole-book listening pass.
+  Cash remains zero through included credits and the verified provider spend0
+  guard; stop/checkpoint at quota, no paid fallback.
+
+Player: `scratch/tts-oct28/output/selected/index.html` (new Cillian, Bill, Caro;
+old native Cillian control; exact text). Final MP3 SHA256
+`bdd8918afad54671b81047c664def76cc13b69f8c3edba14d3a7bb00fcb97bd5`.
+Verified full decode, HTTP/hash delivery, browser metadata/playback/near-end seek.
+Evidence: ignored `scratch/tts-oct29/fast-fish-reference/` and selected player
+manifest. Sources read29 October: [pinned cookbook and sampling controls](https://github.com/sgl-project/sglang-omni/blob/d9c3e708a613515e189134de119209f443c9ae19/docs/cookbook/fishaudio_drama3.md),
+[installation](https://github.com/sgl-project/sglang-omni/blob/d9c3e708a613515e189134de119209f443c9ae19/docs/get_started/installation.md),
+[dependency pins](https://github.com/sgl-project/sglang-omni/blob/d9c3e708a613515e189134de119209f443c9ae19/pyproject.toml),
+[model licence](https://huggingface.co/fishaudio/drama-3/blob/b2b5ee998034b2975720906c815e7fb0e9f007bd/LICENSE),
+[Modal CUDA support](https://modal.com/docs/guide/cuda).
+
+## Bill Boerst and Caro Davy retained; six-paragraph Pocket follow-up machine-checked — Evolving (2026-10-29)
+
+Dave chose **Bill Boerst and Caro Davy** from the seven-voice audition; other
+voices in that batch were not preferred. Two longer readings now use the exact
+same six original paragraphs (458 words), October main100M / four steps /
+temperature0.3 on local CPU: Bill **158.82 s**, Caro **176.26 s**. Dave heard these longer readings and called both **“pretty robust”**; Pocket
+may be the new CPU winner, pending the requested same-text Turbo comparison.
+
+Each paragraph has an exact normalized unprompted ASR match in small, base or
+independent medium, including checks for insertions and substitutions. Bill's
+original paragraph6 was flagged as “beliefs”; Caro's original paragraph4
+was flagged as “influence” rather than “influenced”. Both were replaced with seed43 takes, preserving the
+originals; all other paragraphs use seed42. Other primary-recognizer differences
+were resolved by independent full-passage/crop transcripts, not missing-word
+waivers. Source/group order, source hashes, final MP3 hashes, full decode,
+HTTP delivery and browser metadata/playback/near-end seeking were verified.
+Gain only; 0.5-second paragraph joins. Preset/source licensing remains CC0.
+Player: `scratch/tts-oct28/output/selected/index.html`; ignored offline copy:
+`evaluations/new-engines/output/october-2026-audition/selected/listen.html`.
+The existing six-paragraph native Fish/Cillian control is included.
+
+## Cillian word-gated six-paragraph and sustained comparison delivered; new listening verdict pending — Evolving (2026-10-29)
+
+Dave authorised the six-paragraph Cillian repair first, followed by the same
+longer passage for Fish/Cillian and Pocket four-step, with every word checked.
+He subsequently authorised **up to USD2 additional Modal compute** beyond the
+initial bounded run; this is sample work, not an ongoing cloud-render permission.
+
+- **Machine-verified, awaiting Dave's new listening verdict:** Cillian reads all
+  six original paragraphs / 458 words in **213.19 s**; the continuous Breakneck
+  ch.1 selection / **1,845 words, 17 paragraphs** runs **875.02 s** with
+  Fish/Cillian and **636.40 s** with Pocket/Peter/four steps. Both longer
+  readings use exactly the same prepared words. No Irish glossary entries occur.
+- **Fish recipe remains experimental:** unchanged native Fish Speech 3.0.0,
+  code `541566932abbaebcb0a40e562a1f846738383f38`, Drama 3 weights
+  `b2b5ee998034b2975720906c815e7fb0e9f007bd`, saved full 24.8 s reference;
+  temperature **0.3**, top-p **0.7**, top-k **30**, single-chunk requests,
+  `max_new_tokens=0`, seeds 42 with bounded 43/44 repairs. Lower temperature
+  alone failed the controlled paragraph-six diagnostic. Sentence groups
+  (target 55 words) plus smaller complete-sentence replacements retained
+  **15 groups** for the six paragraphs and **51 groups** for the longer reading.
+  Failed takes remain banked. A checked assembled sample does not establish
+  unattended book reliability; the cause of collapse remains open.
+- **Completeness evidence:** each retained waveform hash and source hash was
+  checked; unprompted small-model ASR and independent base crops cover every
+  source position. Medium-model independent checks resolve disputed Pocket
+  words and the Cillian six-paragraph opening of "Sophie had heard". Explicit
+  orthographic equivalences cover compounds, US/UK spelling and acronym
+  tokenisation; reigns/rains is a spoken homophone. Primary ASR insertions and
+  substitutions were reviewed, including the normaliser's added "and" when
+  ASR writes the year as digits. None of these reviews changes spoken text or
+  silently waives a content omission. Assembly preserves full chunks, adds
+  0.18 s group / 0.50 s paragraph gaps and applies gain only; no EQ/compression.
+- **Costs remain material:** the longer Fish recording's retained synthesis
+  took **431.78 GPU s**; all 71 candidate synthesis calls took **605.26 s**.
+  At the verified H100 + 4 CPU cores + 64 GiB rate, **USD4.6512/runtime-hour**,
+  these extrapolate to roughly **USD30 / USD42 per 100,000 words** respectively,
+  before cold starts and other billed overhead. Budget **USD50–60 per
+  100,000-word book** for the current checked workflow; this is an estimate,
+  not a measured book price, and fails the project's GBP2/book preference.
+  Pocket remains CPU-only with zero cloud compute charges. Credits affect
+  cash billed, not those underlying compute costs. Later runs banked audio and
+  stopped the GPU before local ASR to avoid paying for the word-check wait.
+  Final per-app reports currently total **USD1.5115** for all four Oct 29 apps;
+  the workspace summary still reports **USD0 billed**, with credits applied.
+  Metering can lag. All four apps are stopped and container inventory is empty.
+- Player, exact texts, paragraph jumps and word proofs: ignored artifact
+  `evaluations/new-engines/output/october-2026-audition/reliability/listen.html`.
+  No application source, product voice, default, deployment, or locked S2 Pro
+  production recipe changed. The earlier positive short-Cillian verdict below
+  stays bounded to that earlier clip until Dave hears these new recordings.
+
+## Longer October audition: Fish/Peter and Pocket four-step heard and liked; Cillian short audition liked — Evolving (2026-10-29)
+
+Dave requested the same five/six-paragraph passage for Fish and Pocket four-step,
+with ordinary book narration taking priority over Irish names, and asked whether
+the saved Cillian Murphy reference could be cloned.
+
+- Six paragraphs / **458 words**: three from the existing local Breakneck ch.1
+  fixture, three from the existing archived Sophie's World "Fate" text. Exact
+  prepared words are identical for both full readings. Pocket's accepted Irish
+  spellings are retained in the prep, but none of those names occur here.
+- **Machine-checked outputs:** Fish Drama 3 / Peter **207.09 s** and Pocket 4
+  100M / Peter / four steps **148.31 s** (exact durations in the artifact manifest).
+  Every retained paragraph is aligned to its source; independently cropped ASR
+  resolves primary-transcriber errors. No missing source words remain detected
+  in either delivered reading. On October 29 Dave heard the delivered samples:
+  **"those voices are good too"**. This accepts the six-paragraph audition's
+  voice quality; a sustained chapter/book verdict remains open.
+- Fish's long second paragraph initially lost text; replaced using native
+  automatic chunking / seed 43. The rejected first takes remain banked. Other
+  retained Fish paragraphs use seed 42; sampling remains native 0.7/0.7/top-k 30.
+  Pocket is local CPU / four threads / temperature 0.3 / seed 42 throughout.
+- **Cillian recordings still exist and decode:** current long WAV is **24.8 s**,
+  SHA256 `30606e0686349c48227ec51702e095c8ea269c52b81c724401d1a055617c5e3c`;
+  clean crop **9.5 s**, SHA256
+  `12447e07a292a13c62f8eb1159450dd914396e55581b4a91a08f0b63416f7d8a`.
+  Do not describe the current long file as 28 seconds solely from older docs.
+  Transcripts were independently checked. The new Fish/Cillian **first-paragraph
+  audition (28.75 s)** passes word completeness; longer attempts using both
+  references fail and are excluded from the finished full readings. On October
+  29 Dave heard the short test and said **"cillian surpriisngly good"**. That is
+  a positive listening verdict on the exact short voice audition, not evidence
+  that the failed longer takes are fixed or that a full Cillian book is reliable.
+- **Historical access blocker (resolved later29 October):** authenticated HEAD for its
+  exact October cloning checkpoint returned HTTP 403 / `GatedRepo`. The working
+  public preset-only model reports `has_voice_cloning=False`. Do not bypass its
+  gate or claim that a working HF token alone enables a Cillian clone. Dave later
+  granted account access; the pinned cloning checkpoint now downloads legitimately.
+- Player / exact text / checks: ignored artifact
+  `evaluations/new-engines/output/october-2026-audition/long/listen.html`.
+  No product voice, narrator default, deployment or locked S2 Pro recipe changed.
+
+## Fish Drama 3 wins the October short audition; repaired take accepted, automatic completeness still fails — Evolving (2026-10-28)
+
+Dave heard the new-engine comparison on the same original challenging passage
+(Irish/Chinese names, money, dates, measurements and quoted dialogue): eight clips
+across Phonon 31M, KittenTTS 2, Pocket 4, Ming 3 and Fish Drama 3.
+
+- **Voice-quality verdict:** Fish Drama 3 / Peter Yearsley (Edmund reference) was
+  "a fucking amazing job", "standout winner so far", "outstanding". This is an
+  **82.5-second naturalness/voice verdict**, not a full-chapter or default-narrator
+  decision. The earlier clips heard were only "ok" and failed names, especially
+  Siobhan; Ming sounded muffled and handled some other names better, but not Irish.
+- **Completeness is a separate failure:** the exact Fish clip skips or replaces
+  "Then the telephone rang" around 1:11-1:15. Whole-clip ASR and an independent
+  cropped-window pass flagged it; Dave confirmed the clause is missing or replaced
+  by a sound. Do not call this a production pass, conceal it with the good listening
+  verdict, or start a book without a tested per-chunk word-check/retry path.
+- **Exact successful synthesis setup:** official `fishaudio/fish-speech`
+  `541566932abbaebcb0a40e562a1f846738383f38`, `fishaudio/drama-3`
+  `b2b5ee998034b2975720906c815e7fb0e9f007bd`; native Fish Speech 3.0.0 on one
+  Modal H100, BF16 residuals / upstream block-FP8 experts, no compile. Native
+  runtime sampling is temperature **0.7**, top-p **0.7**, top-k **30**, seed 42,
+  1024 new frames per automatic chunk. The request's `chunk_length=200` is ignored
+  by Drama 3: its own splitter supplies roughly 300-byte chunks and history.
+  Do not copy the different SGLang serving defaults into this measured native arm.
+- **Audition only:** no offered voice, app route, deployed service, production
+  recipe or narrator default changed. References and raw/processed audio remain
+  local runtime artifacts; hashes, exact inputs, settings and transcripts are in
+  `evaluations/new-engines/output/october-2026-audition/`. Research and economic
+  boundaries are recorded in TTS-WATCH-FINDINGS.md, October 28 audition entry.
+- **Targeted follow-up (same day, heard by Dave):** a new seed still omits the
+  telephone sentence; paragraph generation recovers it but loses other text.
+  A bounded repair retains the original first two paragraphs and replaces the
+  entire ending paragraph (85.37 s). Both parts and the assembly pass ASR,
+  including the telephone sentence. Dave heard this exact assembled take and
+  judged it **"outstanding. best yet."** This accepts the short repaired output,
+  including its join/voice continuity as heard; it is not a long-form verdict.
+  This does **not** clear the unguarded-generation failure or approve a book.
+  Dave also called the seed-43 and paragraph takes "great", confirming the
+  telephone sentence is absent in seed 43 and present in the paragraph take.
+  The paragraph take's different first-paragraph omission remains an ASR fault.
+- **CPU follow-up:** both Pocket main-model (100M) one/four-step full takes have
+  a nice voice and good non-Irish content, but bad raw Irish pronunciation.
+  The **four-step Pocket pronunciation-spelling names test is "actually good"**;
+  Ming UK George's equivalent is only "ok", and the other name-test arms were
+  rejected. Advance only those exact Pocket spellings into a full-passage audition;
+  this does not approve a global lexicon or another engine's pronunciation.
+  The full-passage Pocket four-step test now exists (62.80 s audio, 52.95 s warm
+  CPU generation; gross completeness passes). Its listening verdict remains open.
+  Float32 Phonon Hugh is solid but less emotive than Fish; temperature 0.45 is
+  still bland and does not improve Irish. Kitten Saoirse's directed take is
+  merely decent, with a disliked voice and no heard emotion. These are bounded
+  voice/take verdicts, not blanket bans on their engines.
+- **Ming follow-up:** Peter-cloned take remains tinny/artefacty, Irish bad,
+  numbers and other names OK; FREEFORM storytelling is otherwise "all good"
+  with Irish pronunciation still bad. No root cause for the artefacts is proven.
+
+Official sources read October 28: [native inference contract](https://speech.fish.audio/inference/),
+[hardware/install guide](https://speech.fish.audio/install/),
+[model card](https://huggingface.co/fishaudio/drama-3),
+[actual model licence](https://huggingface.co/fishaudio/drama-3/blob/main/LICENSE).
+The model card's research-licence metadata conflicts with its Community License
+text; use the actual licence and do not assume an unrestricted Apache grant.
 
 ## Colab lane VMs live ~1 hour: render with chunk checkpoints, audit first, CI-check before push — Active (2026-10-06)
 
@@ -588,7 +1199,11 @@ Neither fact reopens either engine. They exist so that a future "LoudKit looks
 promising" or "try Sopro" proposal starts from what was already measured and
 already heard.
 
-## Project optimisation order: quality floor, then free, then cheapest — Active
+## Project optimisation order: quality floor, then free, then cheapest — Superseded in part (paid fallback removed 2026-10-29)
+
+**2026-10-29:** Dave now requires zero out-of-pocket audiobook cost. The quality
+floor and preference for free generation remain; the GBP2 paid fallback below
+is historical. See the current cash-budget decision at the top of this file.
 
 An audiobook must first pass Dave's human listening floor for naturalness,
 accent, pronunciation, pacing and long-form comfort. Among engines that pass

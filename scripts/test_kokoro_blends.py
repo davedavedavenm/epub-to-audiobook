@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "evaluations" / "new-engines" / "output" / "kokoro_variations"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(ROOT / "webapp"))
+from preview_manifest import write_manifest  # noqa: E402
+from voice_sample import sample_text_for  # noqa: E402
 
-SAMPLE_TEXT = (
-    "Silicon Valley can be an amazingly drab place. "
-    "The peninsula south of San Francisco has natural beauty, with rolling hills and coastal views, "
-    "but you strain to see them beyond so many corporate parking lots. "
-    "Mountain View and Menlo Park are bizarrely full of rug shops."
-)
+SAMPLE_TEXT = sample_text_for("kokoro")
 
 VARIATIONS = [
     {"name": "george_relaxed", "voice": "bm_george", "speed": 0.92, "label": "George (Relaxed 0.92x)"},
@@ -39,6 +38,7 @@ def main():
         )
         r.raise_for_status()
         out_file.write_bytes(r.content)
+        write_manifest(out_file, SAMPLE_TEXT)
         print(f"  Wrote {out_file.name} ({len(r.content):,} bytes)")
 
 if __name__ == "__main__":

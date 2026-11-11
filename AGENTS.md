@@ -42,6 +42,13 @@ blog, search result, community issue, or remembered default to an official fact.
 
 ## Current Direction & Doc Map (2026-08)
 
+**All agents: before any narrator audition, read [AUDITION-STANDARD.md](AUDITION-STANDARD.md).
+Every new default audition must import `webapp/voice_sample.py` through
+`sample_text_for(engine)` and record its sample ID and prepared-text hash.
+Use the approved ordinary-plus-challenge passage for every engine; Irish/Zulu
+and book excerpts are supplementary tests. Preserve explicitly historical,
+hash-pinned reproductions. Never relabel older cached audio as the new standard.**
+
 Read these before changing anything TTS- or text-related:
 
 | Doc | What it holds |
@@ -60,6 +67,8 @@ Read these before changing anything TTS- or text-related:
 | [TTS-LANDSCAPE-2026-07.md](TTS-LANDSCAPE-2026-07.md) | Mid-2026 state-of-the-art review: new engines, cost updates, what to evaluate next. |
 | [ENGINES.md](ENGINES.md) | Official engine facts + listening outcomes — the baseline for all engine claims. |
 | [VOICES.md](VOICES.md) | **Read before ANY voice or accent work.** Listening verdicts, exact rejection boundaries, the corrected `cfg_weight` interpretation, and wrong turns already taken. |
+| [AUDITION-STANDARD.md](AUDITION-STANDARD.md) | **Mandatory for all agents and engines:** approved shared passage, separate voice/pronunciation scoring, provenance and cache migration. |
+| [TUNING-AUDIT-2026-11.md](TUNING-AUDIT-2026-11.md) | Exact November model/runtime controls, supported overrides versus unproved tuning, and upstream limitations. |
 | [PLAN-V6.md](PLAN-V6.md) | **Current forward plan** (2026-09-02): Smart Library — WhatsApp book bot, auto-series completion, AI library curator, family wishlists. |
 | [PLAN-V5.md](PLAN-V5.md) | Previous forward plan (2026-07-27): automatic re-render, article RSS + Telegram capture, Chatterbox V3. |
 | [PLAN.md](PLAN.md) | Superseded. Historical forward plan. |

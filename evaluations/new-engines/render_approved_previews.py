@@ -16,6 +16,7 @@ All outputs are saved to data/previews/<voice_id>.mp3 with broadcast mastering (
 import modal
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 app = modal.App("homelab-render-approved-previews")
@@ -39,24 +40,6 @@ image = (
         "hf download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice --local-dir /root/qwen-customvoice"
     )
 )
-
-SAMPLE_TEXT = (
-    "In the spring of 1997, Apple was nine weeks from bankruptcy. Its CEO had "
-    "been ousted, Steve Jobs had returned, the share price had fallen 71 percent, "
-    "and the company was burning through $1.2 billion a year. Few analysts at "
-    "Goldman Sachs believed it would survive to see the year 2000.\n\n"
-    "What changed was not one decision, but a thousand small ones. Scott Forstall, "
-    "Jony Ive, and a young engineer named Nguyen worked eighteen-hour days, six "
-    "days a week, for months on end. Between 2001 and 2007, Apple's partners in "
-    "Shenzhen and Zhengzhou scaled from 3,400 workers to over 230,000; a single "
-    "Foxconn campus drew 1.5 gigawatts.\n\n"
-    "Today the iPhone accounts for roughly 52% of revenue, and the App Store for "
-    "some £24.6 billion a year. Rivals — Huawei, Xiaomi, Samsung — circle "
-    "constantly. Whether that dependence is a triumph or a trap, for the WTO, for "
-    "the EU, and for a supply chain 7,000 miles long, is the question Dr. Wang has "
-    "spent a decade trying to answer."
-)
-
 
 def chunk_text(text: str) -> list[str]:
     protected = re.sub(r'([,;:—])\s*([“"][^”"]+[?!”"])', r'\1\n\2', text)
@@ -225,11 +208,19 @@ class PreviewProducer:
 @app.local_entrypoint()
 def main():
     root = Path(__file__).resolve().parents[2]
+    sys.path.insert(0, str(root / "webapp"))
+    from voice_sample import SAMPLE_ID, SAMPLE_SHA256, sample_text_for
+    from preview_manifest import write_manifest
+
     previews_dir = root / "data" / "previews"
     previews_dir.mkdir(parents=True, exist_ok=True)
     voices_dir = root / "chatterbox" / "voices"
 
-    chunks = chunk_text(SAMPLE_TEXT)
+    breeze_text = sample_text_for("breeze")
+    qwen_text = sample_text_for("qwen3")
+    breeze_chunks = chunk_text(breeze_text)
+    qwen_chunks = chunk_text(qwen_text)
+    print(f"Shared audition sample {SAMPLE_ID} ({SAMPLE_SHA256})")
     producer = PreviewProducer()
 
     breeze_configs = [
@@ -281,19 +272,21 @@ def main():
         print(f">>> Rendering {vid}...")
         mp3_bytes = producer.synthesize_breeze.remote(
             vid,
-            chunks,
+            breeze_chunks,
             cfg["wav"].read_bytes(),
             cfg["ref_text"],
             cfg["instruction"]
         )
         out_file.write_bytes(mp3_bytes)
+        write_manifest(out_file, breeze_text)
         print(f"✓ Saved: {out_file.name} ({len(mp3_bytes):,} bytes)")
 
     # Render Qwen3 Aiden
     print(">>> Rendering qwen3_aiden...")
     aiden_file = previews_dir / "qwen3_aiden.mp3"
-    aiden_bytes = producer.synthesize_qwen_aiden.remote(chunks)
+    aiden_bytes = producer.synthesize_qwen_aiden.remote(qwen_chunks)
     aiden_file.write_bytes(aiden_bytes)
+    write_manifest(aiden_file, qwen_text)
     print(f"✓ Saved: {aiden_file.name} ({len(aiden_bytes):,} bytes)")
 
     print("\n✓ ALL 7 APPROVED PREVIEWS GENERATED AND CACHED SUCCESSFULLY!")

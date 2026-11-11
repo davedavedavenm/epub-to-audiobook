@@ -131,12 +131,14 @@ def _request_rng(seed: int | None):
             torch.cuda.set_rng_state_all(cuda_states)
 
 
-# Official Chatterbox generation controls (resemble-ai/chatterbox README):
-#   exaggeration (default 0.5) — expressiveness; higher (~0.7+) speeds speech up.
-#   cfg_weight   (default 0.5) — "lower values (~0.3) improve pacing"; pair
-#                 higher exaggeration with lower cfg_weight for slower, more
-#                 deliberate delivery. These are THE supported pacing levers —
-#                 the OpenAI-style `speed` field is not part of this model.
+# Pinned upstream control semantics (resemble-ai/chatterbox commit
+# 5de7a54aa4e5e2baadb0182dde554908b48b85c2): the original and multilingual
+# implementations use exaggeration/cfg_weight, but Turbo/Nano explicitly warn
+# that exaggeration, cfg_weight (CFG), and min_p are unsupported and ignored
+# (src/chatterbox/tts_turbo.py). This server currently loads Turbo or Nano, so
+# the values below are accepted by its adapter but are not effective tuning
+# controls for those deployed models. Recheck the selected runtime before
+# describing these controls as effective if another model family is enabled.
 EXAGGERATION = float(os.environ.get("CHATTERBOX_EXAGGERATION", "0.5"))
 CFG_WEIGHT = float(os.environ.get("CHATTERBOX_CFG_WEIGHT", "0.5"))
 

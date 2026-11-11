@@ -14,11 +14,30 @@ import proxy
 def test_shortlist_respects_newer_verdicts_and_exact_models():
     assert len(LIKED_VOICES) == 19
     assert len(CPU_VOICES) == 11
+    assert sum(1 for v in LIKED_VOICES.values() if v['liked']) == 17
     assert not any('isabella' in key or 'harriet' in key or 'edmund' in key
                    for key in LIKED_VOICES)
     assert CPU_VOICES['phonon_edwin'][2:] == ('phonon', 'Edwin')
     assert CPU_VOICES['pocket4_bill_boerst'][1] == 'Pocket 4 / October 100M'
     assert LIKED_VOICES['maya2_siddhant']['audition_only']
+    assert LIKED_VOICES['kitten2_rosie']['liked'] is False
+    assert LIKED_VOICES['kitten2_rosie']['catalogue_status'] == 'disliked'
+    assert LIKED_VOICES['silencio2_peter']['liked'] is False
+    assert LIKED_VOICES['silencio2_peter']['catalogue_status'] == 'disliked'
+    assert 'pocket4_peter_yearsley' in LIKED_VOICES
+
+
+def test_voice_catalogue_has_compact_groups_and_shared_sample_details():
+    template_path = Path(__file__).resolve().parents[1] / 'webapp' / 'templates' / 'index.html'
+    template = template_path.read_text(encoding='utf-8')
+    assert 'Start here' in template and 'deepgram_flux_jack' in template
+    assert 'phonon_edwin' in template and 'More local CPU likes' in template
+    assert 'Compare Edwin with Jack' in template
+    assert 'preferred CPU comparator' not in template
+    assert '<summary>GPU auditions' in template
+    assert 'Browse engine catalogue' in template
+    assert 'Shared test passage' in template and 'preview_sample_label' in template
+    assert 'voiceSample.text' in template and 'escapeHtml(voiceSample.text)' in template
 
 
 def test_new_cpu_paths_do_not_fall_back_to_legacy_engine():

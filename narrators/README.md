@@ -9,7 +9,12 @@ The wrapper uses official upstream runtimes, one resident model family at a time
 four CPU threads, no CUDA, no cloud fallback. Health and voice-list requests do
 not load a model. Speech requests are serialized; model downloads happen on first
 use. The 12 GiB ceiling accommodates Kitten 2's much heavier CPU path. Kitten's
-short preview Like is not a full-book speed or stability guarantee.
+short preview Like is historical: Dave subsequently rejected Rosie. That voice
+and Silencio 2/Peter remain registered but are no longer shortlisted.
+
+New auditions use [the shared standard](../AUDITION-STANDARD.md). The current
+[tuning audit](../TUNING-AUDIT-2026-11.md) distinguishes the audition settings
+below from upstream defaults; supported overrides are not proven optimal.
 
 ## Authoritative evidence (read 2026-11-10)
 

@@ -1,5 +1,313 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Shared audition and catalogue cleanup
+
+- **Implemented; deployment verification pending:** approved versioned passage,
+  mandatory agent instructions, ordinary/challenge separation, compact Likes and
+  changed-verdict archive. Rosie and Silencio/Peter retained but unliked.
+- **Verified in targeted tests:** CPU narrator and Nano preview preparation now
+  matches their book profiles; legacy reproduction hashes unchanged; new cache
+  manifests reject stale/replaced audio. Older clips remain available.
+- **Documented audit:** `TUNING-AUDIT-2026-11.md` records exact runtime/model
+  provenance and supported versus ignored controls. It does not establish
+  optimal tuning or diagnose the Kitten/John accent drift.
+- **In progress:** standard-v1 CPU/Flux clips and unprompted completeness checks.
+  Human listening on these new takes remains open. No full-book render or GPU
+  resource has been started for this cleanup.
+
+## 11 November 2026 — Comparison server restored and playback verified
+
+After Dave explicitly requested a retry, a short standalone PowerShell Start-Process command succeeded, launching Python 3.13 http.server hidden on 127.0.0.1:8800, serving only the local audition output directory (PID 52968 at verification). No security setting changes or approval bypass. Both HTML pages and five new MP3 responses hash-match disk. Browser opened the page, loaded 15/15 audio elements readyState 4, and new John playback advanced to 4.41 seconds before pausing. Tab retained. URL: http://127.0.0.1:8800/kitten-reference-retest/ . This supersedes the earlier offline-server status. The process is running now; no reboot persistence is claimed.
+
+## 11 November 2026 — John Kani Kitten take outstanding initially; accent drifts — Active
+
+Dave calls the new `kitten_john_kani.mp3` **outstanding**, but hears it become American at the end. Trevor Noah is too American; the same objection applies to Deon, Bonang and Cillian. Preserve this exact John take/reference as the promising comparison baseline. This does not approve a stable South African narrator or a full-book run; no production/default promotion.
+
+Verified device: CPU, four threads, 18.96 seconds of audio rendered in 127.41 seconds. Exact upstream path uses one 234-character synthesis chunk, reference prompting enabled, one John reference throughout, stable preset/seed 42, packed lossless weights and stock decoder. There is no second-voice selection or chunk join at the ending. That narrows the implementation possibilities but **does not establish why the accent changes**. Weak accent retention within generation is a hypothesis; CPU execution has not been demonstrated to cause it, and GPU execution alone is not a proven remedy. Evidence: ignored `kitten-reference-retest/accent-drift-audit.json` and `listening-verdict.json`. Official model card rechecked: https://huggingface.co/KittenML/kitten-tts-2 ; exact prior model/runtime provenance remains with the samples.
+
+## 11 November 2026 — Comparison server stopped; deliver embedded audio directly
+
+Dave could not open the five-voice page. Verified localhost:8800 refused connections; the previous browser verification did not establish server persistence across turns. Automatic approval review rejected the background-server restart with only `blocked by policy`. Server was offline at that point; the subsequent explicit retry succeeded (see restoration below). The self-contained `kitten-reference-retest/listen-offline.html` was reopened and all fifteen embedded MP3 payloads decoded; all five new MP3 hashes still match their completed audits. Deliver the five new clips directly in chat plus the offline comparison file, rather than presenting the localhost URL as working. No new synthesis or audio changes. Gradium consent is its hosted-service condition, not a blanket statement that public-figure cloning is technically impossible; the existing local Kitten samples demonstrate that capability. No new listening verdict.
+
+## 11 November 2026 — Kitten reference retest delivered; listening verdict recorded above
+
+Five new Kitten takes of the **same 40-word passage**, compared side by side with the exact earlier takes. Four sources were replaced: John Kani / Gareth Cliff studio interview, Trevor Noah / publisher audiobook sample of *Into the Uncut Grass*, Bonang Matheba / Metro FM, Cillian / BBC Desert Island Discs. For Deon, ECR was unsuitable and CapeTalk/Hidden Lives candidates scored worse for noise; a different, longer complete answer from the original Pagecast source was selected instead. This is disclosed in the player, not presented as five replacement programmes.
+
+**Verified:** same model, revision, runtime, stable preset, seed 42 and text as the earlier Kitten batch; fresh reference paths/hashes/transcripts. KittenML/kitten-tts-2@c93cb7c271baa51d9ae8204d5277988906f235a2, kittenml 0.9.7, lossless packed weights, stock decoder@749d1c1a46eb10492095d68fbcf55691ccf137cd, normalize=True, CPU four threads. All five new takes decode and pass unprompted Whisper-small with 100% source-word coverage. Every one of the fifteen player audio URLs was downloaded and hash checked. Browser loaded 15/15 with readyState 4, no errors; new John playback advanced to 6.02 seconds and was paused. Player/offline copy opened; comparison tab retained. No GPU/API charge, deploy or push.
+
+**Noise screening only:** Microsoft DNSMOS P.835 predicted better background quality for every chosen reference. This does not prove speaker identity, accent retention, or naturalness. Dave subsequently supplied the listening verdict recorded above; the model cannot hear audio input. Reference transcripts are ASR-derived and remain an experimental limitation. No denoising, EQ or time stretching; one shared playback gain per old/new pair. The original synthesis WAVs are untouched. Public-facing source previews are short excerpts; the actual longer conditioning durations are labelled.
+
+| Reference | Conditioning duration | Background score old → new | New take / render |
+|---|---:|---:|---:|
+| John Kani | 19.40s | 2.09 → 4.16 | 18.96s / 127.4s |
+| Bonang Matheba | 23.18s | 3.53 → 3.87 | 17.76s / 120.8s |
+| Cillian | 21.40s | 3.53 → 3.87 | 18.32s / 130.8s |
+| Trevor Noah | 15.96s | 3.38 → 4.18 | 16.88s / 109.8s |
+| Deon Meyer | 18.75s | 3.40 → 3.99 | 17.32s / 115.4s |
+
+Player: http://127.0.0.1:8800/kitten-reference-retest/ . Ignored artifacts: `evaluations/new-engines/output/november-2026-south-africa/kitten-reference-retest/`, including source bounds/hashes, exact settings, ASR audits, comparison-integrity.json, reference-quality.json, pinned DNSMOS evidence (CC BY 4.0), Gradium evidence, online/offline players. Ratings remain local, not production favourites.
+
+**Phonon finding:** five free instant clones for noncommercial use, followed by an official export to Phonon safetensors for local CPU rendering, are documented. Gradium requires speaker consent; no celebrity voice was uploaded and no account-level free quota/export was tested. The unreleased speaker encoder prevents doing the creation step wholly locally or simply substituting Kaggle/Modal. See the current DECISIONS entry for pinned official evidence and pricing date.
+
+## 11 November 2026 — Accent audition failed; Kitten preferred; reference selection inadequate
+
+**Listening verdict:** Dave says these clones sound American, except John Kani who sounds British; **Kitten did better than Silencio**. This is a relative preference within these takes, not approval that the requested accents were retained. Dave also rejects the quality of the recordings chosen as cloning inputs. No narrator/default promotion follows.
+
+**Verified audit:** South African references were only 5.97–9.20 seconds (Deon 5.97, Trevor 6.12, Bonang 7.50, John 9.20), with Cillian 24.80 seconds. The supplied reference hashes match. No full-scale sample clipping was found, which does not establish acoustic suitability. Kitten's stock decoder repeats references shorter than 6 seconds, so Deon's clip was repeated internally; its decoder uses at most 10 seconds, while language-model prompting encodes the full reference. This repetition is documented implementation behaviour, not proof of the accent failure's cause.
+
+Official pinned Silencio weights, Kitten packed language-model weights and Kitten speaker-encoder weights all SHA256-match upstream Hugging Face LFS metadata. Kitten 0.9.7 used lossless packed weights, the stock/default decoder, stable preset and reference prompting enabled. Silencio used its exact WAV path, float32/default temperature 0.3, with fresh per-path caches. These renders called the upstream implementations directly, not the production app. No preset fallback or disabled reference conditioning was found. No EQ, pitch shift or time stretching was applied. Provenance and machine findings: ignored `accent-clones/failure-path-audit.json`.
+
+**Cause remains open:** poor source selection and imperfect reference transcripts confound this test. Duration alone is not sufficient diagnosis: the 24.8-second Cillian reference also failed in these CPU models and has prior successful Fish/Higgs history. Do not declare these engines incapable of accents from this test, or claim reference cleanup will necessarily fix them. A follow-up should compare old versus carefully selected clean references on the same model/text/settings before another broad batch; Kitten is Dave's preferred starting model.
+
+**Why Phonon/Klein were absent (official docs rechecked 11 November):** Phonon 31M can consume precomputed voices locally, but its separate speaker codec is not released. The official Transformers documentation explicitly says this local path cannot clone from a recording. Gradium Studio supplies hosted instant cloning; exporting a compatible voice for local CPU use is a separate option, not a wholly local cloning path. Studio was not called, costed or proven in this session. Klein X1.5-Pro documents 17 preset voices and experimental same-language blending; no released recording-to-clone route was found. Explain this distinction before narrowing a future audition.
+
+Primary sources: [Phonon model card](https://huggingface.co/gradium/phonon-31m-en), [official Transformers implementation documentation](https://huggingface.co/docs/transformers/main/en/model_doc/gradium_phonon_tts), [Phonon Python runtime](https://github.com/gradium-ai/xn-ptts/blob/main/ptts-pyo3/README.md), [Klein X1.5-Pro model card](https://huggingface.co/klein-ml/Klein-TTS-X1.5-Pro). Exact installed model revisions remain in `expression-test/cloning-support.json`; this finding supersedes its weaker statement that no local Phonon route was merely documented.
+
+
+## 11 November 2026 — Five-reference CPU accent-cloning audition
+
+John Kani, Trevor Noah, Deon Meyer and Bonang Matheba interview excerpts, plus the existing 24.8-second Cillian reference, were used for ten new local CPU takes: Silencio 2 and KittenTTS 2 for each speaker. No Rosie/Peter preset, emotion tags, GPU service, API charge, deployment or push. Same original 40-word ordinary nonfiction passage and seed 42; Kitten stable preset. No audible accent verdict is inferred from ASR.
+
+**Verified (machine):** all ten synthetic clips decoded and passed unprompted Whisper-small truncation/drop-run checks. Kitten source-word coverage was 100%; Silencio 92.5–100%, with minor substitutions and a possible extra fragment in Deon’s transcript. These ASR discrepancies are disclosed, not silently treated as perfect readings. All 15 audio URLs (five real references plus ten synthetic samples), the player and embedded offline copy were opened and checked; browser loaded all fifteen durations with readyState 4 and no errors; John Kani/Kitten playback advanced to 5.83 seconds, then was paused. The comparison tab is retained for Dave. Single-speaker references selected from identified interview responses; third-party reference excerpts are 15–25 words. Reference transcripts from ASR remain imperfect, especially Bonang's short radio clip. Original sources, bounds, hashes and exact model/runtime settings are retained locally.
+
+**Listening verdict received:** accent retention failed; Kitten was better than Silencio. See the newer audit above. The earlier Pocket/Cillian Americanisation verdict also remains in force. Local ratings do not update production favourites.
+
+Player: http://127.0.0.1:8800/accent-clones/ . Local-only output: `evaluations/new-engines/output/november-2026-south-africa/accent-clones/` (WAV/MP3, references, provenance, transcripts, audits, pinned cards, online/offline players).
+
+Authoritative model cards checked 11 November 2026: [Silencio 2](https://huggingface.co/BlueRoseLabs/Silencio-2/tree/20930f5f6a6bb564f2a8207152fd5c5d8eecff03), CC BY 4.0; [KittenTTS 2](https://huggingface.co/KittenML/kitten-tts-2/tree/c93cb7c271baa51d9ae8204d5277988906f235a2), Stellon Labs Community License, runtime kittenml 0.9.7, packed weights, default decoder pinned to `749d1c1a46eb10492095d68fbcf55691ccf137cd`.
+
+Reference sources: [John Kani / theatreVOICE](https://theatrevoice.com/audio/john-kani/), [Trevor Noah / 947](https://omny.fm/shows/947-breakfast/trevor-noah-makes-comedy-his-first-born-again), [Deon Meyer / Pagecast via True Crime South Africa](https://iono.fm/e/1504758), [Bonang Matheba / Lotus FM](https://omny.fm/shows/the-afternoon-take-over/bonang-matheba-interview).
+
+| Reference | Silencio 2 duration / render | Kitten 2 duration / render |
+|---|---:|---:|
+| John Kani | 13.12s / 3.1s | 17.28s / 112.3s |
+| Deon Meyer | 12.40s / 2.9s | 17.72s / 110.6s |
+| Bonang Matheba | 12.00s / 2.8s | 18.34s / 108.5s |
+| Cillian | 13.44s / 4.5s | 15.52s / 124.1s |
+| Trevor Noah | 11.84s / 2.8s | 15.44s / 88.9s |
+
+
+> ## 2026-11-11 — Rosie/Silencio expressive A/B delivered
+>
+> - Four first-seed CPU takes of the same original 48-word scene, three sections: celebration,
+>   fear, sadness. Rosie ordinary 21.28s / expressive 22.56s; Silencio Peter 19.80s / 19.80s.
+> - Rosie: stable/no tags versus expressive preset + `[excited]`, `[nervous]`, `[sad]`.
+>   Silencio: untagged versus `<happy>`, `<fear>`, `<sad>`. No added sound events.
+>   Same voice, source words, seed 42 per paragraph, .5s joins; one shared gain per voice pair.
+>   This compares two overall configurations; Kitten's preset also changes temperature/top-p.
+> - **Verified (machine):** all four decoded, passed unprompted Whisper-small completeness checks;
+>   all four full HTTP audio downloads hash matched. Browser loaded all durations/readyState4;
+>   actual Rosie expressive playback advanced, then paused. Comparison retained in IAB.
+> - **Listening verdict received 11 November:** expression did not add much; Rosie rejected;
+>   this Silencio/Peter version is tiresome. This does not reject either whole model family.
+>   ASR made minor local word discrepancies on Silencio; original takes retained.
+> - Player: http://127.0.0.1:8800/expression-test/ ; ignored output directory `expression-test/`
+>   under the November South Africa audition contains WAV/MP3, metadata, raw paragraph parts,
+>   audits, pinned model cards, cloning evidence and an embedded offline player.
+> - Current official docs checked: three of the five liked CPU model families support local
+>   audio-prompt cloning (Pocket, Silencio 2, Kitten 2). Phonon documents Gradium Studio cloning
+>   and importing saved voice embeddings locally; Klein documents presets and experimental blends.
+>   No Studio call, service charge, GPU, app/deployment change or push in this test.
+
+> ## 2026-11-10 — Liked voices integrated and deployed
+>
+> - **Verified live:** Zorin webapp AND worker run git `04e7834147a30af5926b4dc8697cabce3c66b327`;
+>   new `cpu-narrators` service healthy, CPU-only, four cores, 12 GiB maximum, one model family resident.
+>   Deployed the whole stack using `scripts/deploy.sh`; no active jobs before deployment.
+> - Source is committed on `codex/liked-narrators` in the sibling worktree
+>   `../epub-to-audiobook-liked-voices`; transferred to Zorin as a git bundle, no GitHub push.
+>   This main worktree's pre-existing uncommitted docs were preserved. Model/audio/secrets stay out of git.
+> - **19/19 liked previews ready and byte-matched** against heard files; `/api/voices` reports
+>   165/165 configured previews cached (181 total catalogue entries, including unconfigured engines).
+>   Signed-in Edge shows all 19 cards under “Your liked voices”; actual Edwin/Jack playback advanced
+>   and was paused. Book conversion selectors contain the 11 CPU + five Flux IDs, excluding three
+>   explicitly audition-only Maya/VoxCPM2 IDs. Isabella's newer Maybe supersedes her short Like.
+> - **Verified synthesis:** all 11 exact CPU voices returned WAVs in the Linux service; unprompted
+>   Whisper-small recovered the complete test sentence for all eleven. After deployment, fresh Edwin,
+>   Rosie and Jack calls through the live app network returned complete decodable speech. Edwin 1.37s,
+>   Rosie 44.62s including cold load, Jack 3.22s for the short test. The pinned Kitten decoder hash matches.
+> - Fixed the existing Deepgram preview fallthrough to Kokoro; Flux explicitly uses `/v2/speak`,
+>   exact voice model, expressivity 0/speed 1. Unknown voice IDs no longer silently become Orion.
+> - Validation: clean-checkout CI at `52cb65c`: 492 passed, one skipped; final decoder-pin change
+>   linted and verified with live synthesis/hash. App JavaScript syntax and rendered UI checked.
+> - **Not verified:** full-book endurance for the new CPU adapter; Kitten 2 is significantly slower
+>   than Phonon. Before a full Kitten book, review job/recovery timeout sizing against its measured
+>   throughput (the inherited generic CPU floor is not a measured Kitten book budget).
+>   New GPU full-book lanes, automatic emotion annotation and quotation casting are not implemented.
+> - Primary model/runtime documentation, versions, licences and expression controls are recorded in
+>   the implementation worktree's `narrators/README.md`. Default narrator unchanged.
+> - Ignored local evidence: `scratch/tts-nov10/deployed-preview-check.json`, `deployed-containers.json`,
+>   `service-smoke/`, `production-smoke/`, exact heard-preview manifest and Chapter 1 comparison.
+
+> ## 2026-11-10 — Chapter 1 comparison: Jack and Edwin
+>
+> - **Verified (machine):** Badawi, *An African History of Africa*, actual Chapter 1
+>   “Our Family and Other Hominins”: opening 1,210 words, 13 complete paragraphs/heading chunks,
+>   approximately four pages. Jack 491.6 seconds; Phonon31M Edwin 425.36 seconds.
+> - Jack default expressivity 0/speed 1; Deepgram credit 125.48528 -> 125.15687,
+>   actual $0.32841. Edwin CPU generation 53.12 seconds. No GPU or full-book conversion.
+> - Both exact MP3 URLs opened/hash matched, decoded and duration checked; browser playback
+>   advanced. Unprompted base.en passed Jack; independent unprompted small ASR recovered
+>   Edwin's three false missing-span flags. Original and review evidence retained; audio unchanged.
+> - **Open:** Dave's listening verdict on these longer takes. Machine completeness is not voice approval.
+> - Player: http://127.0.0.1:8800/chapter-one/ ; local output under
+>   `evaluations/new-engines/output/november-2026-south-africa/chapter-one/`.
+>   `listen-offline.html` embeds both files. Audio/text/player remain ignored and local.
+
+> ## 2026-11-10 — CPU-only Badawi follow-up; Jack leads by ear
+>
+> - Dave's longer-take verdict: Flux Jack is winning; Maya's Indian accents do
+>   not suit this title. Earlier short-take Likes remain historical, not approval
+>   for this book. DECISIONS and VOICES updated with the exact scope.
+> - Local CPU audition: Pocket100M/Bill Boerst, Caro Davy, Stuart Bell;
+>   Klein X1.5-Pro/Arthur, Isabella, Harriet; Phonon31M float32/Hugh, Edwin,
+>   Freya, Imogen. Same 416-word passage, five paragraphs, four CPU threads.
+>   No Peter clones. Existing Jack recording is the labelled hosted reference.
+> - **Verified:** ten full MP3s decoded and passed duration/input/hash checks;
+>   all eleven served audio URLs opened, browser metadata loaded without errors,
+>   and actual CPU playback advanced. Page `http://127.0.0.1:8800/cpu-more/`
+>   opened and retained, with local Like/Maybe/No ratings and export. Also saved
+>   a self-contained offline player. 25.2 minutes of new audio; 402.8 seconds
+>   measured generation, excluding model loading and reference preparation.
+> - Unprompted base.en completeness checks passed eight directly. Arthur and
+>   Stuart's missing-place-name flags were false positives: independent small
+>   ASR recovered the flagged spans; both transcripts retained, audio unchanged.
+>   Machine completeness does not approve pronunciation or narration quality.
+> - Ignored local evidence and player: audition folder `cpu-more/`; pinned model
+>   and voice provenance, parameters, paragraph WAVs and completeness reports.
+>   All new synthesis is local CPU. No hosted calls, GPU, credit use, deployment,
+>   push, or full-book conversion. Fresh CPU listening verdicts remain pending.
+
+> ## 2026-11-10 — One-page reading, five liked voices, delivered
+>
+> - Fresh416-word Badawi introduction extract (first five complete paragraphs),
+>   same input and0.5s paragraph gaps in Maya2/Siddhant151.14s,
+>   Maya2/Nivedita179.70s, VoxCPM2/Peter162.64s, Flux/Colin164.64s,
+>   Flux/Jack166.64s. All three GPU Likes plus two of the tied Flux Likes;
+>   this selection is not a new ordinal ranking from Dave.
+> - **Verified:** all five MP3s decoded, duration/hash/input checks and unprompted
+>   completeness checks done; page and full audio URLs opened, browser play/pause
+>   verified, no browser errors. Jack's base.en missing-name-span flag was a false
+>   positive: independent unprompted Whisper-small recovered the full phrase in
+>   seconds124–147. Both transcripts/evidence retained; no audio edited for that.
+> - Page: `http://127.0.0.1:8800/top-five/`. Exact text, playback speed and a local
+>   favourite selector/export; whole-book credit allowances displayed. Offline
+>   single-file player also retained. Later listening: Jack leads; Maya accents
+>   do not suit this title (see latest entry above).
+> - Modal pinned/cached official images, own apps stopped and zero containers.
+>   Billing snapshot0.36740521→0.66870491 metered, stillUSD0 billed. Deepgram
+>   credit125.70542→125.48528 (USD0.22014 used). No full-book conversion/deploy.
+>   All artifacts remain ignored under the audition folder's `top-five/`.
+
+> ## 2026-11-10 — Recent Africa book cost comparison checked (planning only)
+>
+> - Re-read live library: four relevant newest grabs added8 November. Recommended
+>   candidate: Zeinab Badawi, *An African History of Africa*. Modern prepared-text
+>   count (distinct from earlier Higgs-recipe audit):19 sections,132,293 words,
+>   787,997 Unicode characters including paragraph separators. Recounted from
+>   saved chapter files independently; structural preflight passes with numeric
+>   warnings retained. No full-book render has started.
+> - **Modal Maya2:** L4+4CPU+24GiB costsUSD1.1812/h at live workspace rates.
+>   Slower complete audition sample per-word timing predicts5.31h Siddhant /
+>   6.16h Nivedita generation. Adding50% generation headroom,1h startup/overhead,
+>   andUSD0.25 transfer/misc reserve givesUSD10.85/12.34 credit usage. Double-time
+>   stress estimatesUSD13.98/15.98 still fit conservativeUSD29.54 remaining.
+>   Latest billing snapshot0.36740521 metered/0 billed; use the higher earlier
+>   USD0.46 usage snapshot to avoid overstating remaining credit. USD0 net-spend
+>   cap unchanged. Whole-book throughput/recovery is not yet proven.
+> - **VoxCPM2/Peter:** same costing givesUSD26.26 with allowance; double-time
+>   stressUSD34.54 exceeds free credit. Liked, but less robust zero-cash choice.
+>   Dropped Zulu take excluded from throughput calculation, not counted as speed.
+> - **Deepgram Flux:** current officialUSD0.045/1k characters givesUSD35.459865;
+>   20% re-render reserveUSD42.551838. Live creditUSD125.70542 covers either,
+>   henceUSD0 out of pocket for the proposed one-voice render. No speculative
+>   matching-promotion benefit counted. All liked Flux voices cost the same.
+> - Thompson:926,112 chars / FluxUSD41.68; Laband:857,450 /USD38.59, with extra
+>   text-cleanup warnings. Meredith excluded after bad ZIP-header preflight.
+>   Counts are proposed narration inputs, not publisher word counts.
+> - Focused local page `http://127.0.0.1:8800/book-choice.html`: the three tied
+>   GPU Likes and five liked Flux voices, actual Badawi introduction samples.
+>   Page opened; eight audio HTTP responses/hash matches checked. Calculations,
+>   current balances, model provenance and source URLs retained in ignored
+>   `evaluations/new-engines/output/november-2026-south-africa/book-cost-comparison.json`.
+>   No new synthesis, paid work, deployment or narrator/default decision.
+
+> ## 2026-11-10 — Ordinary narration and South Africa audition delivered; votes saved
+>
+> - **Verified:** 69 local MP3/WAV samples, 23 voices × three separately selectable
+>   passages. Ordinary English (154 words, Badawi) opens first; Thompson places
+>   (131 words) and Laband Zulu names (70 words) are optional. Same prepared text
+>   and paragraph boundaries; exact source/provenance retained. Player at
+>   `http://127.0.0.1:8800/`, files under ignored
+>   `evaluations/new-engines/output/november-2026-south-africa/`.
+> - **Verified:** all69 MP3 URLs opened and hashes matched, all audio decoded and
+>   unprompted ASR checked. All23 ordinary takes pass the completeness screen.
+>   VoxCPM2 Zulu omits a large middle span; Flux Kit's Zulu ending also flagged.
+>   Failed takes are retained and visibly flagged, not described as repaired.
+> - **Dave's ear:** 16 Like, three Maybe, three No, one unscored on ordinary
+>   narration. Exact names/scope in DECISIONS and VOICES. Indian Maya accents
+>   explicitly acceptable. Klein Edmund identity disputed; official-loader A/B
+>   reproduces the take rather than fixing the audible complaint.
+> - **GPU verified:** native Fish Drama3/H100, VoxCPM2/L4, Maya2 Native/L4
+>   completed. Ordinary synthesis pace ≈1.9×,1.1×,2.6× respectively, excluding
+>   startup/load; short samples, not a long-book benchmark. Own Modal apps all
+>   stopped, zero containers. Snapshot: USD0.45740521 metered, USD0 billed;
+>   USD0 net-spend/30 usage cap verified, saved CLI authentication works.
+> - **Kaggle:** free T4 probe verified CUDA; L4 model requests received CPU and
+>   failed. Later L4X1 metadata is not proof of an L4 run. No active jobs/reserved
+>   GPU time; account currently shows six free GPU hours per cycle, pay-to-scale
+>   disabled. No paid fallback. Deepgram credit fell126.48806→125.70542.
+> - **Books:** Badawi, Thompson and Laband passed corpus preflight with recorded
+>   warnings; Meredith local EPUB failed ZIP-header validation and was excluded.
+>   Full-book conversion, sustained throughput and fault-recovery remain untested.
+> - All media, extracts, scratch scripts and ratings remain ignored/local; private
+>   cloud jobs only. No deployment, narrator-default change, commit or push.
+
+> ## 2026-10-29 — Same-reference Cillian CPU head-to-head ready
+>
+> - **Dave's ear:** Pocket Cillian is nice but very American; Irish accent not
+>   accepted. Bill/Caro robust verdicts remain separate.
+> - **Verified (machine):** Turbo/Cillian171.48s versus unchanged Pocket152.50s,
+>   exact same reference WAV and six paragraphs/458words. Two affected Turbo
+>   parts regenerated; all retained words checked, raw takes kept.
+> - Focused two-player page: `scratch/tts-oct28/output/cillian/index.html`.
+>   **New Turbo accent/likeness listening pending.** CPU only, own containers
+>   removed, production healthy, no cloud spend or default/deployment changes.
+
+> ## 2026-10-29 — Pocket Cillian now runs on CPU; Turbo/Pandora comparison ready
+>
+> - **Verified (machine):** after Dave granted HF model access, actual Pocket
+>   cloning works locally: same Cillian reference / four steps / six paragraphs,
+>   152.50s. Turbo/Arthur168.90s and Deepgram/Pandora164.22s read the same458words.
+>   All retained source words checked; failed Turbo takes preserved/replaced.
+> - **Dave's ear:** longer Bill/Caro robust, possible new CPU winner. Faster
+>   Fish acceptable, but weaker accent, artefacts, changing voice/background noise.
+>   **New Pocket clone/Turbo/Pandora listening verdicts pending.**
+> - **Verified balance:** Deepgram USD126.95741 before sample;2673chars = estimated
+>   USD0.08019 credit usage. Immediate balance unchanged; provider billing may lag.
+> - CPU-only rendering for Pocket/Turbo; ephemeral containers removed, live
+>   services healthy. No cloud GPU, deployment or default narrator changed.
+> - Player: `scratch/tts-oct28/output/cpu/index.html`; exact provenance in
+>   DECISIONS “Pocket CPU cloning unblocked”.
+
+> ## 2026-10-29 — Zero-cash auditions: Cillian, Bill and Caro ready
+>
+> - **Dave's short listening picks:** Pocket Bill Boerst and Caro Davy; other
+>   voices in this batch not preferred. Broader acceptable engines retained.
+> - **Verified (machine):** same six paragraphs /458words: faster Fish/Cillian
+>   3:12, Pocket Bill2:39, Caro2:56. Exact source comparisons, rejected takes
+>   retained, gain-only assembly, full decode, HTTP/hash and browser playback/seek.
+>   Four Fish batch takes replaced from the same documented reference recipe;
+>   one paragraph replaced in each Pocket track. **New longer listening pending.**
+> - **Verified:** Dave's screenshot shows Modal net Spend limitUSD0 / UsageUSD30.
+>   Faster-runtime experiments/builds costUSD0.7224 metered, USD0 billed; no
+>   persistent volumes, all own apps stopped, containers empty.
+> - **Scenario only:** measured warm batch plus selected replacements projects
+>   ~USD5.61 credits per100k words, before startup/further retries/I/O. Whole-book
+>   reliability, exact voice quality and end-to-end cost remain unverified.
+> - Player: `scratch/tts-oct28/output/selected/index.html`; full evidence/recipe
+>   in DECISIONS “Faster Fish/Cillian”. No production deployment/default changes.
+
 > ## 2026-10-08 - Armed Struggle (Higgs / Cillian clone) swapped into Audiobookshelf
 >
 > - **DONE + VERIFIED (machine):** 11 chapters, 15.44 h, every chunk passed the independent per-chunk ASR audit
