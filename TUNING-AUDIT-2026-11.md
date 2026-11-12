@@ -41,8 +41,9 @@ naturalness or quality verdict exists. Exact render/settings/ASR receipts are
 local beside `standard-v1/all-engines/higgs3_default_audition.mp3`; raw chunks
 and transport evidence are in `scratch/tts-nov11/higgs3-default-*`.
 The MP3 and canonical sample manifest were preinstalled with no-clobber creation
-and full hash verification. App registration and endpoint verification are the
-next deployment step; this audition has no integrated book route.
+and full hash verification. Registration is deployed at `50543e2`; the exact endpoint returned the matching
+MP3 hash, and browser playback reached 11.28/66.80 seconds with no audio error.
+This audition has no integrated book route.
 
 ## 12 November — TADA-1B Shared Standard v1, cached community-tokenizer CPU audition
 
@@ -127,9 +128,11 @@ next deployment step; this audition has no integrated book route.
 - **Receipts and status:** `scratch/tts-nov11/tada-standard-v1-build-receipt.json`
   records the image, package freeze, offline cold-load, resource readings and
   initial interrupted attempt. Per-voice provenance and ASR reports remain local
-  with the audition artifacts. These clips are staged for the app's Shared Test
-  v1 audition; promotion awaits the warning-note deployment and exact API/hash
-  verification. No app source was edited in this batch.
+  with the audition artifacts. All four clips were promoted after the warning-note deployment at `50543e2`.
+  Exact API bodies match their staged hashes; predecessors are archived under
+  `data/previews-archive/standard-v1/20261112T002915Z`. The final receipt is
+  `scratch/tts-nov11/promoted-preview-http-verification-verified-tada-promotion.json`.
+  No TADA runtime source was changed by this batch.
 
 ## 11 November — Shared Standard v1 GPU preview outcomes
 
@@ -429,8 +432,8 @@ book/preview production parity.
   commercial purpose to include production/product or service use and requires
   a separate written commercial license for that use. This does not establish
   that personal audiobook use is prohibited. Separately, Breeze is not yet an
-  integrated/approved book route. The audition ID's app registration has been
-  prepared, but endpoint availability still awaits deployment and verification.
+  integrated/approved book route. The audition ID is now registered and its exact endpoint body hash verified;
+  browser playback was also measured after deployment at `39292a5`.
   The cache is not a claim of book support.
 
   The take is a single reference-free fictional adult narrator prompt asking

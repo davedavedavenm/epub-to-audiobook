@@ -1,5 +1,46 @@
 # Project Status & Remaining Tasks
 
+## 12 November 2026 — Final shared-audition deployment verified
+
+- Both webapp and worker are healthy at `50543e2a62fa7406f16d6226b84e3b4390000e32`.
+  Clean-checkout CI passed: 530 tests, one skipped; Ruff passed. There were no
+  queued or active book jobs when the whole-stack deployment began.
+- Live catalogue: **185 registered voices, 141 current Shared Test v1 takes,
+  169/169 configured previews cached**. No earlier voice/history was removed.
+  Remaining 44: Gemini 21 (20 untested at the exhausted Pacific-day free quota,
+  plus Puck refusal); six named Breeze references and older Higgs Cillian remain
+  subject to verified speaker permission under current terms; Polly four and
+  Inworld twelve lack configuration. F5 has no registered voice to migrate.
+- All four offline TADA CPU takes were promoted after their listening warnings
+  deployed. The predecessors are archived under
+  `data/previews-archive/standard-v1/20261112T002915Z`. Exact endpoint bodies
+  match their staged MP3 hashes. Arthur's number-span completeness remains
+  uncertain across two ASR passes; the others also flag names/numbers for ear
+  review. This is the historical community-tokenizer runtime, not a verified
+  equivalent of the inaccessible official Meta tokenizer.
+- Higgs3's native default is a new reference-free private audition, not Cillian
+  or an integrated book narrator. Its exact preview GET hash matches the staged
+  66.80-second MP3. Browser playback reached 11.28 seconds with readyState 4 and
+  no audio error; it was left paused at the start. Fish, Breeze, Qwen John and
+  all four TADA full-body GETs also passed the final verification.
+- Widescreen layout was measured at six columns at 2560px and one at 390px, with
+  no horizontal overflow. The one-representative-per-model rule and expandable
+  remaining voices are preserved. Current standard takes outrank older preferred
+  recordings. The Liked card is removed; Listening Desk is preserved.
+- Short John comparison verdict remains **Qwen3 > controlled Kitten > preserved
+  Kitten**. This does not approve any full shared-passage take or long-form book.
+- All owned Modal apps are stopped; the final container and volume lists are
+  empty. The Fish temporary volume was deleted, and the isolated TADA container
+  removed. Modal's saved monthly snapshot reports USD 2.30381140 metered and
+  USD 0 billed, offset by credits/allowances; provider metering can lag. This is
+  cumulative workspace usage, not an isolated per-engine bill.
+- Local evidence: `scratch/tts-nov11/final-audition-verification.json`,
+  `promoted-preview-http-verification-verified-tada-promotion.json`,
+  `promotion-receipt-20261112T002915Z.json`,
+  `modal-billing-final-20261112.json`, and
+  `modal-final-cleanup-20261112.json`. Audio, references, screenshots and scratch
+  receipts remain outside Git. Historical checkpoints below retain their dates.
+
 ## 11 November 2026 — Fish S2 Pro Shared Standard v1 preview
 
 - The exact `fish_cillian_irish` preview has been replaced with the bounded
