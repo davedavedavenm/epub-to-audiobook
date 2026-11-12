@@ -33,13 +33,16 @@ test phrasing; they do not imply automatic speaker casting.
   for the CPU narrator adapter and Deepgram, existing modern-engine treatment for
   Chatterbox, and the existing legacy lexicon for Kokoro/Edge. Record the exact
   prepared payload and its hash; do not claim these engine payloads are identical.
-- Audition-only Maya2 Native and VoxCPM2 have no book route. Their named helper
-  contracts (`sample_text_for('maya2')` / `sample_text_for('voxcpm2')`) return
+- Audition-only Maya2 Native, VoxCPM2 and the Higgs3 native default voice have no
+  book route for these voices. Their named helper contracts
+  (`sample_text_for('maya2')` / `sample_text_for('voxcpm2')` / `'higgs3'`) return
   the approved source for the native API; each voice declares that preview
   contract explicitly. Record internal engine normalization separately: Maya's
   documented numeric-text recommendation is `normalize=True`; VoxCPM2's current
   native default is `normalize=False`. This is not a fallback for missing
-  dependencies or an inferred production preparation policy.
+  dependencies or an inferred production preparation policy. Higgs3's default
+  audition uses its documented text-only API input; it does not claim parity
+  with the separate locked Cillian book pipeline or rerun its book-specific prep.
 - Prepare app-normalized payloads with the application dependencies installed,
   then freeze the text and source/prepared hashes before sending to an isolated
   model environment. Missing `num2words` must fail preparation explicitly: the

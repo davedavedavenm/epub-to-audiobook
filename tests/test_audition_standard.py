@@ -80,6 +80,7 @@ def test_missing_number_dependency_cannot_silently_change_shared_payload(monkeyp
 @pytest.mark.parametrize('voice_id, engine', [
     ('maya2_siddhant', 'maya2'), ('maya2_nivedita', 'maya2'),
     ('voxcpm2_peter', 'voxcpm2'),
+    ('higgs3_default_audition', 'higgs3'),
 ])
 def test_native_audition_payload_is_explicit_without_claiming_a_book_route(voice_id, engine):
     from app import all_voices

@@ -1,20 +1,42 @@
 # Project Status & Remaining Tasks
 
+## 11 November 2026 — Fish S2 Pro Shared Standard v1 preview
+
+- The exact `fish_cillian_irish` preview has been replaced with the bounded
+  Shared Standard v1 take. Its staged MP3 SHA-256 is
+  `044d971db3abf024d4ffd37df7cb92cf69e85164ced4d3be2c166db9f2d1bd55`;
+  the live preview endpoint returned HTTP 200 with the same full-body hash and
+  `/api/voices` reports `narrator-standard-v1` as current. The previous MP3
+  was archived at
+  `/home/dave/ai/lab/stacks/epub-to-audiobook/data/previews-archive/standard-v1/20261111T235314Z`;
+  its archive index records that no prior sample sidecar existed. Receipt:
+  `C:\Users\Dave\repos\epub-to-audiobook\scratch\tts-nov11\promotion-receipt-20261111T235314Z.json`.
+- The one-shot used the official Fish Speech runtime commit and model revision
+  matching the locked DualAR method, with a CPU preflight before L40S inference.
+  Unprompted Whisper small/int8 reports coverage 0.982, no flagged drops and no
+  unheard tail. This is a completeness check, not a human listening or quality
+  verdict. The historical clip's precise runtime and weights remain unproven;
+  matching it by repository timestamps is inference only.
+- The Fish Modal render app is stopped with zero tasks, and the task-created
+  volume has been deleted. Other Shared Standard v1 work remains subject to its
+  own per-engine readiness and listening evidence.
+
 ## 11 November 2026 — Live Breeze audition; representative selection correction
 
-Whole stack `1e57fdd` is healthy on webapp and worker after clean-checkout CI
-(528 passed, one skipped). All 184 voices are retained; 168/168 configured
-previews are cached, 135 use the shared standard. Breeze and Andrew exact GET
+Whole stack `39292a5` is healthy on webapp and worker after clean-checkout CI
+(529 passed, one skipped). All 184 voices are retained; 168/168 configured
+previews are cached, 136 use the shared standard after the Fish promotion. Breeze and Andrew exact GET
 bodies match their staged hashes. Actual browser layout at 2560px has six
 341.6px columns with no horizontal document overflow.
 
 The browser check exposed a presentation bug: an older preferred speaker could
 outrank a current shared take outside the preferred list. Breeze still showed
 old Arthur first despite the new Voice Design sample. The corrected model-wide
-readiness ordering has a regression test; it awaits the corrective deployment.
+readiness ordering has a regression test and is deployed. The browser now
+shows the current fictional Breeze take as its representative.
 No production narrator or voice preference is changed by this presentation rule.
 
-## 11 November 2026 — CPU batch complete; final catalogue update prepared
+## 11 November 2026 — Earlier checkpoint: CPU batch complete; catalogue prepared
 
 - All 83 entries in the six-engine CPU batch have full shared-passage artifacts;
   the two earlier Arthur controls remain current too. Rosie is 84.6 seconds
@@ -34,7 +56,7 @@ No production narrator or voice preference is changed by this presentation rule.
   binary provenance. TADA's already-cached historical runtime is being inventoried
   offline; official Meta file access remains denied, with no mirror download.
 
-## 11 November 2026 — Late Shared Standard v1 GPU follow-up
+## 11 November 2026 — Earlier checkpoint: late GPU follow-up
 
 - The earlier migration checkpoint below predates the final VoxCPM2/Breeze
   checks. Maya2 Siddhant and Nivedita plus VoxCPM2 Peter have now been promoted

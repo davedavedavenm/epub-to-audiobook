@@ -2,11 +2,141 @@
 
 Source audit prepared 2026-11-11. This document compares the exact adapters and revisions used by the liked-voices worktree with current official maintainer/vendor documentation and the pinned runtime implementations. It records implementation settings and documentary defaults; it does not claim a particular setting is optimal by reasoning alone. The initial audit was read-only; follow-up sections distinguish actual experiments, measurements and listening verdicts.
 
+## 12 November — Higgs3 reference-free native default audition
+
+A private text-only evaluation completed using official Boson weights
+[`bosonai/higgs-tts-3-4b@239f63fb7b02b1aa085f98d9efae5e35cc5523e8`](https://huggingface.co/bosonai/higgs-tts-3-4b/tree/239f63fb7b02b1aa085f98d9efae5e35cc5523e8),
+weight SHA-256 `2f7965264c360b38180885006944aa16bd1de20f4e6cff79f6473bfcf8ae3d5a`.
+The runtime is the separate community vLLM-Omni 0.30.0 project, pinned to
+`a8576ccb725c4e21cd13c3eb5f9a546b21149d2b`; its
+[offline example](https://github.com/vllm-project/vllm-omni/blob/v0.30.0/examples/offline_inference/text_to_speech/higgs_audio_v3/end2end.py)
+and matching deployment YAML were inspected and hash-recorded before inference.
+The pinned [Boson license](https://huggingface.co/bosonai/higgs-tts-3-4b/blob/239f63fb7b02b1aa085f98d9efae5e35cc5523e8/LICENSE)
+permits this private evaluation; no public model API, production approval, named
+speaker reference or imitation prompt was used. The older Cillian clip remains.
+
+The canonical raw source/prepared hash is `386e062ef7020b882240cf512ba7c886be75b3d20dede6b60360b5c1bf3d8dc7`.
+Three paragraph requests use the native default voice. Stage 0 defaults:
+temperature 1, top-p .95, top-k 50, max tokens 2048, seed 42, repetition 1.
+Stage 1: temperature 0, top-p 1, top-k -1, max tokens 65536, seed 42,
+repetition 1. Compatibility overrides are explicitly recorded: Triton attention,
+eager execution, FlashInfer sampler disabled, stage-0 context 4096 with checked
+prompt/output headroom. The upstream stage-1 context warning (65536 configured
+versus 32768 derived) remains documented, not silently corrected. Runtime:
+L40S, bfloat16 as observed in startup, Torch 2.13.0+cu130, vLLM/Omni 0.30.0.
+
+A CPU-only model/hash/tokenizer preflight preceded GPU use. The first GPU call
+generated all paragraphs but outbound-network blocking also prevented Modal's
+result-blob upload. One transport-only corrective attempt allowed that transfer;
+HF/Transformers remained offline with the exact snapshot baked into the image.
+No synthesis settings or seed were changed. Both apps are stopped; no persistent
+volume was created. This is not evidence of bit-identical reruns.
+
+The returned chunks total 66.80 seconds, 24 kHz mono. MP3 SHA-256:
+`9561d4f8bcaa163b44bafdae0ec3eca8ee7c2b69dbf011281411b5d0f065b132`.
+Unprompted Whisper small/int8 found .976 normalized coverage, no aligned dropped
+run and no missing tail; it varied on the opening word and $1.2 million passage.
+Those are listening flags, not established pronunciation errors. No human
+naturalness or quality verdict exists. Exact render/settings/ASR receipts are
+local beside `standard-v1/all-engines/higgs3_default_audition.mp3`; raw chunks
+and transport evidence are in `scratch/tts-nov11/higgs3-default-*`.
+The MP3 and canonical sample manifest were preinstalled with no-clobber creation
+and full hash verification. App registration and endpoint verification are the
+next deployment step; this audition has no integrated book route.
+
+## 12 November — TADA-1B Shared Standard v1, cached community-tokenizer CPU audition
+
+- **Purpose and boundary:** After the official Meta tokenizer/config file path
+  returned 403, the four configured TADA voices were rendered through the
+  historical project adapter using only its already-cached community tokenizer
+  snapshot. This is an explicitly identified community-tokenizer path, not the
+  fresh official Meta-tokenizer migration. The model runtime was offline: Docker
+  `--network none`, `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, and the existing
+  `epub-to-audiobook_tada-cache` mounted read-only. No model, tokenizer, or mirror
+  asset was downloaded during cold-load or synthesis. The Meta/community
+  tokenizer equivalence remains unverified; this experiment does not evade or
+  resolve the official access denial.
+- **Exact provenance:** The project image was built from the tracked TADA recipe
+  at Git commit `1e57fdd2c25131641a89c51e4b3045de61a3153a`, image
+  `sha256:e166fd373b1ed4cc947e0cc5fa03f1c41978701534a533260050558ba02942f3`.
+  Project adapter `tada/server.py` SHA-256 is
+  `538dc97e4ad36b7647aab1ca821da18f5d3889e76d667cb790d40691086a0623`;
+  tracked Dockerfile SHA-256 is
+  `71b0f689ea8842f63bba426e5425a7c863ff6e9d697300c6d90997b8c8c13d4d`.
+  Runtime was published `hume-tada==0.1.9`, Transformers 4.57.6, Torch
+  2.8.0+cu126, torchaudio 2.8.0+cu126, torchvision 0.23.0+cu126, and
+  descript-audio-codec 1.0.0. Model `HumeAI/tada-1b` snapshot
+  `39a987c813d70bc70587757c3ed82c6e9853077d`; codec
+  `HumeAI/tada-codec` snapshot `4413b57a1f223c6f1530a8579c24af4238718c83`;
+  adapter tokenizer request resolves through its historical redirect to
+  `unsloth/Llama-3.2-1B` snapshot
+  `9535bd9b1d1dea6acafbdc4813b728796aeb28da`. The TADA model weight SHA-256 is
+  `32063b83702a6a9f7527c1541b4e9adb24433f0b3563f4bd8345aebbb8282c39`; codec
+  encoder, decoder and aligner hashes and the tokenizer JSON hash are in each
+  staged `*.render.json` receipt.
+- **Source gate:** Hume's [published 0.1.9 package metadata](https://pypi.org/pypi/hume-tada/0.1.9/json)
+  requires Python >=3.10, Transformers >=4.57.1,<5, Torch >=2.7,<3, torchaudio,
+  torchvision, and descript-audio-codec >=1.0.0. Hume's
+  [official README](https://github.com/HumeAI/tada) describes TADA's Llama 3.2
+  base and access prerequisites; the official
+  [TADA model card](https://huggingface.co/HumeAI/tada-1b) identifies the public
+  checkpoint. The adapter and tokenizer substitution remain project-owned.
+  Published 0.1.9 PyPI metadata differs from the current upstream `main`
+  `pyproject.toml` Torch upper bound; the observed render used the published
+  package and pinned project image above, not an unversioned source install.
+- **Frozen input and settings:** All four requests used the same prepared text
+  obtained from `voice_sample.sample_text_for('tada')`: sample ID
+  `narrator-standard-v1`, source SHA-256
+  `386e062ef7020b882240cf512ba7c886be75b3d20dede6b60360b5c1bf3d8dc7`
+  (147 raw words), prepared SHA-256
+  `74de152cc1ed27890fbbcabc88f26d5cf360953e64e70a5d56d897ff1ceb0ee9`
+  (151 words). Existing adapter settings were preserved: CPU bfloat16, 600
+  character chunks, 250 ms inter-chunk silence, `Right. ` lead-in trimmed by the
+  adapter, 24 kHz mono output, no exposed seed. Each voice used its exact
+  configured reference WAV and checked-in transcript; hashes are in the per-voice
+  receipts. Docker was capped at 4 CPU and 14 GiB RAM. The first container's
+  unrestricted swap use filled the remaining host swap and its in-flight request
+  was stopped before it wrote an artifact. The same request was rerun unchanged
+  with `--memory-swap=14g` equal to `--memory=14g`, which disables swap access for
+  that container per the official
+  [Docker resource-constraints documentation](https://docs.docker.com/engine/containers/resource_constraints/).
+  All four requests then completed within the 300-second per-voice cap. TADA
+  container peak observed use was about 8 GiB; host MemAvailable remained above
+  8 GiB at sampled checks; app `/api/health` latency stayed 44–247 ms. The owned
+  audition container was removed after the batch; no other service was stopped.
+- **Observed renders (one run each, not speed benchmarks):** Arthur
+  (`uk_male_minter_tada`) took 137.518 s and produced 71.469 s audio; Harriet
+  (`uk_female_golding_tada`) 123.290 s / 69.570 s; Edmund
+  (`uk_male_yearsley_tada`) 123.440 s / 70.350 s; Beatrice
+  (`uk_female_samuel_tada`) 124.765 s / 75.469 s. WAV and MP3 hashes, sizes,
+  exact requests, runtimes, references, and official preview manifests are staged
+  as per-voice `*.render.json` and `*.sample.json` files beside the audio under
+  `evaluations/new-engines/output/november-2026-south-africa/standard-v1/all-engines/`.
+- **Unprompted completeness audit:** All four MP3s were audited with
+  faster-whisper small, CPU int8, 2 threads, English, beam size 5, no VAD and no
+  prior-text conditioning. Harriet, Edmund and Beatrice had no >=3-word internal
+  drop flag and no unheard tail; their transcripts nevertheless varied
+  materially on proper names and on the 1,250/875 figures, so those details need
+  listening. Arthur's small pass flagged a possible internal omission around
+  1,250 invited / 875 attended (cover 0.892, tail_unheard 0). An independent
+  cached base.en pass differed on that passage (cover 0.862, tail_unheard 0, no
+  drop flag). Arthur's number-span completeness is therefore uncertain; both
+  exact transcripts/reports are preserved. These ASR results are completeness
+  signals, not pronunciation or audio-quality verdicts. Dave has not yet rated
+  these four takes by listening.
+- **Receipts and status:** `scratch/tts-nov11/tada-standard-v1-build-receipt.json`
+  records the image, package freeze, offline cold-load, resource readings and
+  initial interrupted attempt. Per-voice provenance and ASR reports remain local
+  with the audition artifacts. These clips are staged for the app's Shared Test
+  v1 audition; promotion awaits the warning-note deployment and exact API/hash
+  verification. No app source was edited in this batch.
+
 ## 11 November — Shared Standard v1 GPU preview outcomes
 
 - **CosyVoice 3 (audition-only):** Official [CosyVoice source](https://github.com/QwenAudio/CosyVoice/tree/074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc), commit `074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc`; official [Fun-CosyVoice3-0.5B-2512 snapshot](https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/tree/29e01c4e8d000f4bcd70751be16fa94bf3d85a18), revision `29e01c4e8d000f4bcd70751be16fa94bf3d85a18`. Uses the pinned upstream requirements except optional TensorRT packages; official `AutoModel` eager path (`load_trt=False`), no explicit seed, chunk limit 300 characters, speed 1.0, non-streaming, `You are a helpful assistant.<|endofprompt|>` prompt prefix, and FFmpeg libmp3lame 96 kbit/s output from the project wrapper. Runtime observed: L40S, Torch `2.3.1+cu121`, CUDA toolkit 12.4.131, transformers 4.51.3, NumPy 1.26.4, WeText 0.0.4, Whisper 20231117, pyworld 0.3.4. Reference WAV hashes were checked against both engine asset copies; prompts use checked-in `tada/voices/ref_transcripts.json`, not the historical CosyVoice Whisper cache. Four Standard v1 files were staged, ASR-checked, promoted and verified by exact HTTP/body hashes. Beatrice's ASR flagged two middle spans, with no tail truncation; this is not a confirmed audio error. No new human listening or quality verdict was recorded. Wrapper/provenance receipt: ignored `scratch/tts-nov11/render_cosy_standard_only.py` and per-voice `*.render.json` under `evaluations/new-engines/output/november-2026-south-africa/standard-v1/all-engines/`.
 - **Gemini 3.1 Flash TTS:** Exact model `gemini-3.1-flash-tts-preview`, pinned project adapter dependency `google-genai==2.18.1`; official [speech generation](https://ai.google.dev/gemini-api/docs/speech-generation), [Interactions API](https://ai.google.dev/api/interactions-api), [model card](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-tts-preview), [billing](https://ai.google.dev/gemini-api/docs/billing), [pricing](https://ai.google.dev/gemini-api/docs/pricing) and [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits). The adapter sends one Interactions API request per preset, 24 kHz mono PCM wrapped as WAV, fixed default audiobook/British-English style unless `GEMINI_TTS_STYLE` is set, retries disabled, local cap 10 requests per Pacific quota day. The Standard v1 batch consumed 10/10: nine clips fully decoded; Puck's safety refusal was counted and not retried. Billing API confirmed the dedicated project has billing disabled. The engine-specific explicit-normalized sample SHA-256 was `d13e1b48bdbfb5ed60fab3736f7287b71ffc6a7418955ca976cb1fc7092e77c9`; nine successful outputs were audition inputs only, with no new human verdict. Achernar's older approval does not transfer to this clip.
 - **TADA-1B:** Fresh pinned-official migration is blocked because the official [Meta Llama 3.2 1B repository](https://huggingface.co/meta-llama/Llama-3.2-1B) tokenizer/config file request at revision `4e20de362430cd3b72f300e6b0f18e50e7166e08` returned HTTP 403 (not authorized). Readable repository metadata did not establish file access. No alternate mirror was used to bypass the denial, no GPU synthesis was launched, and no cache was changed. The existing community-tokenizer adapter/previews remain distinct and unverified for equivalence; this is not a new audio-quality verdict.
+- **Fish Speech S2 Pro (`fish_cillian_irish`):** One bounded Shared Standard v1 audition used the official [Fish Speech inference](https://speech.fish.audio/inference/) and [installation](https://speech.fish.audio/install/) guidance, pinned official runtime commit [`214da3cd841bda85da2496b96cd3c4d7edb1337e`](https://github.com/fishaudio/fish-speech/tree/214da3cd841bda85da2496b96cd3c4d7edb1337e), and official [`fishaudio/s2-pro` revision `1de9996b6be38b745688de084d87a5633f714e4e`](https://huggingface.co/fishaudio/s2-pro/tree/1de9996b6be38b745688de084d87a5633f714e4e). This older runtime loads `DualARTransformer`, matching the locked Cillian recipe; the later upstream Omni loader was not substituted. Runtime was Python 3.10.17, Torch 2.8.0+cu128, CUDA L40S, bfloat16; the CPU preflight loaded the pinned weights, DualAR caches and codec, checked all reference hashes, and passed in 64.29 seconds before GPU inference. Inputs were frozen from `voice_sample.sample_text_for('fish')`, source SHA-256 `386e062ef7020b882240cf512ba7c886be75b3d20dede6b60360b5c1bf3d8dc7`, prepared SHA-256 `74de152cc1ed27890fbbcabc88f26d5cf360953e64e70a5d56d897ff1ceb0ee9`. The unchanged recipe used seed 42 per sentence, temperature 0.85, top-p 0.9, top-k 30, iterative prompting, 300-character chunks, bf16, no retries; quote sentences used the expressive Cillian crop and other sentences the full reference. Recipe assembly trims/pads sentence edges, inserts sentence/paragraph gaps, applies the documented EQ/loudness chain, and encodes 192 kbit/s MP3. The render was 64.94 seconds; MP3 SHA-256 `044d971db3abf024d4ffd37df7cb92cf69e85164ced4d3be2c166db9f2d1bd55`. Unprompted Whisper small/int8 coverage was 0.982 with no flagged drops or unheard tail; this does not establish pronunciation or sound quality. The exact endpoint returned HTTP 200 with matching full-body hash and the API marked the preview current for `narrator-standard-v1`. The previous exact MP3 was archived under `/home/dave/ai/lab/stacks/epub-to-audiobook/data/previews-archive/standard-v1/20261111T235314Z`; no previous sample sidecar existed. Promotion receipt: `C:\Users\Dave\repos\epub-to-audiobook\scratch\tts-nov11\promotion-receipt-20261111T235314Z.json`; per-voice render/ASR/staging records are in ignored `evaluations/new-engines/output/november-2026-south-africa/standard-v1/all-engines/` in the main worktree. Historical cache runtime/model pins are not proven; the timestamp-based match to this DualAR-era source is only an inference. The Fish license is the [Fish Audio Research License](https://huggingface.co/fishaudio/s2-pro/blob/1de9996b6be38b745688de084d87a5633f714e4e/LICENSE.md), which permits non-commercial research/evaluation and requires separate written permission for commercial use. No new human listening or quality verdict was recorded. The successful app `ap-b6pKVyfBNxf0n05Nwxaf6W` used USD 0.0846 in its reported CPU, memory and L40S resources; the Fish-labelled Modal rows across the same hourly bucket total USD 0.340662 including other build/preflight attempts, so that aggregate is not the render-only cost.
 
 ## 11 November follow-up: shared passage and bounded clone experiments
 

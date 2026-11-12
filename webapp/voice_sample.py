@@ -56,7 +56,7 @@ from text_profiles import MODERN_ENGINES, EXPLICIT_ENGINES  # noqa: E402
 # These have no integrated book path. Their audited native API receives source
 # text directly; engine-internal normalization is recorded with each render.
 # Never extend this exception to unknown engines or failed preprocessing.
-RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2')
+RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2', 'higgs3')
 
 
 def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
@@ -69,7 +69,7 @@ def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
         This is the arm Dave selected for Peter, Jasper and Rosie on 2026-08-14,
         and the safe contract for the number-dense Gemini audition.
       * kokoro/edge/polly -> numbers spelled out, which they need.
-      * maya2/voxcpm2 -> source text for their audition-only native API;
+      * maya2/voxcpm2/higgs3 -> source text for their audition-only native API;
         engine-internal normalization is separate, not a book-path claim.
     Sending raw text to every engine can make numeric frontends misread "$1.2
     billion" and you'd be judging a preprocessing bug, not the voice.

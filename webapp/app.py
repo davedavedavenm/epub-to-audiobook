@@ -662,10 +662,10 @@ VOICES = {
     # comparison. Do not add an accented Chatterbox or Piper production voice
     # without materially new evidence and a passed listening sample.
     # ============ TADA (LOCAL/GPU, MOST NATURAL) ============
-    'uk_male_minter_tada': {'name': 'Arthur — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
-    'uk_female_golding_tada': {'name': 'Harriet — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
-    'uk_male_yearsley_tada': {'name': 'Edmund — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada'},
-    'uk_female_samuel_tada': {'name': 'Beatrice — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada'},
+    'uk_male_minter_tada': {'name': 'Arthur — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada', 'note': 'Shared test v1: ASR flagged the 1,250/875 passage; listen to check completeness. The new take has not been rated.'},
+    'uk_female_golding_tada': {'name': 'Harriet — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada', 'note': 'Shared test v1: ASR flagged names and numbers; listen to check them. This new take has not been rated.'},
+    'uk_male_yearsley_tada': {'name': 'Edmund — TADA (most natural)', 'accent': 'British', 'gender': 'Male', 'engine': 'tada', 'note': 'Shared test v1: ASR flagged names and numbers; listen to check them. This new take has not been rated.'},
+    'uk_female_samuel_tada': {'name': 'Beatrice — TADA (most natural)', 'accent': 'British', 'gender': 'Female', 'engine': 'tada', 'note': 'Shared test v1: ASR flagged names and numbers; listen to check them. This new take has not been rated.'},
     # ============ CHATTERBOX NANO (LOCAL, SAME UK CLONES, ~3x CPU SPEED) ============
     'uk_male_minter_nano': {'name': 'Arthur (Nano)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox_nano', 'note': 'ASR flagged numbers; listen to check. This shared-passage take has not yet been heard by Dave.'},
     'uk_female_golding_nano': {'name': 'Harriet (Nano)', 'accent': 'British', 'gender': 'Female', 'engine': 'chatterbox_nano'},
@@ -773,6 +773,12 @@ VOICES['breeze_fictional_voice_design'] = {
     'gender': 'Male', 'engine': 'audition', 'audition_only': True,
     'catalogue_model': 'breeze2', 'preview_text_engine': 'breeze',
     'note': 'A newly designed voice with no speaker reference. Accent and naturalness await listening; ASR flagged the 1,250 passage. Private audition only.',
+}
+VOICES['higgs3_default_audition'] = {
+    'name': 'Default voice (no speaker reference)', 'accent': 'Unspecified',
+    'gender': 'Unspecified', 'engine': 'audition', 'audition_only': True,
+    'catalogue_model': 'higgs3', 'preview_text_engine': 'higgs3',
+    'note': 'Private evaluation of the native default voice. No speaker reference. ASR flagged the opening word and $1.2 million passage; listening verdict pending.',
 }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the

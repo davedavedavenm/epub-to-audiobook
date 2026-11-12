@@ -22,9 +22,12 @@ prose panels retain their own width constraints.
 
 ## 11 November 2026 — Native audition input contracts — Active
 
-Audition-only Maya2 Native and VoxCPM2 declare their native raw-input contracts
-explicitly via `preview_text_engine` and `sample_text_for('maya2'/'voxcpm2')`.
-Neither has a book route, so do not invent book/preview parity. Internal model
+Audition-only Maya2 Native, VoxCPM2 and Higgs3's native default voice declare their
+raw-input contracts explicitly via `preview_text_engine` and the named
+`sample_text_for('maya2'/'voxcpm2'/'higgs3')` helpers. These voices have no book
+route, so do not invent book/preview parity. The Higgs default uses documented
+text-only synthesis with no speaker reference, distinct from its locked Cillian
+book pipeline. Internal model
 normalization stays separately documented: Maya's numeric-text recommendation
 is enabled; VoxCPM2 retains its documented default off. Unknown engines and
 preprocessing errors never use this raw-input exception. This preserves the
