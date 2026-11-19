@@ -5275,14 +5275,13 @@ def voices_for_client() -> dict:
 
 @app.route('/api/bookfinder/search', methods=['GET'])
 def bookfinder_search():
-    """Search OpenBooks for available books to grab."""
+    """Proxy Book Finder search to docker-vm's unified Book Finder service."""
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify({'results': []})
     try:
-        from openbooks_client import search_openbooks_async
-        import asyncio
-        results = asyncio.run(search_openbooks_async(query, timeout=90.0))
+        from openbooks_client import search_books
+        results = search_books(query, timeout=95.0)
         resp = jsonify({'results': results})
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
@@ -5295,7 +5294,7 @@ def bookfinder_search():
 
 @app.route('/api/bookfinder/grab', methods=['POST', 'OPTIONS'])
 def bookfinder_grab():
-    """Download book from OpenBooks, transfer to library, and index."""
+    """Download book via docker-vm Book Finder (into Calibre) and sync copy to studio uploads."""
     if request.method == 'OPTIONS':
         resp = make_response()
         resp.headers['Access-Control-Allow-Origin'] = '*'
@@ -5321,16 +5320,6 @@ def bookfinder_grab():
         resp = jsonify({'error': str(e)})
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp, 500
-
-
-@app.route('/embed/bookfinder', methods=['GET'])
-def bookfinder_embed():
-    """Render standalone BookFinder widget for embedding into Calibre-Web or external dashboards."""
-    resp = make_response(render_template('bookfinder_embed.html'))
-    resp.headers.pop('X-Frame-Options', None)
-    resp.headers['Content-Security-Policy'] = "frame-ancestors *"
-    resp.headers['Access-Control-Allow-Origin'] = '*'
-    return resp
 
 
 @app.route('/api/voices/custom', methods=['GET'])

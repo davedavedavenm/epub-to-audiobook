@@ -1,5 +1,20 @@
 # Decisions — EPUB to Audiobook
 
+## 19 November 2026 — Book acquisition, Book Finder, and `wanted_monitor` consolidated into `infra` — Active
+
+EPUB fetching, the family Book Finder service (`https://books.magnusfamily.co.uk`
+→ `docker-vm:8095` → `openbooks-vpn` → CWA `book-ingest`), CWA metadata curation,
+and `wanted_monitor` are owned solely by `infra` (per `infra/DECISIONS.md`). This
+repo is the TTS conversion studio only:
+- `webapp/openbooks_client.py` is a thin HTTP proxy to `BOOK_FINDER_URL`
+  (`http://192.168.1.113:8095`) on `docker-vm` so the studio's Book Finder tab
+  remains working with zero direct OpenBooks IRC WebSocket or `ssh`/`scp` code.
+- Duplicate `scripts/wanted/` and unused `/embed/bookfinder` have been removed
+  (`wanted_monitor.py` canonical home:
+  `infra/stacks/docker-vm/media-stack/scripts/wanted/`).
+- Ebooks flow unidirectionally from `docker-vm` Calibre (`metadata.db`) into
+  Zorin `/home/dave/booklib` via `infra/scripts/zorin/sync_books_from_calibre.py`.
+
 ## 11 November 2026 — John reference short comparison: Qwen leads — Active
 
 Dave's verdict: "kitten controlled was better, qwen 3 best, preserved worst".

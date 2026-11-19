@@ -1,72 +1,109 @@
-"""Book Finder hand-off: grabbed EPUB must reach the conversion app's uploads."""
-import os
-import subprocess
-import sys
+"""Book Finder thin HTTP proxy tests (delegates search/grab to docker-vm:8095)."""
 from pathlib import Path
+import sys
+from unittest.mock import Mock
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "webapp"))
 import openbooks_client as ob  # noqa: E402
 
-FN = "Patrick Radden Keefe - Say Nothing- A True Story of Murder and Memory in Northern Ireland (retail) (epub).epub"
+
+def _fake_resp(status=200, json_data=None, chunks=None):
+    resp = Mock()
+    resp.status_code = status
+    resp.ok = 200 <= status < 300
+    resp.raise_for_status = Mock()
+    if status >= 400:
+        resp.raise_for_status.side_effect = RuntimeError(f"HTTP {status}")
+    if json_data is not None:
+        resp.json.return_value = json_data
+    if chunks is not None:
+        resp.iter_content.return_value = list(chunks)
+    return resp
 
 
-def test_search_terms_from_openbooks_filename():
-    assert ob._library_search_terms(FN) == ("Keefe", "Nothing")
-    assert ob._library_search_terms("Misha Glenny - McMafia (v5.0).epub") == ("Glenny", "McMafia")
-    assert ob._library_search_terms("OnlyATitle.epub") == ("", "OnlyATitle")
-
-
-def _cp(rc=0, out=""):
-    return subprocess.CompletedProcess([], rc, stdout=out, stderr="")
-
-
-def test_sync_finds_book_in_calibre_library_when_drop_folder_is_empty(tmp_path, monkeypatch):
-    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+def test_search_books_proxies_http_query(monkeypatch):
     calls = []
 
-    def fake_run(cmd, **kw):
-        calls.append(cmd)
-        if cmd[0] == "scp":
-            remote = cmd[-2]
-            if "/calibre-library/" in remote:
-                Path(cmd[-1]).write_bytes(b"epub-bytes")
-                return _cp(0)
-            return _cp(1)  # drop folder: CWA already moved it
-        return _cp(0, "/lib/Patrick Radden Keefe/Say Nothing (247)/Say Nothing - Patrick Radden Keefe.epub\n")
+    def fake_get(url, params=None, timeout=None):
+        calls.append((url, params, timeout))
+        return _fake_resp(200, {"results": [{"title": "Dune", "author": "Frank Herbert", "command": "!Bsk Dune.epub"}]})
 
-    monkeypatch.setattr(ob.subprocess, "run", fake_run)
-    monkeypatch.setattr(ob, "OPENBOOKS_CALIBRE_LIBRARY", "/home/dave/docker-apps/calibre-web-automated/calibre-library")
-    # the fake find returns a path that must contain calibre-library for the fake scp
-    monkeypatch.setattr(ob, "_find_in_calibre_library",
-                        lambda f: "/x/calibre-library/Keefe/Say Nothing (247)/Say Nothing - Patrick Radden Keefe.epub")
-    assert ob._bg_sync_to_studio(FN, wait_s=1, poll_s=0.01) is True
-    assert (tmp_path / FN).read_bytes() == b"epub-bytes"
-    # tried both drop-folder locations, including the books/ subfolder OpenBooks really writes to
-    scp_targets = [c[-2] for c in calls if c[0] == "scp"]
-    assert any("/books/" + FN in t for t in scp_targets)
+    monkeypatch.setattr(ob.requests, "get", fake_get)
+    monkeypatch.setattr(ob, "BOOK_FINDER_URL", "http://192.168.1.113:8095")
+
+    assert ob.search_books("   ") == []
+    res = ob.search_books("Dune")
+    assert len(res) == 1 and res[0]["title"] == "Dune"
+    assert calls[0][0] == "http://192.168.1.113:8095/api/bookfinder/search"
+    assert calls[0][1] == {"q": "Dune"}
 
 
-def test_sync_prefers_drop_folder_and_stops(tmp_path, monkeypatch):
-    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+def test_bg_sync_to_uploads_fetches_via_http_and_sanitizes_filename(tmp_path, monkeypatch):
+    def fake_get(url, params=None, stream=False, timeout=None):
+        assert url.endswith("/api/bookfinder/file")
+        assert params == {"book_id": 312}
+        return _fake_resp(200, chunks=[b"EPUB-", b"BYTES"])
 
-    def fake_run(cmd, **kw):
-        Path(cmd[-1]).write_bytes(b"x")
-        return _cp(0)
+    monkeypatch.setattr(ob.requests, "get", fake_get)
+    monkeypatch.setattr(ob, "BOOK_FINDER_URL", "http://192.168.1.113:8095")
 
-    monkeypatch.setattr(ob.subprocess, "run", fake_run)
-    monkeypatch.setattr(ob, "_find_in_calibre_library", lambda f: (_ for _ in ()).throw(AssertionError("must not search")))
-    assert ob._bg_sync_to_studio(FN, wait_s=1, poll_s=0.01) is True
+    ok = ob._bg_sync_to_uploads(
+        book_id=312,
+        filename="../../evil/Careless People (retail).epub",
+        upload_dir=tmp_path,
+        wait_s=1,
+        poll_s=0.01,
+    )
+    assert ok is True
+    expected = tmp_path / "Careless People (retail).epub"
+    assert expected.is_file() and expected.read_bytes() == b"EPUB-BYTES"
+    assert not (tmp_path.parent / "evil").exists()
 
 
-def test_sync_gives_up_cleanly(tmp_path, monkeypatch):
-    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
-    monkeypatch.setattr(ob.subprocess, "run", lambda cmd, **kw: _cp(1))
-    monkeypatch.setattr(ob, "_find_in_calibre_library", lambda f: None)
-    assert ob._bg_sync_to_studio(FN, wait_s=0.05, poll_s=0.01) is False
-    assert not os.listdir(tmp_path)
+def test_safe_upload_dest_blocks_traversal_and_bad_extensions(tmp_path):
+    dest = ob._safe_upload_dest(tmp_path, "../../nested/script.txt")
+    assert dest.parent == tmp_path.resolve()
+    assert dest.suffix == ".epub"
 
 
-def test_hostile_filename_yields_only_alphanumeric_search_terms():
-    author, word = ob._library_search_terms("Evil'; rm -rf / - Title; $(reboot) Book.epub")
-    assert author.isalnum() and word.isalnum()
-    assert not any(c in author + word for c in ";$()'\"`|&/ ")
+def test_grab_and_import_book_posts_and_spawns_background_fetch(monkeypatch):
+    started = []
+
+    class FakeThread:
+        def __init__(self, target=None, kwargs=None, daemon=None):
+            started.append((target, kwargs, daemon))
+
+        def start(self):
+            started.append(("started",))
+
+    monkeypatch.setattr(ob.threading, "Thread", FakeThread)
+    monkeypatch.setattr(
+        ob.requests,
+        "post",
+        lambda url, json=None, timeout=None: _fake_resp(
+            200,
+            {
+                "status": "success",
+                "filename": "Dune.epub",
+                "title": "Dune",
+                "author": "Frank Herbert",
+                "calibre_id": 999,
+                "ingested": True,
+                "library_url": "https://library.magnusfamily.co.uk/book/999",
+            },
+        ),
+    )
+
+    out = ob.grab_and_import_book("!Bsk Dune.epub", title="Dune", author="Frank Herbert")
+    assert out["status"] == "success"
+    assert out["calibre_id"] == 999
+    assert started[0][0] is ob._bg_sync_to_uploads
+    assert started[0][1] == {"book_id": 999, "filename": "Dune.epub"}
+    assert started[1] == ("started",)
+
+
+def test_grab_requires_command():
+    with pytest.raises(ValueError):
+        ob.grab_and_import_book("   ")

@@ -385,25 +385,9 @@ and `docs/protocols/book-acquisition-pipeline.md` (detailed runbook), with `book
 there (moved 2026-08-01; see `infra/DECISIONS.md`). Don't re-add that
 material here.
 
-What this repo owns from that pipeline: the **wanted monitor** watcher
-(`scripts/wanted/wanted_monitor.py` + `run_wanted_monitor.sh`), which checks
-LazyLibrarian's Wanted list against this app's library and notifies via
-Telegram/WhatsApp when a title lands — see `scripts/wanted/README.md`.
+All book acquisition, CWA curation, and monitoring scripts (including `wanted_monitor.py` / `run_wanted_monitor.sh`, `book_sync.sh`, `pipeline_healthcheck.sh`, and `scripts/docker-vm/cwa/`) now live solely in the `infra` repo — the duplicate `scripts/wanted/` copy previously kept here was removed on 2026-11-19.
 
-The integration contract is nevertheless part of this product: an external
-reading list should queue **AudioBook Wanted only**, with torrents preferred and
-Usenet as fallback. An ebook/TTS job is a later human-approved fallback when no
-acceptable audiobook exists. For a new Goodreads account, LazyLibrarian's
-official docs require the account-specific shelf RSS route because new API keys
-are no longer issued; configure the RSS provider with `DLTYPES=A`. Never commit
-the feed URL, which may contain an account token.
-
-Live deployment detail, verified 2026-08-13: homelab-pi stages incoming ebooks
-at `~/Downloads/openbooks/books`; Zorin user cron rsyncs that source every 15
-minutes into local `/home/dave/booklib`; UI and worker use that local path as
-`LIBRARY_DIR`. Host `/mnt/openbooks` is a read-only SSHFS view but is not the
-current app library. LazyLibrarian owns acquired-audiobook delivery directly to
-Audiobookshelf; infra's `book_sync.sh` audiobook leg is disabled by default.
+Live Book Finder and Calibre flow (`2026-11-19`): `books.magnusfamily.co.uk` and `/api/bookfinder/*` route through `docker-vm:8095` (`cwa-book-bot.service` in `infra`), which talks to `openbooks-vpn` behind ProtonVPN WireGuard and drops ebooks straight into CWA `book-ingest/`. Zorin's `infra`-tracked `sync_books_from_calibre.py` pulls newly indexed ebooks from `docker-vm` into `/home/dave/booklib` every 15 minutes (`LIBRARY_DIR` for UI and worker). `homelab-pi` OpenBooks and the circular Zorin-to-Calibre push were retired on 2026-11-19; LazyLibrarian owns acquired audiobooks directly into Audiobookshelf (`BOOK_SYNC_AUDIO=0`).
 
 ### 2026-08-13 — undocumented automatic Kaggle submitter retired
 
