@@ -6,6 +6,7 @@ Allows users to upload EPUB/PDF files, preview voices, and convert to audiobooks
 
 import os
 import hmac
+import html
 import sys
 import subprocess
 import threading
@@ -18,6 +19,7 @@ import json
 import shlex
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from contextlib import contextmanager
 from collections import Counter
@@ -3813,25 +3815,95 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
             update_job(job_id, sync_status='failed', sync_error=str(e))
         return False
 
+_TG_FIND_CACHE: Dict[str, Dict[str, Any]] = {}
+_TG_FIND_LOCK = threading.Lock()
+
+
+def _extract_tail_error(raw: Any, max_len: int = 220) -> str:
+    """Return the last meaningful error line from logs or tracebacks."""
+    lines = [ln.strip() for ln in str(raw or "").splitlines() if ln.strip()]
+    meaningful = [ln for ln in lines if not ln.startswith(("Traceback ", 'File "'))]
+    picked = meaningful[-1] if meaningful else (lines[-1] if lines else "Unknown error")
+    return picked[-max_len:] if len(picked) > max_len else picked
+
+
+def _is_london_quiet_hours(now_dt: datetime | None = None) -> bool:
+    dt = (now_dt or datetime.now(ZoneInfo("UTC"))).astimezone(ZoneInfo("Europe/London"))
+    return dt.hour >= 23 or dt.hour < 7
+
+
+def _book_finder_base() -> str:
+    return os.environ.get("BOOK_FINDER_URL", "http://192.168.1.113:8095").strip().rstrip("/")
+
+
+def _tg_api(method: str, payload: dict[str, Any], timeout: int = 10) -> None:
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}",
+            json=payload,
+            timeout=timeout,
+        )
+    except Exception as exc:
+        app.logger.warning(f"Telegram {method} failed: {exc}")
+
+
+def _cache_book_item(item: dict[str, Any]) -> str:
+    tok = uuid.uuid4().hex[:10]
+    with _TG_FIND_LOCK:
+        _TG_FIND_CACHE[tok] = dict(item)
+        while len(_TG_FIND_CACHE) > 120:
+            oldest = next(iter(_TG_FIND_CACHE))
+            _TG_FIND_CACHE.pop(oldest, None)
+    return tok
+
+
 def send_telegram_notification(job: dict, success: bool):
     """Send Telegram notification when job completes."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return
 
     try:
+        book_esc = html.escape(str(job.get('book_name') or 'Untitled'))
+        voice_esc = html.escape(str(job.get('voice_name') or 'default'))
         if success:
-            message = f"✅ Audiobook completed!\n\n📖 {job['book_name']}\n🎙️ Voice: {job['voice_name']}\n📁 {job.get('file_count', '?')} MP3 files"
+            lines = [
+                "✅ <b>Audiobook ready!</b>",
+                f"📖 <b>{book_esc}</b>",
+                f"🎙️ Voice: <code>{voice_esc}</code> · 📁 {html.escape(str(job.get('file_count', '?')))} files",
+            ]
             if job.get('synced_to_abs'):
-                message += "\n☁️ Synced to Audiobookshelf"
+                lines.append("☁️ Synced to Audiobookshelf")
         else:
-            message = f"❌ Audiobook conversion failed\n\n📖 {job['book_name']}\n⚠️ {job.get('error', 'Unknown error')[:200]}"
+            tail = html.escape(_extract_tail_error(job.get('error', 'Unknown error')))
+            lines = [
+                "❌ <b>Audiobook conversion failed</b>",
+                f"📖 <b>{book_esc}</b>",
+                f"⚠️ <code>{tail}</code>",
+            ]
+
+        buttons = []
+        base_url = str(globals().get('PUBLIC_BASE_URL') or '').strip().rstrip('/')
+        if base_url.startswith(('http://', 'https://')):
+            job_url = f"{base_url}/#job-{job['id']}" if job.get('id') else base_url
+            buttons.append({'text': '📖 Open App', 'url': job_url})
+        abs_pub = os.environ.get('ABS_PUBLIC_URL', '').strip()
+        if success and job.get('synced_to_abs') and abs_pub.startswith(('http://', 'https://')):
+            buttons.append({'text': '🎧 Audiobookshelf', 'url': abs_pub})
+
+        payload: dict[str, Any] = {
+            'chat_id': TELEGRAM_CHAT_ID,
+            'text': '\n'.join(lines),
+            'parse_mode': 'HTML',
+            'disable_web_page_preview': True,
+            'disable_notification': _is_london_quiet_hours(),
+        }
+        if buttons:
+            payload['reply_markup'] = {'inline_keyboard': [buttons]}
 
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        requests.post(url, json={
-            'chat_id': TELEGRAM_CHAT_ID,
-            'text': message,
-            'parse_mode': 'HTML'
-        }, timeout=10)
+        requests.post(url, json=payload, timeout=10)
         app.logger.info(f"Sent Telegram notification for job {job['id']}")
     except Exception as e:
         app.logger.warning(f"Failed to send Telegram notification: {e}")
@@ -6820,15 +6892,221 @@ def article_audio(job_id: str, filename: str):
                      download_name=target.name)
 
 
+def _handle_book_callback(cb: dict[str, Any], allowed_chat: str) -> tuple[dict[str, Any], int]:
+    cb_id = str(cb.get('id') or '')
+    msg = cb.get('message') or {}
+    chat_id = (msg.get('chat') or {}).get('id')
+    sender_id = (cb.get('from') or {}).get('id')
+    if not (
+        (sender_id is not None and hmac.compare_digest(str(sender_id), allowed_chat))
+        or (chat_id is not None and hmac.compare_digest(str(chat_id), allowed_chat))
+    ):
+        _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Not authorized.'})
+        return {'status': 'ignored_chat'}, 200
+
+    data = str(cb.get('data') or '')
+    message_id = msg.get('message_id')
+    base = _book_finder_base()
+
+    if data.startswith('bk:grab:'):
+        tok = data[len('bk:grab:'):]
+        with _TG_FIND_LOCK:
+            item = _TG_FIND_CACHE.get(tok)
+        if not item:
+            _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Search expired — run /find again.'})
+            return {'status': 'expired_token'}, 200
+        _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Grabbing ebook…'})
+        try:
+            r = requests.post(
+                f"{base}/api/bookfinder/grab",
+                json={
+                    'command': item.get('command', ''),
+                    'title': item.get('title', ''),
+                    'author': item.get('author', ''),
+                },
+                timeout=30,
+            )
+            body = r.json() if r.headers.get('content-type', '').startswith('application/json') else {}
+            ok = r.ok and body.get('status') not in {'error', 'failed'}
+            title_esc = html.escape(str(item.get('title') or 'Book'))
+            status_txt = (
+                f"✅ <b>Grabbed:</b> {title_esc}"
+                if ok
+                else f"❌ <b>Grab failed:</b> {title_esc}\n<code>{html.escape(_extract_tail_error(body.get('error') or r.text))}</code>"
+            )
+        except Exception as exc:
+            status_txt = f"❌ <b>Grab failed:</b> <code>{html.escape(_extract_tail_error(exc))}</code>"
+        if chat_id and message_id:
+            _tg_api('editMessageText', {
+                'chat_id': chat_id,
+                'message_id': message_id,
+                'text': status_txt,
+                'parse_mode': 'HTML',
+                'reply_markup': {'inline_keyboard': [[{'text': '🎙 Queue Audiobook', 'callback_data': f'bk:audio:{tok}'}]]},
+            })
+        return {'status': 'callback_handled', 'action': 'grab'}, 200
+
+    if data.startswith('bk:audio:'):
+        tok = data[len('bk:audio:'):]
+        with _TG_FIND_LOCK:
+            item = _TG_FIND_CACHE.get(tok)
+        title = str((item or {}).get('title') or tok)
+        _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Queuing audiobook…'})
+        try:
+            r = requests.post(f"{base}/want-audio", json={'title': title}, timeout=15)
+            status_txt = (
+                f"🎙 <b>Audiobook queued:</b> {html.escape(title)}"
+                if r.ok
+                else f"❌ <b>Queue failed:</b> HTTP {r.status_code}"
+            )
+        except Exception as exc:
+            status_txt = f"❌ <b>Queue failed:</b> <code>{html.escape(_extract_tail_error(exc))}</code>"
+        if chat_id and message_id:
+            _tg_api('editMessageText', {
+                'chat_id': chat_id,
+                'message_id': message_id,
+                'text': status_txt,
+                'parse_mode': 'HTML',
+            })
+        return {'status': 'callback_handled', 'action': 'audio'}, 200
+
+    _tg_api('answerCallbackQuery', {'callback_query_id': cb_id})
+    return {'status': 'ignored_callback'}, 200
+
+
+def _handle_book_command(chat_id: Any, text: str) -> dict[str, Any]:
+    parts = text.strip().split(None, 1)
+    cmd = parts[0].split('@')[0].lower()
+    arg = parts[1].strip() if len(parts) > 1 else ''
+    base = _book_finder_base()
+
+    if cmd in {'/help', '/start'}:
+        _tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': (
+                "<b>📚 Book &amp; Audiobook Bot</b>\n"
+                "/find &lt;query&gt; — Search OpenBooks &amp; grab ebooks\n"
+                "/wanted — Show series gaps &amp; recent library books\n"
+                "/tts — Active &amp; recent audiobook conversions\n"
+                "/help — Show this help\n\n"
+                "💡 Paste any article URL to queue it as audio."
+            ),
+            'parse_mode': 'HTML',
+            'disable_web_page_preview': True,
+        })
+        return {'status': 'command_handled', 'command': cmd}
+
+    if cmd == '/tts':
+        jobs = get_all_jobs()[:6]
+        if not jobs:
+            _tg_api('sendMessage', {'chat_id': chat_id, 'text': '🎧 <b>No audiobook jobs yet.</b>', 'parse_mode': 'HTML'})
+            return {'status': 'command_handled', 'command': '/tts'}
+        lines = ['<b>🎧 Audiobook Queue</b>']
+        for j in jobs:
+            st = str(j.get('status') or '?')
+            icon = '✅' if st == 'completed' else '❌' if 'fail' in st.lower() else '⏳'
+            title = html.escape(str(j.get('book_name') or j.get('id') or 'Book'))
+            tail = ''
+            if 'fail' in st.lower() and j.get('error'):
+                tail = f" — <code>{html.escape(_extract_tail_error(j['error'], 80))}</code>"
+            lines.append(f"{icon} <b>{title}</b> ({html.escape(st)}){tail}")
+        _tg_api('sendMessage', {'chat_id': chat_id, 'text': '\n'.join(lines), 'parse_mode': 'HTML'})
+        return {'status': 'command_handled', 'command': '/tts'}
+
+    if cmd == '/wanted':
+        rows = []
+        try:
+            r = requests.get(f"{base}/gaps", timeout=10)
+            if r.ok:
+                data = r.json()
+                rows = data if isinstance(data, list) else (data.get('missing') or data.get('gaps') or [])
+        except Exception:
+            rows = []
+        header = '<b>📋 Wanted Series Books</b>'
+        if not rows:
+            header = '<b>📚 Recent Library Books</b>'
+            try:
+                r = requests.get(f"{base}/api/library/recent?limit=6", timeout=10)
+                if r.ok:
+                    rows = (r.json() or {}).get('books') or []
+            except Exception:
+                rows = []
+        if not rows:
+            _tg_api('sendMessage', {'chat_id': chat_id, 'text': '✨ <b>No wanted items found right now.</b>', 'parse_mode': 'HTML'})
+            return {'status': 'command_handled', 'command': '/wanted'}
+        lines = [header]
+        kb = []
+        for idx, item in enumerate(rows[:6], 1):
+            title = str(item.get('title') or item.get('name') or 'Book') if isinstance(item, dict) else str(item)
+            author = str(item.get('author') or '') if isinstance(item, dict) else ''
+            tok = _cache_book_item({'title': title, 'author': author})
+            lines.append(f"{idx}. <b>{html.escape(title)}</b>" + (f" — {html.escape(author)}" if author else ""))
+            kb.append([{'text': f"🎙 Audio #{idx}", 'callback_data': f"bk:audio:{tok}"}])
+        _tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': '\n'.join(lines),
+            'parse_mode': 'HTML',
+            'reply_markup': {'inline_keyboard': kb},
+        })
+        return {'status': 'command_handled', 'command': '/wanted'}
+
+    if cmd == '/find':
+        if not arg:
+            _tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: <code>/find Title or Author</code>', 'parse_mode': 'HTML'})
+            return {'status': 'command_handled', 'command': '/find'}
+        try:
+            r = requests.get(f"{base}/api/bookfinder/search", params={'q': arg}, timeout=20)
+            results = ((r.json() or {}).get('results') or []) if r.ok else []
+        except Exception as exc:
+            _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"❌ <b>Search error:</b> <code>{html.escape(_extract_tail_error(exc))}</code>", 'parse_mode': 'HTML'})
+            return {'status': 'command_handled', 'command': '/find'}
+        if not results:
+            _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"No matches found for <b>{html.escape(arg)}</b>.", 'parse_mode': 'HTML'})
+            return {'status': 'command_handled', 'command': '/find'}
+        lines = [f"<b>🔎 Results for {html.escape(arg)}</b>"]
+        kb = []
+        for idx, item in enumerate(results[:5], 1):
+            title = str(item.get('title') or item.get('name') or 'Book')
+            author = str(item.get('author') or '')
+            fmt = str(item.get('format') or item.get('ext') or '')
+            tok = _cache_book_item(item)
+            meta = " · ".join(x for x in (author, fmt) if x)
+            lines.append(f"{idx}. <b>{html.escape(title)}</b>" + (f" ({html.escape(meta)})" if meta else ""))
+            row = []
+            if item.get('command'):
+                row.append({'text': f"📥 Grab #{idx}", 'callback_data': f"bk:grab:{tok}"})
+            row.append({'text': f"🎙 Audio #{idx}", 'callback_data': f"bk:audio:{tok}"})
+            kb.append(row)
+        _tg_api('sendMessage', {
+            'chat_id': chat_id,
+            'text': '\n'.join(lines),
+            'parse_mode': 'HTML',
+            'disable_web_page_preview': True,
+            'reply_markup': {'inline_keyboard': kb},
+        })
+        return {'status': 'command_handled', 'command': '/find', 'count': len(results[:5])}
+
+    _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Unknown command <code>{html.escape(cmd)}</code>. Try /help.", 'parse_mode': 'HTML'})
+    return {'status': 'unknown_command', 'command': cmd}
+
+
 @app.route('/api/telegram/webhook', methods=['POST'])
 def telegram_webhook():
-    """Handle one or more article URLs from the owner Telegram chat (#42)."""
+    """Handle Telegram callbacks, book/TTS commands, and article URLs (#42)."""
     supplied_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
     if not TELEGRAM_WEBHOOK_SECRET:
         return jsonify({'error': 'Telegram webhook secret is not configured'}), 503
     if not hmac.compare_digest(supplied_secret, TELEGRAM_WEBHOOK_SECRET):
         return jsonify({'error': 'Invalid Telegram webhook secret'}), 401
+
     data = request.get_json(silent=True) or {}
+    if isinstance(data.get('callback_query'), dict):
+        allowed_chat = str(TELEGRAM_CHAT_ID or '').strip()
+        if not allowed_chat:
+            return jsonify({'error': 'Telegram capture chat is not configured'}), 503
+        body, code = _handle_book_callback(data['callback_query'], allowed_chat)
+        return jsonify(body), code
+
     msg = data.get('message') or data.get('channel_post') or {}
     text = (msg.get('text') or msg.get('caption') or '').strip()
     chat_id = (msg.get('chat') or {}).get('id')
@@ -6845,6 +7123,9 @@ def telegram_webhook():
     if not hmac.compare_digest(str(chat_id), allowed_chat):
         app.logger.warning('Ignored Telegram article capture from unapproved chat %s', chat_id)
         return jsonify({'status': 'ignored_chat'}), 200
+
+    if text.startswith('/'):
+        return jsonify(_handle_book_command(chat_id, text)), 200
 
     entity_urls = [entity.get('url') for entity in
                    ((msg.get('entities') or []) + (msg.get('caption_entities') or []))
