@@ -580,6 +580,8 @@ def main():
     # Every app path supplies this explicitly. ``auto`` is retained only for
     # backwards-compatible direct script use and reproduces the old heuristic.
     text_profile = a.text_profile
+    if text_profile == 'auto' and a.voice in _STOCK_BOOK_VOICES:
+        text_profile = 'explicit' if a.voice.startswith('tontaube_') else 'native'
     if text_profile == 'auto':
         modern = (('_tada' in a.voice)
                   or (a.voice.startswith('uk_') and '_tada' not in a.voice)

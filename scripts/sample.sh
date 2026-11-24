@@ -8,7 +8,7 @@
 # Usage:
 #   scripts/sample.sh --book path/to/book.epub [--start 1] [--end 2]
 #                     [--voice uk_male_minter_tada] [--engine-url http://host:port/v1]
-#                     [--text-profile modern|explicit|legacy]
+#                     [--text-profile modern|explicit|legacy|native]
 #
 # Examples:
 #   scripts/sample.sh --book "data/library/Some Book.epub"            # local engine, ch1-2
@@ -41,6 +41,16 @@ chatterbox|http://localhost:8004|uk_male_minter
 tada|http://localhost:8005|uk_male_minter_tada
 kokoro|http://localhost:8880|bm_george
 "
+# These private services are reachable from the Studio Compose network.
+STOCK_ARGS=()
+case "$VOICE" in
+  tontaube_marcus_audition|zonos3_imogen_audition|reverb_en_male_narrator_audition)
+    engine="${VOICE%%_*}"
+    url_var="${engine^^}_URL"
+    ENGINE_URL="${ENGINE_URL:-${!url_var:-http://$engine:8080/v1}}"
+    STOCK_ARGS=(--chunk-chars 600 --pack-paragraphs --request-timeout 900)
+    ;;
+esac
 if [ -z "$ENGINE_URL" ]; then
   while IFS='|' read -r name base dv; do
     [ -n "$name" ] || continue
@@ -68,6 +78,8 @@ fi
 if [ -z "$TEXT_PROFILE" ]; then
   case "$VOICE" in
     pocket_*|kitten_*) TEXT_PROFILE="explicit" ;;
+    tontaube_marcus_audition) TEXT_PROFILE="explicit" ;;
+    zonos3_imogen_audition|reverb_en_male_narrator_audition) TEXT_PROFILE="native" ;;
     uk_*|*_tada) TEXT_PROFILE="modern" ;;
     *) TEXT_PROFILE="legacy" ;;
   esac
@@ -82,5 +94,5 @@ echo ">> output -> $OUT"
 python "$ROOT/scripts/convert_book.py" \
   --epub "$BOOK" --engine-url "$ENGINE_URL" --voice "$VOICE" \
   --out "$OUT" --start "$START" --end "$END" \
-  --text-profile "$TEXT_PROFILE"
+  --text-profile "$TEXT_PROFILE" "${STOCK_ARGS[@]}"
 echo ">> done. Listen in: $OUT"

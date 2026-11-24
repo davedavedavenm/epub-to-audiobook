@@ -34,6 +34,10 @@ async def lifespan(app):
         "LITE_DEVICE": "cpu",
         "TTS_MODEL_REPO_ID": "TontaubeAI/TontaubeV1.1-int4",
         "TTS_MODEL_REVISION": "2cff8331a357cdd50b05c823f5172eaa3ac6c121",
+        "VIBEVOICE_MODEL_PATH": (
+            "/data/cache/tontaube/vibevoice-acoustic-tokenizer/"
+            "c00898d257e6b46004e3e2866a47534085fb685a"
+        ),
         "DEFAULT_VOICE": "/opt/tontaube/voices/samples/Marcus.mp3",
         "ENABLE_VERBALIZATION": "0",
         "MOSSFORMER2_POSTPROCESS_DEFAULT": "0",

@@ -262,13 +262,15 @@ def test_cpu_candidates_are_opt_in_cpu_only_and_cached_before_play():
 def test_every_converter_command_carries_engine_text_profile():
     assert APP.count("'--text-profile', text_profile_for_engine(tts_engine)") == 2
     converter = (ROOT / 'scripts' / 'convert_book.py').read_text(encoding='utf-8')
-    assert "choices=('auto', 'modern', 'explicit', 'legacy')" in converter
+    assert "choices=('auto', 'modern', 'explicit', 'legacy', 'native')" in converter
     assert "_TEXT_PROFILE == 'legacy'" in converter
 
 
 def test_standalone_sampler_cannot_bypass_cpu_candidate_text_profile():
     sampler = (ROOT / 'scripts' / 'sample.sh').read_text(encoding='utf-8')
     assert 'pocket_*|kitten_*) TEXT_PROFILE="explicit"' in sampler
+    assert 'zonos3_imogen_audition|reverb_en_male_narrator_audition) TEXT_PROFILE="native"' in sampler
+    assert 'tontaube_marcus_audition) TEXT_PROFILE="explicit"' in sampler
     assert '--text-profile "$TEXT_PROFILE"' in sampler
 
 
