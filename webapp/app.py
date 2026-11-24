@@ -436,7 +436,7 @@ def _run_audio_asr_verify_sample(job_id: str, epub_filename: str, output_dirname
 # TTS Engines configuration
 TTS_ENGINES = {
     'cpu_narrators': {'name': 'Liked CPU narrators', 'description': 'Exact November audition models, local CPU', 'url_env': 'CPU_NARRATORS_URL', 'default_url': 'http://cpu-narrators:8016/v1'},
-    'audition': {'name': 'Liked GPU auditions', 'description': 'Cached auditions; book conversion not integrated'},
+    'audition': {'name': 'Narrator auditions', 'description': 'Recorded voice samples for listening comparisons'},
     'kokoro': {
         'name': 'Kokoro',
         'description': 'Fast legacy/compatibility TTS; retired from quality contention',
@@ -782,6 +782,16 @@ VOICES['higgs3_default_audition'] = {
     'catalogue_model': 'higgs3', 'preview_text_engine': 'higgs3',
     'note': 'Private evaluation of the native default voice. No speaker reference. ASR flagged the opening word and $1.2 million passage; listening verdict pending.',
 }
+for _model, _voice_id, _name, _accent, _gender in (
+    ('tontaube', 'tontaube_marcus_audition', 'Marcus', 'English', 'Male'),
+    ('zonos3', 'zonos3_imogen_audition', 'Imogen', 'British English', 'Female'),
+    ('reverb', 'reverb_en_male_narrator_audition', 'English male narrator 1', 'English', 'Male'),
+):
+    VOICES[_voice_id] = {
+        'name': _name, 'accent': _accent, 'gender': _gender,
+        'engine': 'audition', 'audition_only': True, 'catalogue_model': _model,
+        'preview_text_engine': _model,
+    }
 
 # The voice-audition sample lives in ONE place (webapp/voice_sample.py) so the
 # Kaggle GPU sample-renderer and this app share a source and engine preparation.

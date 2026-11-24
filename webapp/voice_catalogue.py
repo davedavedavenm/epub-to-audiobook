@@ -9,6 +9,24 @@ from __future__ import annotations
 
 MODEL_GROUPS = (
     {
+        'key': 'tontaube', 'title': 'Tontaube', 'model': 'V1.1 INT4 · audiobook style',
+        'engine': 'audition', 'preferred': ('tontaube_marcus_audition',),
+        'model_note': 'Listen around 0:42 for Huawei. Whisper heard “hallway” and reached the final date.',
+        'book_route': 'Private CPU audition only.',
+    },
+    {
+        'key': 'zonos3', 'title': 'ZONOS3-Mini', 'model': '800M · 100M active',
+        'engine': 'audition', 'preferred': ('zonos3_imogen_audition',),
+        'model_note': 'Whisper recovered the names, figures and closing date in Imogen’s reading.',
+        'book_route': 'Local CPU audition only.',
+    },
+    {
+        'key': 'reverb', 'title': 'Reverb-TTS', 'model': 'v1.0.0 · 297M',
+        'engine': 'audition', 'preferred': ('reverb_en_male_narrator_audition',),
+        'model_note': 'Generated with Reverb-TTS by Software Mansion AI Labs (CC BY-NC 4.0 weights). Whisper recovered the full passage, including both prices.',
+        'book_route': 'Noncommercial CPU audition only.',
+    },
+    {
         'key': 'deepgram_flux', 'title': 'Deepgram Flux', 'model': 'Flux speech model',
         'engine': 'deepgram', 'preferred': ('deepgram_flux_jack',),
         'book_route': 'Integrated; Deepgram credentials and billing apply.',

@@ -56,7 +56,11 @@ from text_profiles import MODERN_ENGINES, EXPLICIT_ENGINES  # noqa: E402
 # These have no integrated book path. Their audited native API receives source
 # text directly; engine-internal normalization is recorded with each render.
 # Never extend this exception to unknown engines or failed preprocessing.
-RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2', 'higgs3')
+RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2', 'higgs3', 'zonos3', 'reverb')
+
+# Tontaube's local CPU audition uses the app's number expansion because the
+# upstream optional verbalizer requires a GPU. It has no book conversion route.
+EXPLICIT_AUDITION_ENGINES = ('tontaube',)
 
 
 def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
@@ -69,7 +73,8 @@ def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
         This is the arm Dave selected for Peter, Jasper and Rosie on 2026-08-14,
         and the safe contract for the number-dense Gemini audition.
       * kokoro/edge/polly -> numbers spelled out, which they need.
-      * maya2/voxcpm2/higgs3 -> source text for their audition-only native API;
+      * tontaube -> explicit numbers/currency for the CPU audition.
+      * maya2/voxcpm2/higgs3/zonos3/reverb -> source text for their audition-only native API;
         engine-internal normalization is separate, not a book-path claim.
     Sending raw text to every engine can make numeric frontends misread "$1.2
     billion" and you'd be judging a preprocessing bug, not the voice.
@@ -87,12 +92,12 @@ def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
                 'prepare and freeze the payload in the application environment'
             )
         lexicon = SAMPLE_LEXICON
-        if engine in EXPLICIT_ENGINES:
+        explicit = engine in EXPLICIT_ENGINES or engine in EXPLICIT_AUDITION_ENGINES
+        if explicit:
             lexicon = {
                 key: value for key, value in SAMPLE_LEXICON.items()
                 if _is_letter_spacing(key, value)
             }
-        explicit = engine in EXPLICIT_ENGINES
         return normalize_text_for_tts(
             source, lexicon=lexicon,
             modern=engine in MODERN_ENGINES or explicit,

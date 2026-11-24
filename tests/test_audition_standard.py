@@ -81,6 +81,8 @@ def test_missing_number_dependency_cannot_silently_change_shared_payload(monkeyp
     ('maya2_siddhant', 'maya2'), ('maya2_nivedita', 'maya2'),
     ('voxcpm2_peter', 'voxcpm2'),
     ('higgs3_default_audition', 'higgs3'),
+    ('zonos3_imogen_audition', 'zonos3'),
+    ('reverb_en_male_narrator_audition', 'reverb'),
 ])
 def test_native_audition_payload_is_explicit_without_claiming_a_book_route(voice_id, engine):
     from app import all_voices
@@ -91,6 +93,14 @@ def test_native_audition_payload_is_explicit_without_claiming_a_book_route(voice
     assert sample_text_for(engine) == SAMPLE_TEXT
     # The exception is restricted to named native audition contracts.
     assert sample_text_for('audition') != SAMPLE_TEXT
+
+
+def test_tontaube_cpu_audition_uses_explicit_number_profile():
+    from app import all_voices
+
+    voice = all_voices()['tontaube_marcus_audition']
+    assert voice['audition_only'] is True
+    assert sample_text_for(voice['preview_text_engine']) == sample_text_for('cpu_narrators')
 
 
 def test_general_preview_producers_use_shared_engine_text_and_manifest():

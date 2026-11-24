@@ -1,5 +1,23 @@
 # Project Status & Remaining Tasks
 
+## 24 November 2026 — Three local CPU readings of the approved shared passage
+
+All three MP3s decoded to the end. Unprompted Whisper small checked the full
+`narrator-standard-v1` passage. Voice preference and pronunciation await Dave's
+listening. Render times are individual runs on different hardware and thread counts.
+
+| Preview | Model / runtime revisions | Output / synthesis | ASR observation |
+|---|---|---|---|
+| `tontaube_marcus_audition` | INT4 `2cff8331a357`, lite v1.1.0 `ef254ca3d7dc` | 77.86 s / 253.64 s, Ryzen WSL2 CPU | Reached the last date. Check Huawei around 0:42, transcribed as “hallway”. |
+| `zonos3_imogen_audition` | `2921b8821772`, official GGML `a50e14117d99`, Q4/Q8 backbone and keep2 decoder | 73.38 s / 131.25 s, Ryzen WSL2 CPU | All names and numerical values present in the transcript. |
+| `reverb_en_male_narrator_audition` | v1.0.0 `72be799c8fb6`, reverb-tts 1.0.0 `ba46de8d0473`, INT8 | 73.46 s / 104.24 s, two Zorin CPU threads | All sentences and numerical values present, including both sterling amounts. |
+
+Seed 42 was supplied to each runtime. The Reverb pipeline advances the seed by
+chunk. ZONOS3 and Reverb received the approved source hash `386e062ef702`;
+Tontaube's app-prepared payload hash was `d13e1b48bdbf`. The preview manifests
+bind these hashes to the final MP3s. See [DECISIONS.md](DECISIONS.md) for
+upstream sources and usage terms.
+
 ## 17 November 2026 — Audiobook-library audit findings + LL re-search queue (cross-repo from infra)
 
 - **Wanted-monitor interaction audited, no bleed**: three LL books touched today by the infra-side ABS repair were set `AudioStatus=Wanted` in LazyLibrarian and manually searched — *State of Denial* (Bob Woodward, `OL4617345W`), *The Sense of Style* (Steven Pinker, `20821371`), *The Let Them Theory* (Mel Robbins, `OL39181496W`). The wanted monitor keys on the ebook `Status='Wanted'` column and explicitly does not auto-convert to audiobooks (`scripts/wanted/README.md` line 8), so these `AudioStatus` rows are **monitor-invisible**: no OpenBooks requests queued, no TTS renders spawned, no Colab billing. Noted here so a future monitor debugging session doesn't treat the three `AudioStatus=Wanted` rows as anomalies.

@@ -43,6 +43,11 @@ test phrasing; they do not imply automatic speaker casting.
   dependencies or an inferred production preparation policy. Higgs3's default
   audition uses its documented text-only API input; it does not claim parity
   with the separate locked Cillian book pipeline or rerun its book-specific prep.
+- The November 24 CPU auditions have three named input contracts.
+  ZONOS3-Mini (`zonos3`) and Reverb-TTS (`reverb`) receive the source passage
+  and use their own text frontends. Tontaube V1.1 INT4 (`tontaube`) receives
+  the app's explicit-number profile with its optional upstream verbalizer off.
+  Preserve both the helper payload and any separately normalized engine input.
 - Prepare app-normalized payloads with the application dependencies installed,
   then freeze the text and source/prepared hashes before sending to an isolated
   model environment. Missing `num2words` must fail preparation explicitly: the

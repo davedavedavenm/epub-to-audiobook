@@ -494,6 +494,10 @@ Live Book Finder and Calibre flow (`2026-11-19`): `books.magnusfamily.co.uk` and
 - **Rule: use `scripts/deploy.sh`.** It runs
   `docker compose up -d --build --remove-orphans` across the stack and does not
   have this hole. Naming individual services is the shortcut that caused this.
+- The webapp and worker inherit release metadata baked into their images.
+  A Compose restart or re-creation preserves that fingerprint. Use the deploy
+  script for rebuilds so it supplies the resolved Git SHA and checks both
+  containers against it. Plain development builds use `dev` and `unknown`.
 - **Lesson (a repeat, in a new costume):** two components deriving one fact
   independently, and the second one drifting — the same shape as the `chapters.py`
   bug and the `_book_meta()` bug in PLAN-V4 §4. Here the two components were two

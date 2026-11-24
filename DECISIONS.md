@@ -1,5 +1,17 @@
 # Decisions — EPUB to Audiobook
 
+## 24 November 2026 — Tontaube, ZONOS3-Mini and Reverb use local audition routes
+
+Use the stock English voices and the shared passage for this comparison. These
+three catalogue entries serve persisted audio. Production narrator selection
+still uses the existing book routes. Listening verdicts are pending.
+
+| Model and runtime | Audition input and usage |
+|---|---|
+| [Tontaube V1.1 INT4](https://huggingface.co/TontaubeAI/TontaubeV1.1-int4), [official v1.1.0 lite runtime](https://github.com/craitech/tontaube/releases/tag/v1.1.0) | Marcus, audiobook style, app-expanded numbers, optional verbalizer off. Community Model License 1.0 permits private noncommercial evaluation and restricts serving the model to others. |
+| [Zyphra ZONOS3-Mini](https://huggingface.co/Zyphra/ZONOS3-Mini) | Imogen, official native GGML CPU runtime, native text frontend. Model weights are Apache-2.0. |
+| [Software Mansion Reverb-TTS v1.0.0](https://huggingface.co/software-mansion/Reverb-TTS) | Stock English male narrator 1, native Verbalis frontend. Model weights are CC BY-NC 4.0 and code is Apache-2.0. Attribute Software Mansion AI Labs. |
+
 ## 19 November 2026 — Book acquisition, Book Finder, and `wanted_monitor` consolidated into `infra` — Active
 
 EPUB fetching, the family Book Finder service (`https://books.magnusfamily.co.uk`
