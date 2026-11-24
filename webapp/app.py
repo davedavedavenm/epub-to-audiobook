@@ -105,6 +105,8 @@ QUEUE_RUNNER_ENABLED = os.environ.get('QUEUE_RUNNER_ENABLED', '1').lower() in ('
 # Lock to prevent race conditions when claiming jobs from the queue.
 # Both the worker loop and API endpoints could try to start the same job simultaneously.
 _job_claim_lock = threading.Lock()
+_queue_startup_lock = threading.Lock()
+_queue_startup_ready = threading.Event()
 
 # Minimum fraction of chapters required to mark a book complete (1.0 = 100%).
 # No more half-finished audiobooks.
@@ -1863,6 +1865,8 @@ def start_next_queued_job():
     The job status is set to 'converting' BEFORE the thread starts, so any
     concurrent caller will see it as running and skip it.
     """
+    if not _queue_startup_ready.is_set():
+        return False
     with _job_claim_lock:
         if is_queue_paused():
             app.logger.info("Queue is paused; not starting queued jobs")
@@ -2430,14 +2434,15 @@ def resume_inflight_jobs():
             # forever and blocks the queue (#14). Fail it so the slot frees and
             # it doesn't silently auto-rerun; the user can retry explicitly.
             with get_db() as c2:
-                c2.execute(
+                changed = c2.execute(
                     "UPDATE jobs SET status='failed', container_name=NULL, "
                     "error='container missing after worker restart (recovered)' "
-                    "WHERE id=? AND status IN "
-                    "('converting','converting PDF','converting to audio')",
-                    (job_id,))
-            app.logger.warning(
-                f"Job {job_id} was '{current_status}' but its container is gone — marked failed to free the queue")
+                    "WHERE id=? AND status=? AND container_name IS ?",
+                    (job_id, current_status, container_name)).rowcount
+                c2.commit()
+            if changed:
+                app.logger.warning(
+                    f"Job {job_id} was '{current_status}' but its container is gone — marked failed to free the queue")
 
     if resumed:
         app.logger.info(f"Recovered {resumed} in-flight conversion(s) after restart")
@@ -8989,6 +8994,17 @@ def _cache_all_voices_background():
     _cache_voice_batch(cacheable)
     app.logger.info("Background voice caching complete.")
 
+def initialize_queue_runner():
+    """Reconcile pre-existing conversions before this process can claim new jobs."""
+    if not QUEUE_RUNNER_ENABLED:
+        return
+    with _queue_startup_lock:
+        if not _queue_startup_ready.is_set():
+            resume_inflight_jobs()
+            start_watchdog()
+            _queue_startup_ready.set()
+
+
 def background_startup():
     """Execute startup tasks in a background thread."""
     import time
@@ -8999,8 +9015,7 @@ def background_startup():
 
     if QUEUE_RUNNER_ENABLED:
         try:
-            resume_inflight_jobs()
-            start_watchdog()
+            initialize_queue_runner()
             start_next_queued_job()
         except Exception as e:
             app.logger.error(f"Background startup error: {e}")

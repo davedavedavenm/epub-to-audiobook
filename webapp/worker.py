@@ -8,7 +8,7 @@ import logging
 import sys
 import time
 
-from app import (app, is_queue_paused, maybe_start_next_queued_job,
+from app import (app, initialize_queue_runner, is_queue_paused, maybe_start_next_queued_job,
                  queued_job_count, running_job_count, set_gpu_manager)
 
 # Ensure Flask and all loggers output to stdout (visible in `docker logs`)
@@ -44,6 +44,7 @@ def main():
 
     while True:
         try:
+            initialize_queue_runner()
             if not is_queue_paused():
                 queued = queued_job_count()
                 running = running_job_count()

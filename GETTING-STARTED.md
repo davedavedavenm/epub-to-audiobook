@@ -377,8 +377,21 @@ Official references:
   `docker compose --profile chatterbox-nano --profile chatterbox up -d`.
   For production, enable the appropriate flag in `.env` and use `scripts/deploy.sh`.
 - **A voice is not listed** — check `/api/voices`. If it is configured but its
-  `preview_cached` value is false, the background cache has not completed or
-  its engine is offline. A Play click will not cold-render it.
+  `preview_cached` value is false, restore the persisted `data/previews` MP3
+  and its matching sample manifest from backup. On a fresh installation
+  of Marcus, Imogen or Reverb, wait for the enabled service to report healthy,
+  then prepare its exact preview once during idle time. For example, on the
+  Compose host run the following command with the corresponding voice ID.
+
+  ```sh
+  docker compose exec -T -e QUEUE_RUNNER_ENABLED=0 -e VOICE_CACHE_ON_START=0 webapp python -c \
+    'import sys; from app import get_voice_preview; sys.exit(0 if get_voice_preview(sys.argv[1]) else 1)' \
+    tontaube_marcus_audition
+  ```
+
+  The other IDs are `zonos3_imogen_audition` and
+  `reverb_en_male_narrator_audition`. Play the result in **Voices** and
+  check `preview_cached` and the sample status in `/api/voices`.
 - **A conversion failed** — open the job's **Log** in the Queue tab; it usually
   says exactly what happened. Press **Resume** to retry just the missing
   chapters.

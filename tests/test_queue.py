@@ -2,6 +2,7 @@ import os
 import sys
 import uuid
 import tempfile
+import threading
 from datetime import datetime
 
 import pytest
@@ -18,6 +19,7 @@ os.environ.setdefault('TOC_CACHE_DIR', tempfile.mkdtemp())
 os.environ.setdefault('TRANSCRIPTS_DIR', tempfile.mkdtemp())
 os.environ.setdefault('QUEUE_RUNNER_ENABLED', '0')
 
+import app as appmod
 from app import (
     get_db,
     save_job,
@@ -81,6 +83,41 @@ def test_queue_counting():
 
     assert queued_job_count() == 2
     assert running_job_count() == 2
+
+
+def test_startup_recovers_old_jobs_before_claiming_new_upload(monkeypatch):
+    interrupted = make_job('converting')
+    uploaded = make_job('queued')
+    save_job(interrupted)
+    save_job(uploaded)
+    monkeypatch.setattr(appmod, 'QUEUE_RUNNER_ENABLED', True)
+    monkeypatch.setattr(appmod, '_queue_startup_ready', threading.Event())
+    monkeypatch.setattr(appmod, 'is_queue_paused', lambda: False)
+    monkeypatch.setattr(appmod, 'start_watchdog', lambda: None)
+
+    resume = appmod.resume_inflight_jobs
+    startup_calls = []
+
+    def recover():
+        startup_calls.append('recover')
+        # Simulate a queue-loop poll while the startup pass is in progress.
+        assert not appmod.maybe_start_next_queued_job()
+        assert get_job(uploaded['id'])['status'] == 'queued'
+        resume()
+
+    monkeypatch.setattr(appmod, 'resume_inflight_jobs', recover)
+    conversion_started = threading.Event()
+    monkeypatch.setattr(appmod, 'convert_book', lambda *args: conversion_started.set())
+
+    appmod.initialize_queue_runner()
+    assert get_job(interrupted['id'])['status'] == 'failed'
+    assert appmod.maybe_start_next_queued_job()
+    assert conversion_started.wait(timeout=2)
+
+    # The delayed app maintenance hook shares the same startup guard.
+    appmod.initialize_queue_runner()
+    assert startup_calls == ['recover']
+    assert get_job(uploaded['id'])['status'] == 'converting'
 
 
 def test_cancel_wipes_partial_conversion_data(tmp_path):
