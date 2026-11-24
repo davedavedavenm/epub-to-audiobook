@@ -7000,14 +7000,25 @@ def _handle_book_callback(cb: dict[str, Any], allowed_chat: str) -> tuple[dict[s
             _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Searching for this volume…'})
             return _handle_book_command(chat_id, f'/find {value}'), 200
         title = value
+        payload = {'title': title}
+        author = str(item.get('author') or '').strip()
+        if author and author.casefold() != 'unknown author':
+            payload['author'] = author
         _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Queuing audiobook…'})
         try:
-            r = requests.post(f"{base}/want-audio", json={'title': title}, timeout=15)
+            r = requests.post(f"{base}/want-audio", json=payload, timeout=15)
             status_txt = (
                 f"🎙 <b>Audiobook request submitted:</b> {html.escape(title)}"
                 if r.ok
                 else f"❌ <b>Queue failed:</b> HTTP {r.status_code}"
             )
+            if r.status_code in (404, 409):
+                try:
+                    error = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    error = None
+                if isinstance(error, dict) and isinstance(error.get('error'), str) and error['error'].strip():
+                    status_txt = f"❌ <b>Queue failed:</b> {html.escape(error['error'])}"
         except Exception as exc:
             status_txt = f"❌ <b>Queue failed:</b> <code>{html.escape(_extract_tail_error(exc))}</code>"
         if chat_id and message_id:
@@ -7091,7 +7102,7 @@ def _handle_book_command(chat_id: Any, text: str) -> dict[str, Any]:
             author = str(item.get('author') or '')
             title = str(item.get('title') or item.get('name') or '').strip()
             if title:
-                tok = _cache_book_item({'title': title})
+                tok = _cache_book_item({'title': title, 'author': author})
                 action, label = 'audio', '🎙 Audio'
             elif item.get('series') and item.get('missing_volume') and item.get('search_query'):
                 title = f"{item['series']}, volume {item['missing_volume']}"

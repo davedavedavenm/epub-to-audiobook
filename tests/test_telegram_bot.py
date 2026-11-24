@@ -7,6 +7,8 @@ import sys
 from unittest.mock import Mock
 from zoneinfo import ZoneInfo
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "webapp"))
 import app as appmod  # noqa: E402
 
@@ -125,7 +127,7 @@ def test_wanted_searches_series_gap_before_requesting_specific_title(monkeypatch
     post.assert_not_called()
     audio_button = tg.call_args.args[1]['reply_markup']['inline_keyboard'][0][0]['callback_data']
     appmod._handle_book_callback(dict(callback, data=audio_button), '123')
-    assert post.call_args.kwargs['json'] == {'title': 'The Second Book'}
+    assert post.call_args.kwargs['json'] == {'title': 'The Second Book', 'author': 'Writer'}
 
     appmod._TG_FIND_CACHE.clear()
     post.reset_mock()
@@ -136,3 +138,40 @@ def test_wanted_searches_series_gap_before_requesting_specific_title(monkeypatch
         assert tg.call_args.args[0] == 'answerCallbackQuery'
     post.assert_not_called()
     get.assert_not_called()
+
+
+@pytest.mark.parametrize(('author', 'code', 'error', 'expected'), [
+    ('A. Writer', 409, 'Several matches for A < Z', 'Several matches for A &lt; Z'),
+    ('Unknown Author', 404, 'Add the ebook first', 'Add the ebook first'),
+    ('', 404, None, 'HTTP 404'),
+])
+def test_recent_book_audio_preserves_known_author_and_explains_failure(monkeypatch, author, code, error, expected):
+    tg = Mock()
+    get = Mock(side_effect=[
+        Mock(ok=True, json=lambda: []),
+        Mock(ok=True, json=lambda: {'books': [{'title': 'The Book', 'author': author}]}),
+    ])
+    result = Mock(ok=False, status_code=code)
+    if error:
+        result.json.return_value = {'error': error}
+    else:
+        result.json.side_effect = appmod.requests.exceptions.JSONDecodeError('Not JSON', '<html>', 0)
+    post = Mock(return_value=result)
+    monkeypatch.setattr(appmod, '_tg_api', tg)
+    monkeypatch.setattr(appmod.requests, 'get', get)
+    monkeypatch.setattr(appmod.requests, 'post', post)
+    monkeypatch.setattr(appmod, '_TG_FIND_CACHE', {})
+
+    appmod._handle_book_command(123, '/wanted')
+    message = tg.call_args.args[1]
+    assert 'Recent Library Books' in message['text']
+    button = message['reply_markup']['inline_keyboard'][0][0]['callback_data']
+    callback = {'id': '1', 'message': {'chat': {'id': 123}, 'message_id': 42}, 'data': button}
+    appmod._handle_book_callback(callback, '123')
+
+    payload = {'title': 'The Book'}
+    if author == 'A. Writer':
+        payload['author'] = author
+    assert post.call_args.kwargs['json'] == payload
+    assert tg.call_args.args[0] == 'editMessageText'
+    assert tg.call_args.args[1]['text'].endswith(expected)

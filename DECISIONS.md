@@ -25,6 +25,9 @@ repo is the TTS conversion studio only:
 - Duplicate `scripts/wanted/` and unused `/embed/bookfinder` have been removed
   (`wanted_monitor.py` canonical home:
   `infra/stacks/docker-vm/media-stack/scripts/wanted/`).
+- Telegram passes the selected title and any known author to Book Finder's
+  `/want-audio`. Book Finder resolves the match and owns the queue write.
+  Telegram shows its missing-book and ambiguous-match errors to the requester.
 - Ebooks flow unidirectionally from `docker-vm` Calibre (`metadata.db`) into
   Zorin `/home/dave/booklib` via `infra/scripts/zorin/sync_books_from_calibre.py`.
 
