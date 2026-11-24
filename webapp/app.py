@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 from contextlib import contextmanager
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional, Dict, List
 from gpu_manager import GPUManager
 from epub_generator import package_epub3_with_audio
@@ -3827,6 +3828,8 @@ def copy_to_audiobookshelf(output_dir: Path, book_name: str, job_id: str | None 
 
 _TG_FIND_CACHE: Dict[str, Dict[str, Any]] = {}
 _TG_FIND_LOCK = threading.Lock()
+# The upstream OpenBooks connection serializes searches and downloads.
+_TG_BOOK_WORKER = ThreadPoolExecutor(max_workers=1, thread_name_prefix='telegram-bookfinder')
 
 
 def _extract_tail_error(raw: Any, max_len: int = 220) -> str:
@@ -5363,7 +5366,7 @@ def bookfinder_search():
         return jsonify({'results': []})
     try:
         from openbooks_client import search_books
-        results = search_books(query, timeout=95.0)
+        results = search_books(query)
         resp = jsonify({'results': results})
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
@@ -6902,6 +6905,61 @@ def article_audio(job_id: str, filename: str):
                      download_name=target.name)
 
 
+def _telegram_grab_book(item, tok, chat_id, message_id):
+    from openbooks_client import request_book_grab
+
+    try:
+        request_book_grab(item.get('command', ''), item.get('title', ''), item.get('author', ''))
+        title_esc = html.escape(str(item.get('title') or 'Book'))
+        status_txt = f"✅ <b>Grabbed:</b> {title_esc}"
+    except Exception as exc:
+        status_txt = f"❌ <b>Grab failed:</b> <code>{html.escape(_extract_tail_error(exc))}</code>"
+    if chat_id and message_id:
+        _tg_api('editMessageText', {
+            'chat_id': chat_id,
+            'message_id': message_id,
+            'text': status_txt,
+            'parse_mode': 'HTML',
+            'reply_markup': {'inline_keyboard': [[{'text': '🎙 Queue Audiobook', 'callback_data': f'bk:audio:{tok}'}]]},
+        })
+
+
+def _telegram_find_books(chat_id, arg):
+    try:
+        from openbooks_client import search_books
+        results = search_books(arg)
+    except Exception as exc:
+        _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"❌ <b>Search error:</b> <code>{html.escape(_extract_tail_error(exc))}</code>", 'parse_mode': 'HTML'})
+        return
+    titled_results = [
+        (item, str(item.get('title') or item.get('name')).strip())
+        for item in results if isinstance(item, dict) and (item.get('title') or item.get('name'))
+    ]
+    if not titled_results:
+        _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"No matches found for <b>{html.escape(arg)}</b>.", 'parse_mode': 'HTML'})
+        return
+    lines = [f"<b>🔎 Results for {html.escape(arg)}</b>"]
+    kb = []
+    for idx, (item, title) in enumerate(titled_results[:5], 1):
+        author = str(item.get('author') or '')
+        fmt = str(item.get('format') or item.get('ext') or '')
+        tok = _cache_book_item({**item, 'title': title})
+        meta = " · ".join(x for x in (author, fmt) if x)
+        lines.append(f"{idx}. <b>{html.escape(title)}</b>" + (f" ({html.escape(meta)})" if meta else ""))
+        row = []
+        if item.get('command'):
+            row.append({'text': f"📥 Grab #{idx}", 'callback_data': f"bk:grab:{tok}"})
+        row.append({'text': f"🎙 Audio #{idx}", 'callback_data': f"bk:audio:{tok}"})
+        kb.append(row)
+    _tg_api('sendMessage', {
+        'chat_id': chat_id,
+        'text': '\n'.join(lines),
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True,
+        'reply_markup': {'inline_keyboard': kb},
+    })
+
+
 def _handle_book_callback(cb: dict[str, Any], allowed_chat: str) -> tuple[dict[str, Any], int]:
     cb_id = str(cb.get('id') or '')
     msg = cb.get('message') or {}
@@ -6926,34 +6984,7 @@ def _handle_book_callback(cb: dict[str, Any], allowed_chat: str) -> tuple[dict[s
             _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Search expired — run /find again.'})
             return {'status': 'expired_token'}, 200
         _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Grabbing ebook…'})
-        try:
-            r = requests.post(
-                f"{base}/api/bookfinder/grab",
-                json={
-                    'command': item.get('command', ''),
-                    'title': item.get('title', ''),
-                    'author': item.get('author', ''),
-                },
-                timeout=30,
-            )
-            body = r.json() if r.headers.get('content-type', '').startswith('application/json') else {}
-            ok = r.ok and body.get('status') not in {'error', 'failed'}
-            title_esc = html.escape(str(item.get('title') or 'Book'))
-            status_txt = (
-                f"✅ <b>Grabbed:</b> {title_esc}"
-                if ok
-                else f"❌ <b>Grab failed:</b> {title_esc}\n<code>{html.escape(_extract_tail_error(body.get('error') or r.text))}</code>"
-            )
-        except Exception as exc:
-            status_txt = f"❌ <b>Grab failed:</b> <code>{html.escape(_extract_tail_error(exc))}</code>"
-        if chat_id and message_id:
-            _tg_api('editMessageText', {
-                'chat_id': chat_id,
-                'message_id': message_id,
-                'text': status_txt,
-                'parse_mode': 'HTML',
-                'reply_markup': {'inline_keyboard': [[{'text': '🎙 Queue Audiobook', 'callback_data': f'bk:audio:{tok}'}]]},
-            })
+        _TG_BOOK_WORKER.submit(_telegram_grab_book, item, tok, chat_id, message_id)
         return {'status': 'callback_handled', 'action': 'grab'}, 200
 
     if data.startswith(('bk:audio:', 'bk:find:')):
@@ -7088,40 +7119,8 @@ def _handle_book_command(chat_id: Any, text: str) -> dict[str, Any]:
         if not arg:
             _tg_api('sendMessage', {'chat_id': chat_id, 'text': 'Usage: <code>/find Title or Author</code>', 'parse_mode': 'HTML'})
             return {'status': 'command_handled', 'command': '/find'}
-        try:
-            r = requests.get(f"{base}/api/bookfinder/search", params={'q': arg}, timeout=20)
-            results = ((r.json() or {}).get('results') or []) if r.ok else []
-        except Exception as exc:
-            _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"❌ <b>Search error:</b> <code>{html.escape(_extract_tail_error(exc))}</code>", 'parse_mode': 'HTML'})
-            return {'status': 'command_handled', 'command': '/find'}
-        titled_results = [
-            (item, str(item.get('title') or item.get('name')).strip())
-            for item in results if isinstance(item, dict) and (item.get('title') or item.get('name'))
-        ]
-        if not titled_results:
-            _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"No matches found for <b>{html.escape(arg)}</b>.", 'parse_mode': 'HTML'})
-            return {'status': 'command_handled', 'command': '/find'}
-        lines = [f"<b>🔎 Results for {html.escape(arg)}</b>"]
-        kb = []
-        for idx, (item, title) in enumerate(titled_results[:5], 1):
-            author = str(item.get('author') or '')
-            fmt = str(item.get('format') or item.get('ext') or '')
-            tok = _cache_book_item({**item, 'title': title})
-            meta = " · ".join(x for x in (author, fmt) if x)
-            lines.append(f"{idx}. <b>{html.escape(title)}</b>" + (f" ({html.escape(meta)})" if meta else ""))
-            row = []
-            if item.get('command'):
-                row.append({'text': f"📥 Grab #{idx}", 'callback_data': f"bk:grab:{tok}"})
-            row.append({'text': f"🎙 Audio #{idx}", 'callback_data': f"bk:audio:{tok}"})
-            kb.append(row)
-        _tg_api('sendMessage', {
-            'chat_id': chat_id,
-            'text': '\n'.join(lines),
-            'parse_mode': 'HTML',
-            'disable_web_page_preview': True,
-            'reply_markup': {'inline_keyboard': kb},
-        })
-        return {'status': 'command_handled', 'command': '/find', 'count': len(kb)}
+        _TG_BOOK_WORKER.submit(_telegram_find_books, chat_id, arg)
+        return {'status': 'command_handled', 'command': '/find'}
 
     _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Unknown command <code>{html.escape(cmd)}</code>. Try /help.", 'parse_mode': 'HTML'})
     return {'status': 'unknown_command', 'command': cmd}

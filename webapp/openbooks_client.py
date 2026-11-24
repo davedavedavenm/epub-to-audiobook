@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 BOOK_FINDER_URL = os.getenv("BOOK_FINDER_URL", "http://192.168.1.113:8095").rstrip("/")
 ALLOWED_EXTS = {".epub", ".azw3", ".mobi", ".pdf"}
+# The upstream service allows 180 seconds for a download and 25 for ingestion.
+GRAB_TIMEOUT = 215.0
 
 
 def _safe_upload_dest(upload_dir, raw_filename: str) -> Path:
@@ -89,8 +91,8 @@ def _bg_sync_to_uploads(
     return False
 
 
-def grab_and_import_book(command: str, title: str = "", author: str = "", timeout: float = 190.0):
-    """Trigger grab on docker-vm Book Finder (into Calibre) and fetch a studio upload copy."""
+def request_book_grab(command: str, title: str = "", author: str = "", timeout: float = GRAB_TIMEOUT):
+    """Request the Calibre import and wait for Book Finder's result."""
     clean_cmd = (command or "").strip()
     if not clean_cmd:
         raise ValueError("No download command specified")
@@ -104,7 +106,12 @@ def grab_and_import_book(command: str, title: str = "", author: str = "", timeou
     data = resp.json()
     if data.get("status") != "success":
         raise RuntimeError(data.get("error") or data.get("message") or "Book Finder grab failed")
+    return data
 
+
+def grab_and_import_book(command: str, title: str = "", author: str = "", timeout: float = GRAB_TIMEOUT):
+    """Trigger a Calibre import and fetch a studio upload copy."""
+    data = request_book_grab(command, title, author, timeout)
     filename = data.get("filename") or ""
     calibre_id = data.get("calibre_id")
     if calibre_id is not None or filename:

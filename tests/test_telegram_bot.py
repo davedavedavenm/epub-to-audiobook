@@ -42,6 +42,7 @@ def test_send_telegram_notification_html_and_buttons(monkeypatch):
 
 def test_telegram_commands_and_callbacks(monkeypatch):
     sent = []
+    monkeypatch.setattr(appmod._TG_BOOK_WORKER, 'submit', lambda fn, *args: fn(*args))
 
     class FakeResp:
         def __init__(self, payload, ok=True, status=200):
@@ -53,6 +54,9 @@ def test_telegram_commands_and_callbacks(monkeypatch):
 
         def json(self):
             return self._p
+
+        def raise_for_status(self):
+            assert self.ok
 
     monkeypatch.setattr(appmod, "TELEGRAM_BOT_TOKEN", "bot-tok")
     monkeypatch.setattr(appmod, "TELEGRAM_CHAT_ID", "12345")
@@ -103,6 +107,8 @@ def test_wanted_searches_series_gap_before_requesting_specific_title(monkeypatch
     monkeypatch.setattr(appmod.requests, 'get', get)
     monkeypatch.setattr(appmod.requests, 'post', post)
     monkeypatch.setattr(appmod, '_TG_FIND_CACHE', {})
+    submit = Mock()
+    monkeypatch.setattr(appmod._TG_BOOK_WORKER, 'submit', submit)
 
     appmod._handle_book_command(123, '/wanted')
     message = tg.call_args.args[1]
@@ -110,7 +116,12 @@ def test_wanted_searches_series_gap_before_requesting_specific_title(monkeypatch
     find_button = message['reply_markup']['inline_keyboard'][0][0]['callback_data']
     callback = {'id': '1', 'message': {'chat': {'id': 123}, 'message_id': 42}, 'data': find_button}
     appmod._handle_book_callback(callback, '123')
+    # The webhook returns while the upstream search is still pending.
+    assert get.call_count == 1
+    work, *args = submit.call_args.args
+    work(*args)
     assert get.call_args.kwargs['params'] == {'q': 'A & Z 2 Writer'}
+    assert get.call_args.kwargs['timeout'] > 90
     post.assert_not_called()
     audio_button = tg.call_args.args[1]['reply_markup']['inline_keyboard'][0][0]['callback_data']
     appmod._handle_book_callback(dict(callback, data=audio_button), '123')
