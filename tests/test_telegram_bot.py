@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import sys
+from unittest.mock import Mock
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "webapp"))
@@ -88,3 +89,39 @@ def test_telegram_commands_and_callbacks(monkeypatch):
         "message": {"chat": {"id": 12345}, "text": "/help"},
     })
     assert r_help.status_code == 200 and r_help.json["command"] == "/help"
+
+
+def test_wanted_searches_series_gap_before_requesting_specific_title(monkeypatch):
+    tg = Mock()
+    post = Mock()
+    get = Mock(side_effect=[
+        Mock(ok=True, json=lambda: [{'series': 'A & Z', 'missing_volume': 2,
+                                     'search_query': 'A & Z 2 Writer', 'author': 'Writer'}]),
+        Mock(ok=True, json=lambda: {'results': [{'title': 'The Second Book', 'author': 'Writer'}]}),
+    ])
+    monkeypatch.setattr(appmod, '_tg_api', tg)
+    monkeypatch.setattr(appmod.requests, 'get', get)
+    monkeypatch.setattr(appmod.requests, 'post', post)
+    monkeypatch.setattr(appmod, '_TG_FIND_CACHE', {})
+
+    appmod._handle_book_command(123, '/wanted')
+    message = tg.call_args.args[1]
+    assert 'A &amp; Z, volume 2' in message['text']
+    find_button = message['reply_markup']['inline_keyboard'][0][0]['callback_data']
+    callback = {'id': '1', 'message': {'chat': {'id': 123}, 'message_id': 42}, 'data': find_button}
+    appmod._handle_book_callback(callback, '123')
+    assert get.call_args.kwargs['params'] == {'q': 'A & Z 2 Writer'}
+    post.assert_not_called()
+    audio_button = tg.call_args.args[1]['reply_markup']['inline_keyboard'][0][0]['callback_data']
+    appmod._handle_book_callback(dict(callback, data=audio_button), '123')
+    assert post.call_args.kwargs['json'] == {'title': 'The Second Book'}
+
+    appmod._TG_FIND_CACHE.clear()
+    post.reset_mock()
+    get.reset_mock()
+    for expired in (audio_button, find_button):
+        response, status = appmod._handle_book_callback(dict(callback, data=expired), '123')
+        assert (response['status'], status) == ('expired_token', 200)
+        assert tg.call_args.args[0] == 'answerCallbackQuery'
+    post.assert_not_called()
+    get.assert_not_called()

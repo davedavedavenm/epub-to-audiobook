@@ -118,4 +118,10 @@ if [[ "${LIVE_SHA}" != "${GIT_SHA}" ]]; then
   exit 1
 fi
 
+WORKER_SHA="$(docker exec epub-to-audiobook-worker printenv APP_GIT_SHA)"
+if [[ "${WORKER_SHA}" != "${GIT_SHA}" ]]; then
+  echo "Revision mismatch: expected ${GIT_SHA}, worker reports ${WORKER_SHA:-missing}" >&2
+  exit 1
+fi
+
 echo "Deployed ${REF} as ${VERSION} (${GIT_SHA})"

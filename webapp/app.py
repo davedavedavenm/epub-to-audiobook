@@ -6946,16 +6946,24 @@ def _handle_book_callback(cb: dict[str, Any], allowed_chat: str) -> tuple[dict[s
             })
         return {'status': 'callback_handled', 'action': 'grab'}, 200
 
-    if data.startswith('bk:audio:'):
-        tok = data[len('bk:audio:'):]
+    if data.startswith(('bk:audio:', 'bk:find:')):
+        _, action, tok = data.split(':', 2)
         with _TG_FIND_LOCK:
             item = _TG_FIND_CACHE.get(tok)
-        title = str((item or {}).get('title') or tok)
+        field = 'search_query' if action == 'find' else 'title'
+        value = str((item or {}).get(field) or '').strip()
+        if not value:
+            _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Selection expired. Run /wanted or /find again.'})
+            return {'status': 'expired_token'}, 200
+        if action == 'find':
+            _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Searching for this volume…'})
+            return _handle_book_command(chat_id, f'/find {value}'), 200
+        title = value
         _tg_api('answerCallbackQuery', {'callback_query_id': cb_id, 'text': 'Queuing audiobook…'})
         try:
             r = requests.post(f"{base}/want-audio", json={'title': title}, timeout=15)
             status_txt = (
-                f"🎙 <b>Audiobook queued:</b> {html.escape(title)}"
+                f"🎙 <b>Audiobook request submitted:</b> {html.escape(title)}"
                 if r.ok
                 else f"❌ <b>Queue failed:</b> HTTP {r.status_code}"
             )
@@ -7036,12 +7044,28 @@ def _handle_book_command(chat_id: Any, text: str) -> dict[str, Any]:
             return {'status': 'command_handled', 'command': '/wanted'}
         lines = [header]
         kb = []
-        for idx, item in enumerate(rows[:6], 1):
-            title = str(item.get('title') or item.get('name') or 'Book') if isinstance(item, dict) else str(item)
-            author = str(item.get('author') or '') if isinstance(item, dict) else ''
-            tok = _cache_book_item({'title': title, 'author': author})
+        for item in rows:
+            if not isinstance(item, dict):
+                item = {'title': item}
+            author = str(item.get('author') or '')
+            title = str(item.get('title') or item.get('name') or '').strip()
+            if title:
+                tok = _cache_book_item({'title': title})
+                action, label = 'audio', '🎙 Audio'
+            elif item.get('series') and item.get('missing_volume') and item.get('search_query'):
+                title = f"{item['series']}, volume {item['missing_volume']}"
+                tok = _cache_book_item({'search_query': item['search_query']})
+                action, label = 'find', '🔎 Find'
+            else:
+                continue
+            idx = len(kb) + 1
             lines.append(f"{idx}. <b>{html.escape(title)}</b>" + (f" — {html.escape(author)}" if author else ""))
-            kb.append([{'text': f"🎙 Audio #{idx}", 'callback_data': f"bk:audio:{tok}"}])
+            kb.append([{'text': f"{label} #{idx}", 'callback_data': f"bk:{action}:{tok}"}])
+            if idx == 6:
+                break
+        if not kb:
+            _tg_api('sendMessage', {'chat_id': chat_id, 'text': 'No identifiable books or series gaps found.'})
+            return {'status': 'command_handled', 'command': '/wanted'}
         _tg_api('sendMessage', {
             'chat_id': chat_id,
             'text': '\n'.join(lines),
@@ -7060,16 +7084,19 @@ def _handle_book_command(chat_id: Any, text: str) -> dict[str, Any]:
         except Exception as exc:
             _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"❌ <b>Search error:</b> <code>{html.escape(_extract_tail_error(exc))}</code>", 'parse_mode': 'HTML'})
             return {'status': 'command_handled', 'command': '/find'}
-        if not results:
+        titled_results = [
+            (item, str(item.get('title') or item.get('name')).strip())
+            for item in results if isinstance(item, dict) and (item.get('title') or item.get('name'))
+        ]
+        if not titled_results:
             _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"No matches found for <b>{html.escape(arg)}</b>.", 'parse_mode': 'HTML'})
             return {'status': 'command_handled', 'command': '/find'}
         lines = [f"<b>🔎 Results for {html.escape(arg)}</b>"]
         kb = []
-        for idx, item in enumerate(results[:5], 1):
-            title = str(item.get('title') or item.get('name') or 'Book')
+        for idx, (item, title) in enumerate(titled_results[:5], 1):
             author = str(item.get('author') or '')
             fmt = str(item.get('format') or item.get('ext') or '')
-            tok = _cache_book_item(item)
+            tok = _cache_book_item({**item, 'title': title})
             meta = " · ".join(x for x in (author, fmt) if x)
             lines.append(f"{idx}. <b>{html.escape(title)}</b>" + (f" ({html.escape(meta)})" if meta else ""))
             row = []
@@ -7084,7 +7111,7 @@ def _handle_book_command(chat_id: Any, text: str) -> dict[str, Any]:
             'disable_web_page_preview': True,
             'reply_markup': {'inline_keyboard': kb},
         })
-        return {'status': 'command_handled', 'command': '/find', 'count': len(results[:5])}
+        return {'status': 'command_handled', 'command': '/find', 'count': len(kb)}
 
     _tg_api('sendMessage', {'chat_id': chat_id, 'text': f"Unknown command <code>{html.escape(cmd)}</code>. Try /help.", 'parse_mode': 'HTML'})
     return {'status': 'unknown_command', 'command': cmd}

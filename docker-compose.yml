@@ -510,9 +510,6 @@ services:
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
-      - APP_VERSION=${APP_VERSION:-dev}
-      - APP_GIT_SHA=${APP_GIT_SHA:-unknown}
-      - APP_BUILD_TIME=${APP_BUILD_TIME:-unknown}
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
       - STACK_PATH=${STACK_PATH:-/opt/epub-to-audiobook}
       # IMPORTANT: This must match the absolute path used in volumes below
@@ -631,9 +628,6 @@ services:
       - OUTPUT_DIR=/data/audiobooks
       - PREVIEWS_DIR=/data/previews
       - DB_PATH=/data/jobs.db
-      - APP_VERSION=${APP_VERSION:-dev}
-      - APP_GIT_SHA=${APP_GIT_SHA:-unknown}
-      - APP_BUILD_TIME=${APP_BUILD_TIME:-unknown}
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
       - STACK_PATH=${STACK_PATH:-/opt/epub-to-audiobook}
       - HOST_STACK_DIR=${STACK_PATH:-/opt/epub-to-audiobook}
