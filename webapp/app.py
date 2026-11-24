@@ -7012,13 +7012,25 @@ def _handle_book_callback(cb: dict[str, Any], allowed_chat: str) -> tuple[dict[s
                 if r.ok
                 else f"❌ <b>Queue failed:</b> HTTP {r.status_code}"
             )
-            if r.status_code in (404, 409):
+            if r.status_code in (200, 404, 409):
                 try:
-                    error = r.json()
+                    result = r.json()
                 except requests.exceptions.JSONDecodeError:
-                    error = None
-                if isinstance(error, dict) and isinstance(error.get('error'), str) and error['error'].strip():
-                    status_txt = f"❌ <b>Queue failed:</b> {html.escape(error['error'])}"
+                    result = None
+                if isinstance(result, dict) and r.ok:
+                    labels = {
+                        'queued': 'Audiobook queued:',
+                        'already_owned': 'Audiobook already in library:',
+                        'already_snatched': 'Audiobook download already requested:',
+                        'already_wanted': 'Audiobook already on the wanted list:',
+                    }
+                    label = labels.get(str(result.get('status') or ''))
+                    if label:
+                        status_txt = f"🎙 <b>{label}</b> {html.escape(title)}"
+                elif isinstance(result, dict):
+                    error = result.get('error')
+                    if isinstance(error, str) and error.strip():
+                        status_txt = f"❌ <b>Queue failed:</b> {html.escape(error)}"
         except Exception as exc:
             status_txt = f"❌ <b>Queue failed:</b> <code>{html.escape(_extract_tail_error(exc))}</code>"
         if chat_id and message_id:

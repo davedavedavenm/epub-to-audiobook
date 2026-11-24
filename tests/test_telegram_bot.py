@@ -140,20 +140,24 @@ def test_wanted_searches_series_gap_before_requesting_specific_title(monkeypatch
     get.assert_not_called()
 
 
-@pytest.mark.parametrize(('author', 'code', 'error', 'expected'), [
-    ('A. Writer', 409, 'Several matches for A < Z', 'Several matches for A &lt; Z'),
-    ('Unknown Author', 404, 'Add the ebook first', 'Add the ebook first'),
+@pytest.mark.parametrize(('author', 'code', 'body', 'expected'), [
+    ('A. Writer', 409, {'error': 'Several matches for A < Z'}, 'Several matches for A &lt; Z'),
+    ('Unknown Author', 404, {'error': 'Add the ebook first'}, 'Add the ebook first'),
     ('', 404, None, 'HTTP 404'),
+    ('A. Writer', 200, {'status': 'queued'}, 'Audiobook queued:'),
+    ('A. Writer', 200, {'status': 'already_owned'}, 'Audiobook already in library:'),
+    ('A. Writer', 200, {'status': 'already_snatched'}, 'Audiobook download already requested:'),
+    ('A. Writer', 200, {'status': 'already_wanted'}, 'Audiobook already on the wanted list:'),
 ])
-def test_recent_book_audio_preserves_known_author_and_explains_failure(monkeypatch, author, code, error, expected):
+def test_recent_book_audio_preserves_known_author_and_reports_queue_result(monkeypatch, author, code, body, expected):
     tg = Mock()
     get = Mock(side_effect=[
         Mock(ok=True, json=lambda: []),
         Mock(ok=True, json=lambda: {'books': [{'title': 'The Book', 'author': author}]}),
     ])
-    result = Mock(ok=False, status_code=code)
-    if error:
-        result.json.return_value = {'error': error}
+    result = Mock(ok=code < 400, status_code=code)
+    if body:
+        result.json.return_value = body
     else:
         result.json.side_effect = appmod.requests.exceptions.JSONDecodeError('Not JSON', '<html>', 0)
     post = Mock(return_value=result)
@@ -174,4 +178,4 @@ def test_recent_book_audio_preserves_known_author_and_explains_failure(monkeypat
         payload['author'] = author
     assert post.call_args.kwargs['json'] == payload
     assert tg.call_args.args[0] == 'editMessageText'
-    assert tg.call_args.args[1]['text'].endswith(expected)
+    assert expected in tg.call_args.args[1]['text']
