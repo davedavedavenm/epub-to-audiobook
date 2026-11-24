@@ -1,5 +1,31 @@
 # Project Status & Remaining Tasks
 
+## 24 November 2026 — Free NVIDIA T4 narrator auditions
+
+Three private Kaggle auditions used Shared Test v1, prepared-text SHA-256
+`386e062ef7020b882240cf512ba7c886be75b3d20dede6b60360b5c1bf3d8dc7`.
+Each render used one Tesla T4. These timings exclude environment setup and
+weight downloads except where the Imogen upper bound is described below.
+
+| Narrator | Audio | GPU synthesis | Playback evidence |
+|---|---:|---:|---|
+| [Kale TTS 1 Base](https://huggingface.co/KaleComputer/kale-tts-1-base), British Amy | 68.90 s | 2.76 s | Four native Kokoro chunks, UK frontend. Whisper recovered the full passage, both sterling amounts and the final date. Xiaomi and other names need listening. |
+| [ZONOS3-Mini](https://github.com/Zyphra/ZONOS3-Mini/tree/a50e14117d99181ba7f28047b451ba03ba1a09a9), Imogen | 74.53 s | under 16.2 s | Same stock reference, model, quantization, keep2 decoder, text and seed as the CPU audition. The Zorin CPU control generated 72.80 s in 27.73 s. |
+| [VoxMel 0.6B](https://huggingface.co/VoxDance-Lab/VoxMel-0.6B), synthetic Zira reference | 71.48 s | 189.80 s | Twelve sentence requests. The three-paragraph take repeated part of the opening and lost the closing date. The sentence take recovered the ending. Listen for sterling units around 0:47–0:56 and a possible extra word after kilometres. |
+
+Imogen's CUDA log identified both the Tesla T4 backbone and GPU decoder.
+The job hit a log-matching assertion after it wrote both WAVs, before it
+saved the full-passage timer. The <16.2 s bound includes the last reference
+download, startup and both generations. The separate short request took
+1.16 s on GPU and 3.00 s on Zorin CPU. In that short sentence, the native
+frontend expanded 1916 to “nineteen sixteen”; a second unprompted ASR pass
+with digit tokens suppressed recovered those words on both devices. Dave's
+earlier book-specific verdict on 1916 still applies to the original take.
+
+Local MP3s, WAVs, device logs, receipts and ASR results are under
+`evaluations/new-engines/output/gpu-nov24/` on the audition workstation.
+Dave's listening verdicts on the new GPU takes are open.
+
 ## 24 November 2026 — Marcus, Imogen and Reverb in Studio
 
 All three local CPU engines are enabled on Dave's Zorin Studio. In live Edge,

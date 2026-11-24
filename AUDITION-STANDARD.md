@@ -50,6 +50,11 @@ test phrasing; they do not imply automatic speaker casting.
   Books and previews use these same profiles. Book input still passes through
   structural EPUB cleanup, and the native engines receive the resulting text.
   Preserve both the helper payload and any separately normalized engine input.
+- The VoxMel and Kale GPU auditions use the source passage from
+  `sample_text_for('voxmel')` and `sample_text_for('kale')`. For VoxMel, record
+  the reference audio and its transcript separately from the text to speak.
+  For Kale Base, record the voice pack and Kokoro frontend language.
+  GPU Imogen uses the same `zonos3` contract as CPU Imogen.
 - Prepare app-normalized payloads with the application dependencies installed,
   then freeze the text and source/prepared hashes before sending to an isolated
   model environment. Missing `num2words` must fail preparation explicitly: the

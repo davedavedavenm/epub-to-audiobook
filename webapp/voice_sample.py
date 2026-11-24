@@ -56,7 +56,7 @@ from text_profiles import MODERN_ENGINES, EXPLICIT_ENGINES, NATIVE_ENGINES  # no
 # These have no integrated book path. Their audited native API receives source
 # text directly; engine-internal normalization is recorded with each render.
 # Never extend this exception to unknown engines or failed preprocessing.
-RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2', 'higgs3')
+RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2', 'higgs3', 'voxmel', 'kale')
 
 
 def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
@@ -71,7 +71,7 @@ def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:
       * kokoro/edge/polly -> numbers spelled out, which they need.
       * tontaube -> explicit numbers/currency for books and previews.
       * zonos3/reverb -> native text frontends for books and previews.
-      * maya2/voxcpm2/higgs3 -> source text for their audition-only API.
+      * RAW_AUDITION_ENGINES -> source text for the native audition API.
     Sending raw text to every engine can make numeric frontends misread "$1.2
     billion" and you'd be judging a preprocessing bug, not the voice.
     """

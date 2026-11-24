@@ -74,7 +74,8 @@ def test_missing_number_dependency_cannot_silently_change_shared_payload(monkeyp
         with pytest.raises(RuntimeError, match='num2words is required'):
             sample_text_for(engine)
     # Native raw-input auditions are an explicit contract, not a failure fallback.
-    assert sample_text_for('maya2') == SAMPLE_TEXT
+    for engine in ('maya2', 'voxmel', 'kale'):
+        assert sample_text_for(engine) == SAMPLE_TEXT
 
 
 @pytest.mark.parametrize('voice_id, engine', [
