@@ -7,6 +7,12 @@ three catalogue entries serve persisted audio. Production narrator selection
 still uses the existing book routes. Dave heard the three Shared Test v1
 takes and said “all 3 voices are quite good”. They remain audition-only.
 
+On the separate *The Armed Struggle* and *Breakneck* excerpts, Dave found
+Marcus, Imogen and Reverb pretty good overall. All three struggled a little
+with the Irish names. In *The Armed Struggle*, Dave heard Imogen read 1916
+as an ordinary number instead of a year. These observations apply to the
+stock voices and settings used for those excerpts.
+
 | Model and runtime | Audition input and usage |
 |---|---|
 | [Tontaube V1.1 INT4](https://huggingface.co/TontaubeAI/TontaubeV1.1-int4), [official v1.1.0 lite runtime](https://github.com/craitech/tontaube/releases/tag/v1.1.0) | Marcus, audiobook style, app-expanded numbers, optional verbalizer off. Community Model License 1.0 permits private noncommercial evaluation and restricts serving the model to others. |
