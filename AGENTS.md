@@ -40,7 +40,7 @@ If official documentation is missing, disabled, contradictory, or does not
 cover the deployed behaviour, say so explicitly. Do not silently promote a
 blog, search result, community issue, or remembered default to an official fact.
 
-## Current Direction & Doc Map (2026-08)
+## Current Direction & Doc Map (2026-11)
 
 **All agents: before any narrator audition, read [AUDITION-STANDARD.md](AUDITION-STANDARD.md).
 Every new default audition must import `webapp/voice_sample.py` through

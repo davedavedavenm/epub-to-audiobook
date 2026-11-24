@@ -1,11 +1,47 @@
 # Project Status & Remaining Tasks
 
+## 24 November 2026 — Marcus, Imogen and Reverb in Studio
+
+All three local CPU engines are enabled on Dave's Zorin Studio. In live Edge,
+the Upload picker offered all three and the Library picker selected Local for
+each. Each Play button advanced the audio clock. All three served MP3s decoded
+to the end and matched the hashes of the previously heard Shared Test v1 takes.
+The catalogue reported 172 of 172 configured previews ready.
+
+A one-chapter, 132-word EPUB passed through the normal upload and worker code
+in isolated containers using the exact deployed web and worker images at
+`80ebcb9d`. The requests went to the three production engines. Each job made
+two successful synthesis requests, and their requested voice IDs and text
+hashes matched the converter transcripts. The production library and queue
+received no test books.
+
+| Narrator | Isolated job | Decoded MP3 | Unprompted ASR against 132 source words |
+|---|---|---:|---|
+| Tontaube Marcus | `e1213066` | 44.09 s | 132 matched |
+| ZONOS3-Mini Imogen | `e3e3aa93` | 44.56 s | 131 matched. Whisper transcribed “path” as “puff”. |
+| Reverb English male narrator 1 | `bbfb3034` | 46.87 s | 132 matched. The final MP3 retained the Software Mansion AI Labs credit. |
+
+A worker startup race surfaced during the queue test. Delayed startup recovery
+could log an interruption for a fresh conversion. SQLite also rolled back the
+status update for genuinely interrupted jobs. Revision `a1730dd7` reconciles
+existing work before it claims new uploads and commits the conditional status
+update. Web and worker both reported this revision. An EPUB queued before
+worker creation (job `2a62bfe8`) was claimed after recovery, stayed active
+through delayed maintenance, and completed with a decoded 44.56-second Imogen
+chapter. Clean-checkout CI passed 563 tests with one skip.
+
+The documentation audit covered all 37 tracked Markdown files. All 101 relative
+file links checked at the integration revision resolved. The current setup
+and operations guides document the private CPU profiles, model caches, preview
+preparation, licences and supported render targets. Historical listening
+results and earlier deployment receipts retain their original dates.
+
 ## 24 November 2026 — Three local CPU readings of the approved shared passage
 
 Dave heard the three Shared Test v1 takes below and said “all 3 voices are quite
-good”. The comment covers the voices as a group. Dave later heard all three struggle with Irish names and Imogen read 1916 as
-a cardinal. He approved the three Badawi readings for Studio. All three MP3s decoded to the end, and
-unprompted Whisper small checked the full `narrator-standard-v1` passage. Render
+good”. Dave later heard all three struggle with Irish names and Imogen read
+1916 as a cardinal. He approved the three Badawi readings for Studio. All three
+MP3s decoded to the end, and unprompted Whisper small checked the full `narrator-standard-v1` passage. Render
 times are individual runs on different hardware and thread counts.
 
 | Preview | Model / runtime revisions | Output / synthesis | ASR observation |
