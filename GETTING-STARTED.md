@@ -185,7 +185,7 @@ automatically.
 
 ## Choosing a voice (when you're ready to fuss)
 
-Voices are grouped by **engine**. You don't have to care about this to start —
+Voices are grouped by **model**. You don't have to care about this to start —
 but when you want the best result:
 
 - **Chatterbox Nano** — the default. A fast local CPU engine using the Beatrice
@@ -206,13 +206,8 @@ but when you want the best result:
   gates passed for optional use; current sentence packing remains because it
   beat/tied paragraph-aware packing. Neither replaces Beatrice/Nano or becomes
   an automatic fallback. Every offered preset is cached before it appears.
-- **Modal Cloud GPU Engines (Breeze TTS 2, Qwen3-TTS, F5-TTS, CosyVoice 3)** — on-demand,
-  serverless cloud GPU narration powered by Modal. Includes **Cillian Murphy Irish Studio Clone**
-  (`breeze_cillian_irish`, the definitive Irish history narration winner), **Aiden** (`qwen3_aiden`,
-  for expressive English non-fiction), **F5-TTS** (300M ultra-fast flow matching), and
-  **CosyVoice 3** (0.5B multilingual bi-streaming diffusion). Previews are pre-cached in the app.
-  Requires `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` in `.env`. Runs on per-second compute
-  with zero idle billing ($30/month free credit allowance).
+- **Tontaube Marcus, ZONOS3-Mini Imogen, and Reverb English male narrator 1** are optional local CPU book voices. An operator can enable the `tontaube`, `zonos3`, and `reverb` profiles. Each voice uses its existing Shared Test v1 preview. Tontaube is for private noncommercial use and Reverb requires noncommercial use and attribution. [CPU engine setup](README.md#tts-engines).
+- **Historical GPU auditions** include Breeze 2/Cillian and Qwen3 CustomVoice/Aiden. A cached audition does not make a voice available for book conversion. Check the current voice and route before selecting an engine. [Engine and route inventory](ENGINES.md).
 - **Fish S2 Pro / Cillian Murphy (free render lanes)** — the locked recipe for
   Irish history narration: dual reference routing (narration + expressive crop
   for quotes), temp 0.85, per-sentence health gate with seed re-rolls, silence
@@ -229,7 +224,7 @@ but when you want the best result:
   for exact facts.
 - **Deepgram (Aura-2)** — fast, high-quality cloud neural TTS.
   Aura-2 voices (**Orion**, **Orpheus**, **Arcas**, **Pandora**, **Hyperion**)
-  deliver natural, expressive narration at $0.030 per 1,000 characters.
+  are hosted and billed by Deepgram.
   Previews are pre-cached out of the box. Enter your API key in
   **Settings → API Keys** and click **Test Deepgram**.
 - **Gemini 3.1 Flash TTS / Achernar** — accepted opt-in online book narrator.
@@ -374,12 +369,13 @@ Official references:
 
 ## If something goes wrong
 
-- **The page won't open at localhost:8881** — make sure Docker Desktop is
-  actually running, then run
-  `docker compose --profile chatterbox-nano up -d --build` again.
+- **The page won't open at localhost:8881** — check that Docker is running,
+  then rerun the bootstrap command in Step 2 for your operating system.
+  On the production host, use `scripts/deploy.sh` from the Git checkout.
 - **A voice says "offline"** — that engine isn't started. Start it with its
   profile while retaining Nano, for example
   `docker compose --profile chatterbox-nano --profile chatterbox up -d`.
+  For production, enable the appropriate flag in `.env` and use `scripts/deploy.sh`.
 - **A voice is not listed** — check `/api/voices`. If it is configured but its
   `preview_cached` value is false, the background cache has not completed or
   its engine is offline. A Play click will not cold-render it.

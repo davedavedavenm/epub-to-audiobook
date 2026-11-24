@@ -6,15 +6,16 @@
 git clone https://github.com/davedavedavenm/epub-to-audiobook.git
 cd epub-to-audiobook
 cp .env.example .env
-docker compose up -d
+./scripts/bootstrap.sh
 ```
 
 ## Development
 
-- App code lives in `webapp/` (Flask). TTS engine servers in `chatterbox/` and `tada/`.
+- App code lives in `webapp/` (Flask). TTS engines have separate service directories. See [README.md](README.md#tts-engines).
 - `docker compose config` validates the compose file after changes.
 - Run tests: `python -m pytest tests/ -x -q` (set `PYTHONPATH=webapp`).
-- CI runs automatically on push/PR (pytest + compose validation).
+- Run `scripts/ci_local.sh` from the intended commit before pushing. It runs lint and tests in a clean checkout.
+- GitHub CI runs the workflow in `.github/workflows/ci.yml` on pushes and pull requests.
 
 ## Rules
 
@@ -31,9 +32,10 @@ docker compose up -d
 |---------|------|
 | `webapp` | Flask UI + API (port 8881) |
 | `worker` | Queue runner, spawns conversion containers |
-| `chatterbox-nano` | **Default TTS engine** — Beatrice (Nano), system default narrator (profile `chatterbox`) |
+| `chatterbox-nano` | **Default TTS engine** with Beatrice (Nano), profile `chatterbox-nano` |
 | `kokoro-tts` | Compatibility/debug TTS engine (port 8880); its tested voices are retired from normal quality selection, so it is not the default |
 | `chatterbox-tts` | Voice-cloning engine, profile `chatterbox` (port 8004) |
 | `tada-tts` | Voice-cloning engine, profile `tada` (port 8005) |
+| `tontaube`, `zonos3`, `reverb` | Optional stock CPU book narrators, each in its own profile |
 | `tts-proxy` | Transcript capture + Edge/Polly/Inworld routing |
 | `docker-socket-proxy` | Restricted Docker API proxy for webapp/worker |

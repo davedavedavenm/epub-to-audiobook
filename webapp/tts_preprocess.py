@@ -757,7 +757,7 @@ def normalize_text_for_tts(text: str, lexicon: dict = None, modern: bool = False
 
 def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None,
                     lexicon: dict = None, modern: bool = False,
-                    expand_numbers: bool | None = None) -> tuple[Path, int]:
+                    expand_numbers: bool | None = None, native_text: bool = False) -> tuple[Path, int]:
     """Preprocess an EPUB file: normalize text for better TTS pronunciation.
 
     Modifies HTML content inside the EPUB. If output_path is None,
@@ -808,7 +808,7 @@ def preprocess_epub(epub_path: str | Path, output_path: str | Path | None = None
                                     expand_numbers=expand_numbers,
                                 )
 
-                            normalized = re.sub(
+                            normalized = text if native_text else re.sub(
                                 r'(?<=>)[^<]+(?=<)',
                                 normalize_segment,
                                 text

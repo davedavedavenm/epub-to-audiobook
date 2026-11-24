@@ -55,11 +55,11 @@ requires a separately authorised environment-gated session.
 
 ## Render lanes and the automatic book audit
 
-Long books render on a GPU **lane** (Colab via khpi5, never on the app host). Before any GPU time is spent, every book
+Local CPU engines can render full books. When an operator selects a GPU **lane**, such as Colab via khpi5, the GPU work runs off the app host. Before any GPU time is spent, every lane job
 passes an automatic **preflight** (`scripts/book_preflight.py`: front/back matter, leaked file names, duplicate chapters,
 copyright pages, junk text; prints estimated hours and Colab units) and is refused with a reason if it is defective.
-The current voice for new books is Higgs TTS 3 (`higgs_cillian_irish`); see OPERATIONS.md "Higgs / Colab lane runbook"
-and ENGINES.md. Colab removes lane VMs after ~1 h, so renders checkpoint chunk audio and resume on a fresh VM.
+The Higgs TTS 3 voice (`higgs_cillian_irish`) uses that lane. See the Higgs / Colab lane runbook and engine inventory.
+Colab can reclaim lane VMs, so renders checkpoint chunk audio and resume on a fresh VM. [OPERATIONS.md](OPERATIONS.md) and [ENGINES.md](ENGINES.md).
 
 ## Features
 
@@ -79,6 +79,7 @@ and ENGINES.md. Colab removes lane VMs after ~1 h, so renders checkpoint chunk a
 - **KittenTTS 0.8.1** - free CPU-only developer-preview book engine with all
   eight official presets cached for immediate audition. Opt in with
   `ENABLE_KITTEN_PROFILE=1`; it is not a default or automatic fallback.
+- **Tontaube V1.1 INT4 / Marcus**, **ZONOS3-Mini / Imogen**, and **Reverb-TTS / English male narrator 1** are optional local CPU book routes. Each uses its existing cached audition voice ID. Tontaube is for the operator's private noncommercial use under its community model license. Reverb's model weights require noncommercial use and attribution. See the enablement and model cache instructions. [Tontaube](tontaube/README.md), [ZONOS3-Mini](zonos3/README.md), [Reverb-TTS](reverb/README.md).
 - **Gemini 3.1 Flash TTS** - accepted opt-in **Free Tier only** book engine
   using the current Gemini Developer API. Achernar passed the long-form gate;
   all 30 official presets are registered and become selectable only after their
@@ -95,7 +96,7 @@ and ENGINES.md. Colab removes lane VMs after ~1 h, so renders checkpoint chunk a
   official hosted-NIM comparison remains open to distinguish the public raw
   runtime from NVIDIA's production service. Exact facts: [ENGINES.md](ENGINES.md);
   safe one-request procedure: [NVIDIA-NIM-DIAGNOSTIC.md](NVIDIA-NIM-DIAGNOSTIC.md).
-- **Modal Cloud GPU Engines**:
+- **Historical Modal GPU evaluations**. The entries below record the evaluation work. Consult the engine inventory for current book-route availability. [ENGINES.md](ENGINES.md).
   - **Breeze TTS 2 (3.5B)** - definitive winner for Irish & Multilingual narration (**Cillian Murphy Irish Studio Clone**). Deployed on Modal GPU (Tesla T4 / Nvidia L4) with locked seed=42 and broadcast mastering (-20 LUFS). Rendered *The Armed Struggle: The Story of the IRA* full book.
   - **Qwen3-TTS 1.7B** - approved for expressive English non-fiction (**Aiden**). `CustomVoice` model with natural-language emotive instruction steering for dynamic non-fiction pacing and question inflection.
   - **F5-TTS (300M)** - ultra-fast non-autoregressive flow matching diffusion model with ConvNeXt v2 acoustic backbone and Vocos 24kHz vocoder. Measured RTF 0.577 on Tesla T4.
@@ -293,6 +294,7 @@ Add your own from a 15–30 s WAV clip — see [GETTING-STARTED.md](GETTING-STAR
 | European | Dora | Alex, Santa |
 
 ### Other Voices
+- **Optional local stock voices:** Tontaube Marcus (`tontaube_marcus_audition`), ZONOS3-Mini Imogen (`zonos3_imogen_audition`), and Reverb English male narrator 1 (`reverb_en_male_narrator_audition`).
 - **Deepgram (cloud Aura-2):** Orion, Orpheus, Arcas, Pandora, Hyperion
 - **EdgeTTS:** British/American/Australian incl. Ryan, Sonia, Libby, Ava, Andrew, Brian, Aria, Jenny
 - **Inworld (paid):** Graham, Rupert, Olivia, Blake, Elizabeth, Dennis, Ashley, Luna
@@ -310,6 +312,9 @@ Add your own from a 15–30 s WAV clip — see [GETTING-STARTED.md](GETTING-STAR
 | `QWEN3_URL` | Qwen3-TTS endpoint (default: `http://qwen3-tts:8011/v1`; opt-in CUDA profile) |
 | `POCKET_URL` | Pocket TTS endpoint (default: `http://pocket-tts:8012/v1`; opt-in CPU profile) |
 | `KITTEN_URL` | KittenTTS endpoint (default: `http://kitten-tts:8013/v1`; opt-in CPU profile) |
+| `ENABLE_TONTAUBE_PROFILE` / `TONTAUBE_CACHE_DIR` | Set the flag to `1` to start Tontaube. Point the cache variable to an absolute host directory containing the staged Hub and acoustic tokenizer files. [Tontaube setup](tontaube/README.md). |
+| `ENABLE_ZONOS3_PROFILE` | Set to `1` to start ZONOS3-Mini. Its image build stages the pinned model and preset. [ZONOS3 setup](zonos3/README.md). |
+| `ENABLE_REVERB_PROFILE` / `REVERB_HUB_CACHE` | Set the flag to `1` to start Reverb. Point the cache variable to the absolute path of the populated Hugging Face `hub` cache. [Reverb setup](reverb/README.md). |
 | `GEMINI_TTS_URL` / `GEMINI_API_KEY` | Internal free-only Gemini adapter and key from the dedicated `GEMINI_FREE_PROJECT_ID` whose Plan is Free; after verifying it, set `GEMINI_FREE_PROJECT_CONFIRMED=1` and opt in with `ENABLE_GEMINI_PROFILE=1`. Never commit the key or attach billing. Full procedure: [GEMINI-SETUP.md](GEMINI-SETUP.md). |
 | `TTS_PROXY_URL` | Optional proxy for transcript capture / Deepgram/Edge/Polly/Inworld |
 | `LLM_API_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL_NAME` | Optional OpenAI-compatible LLM for metadata and chapter classification (deterministic fallback; generated pronunciation rules are off by default). Groq users must choose a current ID from its official model/deprecation pages; see `.env.example`. |

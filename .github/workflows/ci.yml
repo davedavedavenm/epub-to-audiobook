@@ -40,7 +40,7 @@ jobs:
           # added rules to files the repo's ratchet (ruff.toml) had frozen.
           # Bump deliberately, not silently.
           pip install -q "ruff==0.16.0"
-          ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/ vibevoice/ qwen3/ pocket/ kitten/
+          ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/ vibevoice/ qwen3/ pocket/ kitten/ tontaube/ zonos3/ reverb/
 
       - name: Run tests
         run: python -m pytest tests/ -x -q

@@ -711,10 +711,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <h3 style="margin-top:0;">Free Cloud GPU — Kaggle</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
-                            Render any book on a <strong>free Kaggle GPU</strong> (much faster than your
-                            own machine) by choosing <strong>Render on → Kaggle GPU</strong> when you
-                            start a book. You get ~30 free GPU-hours a week. Your token is stored
-                            securely on this server and never leaves it.
+                            Choose <strong>Render on → Kaggle GPU</strong> when it appears for your
+                            selected voice. Kaggle applies its own free GPU quota. Your token is stored
+                            on this server and used to connect to Kaggle.
                             <br><br>
                             <strong>How to get your token (2 minutes, free):</strong>
                             1) Sign up at <strong>kaggle.com</strong> and verify your phone
@@ -740,11 +739,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 
                     <div style="background:var(--bg-element); padding:24px; border-radius:16px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <h3 style="margin:0; font-family:var(--serif);">Serverless Cloud GPU — Modal</h3>
-                            <span style="font-size:0.75rem; background:rgba(139,92,246,0.15); color:#a78bfa; padding:2px 8px; border-radius:4px; font-weight:700;">~$27/mo Free Tier</span>
+                            <h3 style="margin:0; font-family:var(--serif);">Modal — Audition tools</h3>
                         </div>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
-                            Offload voice rendering to Modal serverless GPUs (NVIDIA A100 / L4 / T4). Powers high-quality neural models like <strong>Breeze 2</strong> (3.5B autoregressive studio cloner) and <strong>Qwen3-TTS</strong> with zero local GPU requirements. Get your Token ID and Secret from <a href="https://modal.com/settings" target="_blank" style="color:var(--accent);">modal.com/settings</a>.
+                            Modal credentials are for audition tooling. Book conversion targets are listed with the selected voice.
+                            Get a Token ID and Secret from <a href="https://modal.com/settings" target="_blank" style="color:var(--accent);">modal.com/settings</a>.
                         </p>
                         <div style="display:flex; gap:16px; align-items:flex-end;">
                             <div style="flex:1;">
@@ -909,7 +908,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                         <h3 style="margin-top:0; font-family:var(--serif);">Amazon Polly Voices (Legacy — not recommended)</h3>
                         <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                             ⚠️ <strong>Proven too expensive for full audiobooks</strong> (see LOW-COST-TTS.md); kept only for compatibility.
-                            Audition the target book and use only a voice that passes its quality sample. Piper is retained only for legacy comparison and is not a production fallback. You must have an AWS account with 'polly:SynthesizeSpeech' permissions.
+                            Audition the target book and use only a voice that passes its quality sample. You must have an AWS account with 'polly:SynthesizeSpeech' permissions.
                         </p>
                         <div style="display:grid; gap:16px;">
                             <div>
@@ -1165,8 +1164,17 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     // optional local CUDA service is not running. Disabling their <option>
     // based only on local health made the cloud path impossible to choose.
     const KAGGLE_GPU_ENGINES = ['cosyvoice', 'vibevoice', 'qwen3', 'chatterbox', 'tada'];
-    const MODAL_GPU_ENGINES = ['breeze', 'qwen3'];
-    function engineSelectable(e) { return engineUp(e) || KAGGLE_GPU_ENGINES.includes(e) || MODAL_GPU_ENGINES.includes(e); }
+    const KAGGLE_ONLY_ENGINES = ['cosyvoice'];
+    const UNINTEGRATED_BOOK_ENGINES = ['breeze', 'f5tts', 'audition'];
+    function renderTargets(engine) {
+        if (!engine || UNINTEGRATED_BOOK_ENGINES.includes(engine)) return [];
+        if (engine === 'fish') return engineUp(engine) ? ['lane'] : [];
+        const targets = [];
+        if (!KAGGLE_ONLY_ENGINES.includes(engine) && engineUp(engine)) targets.push('local');
+        if (KAGGLE_GPU_ENGINES.includes(engine)) targets.push('kaggle');
+        return targets;
+    }
+    function engineSelectable(engine) { return renderTargets(engine).length > 0; }
     function engineConfigured(e) { return !engineUnconfigured[e]; }
     // Voices we are willing to offer as a choice at all.
     function selectableVoices() {
@@ -1346,8 +1354,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const active = ws.classList.toggle('active');
         if(active) {
             syncSpeedField('voice-' + bookId, 'speed-' + bookId);
-            if (!kaggleQuota) loadKaggleQuota().then(() => renderTargetNote(bookId, document.getElementById('rt-' + bookId)?.value || 'local'));
-            renderTargetNote(bookId, 'local');
+            if (!kaggleQuota) loadKaggleQuota().then(() => renderTargetNote(bookId, document.getElementById('rt-' + bookId)?.value || ''));
             const startSel = document.getElementById('start-' + bookId);
             const endSel = document.getElementById('end-' + bookId);
             startSel.innerHTML = '<option>Loading chapters...</option>';
@@ -1437,7 +1444,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             return;
         }
 
-        if (isCloud) {
+        const allowed = renderTargets(eng);
+        if (isCloud && allowed.includes('local')) {
             let engTitle = 'Cloud API';
             let engSub = 'Fast cloud synthesis · Assembled locally';
             if (eng === 'deepgram') {
@@ -1472,44 +1480,22 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             `;
             if (hid) hid.value = 'local';
             if (laneHid) laneHid.value = '';
-        } else if (MODAL_GPU_ENGINES.includes(eng)) {
-            // Switching away from fish must clear BOTH lane fields: a stale
-            // 'lane' target would submit a lane render for a non-fish engine
-            // (refused at POST), and a stale lane name is refused too.
-            if (hid && hid.value === 'lane') hid.value = '';
-            if (laneHid) laneHid.value = '';
-            container.innerHTML = `
-                <div class="rt-opt cloud on" data-rt="modal" style="grid-column: 1 / -1;" onclick="pickRender('${bookId}',this)">
-                    <span class="rt-badge" style="background:#8b5cf6; color:#fff;">Modal Cloud GPU</span>
-                    <div class="rt-t">Modal Serverless GPU</div>
-                    <div class="rt-s">free tier · ~$27/mo free credits · fast neural GPU</div>
-                </div>
-            `;
-            if (hid) hid.value = 'modal';
         } else {
-            if (hid && hid.value === 'lane') hid.value = '';
             if (laneHid) laneHid.value = '';
-            const isHeavy = eng === 'chatterbox' || eng === 'tada';
-            const curr = hid ? hid.value : (isHeavy ? 'kaggle' : 'local');
-            container.innerHTML = `
-                <div class="rt-opt ${curr === 'local' ? 'on' : ''}" data-rt="local" onclick="pickRender('${bookId}',this)">
-                    ${!isHeavy ? '<span class="rt-badge">Recommended</span>' : ''}
-                    <div class="rt-t">This machine</div>
-                    <div class="rt-s">free · no quota</div>
-                </div>
-                <div class="rt-opt cloud ${curr === 'kaggle' ? 'on' : ''}" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
-                    ${isHeavy ? '<span class="rt-badge">Recommended</span>' : ''}
-                    <div class="rt-t">Kaggle GPU</div>
-                    <div class="rt-s">free · ~30h/wk</div>
-                </div>
-                <div class="rt-opt cloud ${curr === 'modal' ? 'on' : ''}" data-rt="modal" onclick="pickRender('${bookId}',this)">
-                    <div class="rt-t">Modal GPU</div>
-                    <div class="rt-s">free · ~$27/mo credits</div>
-                </div>
-            `;
-            if (hid && !hid.value) hid.value = isHeavy ? 'kaggle' : 'local';
+            const current = allowed.includes(hid?.value) ? hid.value : (allowed[0] || '');
+            if (hid) hid.value = current;
+            const options = [];
+            if (allowed.includes('local')) options.push(`
+                <div class="rt-opt ${current === 'local' ? 'on' : ''}" data-rt="local" onclick="pickRender('${bookId}',this)">
+                    <div class="rt-t">This machine</div><div class="rt-s">free · no quota</div>
+                </div>`);
+            if (allowed.includes('kaggle')) options.push(`
+                <div class="rt-opt cloud ${current === 'kaggle' ? 'on' : ''}" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
+                    <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · quota applies</div>
+                </div>`);
+            container.innerHTML = options.join('') || '<span class="warn">No render target available for this voice.</span>';
         }
-        renderTargetNote(bookId, hid ? hid.value : 'local');
+        renderTargetNote(bookId, hid?.value || '');
     }
 
     // Grey out + annotate a speed input based on the currently-selected voice.
@@ -1537,8 +1523,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 
     const ENGINE_LABELS = {
         'cpu_narrators': 'LIKED CPU NARRATORS (November models)',
-        'breeze': 'BREEZE 2 (Modal Serverless GPU — Studio Clones)',
-        'qwen3': 'QWEN3-TTS (Modal Serverless GPU — Emotive)',
+        'tontaube': 'Tontaube · private personal use',
+        'zonos3': 'ZONOS3-Mini',
+        'reverb': 'Reverb-TTS · noncommercial',
+        'breeze': 'BREEZE 2 (Audition only)',
+        'qwen3': 'QWEN3-TTS',
         'chatterbox_nano': 'CHATTERBOX NANO (Fast CPU — Default)',
         'chatterbox': 'CHATTERBOX TURBO (Heavy — Needs GPU)',
         'kokoro': 'KOKORO TTS (Neural)',
@@ -1547,22 +1536,18 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         'cosyvoice': 'COSYVOICE 3 (Kaggle GPU)',
         'fish': 'FISH S2 PRO (Locked Recipe — GPU Lane)'
     };
-    function buildVoiceOptions(selectedId) {
+    function buildVoiceOptions(selectedId, target = null) {
         const usable = selectableVoices();
         const engines = [...new Set(usable.map(([id, v]) => v.engine))];
         return engines.map(engine => {
             const up = engineUp(engine);
-            const selectable = engineSelectable(engine);
-            const isModal = MODAL_GPU_ENGINES.includes(engine);
+            const selectable = target ? renderTargets(engine).includes(target) : engineSelectable(engine);
             const isKaggle = KAGGLE_GPU_ENGINES.includes(engine);
             const engineVoices = usable.filter(([id, v]) => v.engine === engine);
             const baseLabel = ENGINE_LABELS[engine] || (engine.toUpperCase() + ' ENGINE');
             let groupLabel = baseLabel;
             let optSuffix = '';
-            if (isModal) {
-                groupLabel = baseLabel + (selectable ? ' — MODAL GPU' : ' — OFFLINE (Add Modal Token)');
-                optSuffix = ' — Modal GPU';
-            } else if (isKaggle && !up) {
+            if (isKaggle && (!up || KAGGLE_ONLY_ENGINES.includes(engine))) {
                 groupLabel = baseLabel + (selectable ? ' — KAGGLE GPU' : ' — OFFLINE');
                 optSuffix = ' — Kaggle GPU';
             } else if (!up) {
@@ -1667,19 +1652,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                                 <div class="conv-step-label">Convert</div>
                                 <div class="render-pick">
                                     <label class="setup-label" style="display:block; margin-bottom:9px;">Render on</label>
-                                     <div class="rt-row" id="rt-row-${bookId}">
-                                         <div class="rt-opt on" data-rt="local" onclick="pickRender('${bookId}',this)">
-                                             <span class="rt-badge">Recommended</span>
-                                             <div class="rt-t">This machine</div><div class="rt-s">free · no quota</div>
-                                         </div>
-                                         <div class="rt-opt cloud" data-rt="kaggle" onclick="pickRender('${bookId}',this)">
-                                             <div class="rt-t">Kaggle GPU</div><div class="rt-s">free · ~30h/wk</div>
-                                         </div>
-                                         <div class="rt-opt cloud" data-rt="modal" onclick="pickRender('${bookId}',this)">
-                                             <div class="rt-t">Modal GPU</div><div class="rt-s">free · ~$27/mo credits</div>
-                                         </div>
-                                     </div><div class="rt-note" id="rt-note-${bookId}"></div>
-                                    <input type="hidden" id="rt-${bookId}" value="local">
+                                    <div class="rt-row" id="rt-row-${bookId}"></div>
+                                    <div class="rt-note" id="rt-note-${bookId}"></div>
+                                    <input type="hidden" id="rt-${bookId}" value="">
                                     <!-- Which GPU lane a fish render NAMES. Empty = auto,
                                          which resolves FREE lanes only (Colab → Kaggle) and
                                          can never reach the paid lane; the paid lane must be
@@ -1862,9 +1837,15 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     }
 
     async function startProduction() {
+        const voice = document.getElementById('upload-voice').value;
+        if (!renderTargets(engineOfVoice(voice)).includes('local')) {
+            await appAlert({ title: 'Select an available voice',
+                message: 'This upload starts a render on this machine.', tone: 'info' });
+            return;
+        }
         const formData = new FormData();
         formData.append('file', selectedFile);
-        formData.append('voice', document.getElementById('upload-voice').value);
+        formData.append('voice', voice);
         formData.append('tts_speed', document.getElementById('upload-speed').value || '1.0');
         await fetch('/api/convert', { method: 'POST', body: formData }); switchTab('queue');
     }
@@ -1875,6 +1856,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     function renderTargetNote(bookId, target) {
         const note = document.getElementById('rt-note-' + bookId);
         if (!note) return;
+        if (!target) {
+            note.textContent = '';
+            return;
+        }
         if (target === 'kaggle') {
             const q = kaggleQuota;
             if (!q || !q.configured) {
@@ -1885,13 +1870,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 note.innerHTML = `<span class="warn">⚠ Only ${q.left} free GPU-hrs left this week (of ${q.weekly}). A full book can use ~4h — it may not finish.</span>`;
             } else {
                 note.innerHTML = `<span class="ok">${q.left} of ${q.weekly} free GPU-hrs left this week. A book uses ~2–4h. Nothing is charged.</span>`;
-            }
-        } else if (target === 'modal') {
-            const m = cachedCloudStatus?.modal;
-            if (!m || !m.configured) {
-                note.innerHTML = '<span class="warn">⚠ Modal isn\'t set up yet — add your Token in <b>Settings → Serverless Cloud GPU — Modal</b> first.</span>';
-            } else {
-                note.innerHTML = '<span class="ok">⚡ Modal Serverless GPU active (~$27/mo free credit). Synthesizes on high-speed NVIDIA L4/A10G cloud GPUs.</span>';
             }
         } else if (target === 'lane') {
             // Fish lane render. The note must say which lane will actually be
@@ -1930,12 +1908,6 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
     function localSpeedNote(bookId) {
         const voiceId = document.getElementById('voice-' + bookId)?.value;
         const eng = (voiceId && voices[voiceId]) ? voices[voiceId].engine : null;
-        if (eng === 'breeze') {
-            return '⚡ Cloud GPU TTS (Breeze 2) — 3.5B autoregressive neural studio voice clones rendered on Modal Serverless GPU.';
-        }
-        if (eng === 'qwen3') {
-            return '⚡ Cloud GPU TTS (Qwen3-TTS) — 1.7B emotive non-fiction neural TTS rendered on Modal Serverless GPU.';
-        }
         if (eng === 'deepgram') {
             return '⚡ Cloud TTS API (Deepgram Aura-2) — High-speed neural speech generated via Deepgram API ($0.030/1k chars), assembled and chapterized locally.';
         }
@@ -1987,7 +1959,13 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const speed = document.getElementById('speed-' + bookId).value;
         const voice2 = document.getElementById('voice2-' + bookId)?.value || '';
         const customRegex = document.getElementById('regex-' + bookId)?.value || '';
-        const renderTarget = document.getElementById('rt-' + bookId)?.value || 'local';
+        const renderTarget = document.getElementById('rt-' + bookId)?.value;
+        const eng = engineOfVoice(voice);
+        if (!renderTargets(eng).includes(renderTarget)) {
+            await appAlert({ title: 'Render target unavailable',
+                message: 'Select an available voice and render target before starting.', tone: 'info' });
+            return;
+        }
         const laneName = (document.getElementById('lane-' + bookId)?.value || '').trim();
         const outputFormat = document.getElementById('fmt-' + bookId)?.value || 'mp3';
         const allowFallback = document.getElementById('fallback-' + bookId)?.checked || false;
@@ -2011,25 +1989,14 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 details: { 'Weekly allowance': `${q.weekly} GPU-hrs`, 'Remaining': '0' },
                 confirmText: 'Queue anyway', cancelText: 'Cancel', icon: '☁', tone: 'default',
             })) return;
-        } else if (renderTarget === 'modal') {
-            const m = cachedCloudStatus?.modal;
-            if (!m || !m.configured) {
-                await appAlert({ title: 'Modal isn\'t set up yet',
-                    message: 'Add your free Modal Token ID and Secret in Settings → Serverless Cloud GPU — Modal, then try again.',
-                    tone: 'info', icon: 'ℹ' });
-                return;
-            }
         }
         // Explicit confirmation — a conversion is a long job, never start one by surprise.
         const voiceName = el.closest('.production-workspace')?.querySelector('#voice-' + bookId)?.selectedOptions[0]?.text || voice;
-        const eng = (voices[voice] || {}).engine;
         let where = 'this computer (free, local)';
         if (renderTarget === 'lane') {
             where = laneName === 'lightning'
                 ? 'Lightning AI — PAID (T4 $0.55/h · L4 $0.79/h · L40S $2.14/h)'
                 : (laneName ? `free GPU lane (${laneName})` : 'a free GPU lane (auto: Colab → Kaggle)');
-        } else if (renderTarget === 'modal' || eng === 'breeze') {
-            where = 'Modal Serverless GPU (~$27/mo free credits)';
         } else if (renderTarget === 'kaggle') {
             where = 'free Kaggle GPU (~30h/wk)';
         } else if (eng === 'deepgram') {
@@ -2053,11 +2020,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             details: { 'Voice': voiceName, 'Render on': where },
             confirmText: 'Start narration', cancelText: 'Not yet', icon: '▶', tone: 'default',
         })) return;
-        const submittedTarget = renderTarget === 'modal' ? 'local' : renderTarget;
-        const body = { path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: submittedTarget, output_format: outputFormat, allow_engine_fallback: allowFallback };
+        const body = { path, voice, start_chapter: start, end_chapter: end, tts_speed: speed, voice2, custom_regex: customRegex, render_target: renderTarget, output_format: outputFormat, allow_engine_fallback: allowFallback };
         // Only a lane render may name a lane — the API refuses the combination
         // otherwise, so never send the field alongside an ordinary target.
-        if (submittedTarget === 'lane') body.lane = laneName;
+        if (renderTarget === 'lane') body.lane = laneName;
         const resp = await fetch('/api/library/convert', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
         const data = await resp.json();
         if(data.status === 'success') {
@@ -3593,10 +3559,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         if (status.modal) {
             if (status.modal.configured) {
-                const bal = status.modal.formatted || '~$27/mo Free GPU';
+                const bal = status.modal.formatted || 'Token saved';
                 badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.15); color:#a78bfa; font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa;"></span>Modal: ${escapeHtml(bal)}</span>`);
             } else {
-                badges.push(`<a href="#settings" onclick="switchTab('settings')" style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.08); color:#a78bfa; font-weight:600; text-decoration:none;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa; opacity:0.6;"></span>Modal: ~$27/mo Free GPU (Configure)</a>`);
+                badges.push(`<a href="#settings" onclick="switchTab('settings')" style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(139,92,246,0.08); color:#a78bfa; font-weight:600; text-decoration:none;"><span style="width:6px; height:6px; border-radius:50%; background:#a78bfa; opacity:0.6;"></span>Modal: Configure audition credentials</a>`);
             }
         }
         badges.push(`<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:14px; background:rgba(100,116,139,0.12); color:var(--text-secondary); font-weight:600;"><span style="width:6px; height:6px; border-radius:50%; background:#64748b;"></span>Local: CPU Default (Free)</span>`);
@@ -3699,7 +3665,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             const tab = localStorage.getItem('audiobook-tab') || 'library';
             switchTab(tab);
             const uploadVoice = document.getElementById('upload-voice');
-            if(uploadVoice) { uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural'); syncSpeedField('upload-voice','upload-speed'); }
+            if(uploadVoice) { uploadVoice.innerHTML = buildVoiceOptions('en-GB-RyanNeural', 'local'); syncSpeedField('upload-voice','upload-speed'); }
         } catch(e) {
             console.error('Initialization error:', e);
         }

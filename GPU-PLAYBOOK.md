@@ -1,5 +1,7 @@
 # Kokoro GPU on Vast.ai — Playbook
 
+> **Historical benchmarking and provisioning evidence.** Kokoro is retired from paid GPU use. For currently permitted actions and spend controls, read [GPU-SAFETY.md](GPU-SAFETY.md) and [DECISIONS.md](DECISIONS.md) before using any command below.
+
 ## Buying a local GPU — the constraints, measured 2026-07-25
 
 Recorded so this isn't re-researched from scratch. The question was whether a

@@ -81,8 +81,6 @@ def test_missing_number_dependency_cannot_silently_change_shared_payload(monkeyp
     ('maya2_siddhant', 'maya2'), ('maya2_nivedita', 'maya2'),
     ('voxcpm2_peter', 'voxcpm2'),
     ('higgs3_default_audition', 'higgs3'),
-    ('zonos3_imogen_audition', 'zonos3'),
-    ('reverb_en_male_narrator_audition', 'reverb'),
 ])
 def test_native_audition_payload_is_explicit_without_claiming_a_book_route(voice_id, engine):
     from app import all_voices
@@ -95,12 +93,47 @@ def test_native_audition_payload_is_explicit_without_claiming_a_book_route(voice
     assert sample_text_for('audition') != SAMPLE_TEXT
 
 
-def test_tontaube_cpu_audition_uses_explicit_number_profile():
-    from app import all_voices
+@pytest.mark.parametrize('voice_id, engine, profile', [
+    ('tontaube_marcus_audition', 'tontaube', 'explicit'),
+    ('zonos3_imogen_audition', 'zonos3', 'native'),
+    ('reverb_en_male_narrator_audition', 'reverb', 'native'),
+])
+def test_promoted_voice_keeps_its_preview_and_routes_books(voice_id, engine, profile):
+    import os
+    from app import all_voices, get_engine_url
 
-    voice = all_voices()['tontaube_marcus_audition']
-    assert voice['audition_only'] is True
-    assert sample_text_for(voice['preview_text_engine']) == sample_text_for('cpu_narrators')
+    voice = all_voices()[voice_id]
+    assert not voice.get('audition_only')
+    assert voice['engine'] == voice['preview_text_engine'] == engine
+    expected_url = os.environ.get(f'{engine.upper()}_URL', f'http://{engine}:8080/v1')
+    assert get_engine_url(engine, 'test')[0] == expected_url.rstrip('/')
+    assert text_profile_for_engine(engine) == profile
+    expected = SAMPLE_TEXT if profile == 'native' else sample_text_for('cpu_narrators')
+    assert sample_text_for(engine) == expected
+
+
+def test_native_book_frontend_keeps_numbers_and_names_through_both_stages(tmp_path, monkeypatch):
+    from zipfile import ZipFile
+    from scripts import convert_book
+    from tts_preprocess import preprocess_epub
+
+    original = tmp_path / 'source.epub'
+    with ZipFile(original, 'w') as book:
+        book.writestr('chapter.xhtml', '<html><body><p>In 1916 Huawei spent £24.60.</p></body></html>')
+    prepared, _ = preprocess_epub(original, native_text=True)
+    monkeypatch.setattr(convert_book, '_TEXT_PROFILE', 'native')
+    monkeypatch.setattr(convert_book, '_LEXICON', {'Huawei': 'replacement'})
+    with ZipFile(prepared) as book:
+        assert convert_book.chapter_text(book, 'chapter.xhtml') == 'In 1916 Huawei spent £24.60.'
+
+
+def test_long_sentence_stays_complete_inside_book_request_limit():
+    from scripts.convert_book import chunk
+
+    source = ' '.join(['a very long sentence'] * 180)
+    chunks = chunk(source, 600, pack_paragraphs=True)
+    assert max(map(len, chunks)) <= 600
+    assert ' '.join(chunks) == source
 
 
 def test_general_preview_producers_use_shared_engine_text_and_manifest():
@@ -128,3 +161,23 @@ def test_generated_qwen_preview_kernel_embeds_the_canonical_sample_provenance():
     assert f'TEST_TEXT = {expected_literal}' in kernel
     assert 'write_sample_manifest(mp3_path)' in kernel
     assert 'Silicon Valley can be an amazingly drab place' not in kernel
+
+
+@pytest.mark.parametrize(('voice', 'retry', 'calls'), [
+    ('tontaube_marcus_audition', '1', 2),
+    ('zonos3_imogen_audition', '', 1),
+    ('reverb_en_male_narrator_audition', 'unavailable', 1),
+    ('existing_voice', '1', 1),
+])
+def test_busy_speech_retries_only_for_stock_backend_with_delay(monkeypatch, voice, retry, calls):
+    from unittest.mock import Mock
+    from scripts import convert_book
+
+    busy = Mock(status_code=503, headers={'Retry-After': retry})
+    ready = Mock(status_code=200)
+    post = Mock(side_effect=[busy, ready])
+    monkeypatch.setattr(convert_book.requests, 'post', post)
+    monkeypatch.setattr(convert_book.time, 'sleep', Mock())
+    response = convert_book._post_speech('http://engine/audio/speech', {'voice': voice}, 10)
+    assert response is (ready if calls == 2 else busy)
+    assert post.call_count == calls

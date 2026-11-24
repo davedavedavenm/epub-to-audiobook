@@ -1,5 +1,7 @@
 # PLAN V5 — what is next (reviewed 2026-08-13)
 
+> **Historical sprint plan.** See [STATUS.md](STATUS.md) for current work and [DECISIONS.md](DECISIONS.md) for standing decisions.
+
 Successor to PLAN-V4, which is complete. V4 was about **truth** — subsystems
 that reported success while doing nothing. V5 is about **automation and reach**:
 the pipeline is honest now, but it still needs a human in three places it

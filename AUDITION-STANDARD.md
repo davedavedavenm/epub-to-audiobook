@@ -47,6 +47,8 @@ test phrasing; they do not imply automatic speaker casting.
   ZONOS3-Mini (`zonos3`) and Reverb-TTS (`reverb`) receive the source passage
   and use their own text frontends. Tontaube V1.1 INT4 (`tontaube`) receives
   the app's explicit-number profile with its optional upstream verbalizer off.
+  Books and previews use these same profiles. Book input still passes through
+  structural EPUB cleanup, and the native engines receive the resulting text.
   Preserve both the helper payload and any separately normalized engine input.
 - Prepare app-normalized payloads with the application dependencies installed,
   then freeze the text and source/prepared hashes before sending to an isolated

@@ -1,6 +1,6 @@
 # PLAN V6 — The Smart Library (2026-09-02)
 
-> **Ownership note (2026-11-19):** Live implementation and maintenance of the acquisition/library pieces (#47 WhatsApp Book Bot & Family Book Finder, #48 Series Gap Detector, #49 AI Library Curator, #50 Family Wishlist) are consolidated into **`infra`** (`scripts/docker-vm/cwa/` on `docker-vm:8095`). `epub-to-audiobook` owns only TTS conversion and a thin HTTP Book Finder proxy (`BOOK_FINDER_URL=http://192.168.1.113:8095`).
+> **Historical design and ownership note (2026-11-19).** Live implementation and maintenance of the acquisition/library pieces (#47 WhatsApp Book Bot & Family Book Finder, #48 Series Gap Detector, #49 AI Library Curator, #50 Family Wishlist) are consolidated into **`infra`** (`scripts/docker-vm/cwa/` on `docker-vm:8095`). `epub-to-audiobook` owns TTS conversion and a thin HTTP Book Finder proxy (`BOOK_FINDER_URL=http://192.168.1.113:8095`). Use [STATUS.md](STATUS.md) for current studio work.
 
 Successor to PLAN-V5. V5 was about **automation and reach** for the TTS
 pipeline. V6 is about **the library as a service**: the ebook and audiobook

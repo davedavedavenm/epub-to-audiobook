@@ -81,6 +81,10 @@ QWEN3_URL = os.environ.get('QWEN3_URL', 'http://qwen3-tts:8011/v1')
 POCKET_URL = os.environ.get('POCKET_URL', 'http://pocket-tts:8012/v1')
 KITTEN_URL = os.environ.get('KITTEN_URL', 'http://kitten-tts:8013/v1')
 CPU_NARRATORS_URL = os.environ.get('CPU_NARRATORS_URL', 'http://cpu-narrators:8016/v1')
+BOOK_CPU_URLS = {
+    engine: os.environ.get(f'{engine.upper()}_URL', f'http://{engine}:8080/v1').rstrip('/')
+    for engine in ('tontaube', 'zonos3', 'reverb')
+}
 GEMINI_TTS_URL = os.environ.get('GEMINI_TTS_URL', 'http://gemini-tts:8014/v1')
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR', '/data/uploads'))
 OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', '/data/audiobooks'))
@@ -436,6 +440,9 @@ def _run_audio_asr_verify_sample(job_id: str, epub_filename: str, output_dirname
 
 # TTS Engines configuration
 TTS_ENGINES = {
+    'tontaube': {'name': 'Tontaube V1.1 INT4', 'description': 'Marcus · private personal CPU narration'},
+    'zonos3': {'name': 'ZONOS3-Mini', 'description': 'Imogen · local CPU narration'},
+    'reverb': {'name': 'Reverb-TTS', 'description': 'English male narrator 1 · noncommercial CPU narration'},
     'cpu_narrators': {'name': 'Liked CPU narrators', 'description': 'Exact November audition models, local CPU', 'url_env': 'CPU_NARRATORS_URL', 'default_url': 'http://cpu-narrators:8016/v1'},
     'audition': {'name': 'Narrator auditions', 'description': 'Recorded voice samples for listening comparisons'},
     'kokoro': {
@@ -476,21 +483,15 @@ TTS_ENGINES = {
     },
     'breeze': {
         'name': 'Breeze 2 (3.5B Studio Clones)',
-        'description': 'High-fidelity studio voice cloning and Irish historical narration on Modal Serverless GPU',
-        'url_env': 'MODAL_BREEZE_URL',
-        'default_url': 'http://modal-breeze:8015/v1'
+        'description': 'Cached studio voice auditions',
     },
     'cosyvoice': {
         'name': 'CosyVoice 3 (0.5B)',
-        'description': 'Ultra-efficient flow-matching voice cloning on Modal GPU (RTF ~0.15)',
-        'url_env': 'MODAL_COSYVOICE_URL',
-        'default_url': 'http://modal-cosyvoice:8016/v1'
+        'description': 'Voice cloning with book rendering on Kaggle',
     },
     'f5tts': {
         'name': 'F5-TTS (300M)',
-        'description': 'Lightweight non-autoregressive flow-matching voice cloning on Modal GPU (RTF ~0.10)',
-        'url_env': 'MODAL_F5TTS_URL',
-        'default_url': 'http://modal-f5tts:8017/v1'
+        'description': 'Cached voice-cloning auditions',
     },
     'fish': {
         'name': 'Fish Speech S2 Pro (locked Cillian recipe)',
@@ -790,7 +791,7 @@ for _model, _voice_id, _name, _accent, _gender in (
 ):
     VOICES[_voice_id] = {
         'name': _name, 'accent': _accent, 'gender': _gender,
-        'engine': 'audition', 'audition_only': True, 'catalogue_model': _model,
+        'engine': _model, 'catalogue_model': _model,
         'preview_text_engine': _model,
     }
 
@@ -2727,7 +2728,7 @@ def get_voice_preview(voice_id: str) -> Path:
             part = preview_path.with_suffix('.mp3.part')
             part.write_bytes(proc.stdout)
             os.replace(part, preview_path)
-        elif engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
+        elif engine in BOOK_CPU_URLS or engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
                         'pocket', 'kitten', 'cpu_narrators'):
             # Direct preview from an isolated local engine service.
             # Timeout must exceed the actual CPU synthesis time: chatterbox runs
@@ -2737,7 +2738,8 @@ def get_voice_preview(voice_id: str) -> Path:
             # 180s cap was SHORTER than that, so every chatterbox sample was
             # generated, timed out, and thrown away — the cache could never fill
             # (2026-07-14). Be generous; this is a background job.
-            _url = (VIBEVOICE_URL if engine == 'vibevoice'
+            _url = (BOOK_CPU_URLS[engine] if engine in BOOK_CPU_URLS
+                    else VIBEVOICE_URL if engine == 'vibevoice'
                     else QWEN3_URL if engine == 'qwen3'
                     else GEMINI_TTS_URL if engine == 'gemini'
                     else POCKET_URL if engine == 'pocket'
@@ -2754,7 +2756,7 @@ def get_voice_preview(voice_id: str) -> Path:
                     "voice": voice_id,
                     "response_format": "mp3"
                 },
-                timeout=max(900 if engine == 'cpu_narrators' else 0,
+                timeout=max(900 if engine == 'cpu_narrators' or engine in BOOK_CPU_URLS else 0,
                             int(os.environ.get('PREVIEW_TIMEOUT', '600')))
             )
             response.raise_for_status()
@@ -3053,6 +3055,8 @@ def get_engine_url(tts_engine: str, job_id: str) -> tuple:
         # not a working book integration; never substitute Kokoro silently.
         raise ValueError(f'{tts_engine} has GPU auditions but no integrated book endpoint; '
                          'use its documented GPU renderer')
+    elif tts_engine in BOOK_CPU_URLS:
+        return BOOK_CPU_URLS[tts_engine], 'tts-1'
     elif tts_engine == 'cpu_narrators':
         return CPU_NARRATORS_URL, 'tts-1'
     elif tts_engine == 'pocket':
@@ -3130,6 +3134,8 @@ def build_retry_cmd_from_job(job: dict) -> list[str]:
 
     if tts_engine == 'tada':
         cmd.append('--denoise')
+    if tts_engine in BOOK_CPU_URLS:
+        cmd.extend(['--chunk-chars', '600', '--pack-paragraphs', '--request-timeout', '900'])
     if tts_engine == 'vibevoice':
         # Vibe's accepted result was one generation per chapter. The old 3600s
         # HTTP timeout was shorter than the measured 3676s chapter generation.
@@ -4561,12 +4567,15 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             from llm_metadata import generate_lexicon, generate_narration_profile
             from tts_preprocess import preprocess_epub
 
+            _pengine = (_rt_job or {}).get('tts_engine') or 'kokoro'
+            _text_profile = text_profile_for_engine(_pengine)
             # QA Layer 1 (pre-flight): adaptive per-book narration profile +
             # legacy name lexicon. Both merge into one lexicon of replacements.
             lexicon = {}
             profile = {}
             try:
-                profile = generate_narration_profile(epub_path) or {}
+                if _text_profile != 'native':
+                    profile = generate_narration_profile(epub_path) or {}
                 if profile.get('form'):
                     append_job_log(job_id, f"Book classified as {profile['form']} (domain: {profile.get('domain')})")
                 if profile.get('rules'):
@@ -4575,7 +4584,7 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             except Exception as e:
                 app.logger.warning(f"Narration profile failed: {e}")
             try:
-                names = generate_lexicon(epub_path)
+                names = generate_lexicon(epub_path) if _text_profile != 'native' else {}
                 if names:
                     # profile rules win on conflict
                     for k, v in names.items():
@@ -4588,9 +4597,6 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             # tts_engine isn't assigned until later in this function; read the
             # engine from the job here so modern-contract preprocessing actually
             # applies (bug caught running the real worker path 2026-07-08).
-            _pjob = get_job(job_id)
-            _pengine = (_pjob.get('tts_engine') if _pjob else None) or 'kokoro'
-            _text_profile = text_profile_for_engine(_pengine)
             _modern = _text_profile in ('modern', 'explicit')
             _expand_numbers = True if _text_profile == 'explicit' else None
             # Explicit numbers/currency won 4/4 controlled CPU A/Bs. Keep only
@@ -4606,11 +4612,12 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
             _, files_changed = preprocess_epub(
                 epub_path, preprocessed_path,
                 lexicon=_preprocess_lexicon, modern=_modern,
-                expand_numbers=_expand_numbers)
+                expand_numbers=_expand_numbers, native_text=_text_profile == 'native')
             # Use preprocessed version for conversion, keep original for reference
             host_input_path = f"{HOST_UPLOAD_DIR}/{preprocessed_path.name}"
             epub_path = preprocessed_path
-            summary = f"sanitized + normalized, {files_changed} files changed"
+            method = 'sanitized for native text frontend' if _text_profile == 'native' else 'sanitized + normalized'
+            summary = f"{method}, {files_changed} files changed"
             if lexicon:
                 summary += f", {len(lexicon)} pronunciation rules"
             if profile.get('domain'):
@@ -4651,9 +4658,10 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # SLOW_ENGINE_MIN_TIMEOUT: chatterbox/tada on CPU run near realtime;
         # polluted ETA metrics produced absurd timeouts (375m for a ~14h book,
         # incident 2026-07-07). Floor the timeout at char_count/4 chars-per-sec.
-        if tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
+        if tts_engine in BOOK_CPU_URLS or tts_engine in ('chatterbox', 'chatterbox_nano', 'tada', 'vibevoice', 'qwen3',
                           'pocket', 'kitten', 'cpu_narrators'):
-            floor_seconds = int(char_count / 4.0)
+            # The Marcus CPU readings took up to ~1.8 seconds per word on Ryzen.
+            floor_seconds = int(char_count / (2.0 if tts_engine in BOOK_CPU_URLS else 4.0))
             if timeout_seconds < floor_seconds:
                 timeout_seconds = floor_seconds
                 append_job_log(job_id, f"Timeout floored to {timeout_seconds//60}m for slow engine {tts_engine}")
@@ -4771,7 +4779,9 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
         # Chatterbox Turbo/Nano genuinely have no speed control and ignore the
         # field, so say so rather than implying it worked.
         if tts_speed and float(tts_speed) != 1.0:
-            if tts_engine == 'gemini':
+            if tts_engine in BOOK_CPU_URLS:
+                append_job_log(job_id, f"{tts_engine} uses the stock narrator's native pacing.")
+            elif tts_engine == 'gemini':
                 append_job_log(job_id,
                                f"NOTE: speed {tts_speed}x requested, but Gemini pacing is "
                                f"pinned by the heard style prompt; the request remains at 1.0x.")
@@ -4790,6 +4800,8 @@ def convert_book(job_id: str, input_filename: str, output_dirname: str, voice: s
 
         if tts_engine == 'tada':
             cmd.append('--denoise')
+        if tts_engine in BOOK_CPU_URLS:
+            cmd.extend(['--chunk-chars', '600', '--pack-paragraphs', '--request-timeout', '900'])
         if tts_engine == 'vibevoice':
             cmd.extend(['--chunk-chars', '1000000', '--request-timeout', '21600'])
         elif tts_engine == 'qwen3':
@@ -5062,6 +5074,7 @@ def check_engines_health(max_age=20):
     if now - _ENGINE_HEALTH_CACHE['ts'] < max_age and _ENGINE_HEALTH_CACHE['data']:
         return _ENGINE_HEALTH_CACHE['data']
     probes = {
+        **{key: f"{url}/audio/voices" for key, url in BOOK_CPU_URLS.items()},
         'kokoro': f"{KOKORO_URL.rstrip('/')}/audio/voices",
         'chatterbox': f"{CHATTERBOX_URL.rstrip('/')}/audio/voices",
         'chatterbox_nano': f"{CHATTERBOX_NANO_URL.rstrip('/')}/audio/voices",
@@ -5091,17 +5104,9 @@ def check_engines_health(max_age=20):
     out['polly'] = proxy_up and bool(get_setting('AWS_ACCESS_KEY_ID') or os.environ.get('AWS_ACCESS_KEY_ID'))
     out['inworld'] = proxy_up and bool(get_setting('INWORLD_API_KEY') or os.environ.get('INWORLD_API_KEY'))
     out['deepgram'] = proxy_up and bool(get_setting('DEEPGRAM_API_KEY') or os.environ.get('DEEPGRAM_API_KEY'))
-    # Modal serverless cloud GPU engines
-    modal_configured = bool(
-        (get_setting('MODAL_TOKEN_ID') or os.environ.get('MODAL_TOKEN_ID')) and
-        (get_setting('MODAL_TOKEN_SECRET') or os.environ.get('MODAL_TOKEN_SECRET'))
-    )
-    out['modal'] = modal_configured
-    out['breeze'] = modal_configured
-    if modal_configured:
-        out['qwen3'] = True
-        out['cosyvoice'] = True
-        out['f5tts'] = True
+    # Modal credentials are used by audition tools. Qwen's local status comes
+    # from its actual endpoint; the other audition engines have no local route.
+    out.update({'breeze': False, 'cosyvoice': False, 'f5tts': False})
     # Fish S2 Pro is healthy exactly when SOME GPU lane credential exists. This
     # check is deliberately local (no SSH/SDK probe inside the health poll —
     # live reachability is /api/lanes' job, and it is TTL-cached there).
@@ -5740,12 +5745,14 @@ def test_modal_connection():
         if not (token_id.startswith('ak-') and token_secret.startswith('as-')):
             return jsonify({'error': 'Modal Token ID must start with ak- and Secret with as-'}), 400
         modal_info = _fetch_modal_balance(token_id, token_secret, force=True)
-        bal_msg = f" — {modal_info['formatted']}" if modal_info and modal_info.get('formatted') else " — ~$27/mo free credits active."
+        if modal_info is None:
+            return jsonify({'error': 'Modal credentials could not be verified by the billing command.'}), 502
+        bal_msg = f" — {modal_info['formatted']}" if modal_info.get('formatted') else ''
         return jsonify({
             'status': 'success',
             'message': f'Modal credentials verified ({token_id[:6]}...{token_id[-4:]})!{bal_msg}',
-            'formatted': modal_info.get('formatted') if modal_info else None,
-            'remaining': modal_info.get('remaining') if modal_info else None
+            'formatted': modal_info.get('formatted'),
+            'remaining': None
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -6037,26 +6044,24 @@ def _fetch_modal_balance(token_id: str, token_secret: str, force: bool = False):
             )
             if proc.returncode == 0 and proc.stdout.strip():
                 data = json.loads(proc.stdout)
-                metered = float(data.get('metered_cost') or 0.0)
-                billed = float(data.get('billed_cost') or 0.0)
-                free_tier_total = 30.0
-                remaining = max(0.0, free_tier_total - metered)
+                metered = data.get('metered_cost')
+                billed = data.get('billed_cost')
+                metered = round(float(metered), 2) if metered is not None else None
+                billed = round(float(billed), 2) if billed is not None else None
                 res = {
                     'configured': True,
-                    'metered_cost': round(metered, 2),
-                    'billed_cost': round(billed, 2),
-                    'remaining': round(remaining, 2),
-                    'formatted': f"${remaining:.2f} Free Credit Left",
-                    'used_formatted': f"${metered:.2f} used",
+                    'metered_cost': metered,
+                    'billed_cost': billed,
+                    'formatted': f"${metered:.2f} metered" if metered is not None else None,
+                    'used_formatted': f"${metered:.2f} metered" if metered is not None else None,
                 }
                 _MODAL_BALANCE_CACHE[cache_key] = {'time': now, 'data': res}
                 return res
         except Exception as e:
             app.logger.warning(f"Error fetching Modal balance: {e}")
 
-    res = {'configured': True, 'formatted': 'Active (~$27/mo free)'}
-    _MODAL_BALANCE_CACHE[cache_key] = {'time': now, 'data': res}
-    return res
+    _MODAL_BALANCE_CACHE[cache_key] = {'time': now, 'data': None}
+    return None
 
 
 @app.route('/api/cloud_status', methods=['GET'])
@@ -6103,9 +6108,9 @@ def get_cloud_status():
         'modal': {
             'configured': modal_configured,
             'label': 'Modal Serverless GPU',
-            'tier': modal_info.get('formatted') if modal_info else ('Active (~$27/mo free credits)' if modal_configured else 'Unconfigured'),
+            'tier': 'Audition credentials saved' if modal_configured else 'Unconfigured',
             'formatted': modal_info.get('formatted') if modal_info else None,
-            'remaining': modal_info.get('remaining') if modal_info else None,
+            'remaining': None,
             'used_formatted': modal_info.get('used_formatted') if modal_info else None,
             'token_id': (modal_id[:6] + '...' + modal_id[-4:]) if len(modal_id) > 10 else (modal_id or '')
         },
@@ -8746,6 +8751,8 @@ def convert_from_library():
             return jsonify({'error': 'Fish S2 Pro renders on a GPU lane, not locally. '
                             'Choose a lane render target (Colab / Kaggle / Lightning — '
                             'see Settings → Render Lanes).'}), 400
+        if tts_engine in BOOK_CPU_URLS and render_target != 'local':
+            return jsonify({'error': f'{tts_engine} runs on the local CPU. Choose This machine.'}), 400
         # The named lane ('lane' field) is only meaningful on a lane render, and
         # only fish renders on a lane today — refuse the meaningless combination
         # instead of silently dropping the caller's choice.

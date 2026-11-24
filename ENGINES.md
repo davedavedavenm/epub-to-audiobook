@@ -7,6 +7,18 @@ this file, the code is wrong. (This file exists because we spent days
 debugging problems the official docs already answered — see OPERATIONS.md
 2026-07-09.)
 
+## Stock CPU book narrators added 24 November 2026
+
+Studio enables one auditioned preset per service. All three upstream models
+can also clone a reference voice. The British Imogen and Irish Cillian names
+below refer to Zyphra’s supplied presets.
+
+| Studio narrator | Other upstream choices | Usage and runtime |
+|---|---|---|
+| Marcus | The v1.1.0 sample directory contains 46 reference files, including Elias and Eleanor. Its official runtime accepts a reference recording. | Pinned INT4 lite CPU, audiobook style. The Community Model License permits private personal use. A shared synthesis service requires separate permission. [Model](https://huggingface.co/TontaubeAI/TontaubeV1.1-int4) · [Bundled references](https://github.com/craitech/tontaube/tree/v1.1.0/voices/samples) · [Studio backend](tontaube/README.md) |
+| Imogen | Zyphra supplies Cillian, Jett and Rupert among its English voices. Reference-audio cloning works without a transcript. | Apache-2.0 weights, native GGML CPU in Studio. Upstream also offers CUDA and WebGPU. [Model and official runtimes](https://huggingface.co/Zyphra/ZONOS3-Mini) · [Voice assets](https://huggingface.co/Zyphra/ZONOS3-Mini/tree/main/gguf/voices/English) · [Studio backend](zonos3/README.md) |
+| English male narrator 1 | Sixteen presets across seven languages include English female narrator and English male narrator 2. Custom cloning takes a clean recording and its transcript. | Pinned INT8 weights under CC BY-NC 4.0, Apache-2.0 runtime. Attribute Software Mansion AI Labs. [Model card](https://huggingface.co/software-mansion/Reverb-TTS) · [Studio backend](reverb/README.md) |
+
 ## Listening outcomes (one user, one book — NOT a general ranking)
 
 Recorded so the repo reflects what was verified by ear. The original comparison

@@ -1,6 +1,10 @@
+import ast
 import os
+import re
 import sys
 import tempfile
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -42,6 +46,39 @@ def test_retired_piper_job_fails_closed():
 def test_gpu_audition_without_book_endpoint_never_substitutes_kokoro(engine):
     with pytest.raises(ValueError, match='audition'):
         get_engine_url(engine, JOB_ID)
+
+
+def test_modal_credentials_do_not_override_book_engine_health(monkeypatch):
+    monkeypatch.setenv('MODAL_TOKEN_ID', 'ak-test')
+    monkeypatch.setenv('MODAL_TOKEN_SECRET', 'as-test')
+    monkeypatch.setattr(appmod, '_ENGINE_HEALTH_CACHE', {'ts': 0, 'data': {}})
+    monkeypatch.setattr(appmod, 'get_setting', lambda *args: None)
+    monkeypatch.setattr(appmod.requests, 'get', lambda *args, **kwargs: SimpleNamespace(status_code=503))
+    health = appmod.check_engines_health(max_age=0)
+    assert all(health[engine] is False for engine in ('qwen3', 'breeze', 'cosyvoice', 'f5tts'))
+
+
+def test_modal_usage_does_not_invent_a_remaining_balance(monkeypatch):
+    monkeypatch.setattr(appmod.shutil, 'which', lambda _: 'modal')
+    good = SimpleNamespace(returncode=0, stdout='{"metered_cost": 2.35, "billed_cost": 0}')
+    bad = SimpleNamespace(returncode=1, stdout='')
+    monkeypatch.setattr(appmod.subprocess, 'run', lambda *args, **kwargs: good)
+    usage = appmod._fetch_modal_balance('ak-test', 'as-test', force=True)
+    assert usage['formatted'] == '$2.35 metered'
+    assert 'remaining' not in usage
+    monkeypatch.setattr(appmod.subprocess, 'run', lambda *args, **kwargs: bad)
+    assert appmod._fetch_modal_balance('ak-test', 'as-test', force=True) is None
+
+
+def test_picker_kaggle_engines_match_backend_and_modal_is_not_a_target():
+    import kaggle_render
+
+    template = (Path(appmod.__file__).parent / 'templates' / 'index.html').read_text(encoding='utf-8')
+    listed = re.search(r'const KAGGLE_GPU_ENGINES = (\[[^\]]+\]);', template)
+    assert listed is not None and set(ast.literal_eval(listed[1])) == set(kaggle_render.render_engines())
+    assert 'data-rt="modal"' not in template
+    assert "renderTarget === 'modal'" not in template
+    assert '$27/mo' not in template
 
 
 def test_retired_piper_is_not_offered():

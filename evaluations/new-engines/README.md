@@ -1,5 +1,7 @@
 # August 2026 new-engine auditions
 
+> **Historical evaluation runbook.** The commands and claims below apply to the August experiments. See the current inventory and shared test standard. [ENGINES.md](../../ENGINES.md) and [AUDITION-STANDARD.md](../../AUDITION-STANDARD.md).
+
 This is an isolated, CPU-only short-sample gate for the three viable engines
 identified in `TTS-WATCH-FINDINGS.md`. It does not register an application
 engine, start a persistent service, use a GPU, or call a paid/cloud API.

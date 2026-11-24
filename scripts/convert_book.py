@@ -17,6 +17,8 @@ import json
 import os
 import re
 import sys
+import textwrap
+import time
 import wave
 import shutil
 import zipfile
@@ -188,15 +190,16 @@ def chapter_text(z, name):
     p = _P(); p.feed(sanitize_html(z.read(name).decode('utf-8', 'ignore')))
     text = re.sub(r'[ \t]+', ' ', ''.join(p.parts)).strip()
     modern = _TEXT_PROFILE in ('modern', 'explicit')
-    text = normalize_text_for_tts_jev(
-        text, modern=modern,
-        expand_numbers=True if _TEXT_PROFILE == 'explicit' else None,
-    )
+    if _TEXT_PROFILE != 'native':
+        text = normalize_text_for_tts_jev(
+            text, modern=modern,
+            expand_numbers=True if _TEXT_PROFILE == 'explicit' else None,
+        )
     # Modern engines read real words natively; phonetic respellings ("Bay-JING")
     # make them worse (heard "bay...zhing"). For modern, keep ONLY acronym
     # letter-spacing rules ("CEO" -> "C E O" — heard "see you" otherwise);
     # other misreads go to the QA loop with targeted natural spellings.
-    if _LEXICON:
+    if _LEXICON and _TEXT_PROFILE != 'native':
         from tts_preprocess import _is_letter_spacing
         # The explicit profile is the measured Pocket/Kitten contract: spell
         # numbers and currency, but retain only safe acronym letter-spacing
@@ -246,7 +249,9 @@ def chunk(text, n, preserve_paragraphs=False, pack_paragraphs=False):
         units = []
         for paragraph in paragraphs:
             for piece_idx, piece in enumerate(_chunk_passage(paragraph, n)):
-                units.append((piece, piece_idx == 0))
+                # A single long sentence can exceed n even after sentence packing.
+                for part_idx, part in enumerate(textwrap.wrap(piece, width=n, break_on_hyphens=False)):
+                    units.append((part, piece_idx == 0 and part_idx == 0))
         out, current = [], ''
         for unit, starts_paragraph in units:
             separator = ('\n\n' if starts_paragraph else ' ') if current else ''
@@ -416,6 +421,25 @@ def _valid_cached_wav(path: Path) -> bool:
         return False
 
 
+_STOCK_BOOK_VOICES = {'tontaube_marcus_audition', 'zonos3_imogen_audition', 'reverb_en_male_narrator_audition'}
+
+
+def _post_speech(url, payload, timeout):
+    deadline = time.monotonic() + timeout
+    while True:
+        response = requests.post(url, json=payload, timeout=(15, timeout))
+        if payload['voice'] not in _STOCK_BOOK_VOICES or response.status_code not in (429, 503):
+            return response
+        retry = response.headers.get('Retry-After', '')
+        if not retry.isdecimal():
+            return response
+        delay = min(30, max(1, int(retry)))
+        if time.monotonic() + delay >= deadline:
+            return response
+        response.close()
+        time.sleep(delay)
+
+
 def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', speed=1.0,
           job_id=None, request_timeout=3600, join_silence_ms=0, seed_offset=0,
           preserve_paragraphs=False, pack_paragraphs=False, chunk_cache_dir=None,
@@ -453,13 +477,14 @@ def synth(engine_url, voice, text, chunk_chars, chapter_idx=1, model='tts-1', sp
         attempts = max(1, int(max_chunk_attempts))
         for attempt in range(attempts):
             try:
-                r = requests.post(f"{engine_url.rstrip('/')}/audio/speech",
-                                  json={"model": model, "input": c, "voice": voice,
+                r = _post_speech(f"{engine_url.rstrip('/')}/audio/speech",
+                                  {"model": model, "input": c, "voice": voice,
                                         "response_format": "wav", "speed": speed,
                                         # Stable across retry/recovery. New engines use
                                         # it; existing Pydantic shims ignore the field.
-                                        "seed": 12345 + seed_offset + ((chapter_idx - 1) * 1000) + (chunk_idx - 1)},
-                                  timeout=(15, request_timeout))
+                                        "seed": 42 if voice in _STOCK_BOOK_VOICES else
+                                        12345 + seed_offset + ((chapter_idx - 1) * 1000) + (chunk_idx - 1)},
+                                  request_timeout)
                 if model == _GEMINI_MODEL:
                     _raise_for_status_with_safe_detail(r)
                 else:
@@ -529,7 +554,7 @@ def main():
                     help='Path to a file containing search==replace rules (one per line) to apply to text')
     ap.add_argument('--model', default='tts-1',
                     help='TTS model name to send in request')
-    ap.add_argument('--text-profile', choices=('auto', 'modern', 'explicit', 'legacy'),
+    ap.add_argument('--text-profile', choices=('auto', 'modern', 'explicit', 'legacy', 'native'),
                     default='auto',
                     help='Text normalization contract. explicit spells numbers/currency '
                          'without legacy phonetic respellings; the app always sends this '
@@ -578,7 +603,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     print(f"output dir: {out}", flush=True)
     global _LEXICON
-    _LEXICON = build_lexicon(epub)
+    _LEXICON = {} if text_profile == 'native' else build_lexicon(epub)
     z = zipfile.ZipFile(epub)
     docs = spine_docs(z)
 
@@ -656,6 +681,8 @@ def main():
             meta = {'title': ctitle, 'album': book_title, 'artist': book_author,
                     'album_artist': book_author, 'genre': 'Audiobook',
                     'track': f"{done_render + 1}/{total_render}"}
+            if a.voice == 'reverb_en_male_narrator_audition':
+                meta['comment'] = 'Synthetic narration using Reverb-TTS by Software Mansion AI Labs (CC BY-NC 4.0).'
             wav = synth(a.engine_url, a.voice, text, a.chunk_chars, chapter_idx=idx,
                         model=a.model, speed=a.speed, job_id=a.job_id,
                         request_timeout=a.request_timeout,

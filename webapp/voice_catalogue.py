@@ -10,21 +10,21 @@ from __future__ import annotations
 MODEL_GROUPS = (
     {
         'key': 'tontaube', 'title': 'Tontaube', 'model': 'V1.1 INT4 · audiobook style',
-        'engine': 'audition', 'preferred': ('tontaube_marcus_audition',),
+        'engine': 'tontaube', 'preferred': ('tontaube_marcus_audition',),
         'model_note': 'Listen around 0:42 for Huawei. Whisper heard “hallway” and reached the final date.',
-        'book_route': 'Private CPU audition only.',
+        'book_route': 'Local CPU · private personal use.',
     },
     {
         'key': 'zonos3', 'title': 'ZONOS3-Mini', 'model': '800M · 100M active',
-        'engine': 'audition', 'preferred': ('zonos3_imogen_audition',),
-        'model_note': 'Whisper recovered the names, figures and closing date in Imogen’s reading.',
-        'book_route': 'Local CPU audition only.',
+        'engine': 'zonos3', 'preferred': ('zonos3_imogen_audition',),
+        'model_note': 'Approved on the Badawi excerpt. Imogen read 1916 as a cardinal number on the Irish history excerpt.',
+        'book_route': 'Local CPU · Imogen preset.',
     },
     {
         'key': 'reverb', 'title': 'Reverb-TTS', 'model': 'v1.0.0 · 297M',
-        'engine': 'audition', 'preferred': ('reverb_en_male_narrator_audition',),
+        'engine': 'reverb', 'preferred': ('reverb_en_male_narrator_audition',),
         'model_note': 'Generated with Reverb-TTS by Software Mansion AI Labs (CC BY-NC 4.0 weights). Whisper recovered the full passage, including both prices.',
-        'book_route': 'Noncommercial CPU audition only.',
+        'book_route': 'Local CPU · noncommercial narration.',
     },
     {
         'key': 'deepgram_flux', 'title': 'Deepgram Flux', 'model': 'Flux speech model',

@@ -13,6 +13,6 @@ source "$TMP/venv/bin/activate" 2>/dev/null || source "$TMP/venv/Scripts/activat
 pip install -q flask requests gunicorn num2words nltk ebooklib beautifulsoup4 lxml boto3 kaggle \
   pytest mutagen edge-tts numpy soundfile "ruff==0.16.0"
 pip install -q -r gemini/requirements.txt
-ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/ vibevoice/ qwen3/ pocket/ kitten/
+ruff check webapp/ tests/ scripts/ tts_proxy/ chatterbox/ tada/ vibevoice/ qwen3/ pocket/ kitten/ tontaube/ zonos3/ reverb/
 PYTHONPATH=webapp python -m pytest tests/ -x -q
 echo "CI-LOCAL OK"

@@ -3,8 +3,8 @@
 ## 24 November 2026 — Three local CPU readings of the approved shared passage
 
 Dave heard the three Shared Test v1 takes below and said “all 3 voices are quite
-good”. The comment covers the voices as a group. A ranking and a specific
-pronunciation verdict remain open. All three MP3s decoded to the end, and
+good”. The comment covers the voices as a group. Dave later heard all three struggle with Irish names and Imogen read 1916 as
+a cardinal. He approved the three Badawi readings for Studio. All three MP3s decoded to the end, and
 unprompted Whisper small checked the full `narrator-standard-v1` passage. Render
 times are individual runs on different hardware and thread counts.
 
@@ -22,7 +22,7 @@ upstream sources and usage terms.
 
 ## 17 November 2026 — Audiobook-library audit findings + LL re-search queue (cross-repo from infra)
 
-- **Wanted-monitor interaction audited, no bleed**: three LL books touched today by the infra-side ABS repair were set `AudioStatus=Wanted` in LazyLibrarian and manually searched — *State of Denial* (Bob Woodward, `OL4617345W`), *The Sense of Style* (Steven Pinker, `20821371`), *The Let Them Theory* (Mel Robbins, `OL39181496W`). The wanted monitor keys on the ebook `Status='Wanted'` column and explicitly does not auto-convert to audiobooks (`scripts/wanted/README.md` line 8), so these `AudioStatus` rows are **monitor-invisible**: no OpenBooks requests queued, no TTS renders spawned, no Colab billing. Noted here so a future monitor debugging session doesn't treat the three `AudioStatus=Wanted` rows as anomalies.
+- **Wanted-monitor interaction audited, no bleed**: three LL books touched today by the infra-side ABS repair were set `AudioStatus=Wanted` in LazyLibrarian and manually searched — *State of Denial* (Bob Woodward, `OL4617345W`), *The Sense of Style* (Steven Pinker, `20821371`), *The Let Them Theory* (Mel Robbins, `OL39181496W`). The wanted monitor keys on the ebook `Status='Wanted'` column and explicitly does not auto-convert to audiobooks (infra repository, `stacks/docker-vm/media-stack/scripts/wanted/`), so these `AudioStatus` rows are **monitor-invisible**: no OpenBooks requests queued, no TTS renders spawned, no Colab billing. Noted here so a future monitor debugging session doesn't treat the three `AudioStatus=Wanted` rows as anomalies.
 - **New release-quality class found in LL-grabbed AI-generated audiobooks**: MP3 payloads fully intact, but poisoned Xing/Info gapless headers make decoders **trim every sample** — decoded end-time ~11 µs, stderr clean, ffprobe reports full declared duration. Files therefore pass every header-level check (including our ASR tooling's frame-header parsing via mutagen) while being unlistenable. Detection requires a *decode* probe (decoded end-time vs declared duration); repair is a lossless stream-copy remux (`-write_xing 0` for mp3; `-c:a copy -movflags +faststart` for m4b/m4a; **never test an AAC m4b with an MP3-container remux** — it fails on container grounds and masquerades as an unfixable file).
 - **Scale in the ABS library**: these LL-grabbed releases accounted for the bulk of a 1,400-file corruption census; 1,031 files were repaired losslessly (840 + 131 + 40 + 17 mp3 remuxes, plus 3 whole m4b books recovered via format-appropriate remux). Residual: 188 parts each missing their final ~20–45 s (real truncations) across *State of Denial* (182/324), *Sense of Style* (5/10), *Let Them Theory* (1/31); re-search queued for cleaner releases. Detail: infra `docs/session-notes/2026-11-17-abs-audiobook-corruption-audit.md`, `docs/changelog.md` 2026-11-17 entry.
 - **Prevention now live on docker-vm** (infra repo, not this one): `abs-gapless-repair.timer` every 10 min decode-verifies new/changed files in `/opt/stacks/audiobookshelf/audiobooks` and auto-remuxes poisoned ones before playback — `scripts/docker-vm/abs-gapless-repair/`. Relevant here because LL-grabbed releases flow into that library; if our own render/assemble tooling ever writes gapless tags (`scripts/convert_book.py` `_to_mp3`, `scripts/assemble_armed_struggle_m4b.py`, TTS proxy servers), verify its output decodes to its declared duration before shipping.
@@ -2869,15 +2869,15 @@ can drive, and self-service configuration.
 
 | Issue | Kind | What | State |
 |---|---|---|---|
-| [#44](../../issues/44) | enhancement | Evaluate VibeVoice 90-minute single-pass rendering | Closed / capability proved, audiobook promotion rejected by ear |
-| [#45](../../issues/45) | enhancement | Persistent voice-sample play/pause across tabs and menus | Closed |
-| [#41](../../issues/41) | enhancement | Automatically re-render chunks that fail ASR | Closed |
-| [#42](../../issues/42) | enhancement | Article RSS and Telegram link capture | Closed |
-| [#43](../../issues/43) | enhancement | Chatterbox Multilingual V3 accents + per-voice `cfg_weight` | Closed |
-| [#40](../../issues/40) | bug | Two renders of one book are indistinguishable in Audiobookshelf | Closed |
-| [#37](../../issues/37) | bug | Settings save blocked by wrong WAL ownership | Closed |
-| [#33](../../issues/33) | bug | Local render silently skipped ASR verification | Closed |
-| [#21](../../issues/21) | enhancement | TADA: path to production-ready | Closed |
+| [#44](https://github.com/davedavedavenm/epub-to-audiobook/issues/44) | enhancement | Evaluate VibeVoice 90-minute single-pass rendering | Closed / capability proved, audiobook promotion rejected by ear |
+| [#45](https://github.com/davedavedavenm/epub-to-audiobook/issues/45) | enhancement | Persistent voice-sample play/pause across tabs and menus | Closed |
+| [#41](https://github.com/davedavedavenm/epub-to-audiobook/issues/41) | enhancement | Automatically re-render chunks that fail ASR | Closed |
+| [#42](https://github.com/davedavedavenm/epub-to-audiobook/issues/42) | enhancement | Article RSS and Telegram link capture | Closed |
+| [#43](https://github.com/davedavedavenm/epub-to-audiobook/issues/43) | enhancement | Chatterbox Multilingual V3 accents + per-voice `cfg_weight` | Closed |
+| [#40](https://github.com/davedavedavenm/epub-to-audiobook/issues/40) | bug | Two renders of one book are indistinguishable in Audiobookshelf | Closed |
+| [#37](https://github.com/davedavedavenm/epub-to-audiobook/issues/37) | bug | Settings save blocked by wrong WAL ownership | Closed |
+| [#33](https://github.com/davedavedavenm/epub-to-audiobook/issues/33) | bug | Local render silently skipped ASR verification | Closed |
+| [#21](https://github.com/davedavedavenm/epub-to-audiobook/issues/21) | enhancement | TADA: path to production-ready | Closed |
 
 
 ## Historical live deployment check (2026-07-25; superseded)

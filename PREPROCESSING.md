@@ -4,6 +4,13 @@
 this pipeline first. Direction set 2026-07 after the Abundance test proved the
 worst listening problems were text defects, not voice defects.
 
+For Marcus, book conversion uses the explicit number profile and preserves
+proper names. For Imogen and Reverb, the `native` profile removes structural
+noise such as footnote markup before passing text to the model’s own frontend.
+Their book, recovery and preview paths share this choice. An explicit per-job
+search-and-replace rule still applies. Imogen’s stock frontend read 1916 as
+a cardinal number in the Irish history comparison.
+
 ---
 
 ## ✅ Proper nouns stay raw; ⚠️ raw numeric symbols failed (2026-08-15)

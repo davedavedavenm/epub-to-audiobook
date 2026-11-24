@@ -174,6 +174,9 @@ SyntaxError — write the snippet to a file instead. And when polling
 `KernelWorkerStatus.ERROR`, so a `*error*` glob silently reports a dead job as
 running forever.
 
-## Paid fallback (works today, no phone verification)
-`scripts/vast-gpu.sh up tada` → point `convert_book.py` at the printed URL.
-~$0.25/hr RTX 3090; a few chapters cost pennies. Always `down` when finished.
+## Historical paid Vast comparison
+
+Earlier tests used `scripts/vast-gpu.sh up tada`, with the printed URL passed
+to `convert_book.py`. The current Vast policy requires explicit authorisation
+for the task and verification that the rented instance was destroyed.
+[GPU-SAFETY.md](../../GPU-SAFETY.md) and [DECISIONS.md](../../DECISIONS.md).

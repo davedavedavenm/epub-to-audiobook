@@ -1,6 +1,5 @@
 # EPUB/PDF to Audiobook Stack
 # - Kokoro-FastAPI: TTS engine at http://localhost:8880
-# - Piper TTS: Fast local TTS at http://localhost:5000 (optional)
 # - Web UI: Upload and convert at http://localhost:8881
 
 x-logging: &default-logging
@@ -466,6 +465,41 @@ services:
       retries: 3
       start_period: 10s
 
+  # Internal CPU book engines. Each profile has its own model/runtime licence.
+  tontaube:
+    build: ./tontaube
+    profiles: [tontaube]
+    restart: unless-stopped
+    logging: *default-logging
+    cpus: 4
+    mem_limit: 8g
+    volumes:
+      - ${TONTAUBE_CACHE_DIR:-${HOME}/.cache/tontaube-studio}:/data/cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/audio/voices',timeout=4).close()"]
+      interval: 30s
+      timeout: 6s
+      start_period: 240s
+      retries: 4
+
+  zonos3:
+    build: ./zonos3
+    profiles: [zonos3]
+    restart: unless-stopped
+    logging: *default-logging
+    cpus: 4
+    mem_limit: 4g
+
+  reverb:
+    build: ./reverb
+    profiles: [reverb]
+    restart: unless-stopped
+    logging: *default-logging
+    cpus: 2
+    mem_limit: 6g
+    volumes:
+      - ${REVERB_HUB_CACHE:-${HOME}/.cache/huggingface/hub}:/data/hf/hub:ro
+
   webapp:
     build:
       context: .
@@ -495,6 +529,9 @@ services:
       - VIBEVOICE_URL=${VIBEVOICE_URL:-http://vibevoice-tts:8010/v1}
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
       - CPU_NARRATORS_URL=${CPU_NARRATORS_URL:-http://cpu-narrators:8016/v1}
+      - TONTAUBE_URL=${TONTAUBE_URL:-http://tontaube:8080/v1}
+      - ZONOS3_URL=${ZONOS3_URL:-http://zonos3:8080/v1}
+      - REVERB_URL=${REVERB_URL:-http://reverb:8080/v1}
       - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
       - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
       - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}
@@ -614,6 +651,9 @@ services:
       - VIBEVOICE_URL=${VIBEVOICE_URL:-http://vibevoice-tts:8010/v1}
       - QWEN3_URL=${QWEN3_URL:-http://qwen3-tts:8011/v1}
       - CPU_NARRATORS_URL=${CPU_NARRATORS_URL:-http://cpu-narrators:8016/v1}
+      - TONTAUBE_URL=${TONTAUBE_URL:-http://tontaube:8080/v1}
+      - ZONOS3_URL=${ZONOS3_URL:-http://zonos3:8080/v1}
+      - REVERB_URL=${REVERB_URL:-http://reverb:8080/v1}
       - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
       - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}
       - GEMINI_TTS_URL=${GEMINI_TTS_URL:-http://gemini-tts:8014/v1}

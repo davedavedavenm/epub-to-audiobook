@@ -1,11 +1,13 @@
 # Decisions — EPUB to Audiobook
 
-## 24 November 2026 — Tontaube, ZONOS3-Mini and Reverb use local audition routes
+## 24 November 2026 — Marcus, Imogen and Reverb are local book narrators
 
-Use the stock English voices and the shared passage for this comparison. These
-three catalogue entries serve persisted audio. Production narrator selection
-still uses the existing book routes. Dave heard the three Shared Test v1
-takes and said “all 3 voices are quite good”. They remain audition-only.
+Dave approved all three stock readings of pages 1–3 of Zeinab Badawi’s
+*An African History of Africa* and requested book conversion. Use the local
+CPU services for these voices and retain their existing IDs, cached previews
+and listening history. Dave confirmed he is the sole user submitting books.
+Enable Marcus only for private personal use and Reverb for noncommercial use.
+Beatrice (Nano) remains the default narrator.
 
 On the separate *The Armed Struggle* and *Breakneck* excerpts, Dave found
 Marcus, Imogen and Reverb pretty good overall. All three struggled a little
@@ -2013,7 +2015,8 @@ without pretending it can hear like the listener.
 
 ## Wanted monitor Audiobook status query — Active
 
-`scripts/wanted/wanted_monitor.py` queries LazyLibrarian's database matching
+The wanted monitor (now `stacks/docker-vm/media-stack/scripts/wanted/wanted_monitor.py`
+in the infra repo) queries LazyLibrarian's database matching
 `Status = 'Wanted' OR AudioStatus = 'Wanted'`. LazyLibrarian tracks ebooks in
 `Status` and audiobooks in `AudioStatus`.
 

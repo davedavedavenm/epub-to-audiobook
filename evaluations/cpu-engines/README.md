@@ -1,5 +1,7 @@
 # Isolated CPU-engine screen
 
+> **Historical August evaluation setup.** Use [ENGINES.md](../../ENGINES.md) for the current optional book routes and [AUDITION-STANDARD.md](../../AUDITION-STANDARD.md) for new auditions.
+
 This directory evaluates new upstream engines without registering them in the
 application, starting a background service, or giving an ordinary book job a
 new route. The containers are one-shot processes with four CPU cores, explicit

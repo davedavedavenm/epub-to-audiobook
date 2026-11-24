@@ -1,5 +1,7 @@
 # PLAN V3 — Product + Quality Sprint (2026-07-23)
 
+> **Historical sprint record.** Its status and tasks are dated. See [STATUS.md](STATUS.md) for current work.
+
 Successor to PLAN.md. Every item below was accepted by Dave on 2026-07-23.
 
 **Status key:** `[ ]` not started · `[x]` done · `[~]` in progress

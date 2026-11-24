@@ -1,5 +1,7 @@
 # Tuning audit: November 2026
 
+> Settings and findings below are tied to the dated runs and pinned revisions. See [ENGINES.md](ENGINES.md) for currently integrated book routes.
+
 Source audit prepared 2026-11-11. This document compares the exact adapters and revisions used by the liked-voices worktree with current official maintainer/vendor documentation and the pinned runtime implementations. It records implementation settings and documentary defaults; it does not claim a particular setting is optimal by reasoning alone. The initial audit was read-only; follow-up sections distinguish actual experiments, measurements and listening verdicts.
 
 ## 12 November — Higgs3 reference-free native default audition

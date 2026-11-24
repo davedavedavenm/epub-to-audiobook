@@ -4,6 +4,12 @@
 
 <!-- TTS_WATCH_SECTION_START -->
 
+## 24 November 2026 — GPU voice cloning and stock-voice releases
+
+- **VoxMel** published 0.3B and 0.6B English/Mandarin checkpoints on 10 November. Both use a short reference recording and its transcript for zero-shot voice cloning. The Apache-2.0 checkpoints are candidates for the existing English book comparison. The repo has no VoxMel audiobook timing or listening verdict. [0.3B model card, revision 8a9b893d](https://huggingface.co/VoxDance-Lab/VoxMel-0.3B/tree/8a9b893d35bf575eda1b0380e984cb99fe333ae7) · [0.6B model card, revision 6450fc40](https://huggingface.co/VoxDance-Lab/VoxMel-0.6B/tree/6450fc40bda9c49239f7d249510cd94c9ff89672)
+- **Zyphra ZONOS3-Mini** has an official NVIDIA serving path through SGLang-Omni and a WebGPU path. A matched GPU run can reuse the Imogen preset from the approved CPU recordings. The vendor throughput figures describe its own hardware and workload. [Zyphra’s 12 November release](https://huggingface.co/blog/Zyphra/zonos3-mini) · [Model card](https://huggingface.co/Zyphra/ZONOS3-Mini)
+- **Kale TTS 1 Base**, published 17 November, is an Apache-2.0 desktop/GPU English model with ten designed stock voices, including the British newsreader Amy. Its model card reports quality variation across family sizes. Studio has no local audition. [Model card, revision 98f4baa0](https://huggingface.co/KaleComputer/kale-tts-1-base/tree/98f4baa0aa07d39e4e4fe8d8c2dbf86d892067f2)
+
 ## Project test rubric
 
 A discovery is not a production recommendation. It must first pass the repository's existing gates:

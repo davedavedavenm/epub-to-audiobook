@@ -2,10 +2,10 @@
 
 How the system behaves under failure, what the states mean, how to respond,
 and the honest record of incidents found during hardening. **This file is the
-runbook; current forward work belongs in PLAN-V5.md and current evidence in
-STATUS.md.**
+runbook. Current evidence lives in STATUS.md and standing decisions in
+DECISIONS.md.**
 
-## Current live baseline — 2026-08-15
+## Historical live baseline — 2026-08-15
 
 - `epub-to-audiobook-worker` is **running and healthy**, with `OOMKilled=false`
   and exit code 0. The earlier “down after exit 137 on 3 August” report is
@@ -27,7 +27,25 @@ STATUS.md.**
   reported overall `ok` at app revision
   `9dcff344cdd935089887e56db76f88b7238603a0`.
 
-## Higgs on Modal runbook (2026-10-07) - the route for whole books
+## Optional stock CPU book narrators
+
+Set `ENABLE_TONTAUBE_PROFILE=1`, `ENABLE_ZONOS3_PROFILE=1` or
+`ENABLE_REVERB_PROFILE=1` in the stack `.env` for the specific local engine
+you want. Preserve the cached Shared Test v1 previews and their voice IDs.
+Reverb needs the populated Hugging Face Hub cache at `REVERB_HUB_CACHE`.
+Tontaube needs the host cache root at `TONTAUBE_CACHE_DIR`, including the Hub
+and acoustic tokenizer files. ZONOS3 stages the pinned weights in its image
+build. Review each engine's preparation and licence first. [Tontaube](tontaube/README.md),
+[ZONOS3-Mini](zonos3/README.md), [Reverb-TTS](reverb/README.md).
+
+Check that no conversion is active before running `scripts/deploy.sh` from
+the Git checkout. Verify that `/api/health` and the worker report the intended
+revision, `/api/engines/health` reports the enabled services healthy, and
+`/api/voices` and the exact `/api/preview/<voice_id>` response expose the ready
+preview. Verify conversion from the intended book route before calling it ready.
+If a cache is missing, correct its mount and redeploy from Git.
+
+## Historical Higgs on Modal runbook (2026-10-07)
 
 Driver runs on Windows (`modal` CLI authenticated); everything else is in the image.
 

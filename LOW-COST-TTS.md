@@ -1,5 +1,7 @@
 # Low-Cost TTS Strategy
 
+> **Dated cost and listening evidence.** See [ENGINES.md](ENGINES.md) for the current engine inventory and [DECISIONS.md](DECISIONS.md) for routing and cost policy. Recheck provider prices and usage terms before spending.
+
 Goal: produce a genuinely good audiobook for free wherever possible; when a
 paid path is necessary to reach that quality, use the lowest measured total
 cost per finished book, with a hard maximum of GBP2.
@@ -234,7 +236,7 @@ Provider pricing is usually per 1M characters. A practical audiobook estimate:
 
 This means most mainstream premium APIs are too expensive for full-book default use. They can still be useful for samples, short books, or selected premium conversions.
 
-## Current Repo Engines
+## Repo engine comparison at the time of testing
 
 | Engine | Status | Expected cost/book | Notes |
 |--------|--------|--------------------|-------|
@@ -246,7 +248,7 @@ This means most mainstream premium APIs are too expensive for full-book default 
 | Chatterbox Turbo + Arthur | Implemented; opt-in | GBP0 incremental | Mixed evidence; per-book audition required. The 2026-08-15 hard sample failed while earlier long-form controls were excellent. |
 | Kokoro CPU | Implemented; compatibility/debug | GBP0 incremental | Retired from quality contention; speed does not clear the listening floor. |
 | Kokoro on Vast.ai GPU | Legacy manual path | Paid marketplace rate | Never automatic and not recommended: paying to accelerate rejected-quality output violates the project objective. |
-| Piper | Implemented | GBP0 incremental | Legacy/debug only; **rejected for production by ear**. Deployed 64 kbps, same-WAV higher-bitrate, and current Piper 1.6 direct A/Bs all failed badly. Not an automatic fallback. |
+| Piper | Retired | GBP0 incremental in the historical test | **Rejected by ear**. Deployed 64 kbps, same-WAV higher-bitrate, and Piper 1.6 direct A/Bs all failed. The service and routes were subsequently removed. |
 | EdgeTTS | Implemented via `tts-proxy` | GBP0 direct API cost | Good quality and many voices. Treat as unofficial/fragile because it depends on the `edge-tts` package and Microsoft service behavior. |
 | Pocket TTS 2.1 | **Accepted opt-in** after 16:27 long-form and corrective listening | GBP0 | 21 official English presets; Peter is decent but imperfect; explicit spoken number/currency profile; no automatic fallback. |
 | KittenTTS 0.8.1 | **Accepted opt-in** after 21:16 Rosie long-form and corrective listening | GBP0 | Eight official presets; developer preview; Rosie led on body pace/tone; explicit spoken number/currency profile. |
@@ -255,7 +257,7 @@ This means most mainstream premium APIs are too expensive for full-book default 
 | AWS Polly Long-Form | Implemented via `tts-proxy` | Avoid | Proven too expensive for good-quality audiobook use. Keep only as legacy code path; do not use for normal conversions. |
 | Inworld TTS 1.5 | Implemented via `tts-proxy` | Likely over budget for full books | Keep as experimental/premium unless real account pricing proves otherwise. |
 
-## Current External Options
+## External options and prices at the time of review
 
 Prices below were rechecked against the providers' official pages on
 2026-08-13. They are screening costs, not approvals: no paid service becomes a

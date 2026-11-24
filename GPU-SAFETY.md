@@ -1,6 +1,6 @@
 # GPU / Vast.ai Safety Rules — READ BEFORE ANY GPU ACTION
 
-**The Vast.ai balance is real money and small (~$3–4). Treat cloud GPU as
+**The Vast.ai balance is real money. Treat cloud GPU as
 OFF by default. These rules exist because an automated agent can drain the
 balance in minutes by leaving an instance running.**
 
@@ -21,9 +21,9 @@ balance in minutes by leaving an instance running.**
 3. **Never spin up a Vast instance without an explicit user request for
    *this* task.** Not to "test", not to "benchmark", not to "save time".
 4. **If you create an instance, you destroy it in the same session.**
-   `python vast.py destroy instance <id>` — and verify
-   `show instances` returns 0. Billing continues until destroyed, even when
-   idle. A stopped instance still bills for storage.
+   Use `vastai destroy instance <id>` and verify `vastai show instances --raw`
+   no longer lists your instance. Billing continues until destruction. A
+   stopped instance still bills for storage. [Vast CLI reference](https://docs.vast.ai/cli/reference/destroy-instance).
 5. **Respect the cost cap.** `AUTOSCALE_COST_CAP` (default $1.00). Never
    raise it without the user asking.
 6. **Confirm the balance is intended to be spent.** If a GPU action would
@@ -31,8 +31,8 @@ balance in minutes by leaving an instance running.**
 
 ## What "local" means here
 
-- Chatterbox Turbo and Hume TADA both run on local CPU (see
-  PLAN.md). Slower (~14h and ~26h per book respectively), but the
+- Chatterbox Nano is the default. Turbo, TADA, and the other supported
+  local engines are listed in [ENGINES.md](ENGINES.md). The
   user has stated **time does not matter; quality and not wasting money
   do.** Overnight local batches are the expected default path.
 - Cloud GPU is an opt-in accelerator for when the user *chooses* to trade a
@@ -40,10 +40,10 @@ balance in minutes by leaving an instance running.**
 
 ## Proven-safe Vast workflow (only when explicitly requested)
 
-1. `python vast.py show user` — confirm balance and that spending is intended.
+1. `vastai show user` — confirm balance and that spending is intended.
 2. Search cheap reliable offers; create from a `pytorch/pytorch` image.
    Key format: the copied key is prefixed `arc_` — strip it to the 64-hex.
-3. Do the work (see PLAN.md Phase B for the TADA recipe).
+3. Use the current engine-specific instructions in [ENGINES.md](ENGINES.md).
 4. **Download results, then immediately `destroy instance <id>` and verify 0
    instances remain.**
 5. Report actual spend (`show user` before/after).

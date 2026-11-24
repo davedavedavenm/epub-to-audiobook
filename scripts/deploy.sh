@@ -54,6 +54,11 @@ BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 # RTF 0.87 (measured) — light enough to run always, unlike Turbo/TADA which
 # stay opt-in because they are heavy and slow.
 PROFILE_ARGS=(--profile chatterbox-nano)
+for engine in tontaube zonos3 reverb; do
+  if profile_enabled "ENABLE_${engine^^}_PROFILE"; then
+    PROFILE_ARGS+=(--profile "${engine}")
+  fi
+done
 if profile_enabled ENABLE_NARRATORS_PROFILE; then
   PROFILE_ARGS+=(--profile narrators)
 fi

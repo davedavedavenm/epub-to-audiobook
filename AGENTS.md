@@ -69,7 +69,7 @@ Read these before changing anything TTS- or text-related:
 | [VOICES.md](VOICES.md) | **Read before ANY voice or accent work.** Listening verdicts, exact rejection boundaries, the corrected `cfg_weight` interpretation, and wrong turns already taken. |
 | [AUDITION-STANDARD.md](AUDITION-STANDARD.md) | **Mandatory for all agents and engines:** approved shared passage, separate voice/pronunciation scoring, provenance and cache migration. |
 | [TUNING-AUDIT-2026-11.md](TUNING-AUDIT-2026-11.md) | Exact November model/runtime controls, supported overrides versus unproved tuning, and upstream limitations. |
-| [PLAN-V6.md](PLAN-V6.md) | **Current forward plan** (2026-09-02): Smart Library — WhatsApp book bot, auto-series completion, AI library curator, family wishlists. |
+| [PLAN-V6.md](PLAN-V6.md) | Historical Smart Library design (2026-09-02). Live acquisition and library ownership moved to `infra`. |
 | [PLAN-V5.md](PLAN-V5.md) | Previous forward plan (2026-07-27): automatic re-render, article RSS + Telegram capture, Chatterbox V3. |
 | [PLAN.md](PLAN.md) | Superseded. Historical forward plan. |
 | [GPU-SAFETY.md](GPU-SAFETY.md) | **READ FIRST for any GPU work.** Default-local rules; how to not drain the Vast balance. |
@@ -163,7 +163,7 @@ playbook but skips these is a net negative.
 Key facts an agent must know:
 - Conversion runs the upstream container `ghcr.io/p0n1/epub_to_audiobook` (a *different* project with a confusingly similar name); our webapp orchestrates it and preprocesses a `_tts.epub` copy first.
 - The deployed stack is currently a Git checkout on Zorin at `/home/dave/ai/lab/stacks/epub-to-audiobook` (the older `/opt/epub-to-audiobook` documentation was stale). Deploy **from git only**; never patch application source live. The default deploy enables Chatterbox Nano with **Beatrice (Nano)** (`uk_female_samuel_nano`) as system default narrator. Piper is fully retired after its controlled old/current-runtime + encoding A/B failed quality: do not restore its service, profile, route or voices without an explicit decision reversal. Chatterbox Turbo and TADA require the explicit `ENABLE_CHATTERBOX_PROFILE=1` / `ENABLE_TADA_PROFILE=1` opt-ins. Zorin was upgraded to an i5-12400 / 31 GB (2026-07-20); Chatterbox now runs comfortably for previews. TADA is opt-in and **works** as of 2026-07-27 (#23 closed — the OOM was fp32 on CPU; bf16 fits the cap, RTF 1.68).
-- Two custom engines are BUILT and containerised: `chatterbox/` (Turbo) and `tada/` (TADA), both OpenAI-compatible, UK human-cloned voices baked in. Adding an engine = VOICES entries + a branch at the three `tts_engine ==` sites in app.py.
+- Stock Tontaube Marcus, ZONOS3-Mini Imogen and Reverb English male narrator 1 have opt-in local CPU book routes. Their Compose profiles are `tontaube`, `zonos3` and `reverb`. On an engine change, audit catalogue readiness, regular and recovered jobs, text preparation, health and deployment together. See the current engine inventory and setup details. [ENGINES.md](ENGINES.md) and [README.md](README.md#tts-engines).
 
 ## Scope
 
