@@ -4,7 +4,8 @@
 
 Use the stock English voices and the shared passage for this comparison. These
 three catalogue entries serve persisted audio. Production narrator selection
-still uses the existing book routes. Listening verdicts are pending.
+still uses the existing book routes. Dave heard the three Shared Test v1
+takes and said “all 3 voices are quite good”. They remain audition-only.
 
 | Model and runtime | Audition input and usage |
 |---|---|

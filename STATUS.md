@@ -2,9 +2,11 @@
 
 ## 24 November 2026 — Three local CPU readings of the approved shared passage
 
-All three MP3s decoded to the end. Unprompted Whisper small checked the full
-`narrator-standard-v1` passage. Voice preference and pronunciation await Dave's
-listening. Render times are individual runs on different hardware and thread counts.
+Dave heard the three Shared Test v1 takes below and said “all 3 voices are quite
+good”. The comment covers the voices as a group. A ranking and a specific
+pronunciation verdict remain open. All three MP3s decoded to the end, and
+unprompted Whisper small checked the full `narrator-standard-v1` passage. Render
+times are individual runs on different hardware and thread counts.
 
 | Preview | Model / runtime revisions | Output / synthesis | ASR observation |
 |---|---|---|---|

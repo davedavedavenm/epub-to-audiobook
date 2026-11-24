@@ -1,5 +1,14 @@
 # Voices and accents
 
+## 24 November 2026 — Tontaube, ZONOS3-Mini and Reverb heard on Shared Test v1
+
+Dave's listening verdict was “all 3 voices are quite good” for Tontaube Marcus
+(`tontaube_marcus_audition`), ZONOS3-Mini Imogen (`zonos3_imogen_audition`) and
+Reverb English male narrator 1 (`reverb_en_male_narrator_audition`). All three
+remain audition-only. The Tontaube Huawei observation at 0:42 comes from
+Whisper. See [STATUS.md](STATUS.md#24-november-2026--three-local-cpu-readings-of-the-approved-shared-passage)
+for the ASR observations and render evidence.
+
 ## 11 November 2026 — John reference short comparison heard
 
 Dave: "kitten controlled was better, qwen 3 best, preserved worst".
