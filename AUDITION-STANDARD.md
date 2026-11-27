@@ -55,6 +55,9 @@ test phrasing; they do not imply automatic speaker casting.
   the reference audio and its transcript separately from the text to speak.
   For Kale Base, record the voice pack and Kokoro frontend language.
   GPU Imogen uses the same `zonos3` contract as CPU Imogen.
+- OGG TTS 430k receives the source text through `sample_text_for('ogg_tts')`.
+  Record the reference audio, its transcript and any neighbouring sentences
+  supplied as context separately from the text the model should speak.
 - Prepare app-normalized payloads with the application dependencies installed,
   then freeze the text and source/prepared hashes before sending to an isolated
   model environment. Missing `num2words` must fail preparation explicitly: the

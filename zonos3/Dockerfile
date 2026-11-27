@@ -34,10 +34,9 @@ RUN set -eu; \
     base="https://huggingface.co/Zyphra/ZONOS3-Mini/resolve/${WEIGHTS_REV}"; \
     while read -r sha path; do \
         mkdir -p "$(dirname "$path")"; \
-        curl --fail --silent --show-error --location --retry 3 --max-time 600 "$base/gguf/$path" -o "$path"; \
+        curl --fail --silent --show-error --location --retry 3 --max-time 600 "$base/gguf/${path#enrollment/}" -o "$path"; \
     done < models.sha256; \
     sha256sum --check models.sha256; \
-    mkdir enrollment; mv spk-encoder.gguf enrollment/; \
     curl --fail --silent --show-error --location --retry 3 "$base/README.md" -o MODEL_CARD.md
 
 FROM ubuntu:24.04
