@@ -47,7 +47,8 @@ requires a separately authorised environment-gated session.
   is persisted.
 - **Model capabilities and Studio controls are listed separately.** Use the
   Voices customization filter to find models that support reference audio or
-  voice design. Studio offers WAV upload on Chatterbox. Reference accent labels
+  voice design. Studio offers WAV upload on Chatterbox and the optional local
+  ZONOS3-Mini service. Reference accent labels
   describe the source recording. Use **Heard and accepted** in the accent
   filter for voices with a documented listening verdict on the accent.
   [Choosing a voice](GETTING-STARTED.md#choosing-a-voice-when-youre-ready-to-fuss).

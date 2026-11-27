@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import threading
@@ -74,6 +75,35 @@ def test_http_voice_readiness_and_busy_contract(monkeypatch):
                 urlopen(base + "/v1/audio/voices", timeout=3)
             assert unavailable.value.code == 503
             synth.assert_called_once_with(request["input"])
+        finally:
+            http.shutdown()
+            thread.join()
+
+
+def test_custom_embedding_identity_and_native_mode(monkeypatch, tmp_path):
+    embedding = b'\x93NUMPY' + b'float32 embedding'
+    voice_id = 'zonos3_custom_custom_compact_' + hashlib.sha256(embedding).hexdigest()
+    asset = tmp_path / f'{voice_id}.npy'
+    asset.write_bytes(embedding)
+    monkeypatch.setattr(server, 'REFERENCE_DIR', tmp_path)
+    native = Mock(return_value=pcm_wav())
+    monkeypatch.setattr(server, '_native_wav', native)
+    process = Mock()
+    process.poll.return_value = None
+    with server.SpeechServer(process, ('127.0.0.1', 0)) as http:
+        thread = threading.Thread(target=http.serve_forever, daemon=True)
+        thread.start()
+        try:
+            req = Request(f'http://127.0.0.1:{http.server_port}/v1/audio/speech',
+                          json.dumps({'voice': voice_id, 'input': 'Exact text.', 'response_format': 'wav'}).encode())
+            with urlopen(req, timeout=3) as response:
+                assert response.read() == pcm_wav()
+            native.assert_called_once()
+            assert native.call_args.args[2] == embedding
+            asset.write_bytes(embedding + b'invalid')
+            with pytest.raises(HTTPError) as invalid:
+                urlopen(req, timeout=3)
+            assert invalid.value.code == 400
         finally:
             http.shutdown()
             thread.join()

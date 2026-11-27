@@ -161,10 +161,10 @@ def test_only_known_custom_reference_ids_receive_regional_tags(monkeypatch, tmp_
 def test_customization_filters_distinguish_upstream_features_from_studio_access():
     groups = {group['key']: group for group in build_voice_catalogue(all_voices(), TTS_ENGINES)}
     assert {key for key, group in groups.items() if 'upload' in group['customization_filters']} == {
-        'chatterbox_turbo', 'chatterbox_nano',
+        'chatterbox_turbo', 'chatterbox_nano', 'zonos3',
     }
-    assert set(groups['zonos3']['customization_filters']) == {'stock', 'cloning', 'steering'}
-    assert groups['zonos3']['customization']['cloning']['studio'] == 'preset_only'
+    assert set(groups['zonos3']['customization_filters']) == {'stock', 'cloning', 'steering', 'upload'}
+    assert groups['zonos3']['customization']['cloning']['studio'] == 'upload'
     assert groups['qwen3_base']['customization_filters'] == ['cloning']
     assert groups['qwen3_customvoice']['customization_filters'] == ['stock', 'steering']
     assert groups['gemini31']['customization_filters'] == ['stock', 'steering']

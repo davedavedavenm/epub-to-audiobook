@@ -489,6 +489,8 @@ services:
     logging: *default-logging
     cpus: 4
     mem_limit: 4g
+    volumes:
+      - ${STACK_PATH:-/opt/epub-to-audiobook}/data/voices:/references:ro
 
   reverb:
     build: ./reverb
@@ -531,6 +533,7 @@ services:
       - CPU_NARRATORS_URL=${CPU_NARRATORS_URL:-http://cpu-narrators:8016/v1}
       - TONTAUBE_URL=${TONTAUBE_URL:-http://tontaube:8080/v1}
       - ZONOS3_URL=${ZONOS3_URL:-http://zonos3:8080/v1}
+      - ZONOS3_PREVIEW_ASR_MODEL=${ZONOS3_PREVIEW_ASR_MODEL:-base}
       - REVERB_URL=${REVERB_URL:-http://reverb:8080/v1}
       - POCKET_URL=${POCKET_URL:-http://pocket-tts:8012/v1}
       - KITTEN_URL=${KITTEN_URL:-http://kitten-tts:8013/v1}

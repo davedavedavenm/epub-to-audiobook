@@ -273,7 +273,8 @@ def annotate_suggestions(sugg: dict) -> list[dict]:
     return out
 
 
-def transcribe(audio_path: str | Path, model_size: str = "base", device: str = "cpu") -> str:
+def transcribe(audio_path: str | Path, model_size: str = "base", device: str = "cpu", *,
+               local_only: bool = False) -> str:
     """Transcribe audio to text with a LOCAL faster-whisper model (CPU by
     default). Raises a clear, actionable error if faster-whisper isn't
     installed — QA is optional and callers handle that."""
@@ -288,7 +289,9 @@ def transcribe(audio_path: str | Path, model_size: str = "base", device: str = "
     model_dir = os.environ.get('WHISPER_MODEL_DIR', '/data/models/whisper')
     try:
         model = WhisperModel(model_size, device=device, compute_type=compute, download_root=model_dir, local_files_only=True)
-    except Exception:
+    except Exception as exc:
+        if local_only:
+            raise RuntimeError(f'Local Whisper {model_size} model is unavailable in {model_dir}') from exc
         model = WhisperModel(model_size, device=device, compute_type=compute, download_root=model_dir)
     segments, _ = model.transcribe(str(audio_path), beam_size=1, vad_filter=True)
     return " ".join(seg.text for seg in segments)

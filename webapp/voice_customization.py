@@ -8,7 +8,7 @@ and listening paths is in ENGINES.md and TUNING-AUDIT-2026-11.md.
 # order. Each pair gives upstream capability followed by Studio access.
 _OPTIONS = {
     'tontaube': (('yes', 'preset'), ('audio', 'preset_only'), ('delivery', 'fixed')),
-    'zonos3': (('yes', 'preset'), ('audio', 'preset_only'), ('structured', 'none')),
+    'zonos3': (('yes', 'preset'), ('audio', 'upload'), ('structured', 'none')),
     'kale_base': (('yes', 'sample'), ('unknown', 'none'), ('unknown', 'none')),
     'voxmel_06b': (('unknown', 'none'), ('transcript', 'none'), ('unknown', 'none')),
     'reverb': (('yes', 'preset'), ('transcript', 'preset_only'), ('unknown', 'none')),

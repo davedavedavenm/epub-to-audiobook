@@ -297,8 +297,8 @@ quota-exhausted before starting a job.
 ### Add your own voice from a ~15 s clip
 
 In **Voices → Clone a voice**, give the reference a name, choose a **WAV** file
-and press **Upload**. Studio can prepare a preview for each enabled Chatterbox
-engine using that reference.
+and press **Upload**. The default is Chatterbox Nano / Turbo. Choose
+**ZONOS3-Mini (local)** explicitly if the optional `zonos3` profile is enabled.
 
 - **Real WAV (PCM) only.** An MP3 renamed to `.wav` is refused right there with
   that exact message — Chatterbox opens the file with `wave`, so a fake WAV
@@ -310,6 +310,11 @@ engine using that reference.
 - The upload starts preview preparation for healthy local variants (`<name>`
   and `<name>_nano`). Each variant appears in **Voices** once its preview is
   cached and ready to play.
+- For ZONOS3, upload a complete PCM WAV of 8–45 seconds at 16–48 kHz. Studio
+  derives a speaker embedding and prepares one shared-test preview locally.
+  When its status reads **ready**, choose **Refresh Voices**, audition it and
+  select the enrolled voice in the local book picker. The accent is unclassified
+  until there is listening evidence. [ZONOS3 setup and storage](zonos3/README.md).
 - `GET /api/voices/custom` lists them; `DELETE /api/voices/custom/<id>` removes
   one.
 

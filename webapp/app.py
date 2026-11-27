@@ -5,6 +5,7 @@ Allows users to upload EPUB/PDF files, preview voices, and convert to audiobooks
 """
 
 import os
+import hashlib
 import hmac
 import html
 import sys
@@ -18,10 +19,11 @@ import sqlite3
 import json
 import shlex
 import time
+import tempfile
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional, Dict, List
@@ -1145,7 +1147,12 @@ def tail_text_file(path: Path, max_lines: int = 200, max_bytes: int = 15000) -> 
 
 def save_job(job: dict):
     """Save or update a job in the database."""
-    with get_db() as conn:
+    voice = job.get('voice') or ''
+    enrolled = isinstance(voice, str) and ZONOS3_CUSTOM_ID.fullmatch(voice)
+    with (_zonos3_upload_lock if enrolled else nullcontext()), get_db() as conn:
+        if enrolled and not (_zonos3_references() / f'{voice}.npy').is_file():
+            if conn.execute('SELECT 1 FROM jobs WHERE id = ?', (job.get('id'),)).fetchone() is None:
+                raise Zonos3ReferenceUnavailable('The selected ZONOS3 reference was removed before the job could be queued')
         conn.execute('''
             INSERT OR REPLACE INTO jobs
             (id, book_name, voice, voice_name, voice2, voice2_name, tts_engine, status, created_at, started_at,
@@ -5234,6 +5241,160 @@ def api_engines_unconfigured():
 # Uploaded reference voices live here; the chatterbox containers bind-mount it
 # at /app/voices/custom, so a new WAV is usable without rebuilding the image.
 CUSTOM_VOICES_DIR = Path(os.environ.get('CUSTOM_VOICES_DIR', '/data/voices'))
+ZONOS3_CUSTOM_ID = re.compile(r'zonos3_custom_([a-z0-9_]{1,40})_(standard|compact)_([a-f0-9]{64})')
+ZONOS3_MAX_REFERENCE_BYTES = 12 * 1024 * 1024
+_zonos3_upload_lock = threading.Lock()
+_zonos3_upload_state = {}
+
+
+class Zonos3ReferenceUnavailable(ValueError):
+    pass
+
+
+@app.errorhandler(Zonos3ReferenceUnavailable)
+def _handle_zonos3_reference_unavailable(exc):
+    return jsonify({'error': str(exc)}), 409
+
+
+def _zonos3_references() -> Path:
+    return CUSTOM_VOICES_DIR / 'zonos3'
+
+
+def _zonos3_records() -> list[dict]:
+    records = []
+    for path in sorted(_zonos3_references().glob('*.json')):
+        try:
+            info = json.loads(path.read_text(encoding='utf-8'))
+            voice_id = info['voice_id']
+            match = ZONOS3_CUSTOM_ID.fullmatch(voice_id)
+            if match and match[1] == path.stem and info['id'] == path.stem and re.fullmatch(r'[a-f0-9]{64}', info['preview_sha256']):
+                records.append(info)
+        except (OSError, ValueError, TypeError, KeyError):
+            continue
+    return records
+
+
+def _zonos3_ready(voice_id: str, audio_sha256: str | None = None) -> bool:
+    match = ZONOS3_CUSTOM_ID.fullmatch(voice_id)
+    if not match:
+        return False
+    preview = PREVIEWS_DIR / f'{voice_id}.mp3'
+    try:
+        with (_zonos3_references() / f'{voice_id}.npy').open('rb') as source:
+            embedding = source.read(2049)
+        if not embedding.startswith(b'\x93NUMPY') or len(embedding) > 2048:
+            return False
+        if hashlib.sha256(embedding).hexdigest() != match[3] or preview.stat().st_size <= 5000:
+            return False
+    except OSError:
+        return False
+    info = _preview_sample_info(preview, sha256_hex_text(_preview_text_for('zonos3')))
+    return info['preview_sample_current'] and (audio_sha256 is None or audio_sha256 == info.get('preview_audio_sha256'))
+
+
+def _zonos3_preview_complete(preview: Path, prepared: str) -> bool:
+    from difflib import SequenceMatcher
+    from qa_asr import diff_report, normalize_words, transcribe
+
+    transcript = transcribe(preview, model_size=os.environ.get('ZONOS3_PREVIEW_ASR_MODEL', 'base'), local_only=True)
+    alignment = diff_report(prepared, transcript)
+    expected_tail = normalize_words(prepared)[-12:]
+    heard_tail = normalize_words(transcript)[-24:]
+    tail_matches = sum(block.size for block in SequenceMatcher(a=expected_tail, b=heard_tail, autojunk=False).get_matching_blocks())
+    largest_drop = max((len(finding['source']) - len(finding['heard']) for finding in alignment['divergences']), default=0)
+    return (alignment['n_match'] >= .85 * alignment['n_source']
+            and largest_drop < 11 and tail_matches >= 8)
+
+
+def _render_zonos3_reference_preview(voice_id: str, endpoint: str) -> bool:
+    prepared = _preview_text_for('zonos3')
+    rendered = requests.post(f'{endpoint}/audio/speech', json={
+        'model': 'tts-1', 'voice': voice_id, 'input': prepared, 'response_format': 'mp3',
+    }, timeout=(5, 395))
+    rendered.raise_for_status()
+    with tempfile.TemporaryDirectory(dir=PREVIEWS_DIR) as staging:
+        preview = Path(staging) / f'{voice_id}.mp3'
+        preview.write_bytes(rendered.content)
+        if preview.stat().st_size <= 5000 or not rendered.headers.get('Content-Type', '').startswith('audio/mpeg'):
+            raise ValueError('ZONOS3 produced no playable preview')
+        subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-xerror', '-i', str(preview),
+                        '-f', 'null', '-'], capture_output=True, check=True, timeout=30)
+        if not _zonos3_preview_complete(preview, prepared):
+            return False
+        _write_preview_manifest(preview, prepared)
+        os.replace(preview, PREVIEWS_DIR / preview.name)
+        manifest = preview.with_suffix('.sample.json')
+        os.replace(manifest, PREVIEWS_DIR / manifest.name)
+    return True
+
+
+def _prepare_zonos3_reference(name: str, audio: bytes):
+    """Enroll and audition one explicitly selected reference, then publish it."""
+    references = _zonos3_references()
+    endpoint = BOOK_CPU_URLS['zonos3']
+    created_embedding = None
+    try:
+        enrol = requests.post(f'{endpoint}/voices/enroll', data=audio,
+                              headers={'Content-Type': 'audio/wav'}, timeout=(5, 100))
+        enrol.raise_for_status()
+        embedding = enrol.content
+        if not embedding.startswith(b'\x93NUMPY') or len(embedding) > 2048:
+            raise ValueError('Invalid speaker embedding from ZONOS3')
+        digest = hashlib.sha256(embedding).hexdigest()
+        references.mkdir(parents=True, exist_ok=True)
+        PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+        for mode in ('standard', 'compact'):
+            voice_id = f'zonos3_custom_{name}_{mode}_{digest}'
+            if _zonos3_ready(voice_id):
+                break
+            dest = references / f'{voice_id}.npy'
+            stage = dest.with_suffix('.part')
+            stage.write_bytes(embedding)
+            stage.chmod(0o644)  # The CPU bridge reads it under its own container UID.
+            if not dest.exists():
+                created_embedding = dest
+            os.replace(stage, dest)
+            if _render_zonos3_reference_preview(voice_id, endpoint):
+                break
+            if created_embedding:
+                created_embedding.unlink(missing_ok=True)
+                created_embedding = None
+        else:
+            raise ValueError('ZONOS3 preview omitted part of the shared test on both attempts')
+        if not _zonos3_ready(voice_id):
+            raise ValueError('ZONOS3 preview failed integrity verification')
+        preview = PREVIEWS_DIR / f'{voice_id}.mp3'
+        record = {'id': name, 'voice_id': voice_id, 'engine': 'zonos3',
+                  'reference_sha256': hashlib.sha256(audio).hexdigest(),
+                  'preview_sha256': hashlib.sha256(preview.read_bytes()).hexdigest()}
+        staged = references / f'{name}.json.part'
+        staged.write_text(json.dumps(record), encoding='utf-8')
+        os.replace(staged, references / f'{name}.json')
+        with _zonos3_upload_lock:
+            _zonos3_upload_state.pop(name, None)
+    except (OSError, ValueError, RuntimeError, requests.RequestException, subprocess.SubprocessError) as exc:
+        if created_embedding:
+            created_embedding.unlink(missing_ok=True)
+            (PREVIEWS_DIR / f'{created_embedding.stem}.mp3').unlink(missing_ok=True)
+            (PREVIEWS_DIR / f'{created_embedding.stem}.sample.json').unlink(missing_ok=True)
+        app.logger.warning('ZONOS3 reference preparation failed for %s: %s', name, exc)
+        with _zonos3_upload_lock:
+            _zonos3_upload_state[name] = 'failed'
+
+
+def _request_zonos3_upload(name: str, stream):
+    if not 1 <= len(name) <= 40:
+        return jsonify({'error': 'Use a reference name with 1–40 letters, digits or underscores'}), 400
+    with _zonos3_upload_lock:
+        if 'preparing' in _zonos3_upload_state.values():
+            return jsonify({'error': 'A ZONOS3 reference is already being prepared'}), 409
+        audio = stream.read(ZONOS3_MAX_REFERENCE_BYTES + 1)
+        if not 12 <= len(audio) <= ZONOS3_MAX_REFERENCE_BYTES or audio[:4] != b'RIFF' or audio[8:12] != b'WAVE':
+            return jsonify({'error': 'Upload a PCM WAV under 12 MiB'}), 400
+        _zonos3_upload_state.clear()
+        _zonos3_upload_state[name] = 'preparing'
+        threading.Thread(target=_prepare_zonos3_reference, args=(name, audio), daemon=True).start()
+    return jsonify({'status': 'preparing', 'id': name, 'engine': 'zonos3'}), 202
 
 # Generated epubs for URL-ingested articles. Writable, unlike LIBRARY_DIR
 # (read-only, and an rsync mirror), and kept out of the ebook library so a
@@ -5270,6 +5431,8 @@ def _queue_article(meta: dict, options: dict | None = None) -> tuple[dict, int]:
 
     voice = options.get('voice') or _article_default_voice()
     if voice not in all_voices():
+        if voice.startswith('zonos3_custom_'):
+            return {'error': 'The selected ZONOS3 reference is not available'}, 400
         voice = _article_default_voice()
     forwarded = {
         'path': str(epub_path),
@@ -5381,6 +5544,11 @@ def all_voices() -> dict:
     listed first.
     """
     merged = dict(VOICES)
+    for record in _zonos3_records():
+        voice_id = record['voice_id']
+        if _zonos3_ready(voice_id, record.get('preview_sha256')):
+            merged[voice_id] = {'name': record['id'].replace('_', ' ').title(),
+                                'accent': 'Unclassified', 'gender': 'Unspecified', 'engine': 'zonos3'}
     if not CUSTOM_VOICES_DIR.exists():
         return merged
     known_references = {
@@ -5505,7 +5673,12 @@ def list_custom_voices():
     if CUSTOM_VOICES_DIR.exists():
         for p in sorted(CUSTOM_VOICES_DIR.glob('*.wav')):
             out.append({'id': p.stem, 'bytes': p.stat().st_size, **_probe_wav(p)})
-    return jsonify({'voices': out, 'dir': str(CUSTOM_VOICES_DIR)})
+    records = {record['id']: {**record, 'state': 'ready' if _zonos3_ready(record['voice_id'], record.get('preview_sha256')) else 'failed'}
+               for record in _zonos3_records()}
+    with _zonos3_upload_lock:
+        for voice_id, state in _zonos3_upload_state.items():
+            records[voice_id] = {**records.get(voice_id, {}), 'id': voice_id, 'engine': 'zonos3', 'state': state}
+    return jsonify({'voices': out + list(records.values()), 'dir': str(CUSTOM_VOICES_DIR)})
 
 
 @app.route('/api/voices/custom', methods=['POST'])
@@ -5525,6 +5698,11 @@ def upload_custom_voice():
     voice_id = re.sub(r'[^a-z0-9_]+', '_', raw_name.strip().lower()).strip('_')
     if not voice_id:
         return jsonify({'error': 'Could not derive a usable voice id from that name'}), 400
+    engine = request.form.get('engine', 'chatterbox')
+    if engine == 'zonos3':
+        return _request_zonos3_upload(voice_id, f.stream)
+    if engine != 'chatterbox':
+        return jsonify({'error': 'Unknown reference enrollment engine'}), 400
 
     CUSTOM_VOICES_DIR.mkdir(parents=True, exist_ok=True)
     dest = CUSTOM_VOICES_DIR / f'{voice_id}.wav'
@@ -5575,6 +5753,23 @@ def upload_custom_voice():
 @app.route('/api/voices/custom/<voice_id>', methods=['DELETE'])
 def delete_custom_voice(voice_id: str):
     safe = re.sub(r'[^a-z0-9_]+', '_', voice_id.lower())
+    if request.args.get('engine') == 'zonos3':
+        with _zonos3_upload_lock:
+            if _zonos3_upload_state.get(safe) == 'preparing':
+                return jsonify({'error': 'Wait for the reference preparation to finish'}), 409
+            record = _zonos3_references() / f'{safe}.json'
+            if not record.exists() and safe not in _zonos3_upload_state:
+                return jsonify({'error': 'No such custom voice'}), 404
+            record.unlink(missing_ok=True)
+            _zonos3_upload_state.pop(safe, None)
+            used = {job.get(key) for job in get_all_jobs() for key in ('voice', 'voice2')}
+            for embedding in _zonos3_references().glob(f'zonos3_custom_{safe}_*.npy'):
+                match = ZONOS3_CUSTOM_ID.fullmatch(embedding.stem)
+                if match and match[1] == safe and embedding.stem not in used:
+                    (PREVIEWS_DIR / f'{embedding.stem}.mp3').unlink(missing_ok=True)
+                    (PREVIEWS_DIR / f'{embedding.stem}.sample.json').unlink(missing_ok=True)
+                    embedding.unlink()
+        return jsonify({'status': 'deleted', 'voice_id': safe})
     p = CUSTOM_VOICES_DIR / f'{safe}.wav'
     if not p.exists():
         return jsonify({'error': 'No such custom voice'}), 404
@@ -5622,7 +5817,7 @@ def pick_engine_with_fallback(preferred_engine, preferred_voice, allow_fallback=
     health = check_engines_health()
     if health.get(preferred_engine):
         return preferred_engine, preferred_voice, None
-    if preferred_engine == 'fish':
+    if preferred_engine == 'fish' or (preferred_voice or '').startswith('zonos3_custom_'):
         # Never substitute another engine for the locked recipe: the voice
         # exists nowhere else, so any "healthy" swap is a wrong-engine book.
         return preferred_engine, preferred_voice, None
@@ -6537,14 +6732,15 @@ def start_conversion():
     is_pdf = file_ext == '.pdf'
     needs_conversion = file_ext not in {'.epub', '.pdf'}  # PDF handled separately by Docker
 
-    if voice not in all_voices():
+    voice_catalog = all_voices()
+    if voice not in voice_catalog:
         return jsonify({'error': 'Invalid voice selected'}), 400
-    if all_voices()[voice].get('audition_only'):
+    if voice_catalog[voice].get('audition_only'):
         return jsonify({'error': 'This GPU voice is a cached audition; book conversion is not integrated'}), 400
 
-    if voice2 and voice2 not in all_voices():
+    if voice2 and voice2 not in voice_catalog:
         return jsonify({'error': 'Invalid secondary voice selected'}), 400
-    if all_voices().get(voice2, {}).get('audition_only'):
+    if voice_catalog.get(voice2, {}).get('audition_only'):
         return jsonify({'error': 'The secondary voice is available for audition only'}), 400
 
     # Create job
@@ -6583,16 +6779,16 @@ def start_conversion():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Determine TTS engine from voice
-    tts_engine = all_voices()[voice].get('engine', 'kokoro')
+    tts_engine = voice_catalog[voice].get('engine', 'kokoro')
 
     # Save job to database
     job = {
         'id': job_id,
         'book_name': book_name,
         'voice': voice,
-        'voice_name': all_voices()[voice]['name'],
+        'voice_name': voice_catalog[voice]['name'],
         'voice2': voice2,
-        'voice2_name': all_voices().get(voice2, {}).get('name') if voice2 else None,
+        'voice2_name': voice_catalog.get(voice2, {}).get('name') if voice2 else None,
         'tts_engine': tts_engine,
         'status': 'queued',
         'created_at': datetime.now().isoformat(),
@@ -8781,7 +8977,10 @@ def convert_from_library():
 
         file_path = Path(file_path_str)
         voice = data.get('voice', DEFAULT_VOICE)
-        if all_voices().get(voice, {}).get('audition_only'):
+        voice_catalog = all_voices()
+        if isinstance(voice, str) and voice.startswith('zonos3_custom_') and voice not in voice_catalog:
+            return jsonify({'error': 'The selected ZONOS3 reference is not available'}), 400
+        if voice_catalog.get(voice, {}).get('audition_only'):
             return jsonify({'error': 'This GPU voice is a cached audition; book conversion is not integrated'}), 400
         voice2 = (data.get('voice2') or '').strip() or None
         custom_regex = (data.get('custom_regex') or '').strip() or None
@@ -8831,7 +9030,7 @@ def convert_from_library():
         except: pass
 
         output_dirname = f"{safe_name}_{job_id}"
-        tts_engine = all_voices().get(voice, {}).get('engine', 'kokoro')
+        tts_engine = voice_catalog.get(voice, {}).get('engine', 'kokoro')
         render_target = (data.get('render_target') or 'local').lower()
         if render_target not in ('local', 'kaggle', 'lane'):
             return jsonify({'error': 'Paid GPU cannot be selected by queueing a book. '
@@ -8867,7 +9066,7 @@ def convert_from_library():
             # (no flag) keeps the strict reject so we never silently swap voices.
             # Fish is excluded from failover outright: its recipe voices exist
             # on no other engine, so a substitution is always a bad book.
-            if data.get('allow_engine_fallback') and tts_engine != 'fish':
+            if data.get('allow_engine_fallback') and tts_engine != 'fish' and not voice.startswith('zonos3_custom_'):
                 new_eng, new_voice, engine_fallback_note = pick_engine_with_fallback(tts_engine, voice)
                 if engine_fallback_note:
                     tts_engine, voice = new_eng, new_voice
@@ -8906,7 +9105,7 @@ def convert_from_library():
             'input_filename': input_filename,
             'output_dirname': output_dirname,
             'voice': voice,
-            'voice_name': all_voices().get(voice, {}).get('name', voice),
+            'voice_name': voice_catalog.get(voice, {}).get('name', voice),
             'tts_engine': tts_engine,
             'tts_speed': tts_speed,
             'voice2': voice2,
@@ -8942,6 +9141,8 @@ def convert_from_library():
         return jsonify({'status': 'success', 'job_id': job_id,
                         'engine_fallback': engine_fallback_note})
 
+    except Zonos3ReferenceUnavailable as exc:
+        return _handle_zonos3_reference_unavailable(exc)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

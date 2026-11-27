@@ -1,5 +1,7 @@
-"""Serve the pinned local ZONOS3-Mini Imogen voice over the OpenAI TTS API."""
+"""Serve local ZONOS3-Mini stock and enrolled voices over the OpenAI TTS API."""
 
+import base64
+import hashlib
 import io
 import json
 import logging
@@ -7,10 +9,12 @@ import os
 import re
 import signal
 import subprocess
+import tempfile
 import threading
 import time
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -19,6 +23,10 @@ NATIVE_VOICE_ID = "default_b78b28baf5c31a1d"
 NATIVE_URL = "http://127.0.0.1:19190"
 DECODER = "keep2_plain"
 MAX_BODY_BYTES = 32 * 1024
+MAX_REFERENCE_BYTES = 12 * 1024 * 1024
+REFERENCE_DIR = Path('/references/zonos3')
+CUSTOM_VOICE = re.compile(r'zonos3_custom_[a-z0-9_]{1,40}_(standard|compact)_([a-f0-9]{64})')
+CUSTOM_CHUNKS = {'standard': (420, 70), 'compact': (270, 45)}
 MAX_INPUT_CHARS = 4096
 NATIVE_CHARS = 900
 NATIVE_WORDS = 150
@@ -33,14 +41,14 @@ SENTENCE_END = re.compile(r"""(?<=[.!?])["”’)]*\s+""")
 ABBREVIATION = re.compile(r"\b(?:dr|mr|mrs|ms|prof|st|sr|jr|vs)\.$|(?:\b[a-z]\.){1,}$", re.I)
 
 
-def split_text(text: str) -> list[str]:
+def split_text(text: str, char_limit=NATIVE_CHARS, word_limit=NATIVE_WORDS) -> list[str]:
     """Preserve the input exactly, preferring sentence edges inside native limits."""
     chunks = []
-    while len(text) > NATIVE_CHARS or len(text.split()) > NATIVE_WORDS:
-        words = list(WORD.finditer(text[:NATIVE_CHARS + 1]))
-        ends = [word.end() for word in words[:NATIVE_WORDS]
-                if word.end() <= NATIVE_CHARS and text[word.end() - 1].isspace()]
-        limit = ends[-1] if ends else NATIVE_CHARS
+    while len(text) > char_limit or len(text.split()) > word_limit:
+        words = list(WORD.finditer(text[:char_limit + 1]))
+        ends = [word.end() for word in words[:word_limit]
+                if word.end() <= char_limit and text[word.end() - 1].isspace()]
+        limit = ends[-1] if ends else char_limit
         sentences = [edge.end() for edge in SENTENCE_END.finditer(text, 0, limit)
                      if edge.end() >= limit // 2 and not ABBREVIATION.search(text[:edge.start()])]
         cut = sentences[-1] if sentences else limit
@@ -56,11 +64,15 @@ def _native_json(path: str, timeout: float):
         return json.load(response)
 
 
-def _native_wav(text: str, timeout: float) -> bytes:
+def _native_wav(text: str, timeout: float, embedding: bytes | None = None) -> bytes:
+    voice = {"speaker_embedding_id": NATIVE_VOICE_ID, "speaker_mode": "reference"}
+    if embedding is not None:
+        voice = {"speaker_embedding_base64": base64.b64encode(embedding).decode('ascii'),
+                 "speaker_embedding_name": "reference.npy",
+                 "speaker_mode": "embedding"}
     payload = json.dumps({
         "text": text,
-        "speaker_embedding_id": NATIVE_VOICE_ID,
-        "speaker_mode": "reference",
+        **voice,
         "language": "en_gb",
         "text_normalization": True,
         "decoder": DECODER,
@@ -89,21 +101,23 @@ def _checked_frames(audio: bytes) -> bytes:
     return samples
 
 
-def _synthesize(text: str) -> bytes:
+def _synthesize(text: str, embedding: bytes | None = None, custom_mode: str | None = None) -> bytes:
     started = time.monotonic()
     result = io.BytesIO()
     with wave.open(result, "wb") as output:
         output.setnchannels(PCM[0])
         output.setsampwidth(PCM[1])
         output.setframerate(PCM[2])
-        chunks = (chunk for chunk in split_text(text) if chunk.strip())
+        limits = CUSTOM_CHUNKS.get(custom_mode, (NATIVE_CHARS, NATIVE_WORDS))
+        chunks = (chunk for chunk in split_text(text, *limits) if chunk.strip())
         for index, chunk in enumerate(chunks):
             remaining = REQUEST_TIMEOUT - (time.monotonic() - started)
             if remaining <= 0:
                 raise TimeoutError("ZONOS3 request deadline elapsed")
             if index:
                 output.writeframes(b"\0\0" * (PCM[2] // 4))
-            output.writeframes(_checked_frames(_native_wav(chunk, remaining)))
+            raw = _native_wav(chunk, remaining) if embedding is None else _native_wav(chunk, remaining, embedding)
+            output.writeframes(_checked_frames(raw))
     return result.getvalue()
 
 
@@ -116,6 +130,33 @@ def _mp3(wav: bytes) -> bytes:
     if not result.stdout:
         raise ValueError("Empty ZONOS3 MP3")
     return result.stdout
+
+
+def _custom_embedding(voice_id: str) -> bytes:
+    match = CUSTOM_VOICE.fullmatch(voice_id)
+    if not match:
+        raise ValueError('Invalid ZONOS3 voice ID')
+    with (REFERENCE_DIR / f'{voice_id}.npy').open('rb') as source:
+        embedding = source.read(2049)
+    if not embedding.startswith(b'\x93NUMPY') or len(embedding) > 2048 or hashlib.sha256(embedding).hexdigest() != match[2]:
+        raise ValueError('ZONOS3 speaker embedding failed verification')
+    return embedding
+
+
+def _enroll(wav: bytes) -> bytes:
+    # The upstream CLI emits the exact float32 .npy used by native generation.
+    # The JSON inspection endpoint exposes rounded values.
+    with tempfile.TemporaryDirectory() as work:
+        reference = Path(work) / 'reference.wav'
+        embedding = Path(work) / 'reference.npy'
+        reference.write_bytes(wav)
+        subprocess.run(['/opt/zonos3/spk-encoder-cli', '/models/enrollment/spk-encoder.gguf',
+                        '--audio', str(reference), str(embedding), '--cpu'],
+                       capture_output=True, check=True, timeout=90)
+        result = embedding.read_bytes()
+    if not result.startswith(b'\x93NUMPY') or len(result) > 2048:
+        raise ValueError('Invalid ZONOS3 speaker embedding')
+    return result
 
 
 class SpeechServer(ThreadingHTTPServer):
@@ -159,6 +200,9 @@ class SpeechHandler(BaseHTTPRequestHandler):
             self._json(200, {"voices": [{"id": VOICE_ID}]})
 
     def do_POST(self):
+        if self.path == '/v1/voices/enroll':
+            self._enroll_voice()
+            return
         if self.path != "/v1/audio/speech":
             self._error(404, "Unknown route")
             return
@@ -170,8 +214,10 @@ class SpeechHandler(BaseHTTPRequestHandler):
         except (ValueError, TimeoutError):
             self._error(400, "A valid JSON request body is required")
             return
-        if not isinstance(body, dict) or body.get("voice") != VOICE_ID:
-            self._error(400, f"voice must be {VOICE_ID}")
+        voice_id = body.get('voice') if isinstance(body, dict) else None
+        custom_voice = CUSTOM_VOICE.fullmatch(voice_id) if isinstance(voice_id, str) else None
+        if voice_id != VOICE_ID and not custom_voice:
+            self._error(400, 'Unknown ZONOS3 voice')
             return
         text = body.get("input")
         if not isinstance(text, str) or not text.strip() or len(text) > MAX_INPUT_CHARS:
@@ -191,7 +237,15 @@ class SpeechHandler(BaseHTTPRequestHandler):
             self._error(429, "ZONOS3 is already synthesizing", retry_after=5)
             return
         try:
-            wav = _synthesize(text)
+            if voice_id == VOICE_ID:
+                wav = _synthesize(text)
+            else:
+                try:
+                    embedding = _custom_embedding(voice_id)
+                except (OSError, ValueError):
+                    self._error(400, 'ZONOS3 custom voice embedding is unavailable or invalid')
+                    return
+                wav = _synthesize(text, embedding, custom_voice[1])
             if output_format.lower() == "wav":
                 self._respond(200, "audio/wav", wav)
             else:
@@ -203,6 +257,37 @@ class SpeechHandler(BaseHTTPRequestHandler):
         except (OSError, ValueError, EOFError, wave.Error, subprocess.SubprocessError):
             LOGGER.exception("ZONOS3 synthesis failed")
             self._error(502, "ZONOS3 failed to produce audio")
+        finally:
+            self.server.synth_slot.release()
+
+    def _enroll_voice(self):
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+            if self.headers.get('Content-Type') != 'audio/wav' or not 0 < length <= MAX_REFERENCE_BYTES:
+                raise ValueError('Invalid reference size or format')
+            audio = self.rfile.read(length)
+            with wave.open(io.BytesIO(audio), 'rb') as source:
+                count = source.getnframes()
+                rate = source.getframerate()
+                if not (16000 <= rate <= 48000 and source.getnchannels() in (1, 2)
+                        and source.getsampwidth() in (2, 3) and rate * 8 <= count <= rate * 45):
+                    raise ValueError('Unsupported WAV format or duration')
+                if len(source.readframes(count)) != count * source.getnchannels() * source.getsampwidth():
+                    raise ValueError('Truncated reference WAV')
+        except (EOFError, ValueError, wave.Error, TimeoutError):
+            self._error(400, 'Provide a complete 8–45 second PCM WAV at 16–48 kHz')
+            return
+        if self.server.process.poll() is not None:
+            self._error(503, 'ZONOS3 is unavailable')
+            return
+        if not self.server.synth_slot.acquire(blocking=False):
+            self._error(429, 'ZONOS3 is busy', retry_after=5)
+            return
+        try:
+            self._respond(200, 'application/octet-stream', _enroll(audio))
+        except (OSError, ValueError, subprocess.SubprocessError):
+            LOGGER.exception('ZONOS3 reference enrollment failed')
+            self._error(502, 'ZONOS3 could not derive a speaker embedding')
         finally:
             self.server.synth_slot.release()
 

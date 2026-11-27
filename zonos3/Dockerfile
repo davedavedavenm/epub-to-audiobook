@@ -18,9 +18,9 @@ RUN git init . \
     && git submodule update --init --depth 1 servers/ggml/ggml third_party/zyphra-textnorm
 RUN cmake -S servers/ggml -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_TESTING=OFF -DGGML_NATIVE=OFF -DGGML_CUDA=OFF -DGGML_VULKAN=OFF \
-    && cmake --build /build --parallel 2 --target zonos3-server \
+    && cmake --build /build --parallel 2 --target zonos3-server spk-encoder-cli \
     && mkdir /runtime \
-    && cp /build/zonos3-server /runtime/ \
+    && cp /build/zonos3-server /build/spk-encoder-cli /runtime/ \
     && cp -a /build/ggml/src/libggml*.so* /runtime/ \
     && cp LICENSE /runtime/LICENSE
 
@@ -37,6 +37,7 @@ RUN set -eu; \
         curl --fail --silent --show-error --location --retry 3 --max-time 600 "$base/gguf/$path" -o "$path"; \
     done < models.sha256; \
     sha256sum --check models.sha256; \
+    mkdir enrollment; mv spk-encoder.gguf enrollment/; \
     curl --fail --silent --show-error --location --retry 3 "$base/README.md" -o MODEL_CARD.md
 
 FROM ubuntu:24.04

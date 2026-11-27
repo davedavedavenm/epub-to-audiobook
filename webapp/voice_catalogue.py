@@ -59,7 +59,7 @@ MODEL_GROUPS = (
         'key': 'zonos3', 'title': 'ZONOS3-Mini', 'model': '800M · 100M active',
         'engine': 'zonos3', 'preferred': ('zonos3_imogen_audition',),
         'model_note': 'Approved on the Badawi excerpt. Imogen read 1916 as a cardinal number on the Irish history excerpt.',
-        'book_route': 'Local CPU · Imogen preset.',
+        'book_route': 'Local CPU · Imogen preset and enrolled references.',
     },
     {
         'key': 'kale_base', 'title': 'Kale TTS', 'model': '1 Base',

@@ -2096,10 +2096,17 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div style="font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);">upload a reference · no rebuild</div>
                 </div>
                 <div style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:14px;">
-                    Upload 15–30 seconds of clean speech as a <b>WAV</b> for the enabled Chatterbox engines.
-                    Listen to the preview to check the generated accent and delivery.
+                    Upload 15–30 seconds of clean speech as a <b>WAV</b> you have permission to use.
+                    Choose ZONOS3 explicitly to create a local speaker embedding. Listen to the preview to check the accent and delivery.
                 </div>
                 <div class="compare-row">
+                    <div class="setup-field">
+                        <label class="setup-label" for="clone-engine">Engine</label>
+                        <select id="clone-engine" class="input-control">
+                            <option value="chatterbox">Chatterbox Nano / Turbo</option>
+                            <option value="zonos3">ZONOS3-Mini (local)</option>
+                        </select>
+                    </div>
                     <div class="setup-field">
                         <label class="setup-label" for="clone-name">Name</label>
                         <input id="clone-name" class="input-control" placeholder="dave" maxlength="40">
@@ -2160,14 +2167,14 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             if (v.catalogue_status) return `<div class="voice-verdict"><strong>${verdictLabel(v)} · ${escapeHtml(v.catalogue_status)}</strong>${v.note ? ` — ${escapeHtml(v.note)}` : ''}</div>`;
             return v.note ? `<div class="voice-verdict"><strong>Notes</strong> — ${escapeHtml(v.note)}</div>` : '';
         };
-        const customizationHtml = ({customization}) => {
+        const customizationHtml = ({customization, key}) => {
             const rows = [
                 ['Stock voices', customization.stock],
                 ['Voice cloning', customization.cloning],
                 ['Voice design', customization.design],
             ].map(([label, details]) => {
                 const studio = details.studio === 'upload'
-                    ? '<a href="#voice-clone-upload">Upload a WAV</a>'
+                    ? `<a href="#voice-clone-upload" onclick="document.getElementById('clone-engine').value='${key === 'zonos3' ? 'zonos3' : 'chatterbox'}'">Upload a WAV</a>`
                     : escapeHtml(details.studio_label);
                 return `<div><dt>${label}</dt><dd>${escapeHtml(details.model_label)} · ${studio}</dd></div>`;
             }).join('');
@@ -2384,7 +2391,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         } finally { btn.disabled = false; }
     }
 
+    let cloneListTimer;
     async function loadCloneList() {
+        clearTimeout(cloneListTimer);
         const el = document.getElementById('clone-list');
         if (!el) return;
         try {
@@ -2394,9 +2403,13 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 + d.voices.map(v => `
                     <div style="display:flex; align-items:center; gap:10px; padding:5px 0; font-size:0.86rem;">
                         <b>${escapeHtml(v.id)}</b>
-                        <span style="font-family:var(--mono); font-size:.75rem; color:var(--ink-3);">${v.seconds ?? '?'}s · ${v.rate ?? '?'}Hz</span>
-                        <button class="btn" style="padding:2px 10px; font-size:.75rem;" onclick="deleteCloneVoice('${escapeHtml(v.id)}')">Remove</button>
+                        <span style="font-family:var(--mono); font-size:.75rem; color:var(--ink-3);">${v.engine === 'zonos3'
+                            ? `ZONOS3 · ${escapeHtml(v.state)}` : `${v.seconds ?? '?'}s · ${v.rate ?? '?'}Hz`}</span>
+                        ${v.engine === 'zonos3' && v.state === 'ready' && !voices[v.voice_id]
+                            ? '<button class="btn" type="button" onclick="location.reload()">Refresh Voices</button>' : ''}
+                        <button class="btn" style="padding:2px 10px; font-size:.75rem;" ${v.state === 'preparing' ? 'disabled' : ''} onclick="deleteCloneVoice('${escapeHtml(v.id)}', '${v.engine === 'zonos3' ? 'zonos3' : 'chatterbox'}')">Remove</button>
                     </div>`).join('');
+            if (d.voices.some(v => v.state === 'preparing')) cloneListTimer = setTimeout(loadCloneList, 2500);
         } catch (e) { el.innerHTML = ''; }
     }
 
@@ -2410,6 +2423,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         }
         const fd = new FormData();
         fd.append('file', fileEl.files[0]);
+        fd.append('engine', document.getElementById('clone-engine').value);
         if (nameEl.value.trim()) fd.append('voice_id', nameEl.value.trim());
         btn.disabled = true;
         status.textContent = 'Uploading…';
@@ -2418,6 +2432,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             const d = await r.json();
             if (!r.ok) {
                 status.innerHTML = `<span class="warn">${escapeHtml(d.error || 'Upload failed')}</span>`;
+            } else if (d.engine === 'zonos3') {
+                status.textContent = 'Preparing the ZONOS3 speaker and preview. Check its status below.';
+                fileEl.value = '';
+                loadCloneList();
             } else {
                 // Warnings are advice, not failure — the reference is saved either
                 // way, because only the preview really settles whether it's good.
@@ -2433,15 +2451,17 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         } finally { btn.disabled = false; }
     }
 
-    async function deleteCloneVoice(id) {
+    async function deleteCloneVoice(id, engine) {
         const ok = await appConfirm({
             title: 'Remove this clone?',
-            body: `The reference recording for "${id}" will be deleted. Books already rendered with it are unaffected.`,
+            body: engine === 'zonos3' ? `Remove "${id}" from the voice picker? Saved jobs keep their speaker data for recovery.`
+                : `The reference recording for "${id}" will be deleted. Books already rendered with it are unaffected.`,
             confirmText: 'Remove', tone: 'danger'
         });
         if (!ok) return;
-        await fetch('/api/voices/custom/' + encodeURIComponent(id), { method: 'DELETE' });
-        loadCloneList();
+        const response = await fetch('/api/voices/custom/' + encodeURIComponent(id) + '?engine=' + engine, { method: 'DELETE' });
+        if (response.ok && engine === 'zonos3') location.reload();
+        else loadCloneList();
     }
 
     // One global transport owns every voice audition: voice grid, workspace and
