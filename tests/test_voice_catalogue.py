@@ -41,6 +41,17 @@ def test_preferred_current_voice_represents_group_without_claiming_quality_rank(
     assert group['other_voice_ids'] == ['deepgram_flux_colin']
 
 
+def test_enrolled_zonos_voice_inherits_its_models_cloning_and_book_route():
+    enrolled = 'zonos3_custom_example_standard_' + 'a' * 64
+    voices = {key: {'name': key, 'engine': 'zonos3', 'preview_cached': True}
+              for key in ('zonos3_imogen_audition', enrolled)}
+    groups = build_voice_catalogue(voices)
+    group = next(g for g in groups if g['key'] == 'zonos3')
+    assert group['other_voice_ids'] == [enrolled]
+    assert 'upload' in group['customization_filters']
+    assert not any(g['key'].startswith('unclassified:zonos3') for g in groups)
+
+
 def test_old_cached_preview_is_distinguished_from_pending_and_current():
     voices = {
         'phonon_edwin': {

@@ -240,6 +240,7 @@ MODEL_GROUPS = (
 
 _GROUP_BY_KEY = {group['key']: group for group in MODEL_GROUPS}
 _ENGINE_GROUP = {
+    'zonos3': 'zonos3',
     'chatterbox': 'chatterbox_turbo',
     'chatterbox_nano': 'chatterbox_nano',
     'cosyvoice': 'cosyvoice3',
