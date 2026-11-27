@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tts_proxy'))
 
 from liked_voices import CPU_VOICES, LIKED_VOICES
-from app import get_engine_url, text_profile_for_engine
+from app import all_voices, get_engine_url, text_profile_for_engine
 import proxy
 
 
@@ -27,6 +27,25 @@ def test_shortlist_respects_newer_verdicts_and_exact_models():
     assert 'pocket4_peter_yearsley' in LIKED_VOICES
 
 
+def test_round_one_verdicts_are_bound_to_exact_voice_ids_and_sample():
+    voices = all_voices()
+    expected = {
+        'klein_arthur': ('Retire vote · refinement pending', 'Chinese pronunciation'),
+        'uk_female_samuel_nano': ('Keep', '21 of April'),
+        'phonon_edwin': ('Keep', 'hua way way'),
+        'pocket4_caro_davy': ('Keep', 'unsure about the final April date'),
+    }
+    for key, (verdict, finding) in expected.items():
+        assert voices[key]['catalogue_status'] == verdict
+        assert voices[key]['rating_date'] == '2026-11-27'
+        assert voices[key]['rated_sample_id'] == 'narrator-standard-v1'
+        assert finding in voices[key]['note']
+        assert not voices[key].get('audition_only')
+    assert voices['klein_arthur']['engine'] == 'cpu_narrators'
+    assert 'klein_arthur' in CPU_VOICES
+    assert not voices['uk_male_minter_nano'].get('catalogue_status')
+
+
 def test_voice_catalogue_has_compact_groups_and_shared_sample_details():
     template_path = Path(__file__).resolve().parents[1] / 'webapp' / 'templates' / 'index.html'
     template = template_path.read_text(encoding='utf-8')
@@ -41,6 +60,9 @@ def test_voice_catalogue_has_compact_groups_and_shared_sample_details():
     assert 'preview_sample_current' in template
     assert 'playVoicePreview' in template and 'v.preview_cached === true' in template
     assert 'modelCatalogue' in template and 'engineUnconfigured[group.engine]' in template
+    assert 'v.rated_sample_id === v.preview_sample_id' in template
+    assert "'Listening verdict' : 'Previous verdict'" in template
+    assert 'verdictLabel(v)' in template and 'verdictLabel(other)' in template
 
 
 def test_new_cpu_paths_do_not_fall_back_to_legacy_engine():

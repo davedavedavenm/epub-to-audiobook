@@ -1,5 +1,21 @@
 # Voices and accents
 
+## 27 November 2026 — First blind CPU round
+
+Dave rated the four Shared Test v1 recordings before sending his revealed
+scorecard. These are listening verdicts on the original recordings.
+
+| Voice | Narration | Pronunciation | Decision and listening notes |
+|---|---|---|---|
+| A · Arthur, Klein X1.5-Pro | Usable | Blocking issues | Retire vote on this take. Chinese pronunciation was poor; questions and emphasis lacked intonation. Dave otherwise liked the reading. |
+| B · Beatrice, Chatterbox Nano | Natural | Minor issues | Keep. Very listenable. The final date sounded like “21 of April” or similar. |
+| C · Edwin, Phonon 31M | Natural | Minor issues | Keep. Huawei sounded like “hua way way”, and kilometres sounded odd. Dave otherwise rated the take very highly. |
+| D · Caro Davy, Pocket 4 | Natural | Clean | Keep. Dave was unsure what day Caro said in the closing April date. |
+
+Klein/Arthur is a different voice from Arthur on Chatterbox Turbo. The Klein
+recording is retained for comparison. A new pronunciation attempt needs its
+own A/B and verdict before it can supersede a heard take.
+
 ## 25 November 2026 — Amy, Imogen and the VoxMel GPU audition
 
 Dave liked Kale Base/Amy and ZONOS3-Mini/Imogen on Shared Test v1. He described

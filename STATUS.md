@@ -19,12 +19,20 @@ and Studio labels together. The late-September to November GPU review covers
 reference cloning, prompt-created voices and what has actually been measured
 at chapter length. [GPU review](TTS-WATCH-FINDINGS.md#27-november-2026--gpu-developments-for-customizable-audiobook-narrators).
 
+On Zorin, web and worker reported revision `13f19a1`. The live catalogue had
+192 voice IDs, 176/176 configured previews ready and 148 current standard
+recordings. The served Amy, GPU Imogen, Rupert and Savannah MP3s matched their
+source files byte for byte and decoded through the end.
+
 The first blind CPU round pairs three unresolved voices with the usual book
 default. The four ordinary openings take 66 seconds together. The local page
 at `evaluations/cpu-engines/output/blind-cpu-2026-11-27/index.html` includes
 the full original MP3s, a seek point for the names and numbers, and a reveal
 after listening. All four MP3s matched their original manifests and decoded
-in full. Listening decisions are pending.
+in full. Dave marked Klein/Arthur for retirement consideration and kept Beatrice,
+Edwin and Caro. Round two has four different CPU voices and its own saved ratings at
+`evaluations/cpu-engines/output/blind-cpu-2026-11-27-round-2/index.html`.
+The four openings take 67 seconds. [Round-one listening notes](VOICES.md#27-november-2026--first-blind-cpu-round).
 
 ## 24 November 2026 — Free NVIDIA T4 narrator auditions
 

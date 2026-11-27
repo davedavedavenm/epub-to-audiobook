@@ -2,6 +2,11 @@
 
 ## 27 November 2026 — Compare four CPU voices per listening round
 
+The first round recorded a Retire vote for Klein X1.5-Pro/Arthur and Keep
+votes for Nano Beatrice, Phonon Edwin and Pocket 4 Caro Davy. Dave wants
+to try small refinements before withdrawing voices. Keep the original
+recordings available for comparison. [Round-one ratings](VOICES.md#27-november-2026--first-blind-cpu-round).
+
 Prefer CPU and GPU models that can reuse a custom narrator when selecting new
 book engines. Preserve useful stock voices and score the actual recording.
 Studio distinguishes reference cloning, creating a voice from a description,

@@ -760,6 +760,23 @@ VOICES = {
 
 from liked_voices import LIKED_VOICES  # noqa: E402
 VOICES.update(LIKED_VOICES)
+# The CPU renderer imports liked_voices for preset configuration. Keep these
+# Studio listening votes here so they do not change that image's build inputs.
+for _voice_id, _verdict, _note in (
+    ('klein_arthur', 'Retire vote · refinement pending',
+     'Round 1: usable voice, but Chinese pronunciation was a blocker and questions and emphasis lacked intonation.'),
+    ('uk_female_samuel_nano', 'Keep',
+     'Round 1: natural and very listenable. Dave heard “21 of April” or similar as a minor issue.'),
+    ('phonon_edwin', 'Keep',
+     'Round 1: natural and otherwise excellent, with minor pronunciation issues. Dave heard “hua way way” for Huawei and an odd reading of kilometres.'),
+    ('pocket4_caro_davy', 'Keep',
+     'Round 1: natural and clean. Dave was unsure about the final April date.'),
+):
+    VOICES[_voice_id] = {
+        **VOICES[_voice_id],
+        'catalogue_status': _verdict, 'liked': _verdict == 'Keep',
+        'rating_date': '2026-11-27', 'rated_sample_id': 'narrator-standard-v1', 'note': _note,
+    }
 VOICES['kitten2_john_kani_audition'] = {
     'name': 'John Kani reference (AI clone)', 'accent': 'South African reference',
     'gender': 'Male', 'engine': 'audition', 'audition_only': True,
