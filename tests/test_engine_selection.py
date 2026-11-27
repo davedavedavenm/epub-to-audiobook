@@ -27,6 +27,23 @@ from tts_preprocess import normalize_text_for_tts
 JOB_ID = 'testjob123'
 
 
+def test_recovery_preserves_finalized_chapters_in_requested_range(tmp_path):
+    for name in ('01 - Part One.mp3', '002_Raw Part.mp3', '0004_Publisher Part.mp3',
+                 '05 - Part Five.mp3', '03-not-a-finalized-chapter.mp3'):
+        (tmp_path / name).touch()
+
+    assert appmod.find_missing_chapters(tmp_path, 5, start_chapter=2, end_chapter=5) == [3]
+    assert appmod.find_missing_chapters(tmp_path, 5) == [3]
+
+
+def test_book_verification_rejects_duplicate_chapter_after_recovery(tmp_path):
+    for name in ('01 - Part One.mp3', '001_Part_One.mp3', '02 - Part Two.mp3'):
+        (tmp_path / name).write_bytes(b'audio' * 1024)
+
+    assert appmod.verify_book_complete(JOB_ID, tmp_path, 2) == (
+        False, 'Duplicate chapter audio files for chapter(s): [1]')
+
+
 def _proxy_or(fallback):
     return f"{appmod.TTS_PROXY_URL}/j/{JOB_ID}/v1" if appmod.TTS_PROXY_URL else fallback
 

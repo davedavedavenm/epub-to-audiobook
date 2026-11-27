@@ -21,6 +21,12 @@ from tts_preprocess import sanitize_html, normalize_text_for_tts
 # Contents, ...) and are skipped — matching the converter's --min-words default.
 MIN_WORDS = 120
 
+
+def output_chapter_number(filename: str) -> int | None:
+    """Read the chapter number from a converter or finalized audio filename."""
+    match = re.match(r'^(?:(\d{3,})(?=[_\-.\s]|$)|(\d{2})(?= - ))', filename)
+    return int(match.group(1) or match.group(2)) if match else None
+
 # Renderable, but usually not "the book" — Acknowledgments, Notes/citations,
 # Index, etc. Flagged so the UI can default "convert the whole book" to the body
 # and not tack on a citations dump the listener didn't ask for.

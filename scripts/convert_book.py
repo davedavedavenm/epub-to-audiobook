@@ -36,7 +36,7 @@ from tts_preprocess import sanitize_html  # noqa: E402
 from jevspeak import normalize_text_for_tts_jev  # noqa: E402
 # Shared chapter numbering — the SAME function the web UI's picker uses, so the
 # chapter number a user selects is exactly the chapter that renders here.
-from chapters import spine_docs, renderable_wordcount, _title_for  # noqa: E402
+from chapters import spine_docs, renderable_wordcount, _title_for, output_chapter_number  # noqa: E402
 from book_meta import read_book_meta  # noqa: E402
 import requests  # noqa: E402
 
@@ -663,16 +663,9 @@ def main():
         suffix = f"_{clean_title}" if clean_title else ""
 
         text = chapter_text(z, name)
-        # resume: accept a prior .mp3 OR .wav for this chapter
-        fn = None
-        for ext in ('mp3', 'wav'):
-            # Match 3-digit flat, 3-digit with name, or 4-digit with name
-            matches = (list(out.glob(f"{idx:03d}.{ext}")) +
-                       list(out.glob(f"{idx:03d}_*.{ext}")) +
-                       list(out.glob(f"{idx:04d}_*.{ext}")))
-            if matches and matches[0].stat().st_size > 10240:
-                fn = matches[0]
-                break
+        # Resume from a converter or finalized MP3, or a prior WAV.
+        fn = next((path for ext in ('mp3', 'wav') for path in out.glob(f'*.{ext}')
+                   if output_chapter_number(path.name) == idx and path.stat().st_size > 10240), None)
         if fn:
             print(f"[chapter {idx}] already done — skipping (resume)", flush=True)
             print(f"Processing chapter {idx}: {ctitle}", flush=True)

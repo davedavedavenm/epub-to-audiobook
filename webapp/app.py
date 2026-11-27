@@ -30,7 +30,7 @@ from typing import Any, Optional, Dict, List
 from gpu_manager import GPUManager
 from epub_generator import package_epub3_with_audio
 from qa_report import merge_qa_reports, read_qa_report, write_qa_report_atomic
-from chapters import list_renderable_chapters, body_end_index
+from chapters import list_renderable_chapters, body_end_index, output_chapter_number
 import guard
 
 from flask import Flask, render_template, request, jsonify, send_file, Response, url_for, make_response
@@ -1509,6 +1509,12 @@ def verify_book_complete(job_id: str, output_path: Path, total_chapters: int | N
     if not output_files:
         return False, "No output MP3 files found"
 
+    chapter_counts = Counter(number for path in output_files
+                             if (number := output_chapter_number(path.name)) is not None)
+    duplicates = sorted(number for number, count in chapter_counts.items() if count > 1)
+    if duplicates:
+        return False, f"Duplicate chapter audio files for chapter(s): {duplicates}"
+
     # Determine expected chapter count.
     # A raw range span (end-start+1) is WRONG for range jobs: the renderer skips
     # sub-min-words sections (front/back-matter) and clamps to what actually
@@ -2963,16 +2969,8 @@ def get_expected_chapter_count(output: str) -> int | None:
 def find_missing_chapters(output_dir: Path, total_chapters: int,
                           start_chapter: int | None = None,
                           end_chapter: int | None = None) -> list[int]:
-    """Return 1-based chapter numbers that have no matching output file.
-
-    Handles both 3-digit (001.mp3 or 001_*.mp3) and 4-digit (0001_*.mp3) filenames.
-    """
-    existing = set()
-    if output_dir.exists():
-        for f in output_dir.glob('*.mp3'):
-            m = re.match(r'^(\d{3,4})(?:[_\-\.\s]|$)', f.name)
-            if m:
-                existing.add(int(m.group(1)))
+    """Return 1-based chapter numbers without a converter or finalized MP3."""
+    existing = {output_chapter_number(path.name) for path in output_dir.glob('*.mp3')}
 
     first = start_chapter or 1
     last = end_chapter or total_chapters
@@ -3061,12 +3059,8 @@ def retry_missing_chapters(
             import time as time_module
             time_module.sleep(5)
 
-            # Check if the chapter file now exists (both 3-digit and 4-digit formats, and .mp3 / .wav)
-            ch_files = []
-            for ext in ('mp3', 'wav'):
-                ch_files.extend(output_path.glob(f'{ch:03d}.{ext}'))
-                ch_files.extend(output_path.glob(f'{ch:03d}_*.{ext}'))
-                ch_files.extend(output_path.glob(f'{ch:04d}_*.{ext}'))
+            ch_files = [path for ext in ('mp3', 'wav') for path in output_path.glob(f'*.{ext}')
+                        if output_chapter_number(path.name) == ch]
 
             if ch_files and all(f.stat().st_size > 1024 for f in ch_files):
                 app.logger.info(f"Chapter {ch} recovered on attempt {attempt}")
@@ -3342,11 +3336,7 @@ def _recover_partial_inner(job_id: str, _recovery_thread_key: str):
 
     if not total_chapters:
         # Fallback: use the highest chapter number found in output
-        max_ch = 0
-        for f in output_path.glob('*.mp3'):
-            m = re.match(r'^(\d{4})_', f.name)
-            if m:
-                max_ch = max(max_ch, int(m.group(1)))
+        max_ch = max((output_chapter_number(path.name) or 0 for path in existing_files), default=0)
         if max_ch == 0:
             app.logger.warning(f"Recovery {job_id}: Can't determine chapter count")
             return
