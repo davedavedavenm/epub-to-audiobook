@@ -17,6 +17,8 @@ HEARD_ACCENTS = {
     'en-AU-WilliamNeural': ('Australian', 'Earlier Edge audition; Chinese company names sounded wrong.'),
     # VOICES.md: the September Breeze auditions on Irish history passages.
     'breeze_cillian_irish': ('Irish', 'Earlier Breeze audition; no verified Studio book route.'),
+    # VOICES.md: the October opening and Say Nothing chapter 4.
+    'higgs_cillian_irish': ('Irish', 'Dave praised the accent in the Armed Struggle opening and liked the Say Nothing chapter 4 preview. Studio book route uses a GPU lane.'),
 }
 
 REFERENCE_ENGINES = {'chatterbox', 'chatterbox_nano', 'tada', 'cosyvoice', 'breeze', 'vibevoice', 'fish'}

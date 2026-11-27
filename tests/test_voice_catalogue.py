@@ -215,3 +215,7 @@ def test_accent_evidence_distinguishes_reference_target_and_listening():
     natasha = accent_evidence_for('en-AU-NatashaNeural', {'accent': 'Australian'})
     assert natasha['heard_accent'] == 'Australian'
     assert 'Earlier Edge audition' in natasha['heard_accent_note']
+    higgs = accent_evidence_for('higgs_cillian_irish', {'accent': 'Irish', 'engine': 'fish'})
+    assert higgs['heard_accent'] == 'Irish'
+    assert higgs['accent_source'] == 'reference'
+    assert 'Say Nothing chapter 4' in higgs['heard_accent_note']
