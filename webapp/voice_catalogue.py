@@ -21,6 +21,18 @@ MODEL_GROUPS = (
         'book_route': 'Local CPU · Imogen preset.',
     },
     {
+        'key': 'kale_base', 'title': 'Kale TTS', 'model': '1 Base',
+        'engine': 'audition', 'preferred': ('kale_base_amy',),
+        'book_route': 'No integrated book route.',
+    },
+    {
+        'key': 'voxmel_06b', 'title': 'VoxMel', 'model': '0.6B',
+        'engine': 'voxmel', 'preferred': (),
+        'model_note': 'Shared Test v1 listening verdict: Zira sounded robotic and the dry Cillian reference sounded rough and warbly.',
+        'book_route': 'Excluded after listening review.',
+        'verdict_only': True,
+    },
+    {
         'key': 'reverb', 'title': 'Reverb-TTS', 'model': 'v1.0.0 · 297M',
         'engine': 'reverb', 'preferred': ('reverb_en_male_narrator_audition',),
         'model_note': 'Generated with Reverb-TTS by Software Mansion AI Labs (CC BY-NC 4.0 weights). Whisper recovered the full passage, including both prices.',
@@ -263,11 +275,11 @@ def build_voice_catalogue(voices: dict[str, dict], engine_registry: dict | None 
         key = model_key_for_voice(voice_id, info)
         grouped.setdefault(key, []).append((voice_id, info))
 
-    # Keep a model card for registered engines that have no registered voice
-    # (currently F5-TTS), so an absent voice cannot hide the model itself.
+    # Keep a model card for verdict-only models and registered engines
+    # with no registered voice (currently F5-TTS).
     for group in MODEL_GROUPS:
-        if group['engine'] in (engine_registry or {}) and group['key'] not in grouped:
-            grouped[group['key']] = []
+        if group.get('verdict_only') or group['engine'] in (engine_registry or {}):
+            grouped.setdefault(group['key'], [])
 
     ordered = [group for group in MODEL_GROUPS if group['key'] in grouped]
     extra_keys = sorted(key for key in grouped if key not in _GROUP_BY_KEY)
@@ -301,6 +313,7 @@ def build_voice_catalogue(voices: dict[str, dict], engine_registry: dict | None 
             'engine': spec['engine'],
             'book_route': spec['book_route'],
             'model_note': spec.get('model_note', ''),
+            'verdict_only': spec.get('verdict_only', False),
             'voice_count': len(members),
             'cached_count': cached_count,
             'current_count': current_count,

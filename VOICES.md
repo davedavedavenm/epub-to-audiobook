@@ -1,5 +1,18 @@
 # Voices and accents
 
+## 25 November 2026 — Amy, Imogen and the VoxMel GPU audition
+
+Dave liked Kale Base/Amy and ZONOS3-Mini/Imogen on Shared Test v1. He described
+the VoxMel 0.6B take as sounding robotic. Both initial VoxMel renders used the same
+7.2-second Microsoft Zira Desktop synthetic reference. The sentence-by-sentence
+retry recovered the missing ending.
+
+A follow-up used the 9.5-second dry Cillian audiobook reference and its
+matching transcript. The target passage, twelve sentence requests, model,
+vocoder and seed (42) matched the Zira retry. The 17-second opening comparison
+plays Zira first and switches to Cillian at 9.78 seconds. Dave described the
+Cillian take as “very rough quality...warbly”. The cause of the warble is open.
+
 ## 24 November 2026 — Tontaube, ZONOS3-Mini and Reverb heard on Shared Test v1
 
 Dave's listening verdict was “all 3 voices are quite good” for Tontaube Marcus

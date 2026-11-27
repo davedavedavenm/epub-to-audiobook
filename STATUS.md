@@ -1,5 +1,20 @@
 # Project Status & Remaining Tasks
 
+## 27 November 2026 — Accent browsing and four-voice CPU listening rounds
+
+Studio's Voices catalogue groups recordings by model and can filter those
+groups by recorded accent. Kale Base Amy and the GPU Imogen take carry Dave's
+positive listening verdict. The ZONOS3-Mini CPU book route uses Imogen. Rupert
+and Savannah are stock CPU auditions awaiting a listening verdict. The VoxMel
+0.6B card records the Zira and Cillian verdicts without offering either voice.
+
+The first blind CPU round pairs three unresolved voices with the usual book
+default. The four ordinary openings take 66 seconds together. The local page
+at `evaluations/cpu-engines/output/blind-cpu-2026-11-27/index.html` includes
+the full original MP3s, a seek point for the names and numbers, and a reveal
+after listening. All four MP3s matched their original manifests and decoded
+in full. Listening decisions are pending.
+
 ## 24 November 2026 — Free NVIDIA T4 narrator auditions
 
 Three private Kaggle auditions used Shared Test v1, prepared-text SHA-256
@@ -24,7 +39,15 @@ earlier book-specific verdict on 1916 still applies to the original take.
 
 Local MP3s, WAVs, device logs, receipts and ASR results are under
 `evaluations/new-engines/output/gpu-nov24/` on the audition workstation.
-Dave's listening verdicts on the new GPU takes are open.
+On 25 November Dave liked Amy and Imogen and heard a robotic quality in the
+VoxMel take made with Zira. [Listening notes](VOICES.md#25-november-2026--amy-imogen-and-the-voxmel-gpu-audition).
+
+A matched Cillian-reference run on a free T4 produced 64.91 seconds of VoxMel
+audio in 175.52 seconds of synthesis. Whisper recovered the opening and closing
+date but misrecognized the attendance figure and both sterling prices.
+Dave heard rough, warbly audio on the Cillian take. The
+full take and the Zira/Cillian opening comparison are under
+`evaluations/new-engines/output/voxmel-cillian-2026-11-25/`.
 
 ## 24 November 2026 — Marcus, Imogen and Reverb in Studio
 

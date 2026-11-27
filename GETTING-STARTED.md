@@ -207,6 +207,8 @@ but when you want the best result:
   beat/tied paragraph-aware packing. Neither replaces Beatrice/Nano or becomes
   an automatic fallback. Every offered preset is cached before it appears.
 - **Tontaube Marcus, ZONOS3-Mini Imogen, and Reverb English male narrator 1** are optional local CPU book voices. An operator can enable the `tontaube`, `zonos3`, and `reverb` profiles. Each voice uses its existing Shared Test v1 preview. Tontaube is for private noncommercial use and Reverb requires noncommercial use and attribution. [CPU engine setup](README.md#tts-engines).
+- In **Voices**, choose an accent to browse matching recordings across models. The labels describe the stock speaker or the reference used. Play the opening to judge the accent you actually hear.
+- Kale Base **Amy** and the GPU take of **Imogen** are listening previews. Under **ZONOS3-Mini**, **Rupert** (British English) and **Savannah** (American English) are additional CPU auditions. Choose the regular **Imogen** in the book picker for local conversion.
 - **Historical GPU auditions** include Breeze 2/Cillian and Qwen3 CustomVoice/Aiden. A cached audition does not make a voice available for book conversion. Check the current voice and route before selecting an engine. [Engine and route inventory](ENGINES.md).
 - **Fish S2 Pro / Cillian Murphy (free render lanes)** — the locked recipe for
   Irish history narration: dual reference routing (narration + expressive crop

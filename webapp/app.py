@@ -786,6 +786,30 @@ VOICES['higgs3_default_audition'] = {
     'catalogue_model': 'higgs3', 'preview_text_engine': 'higgs3',
     'note': 'Private evaluation of the native default voice. No speaker reference. ASR flagged the opening word and $1.2 million passage; listening verdict pending.',
 }
+VOICES['kale_base_amy'] = {
+    'name': 'Amy (GPU audition)', 'accent': 'British English', 'gender': 'Female',
+    'engine': 'audition', 'audition_only': True,
+    'catalogue_model': 'kale_base', 'preview_text_engine': 'kale',
+    'liked': True, 'rating_date': '2026-11-25', 'rated_sample_id': 'narrator-standard-v1',
+    'note': 'Liked on Shared Test v1. AI-generated voice audition.',
+}
+VOICES['zonos3_imogen_gpu_audition'] = {
+    'name': 'Imogen (GPU audition)', 'accent': 'British English', 'gender': 'Female',
+    'engine': 'audition', 'audition_only': True,
+    'catalogue_model': 'zonos3', 'preview_text_engine': 'zonos3',
+    'liked': True, 'rating_date': '2026-11-25', 'rated_sample_id': 'narrator-standard-v1',
+    'note': 'Liked on Shared Test v1. Same stock Imogen preset as the CPU book voice.',
+}
+for _voice_id, _name, _accent, _gender in (
+    ('zonos3_rupert_audition', 'Rupert', 'British English', 'Male'),
+    ('zonos3_savannah_audition', 'Savannah', 'American English', 'Female'),
+):
+    VOICES[_voice_id] = {
+        'name': _name, 'accent': _accent, 'gender': _gender,
+        'engine': 'audition', 'audition_only': True,
+        'catalogue_model': 'zonos3', 'preview_text_engine': 'zonos3',
+        'note': 'Stock ZONOS3-Mini CPU audition. Listening verdict pending.',
+    }
 for _model, _voice_id, _name, _accent, _gender in (
     ('tontaube', 'tontaube_marcus_audition', 'Marcus', 'English', 'Male'),
     ('zonos3', 'zonos3_imogen_audition', 'Imogen', 'British English', 'Female'),
@@ -2636,12 +2660,12 @@ def get_voice_preview(voice_id: str) -> Path:
     # Determine TTS engine from voice definition
     voice_info = all_voices().get(voice_id, {})
     engine = voice_info.get('engine', 'kokoro')
-    ptext = _preview_text_for(engine)
 
     # GPU-only engines (Kaggle/Modal/lane render): previews are pre-rendered and
     # dropped into PREVIEWS_DIR, never generated on this CPU box.
-    if engine in ('cosyvoice', 'breeze', 'f5tts', 'fish'):
+    if engine in ('audition', 'cosyvoice', 'breeze', 'f5tts', 'fish'):
         return preview_path if preview_path.exists() else None
+    ptext = _preview_text_for(engine)
 
     try:
         if engine == 'polly':
@@ -5320,19 +5344,28 @@ def all_voices() -> dict:
     merged = dict(VOICES)
     if not CUSTOM_VOICES_DIR.exists():
         return merged
+    known_references = {
+        'accent_irish_male': ('Irish reference', 'Male'),
+        'accent_australian_female': ('Australian reference', 'Female'),
+        'accent_southafrican_male': ('South African reference', 'Male'),
+    }
     for p in sorted(CUSTOM_VOICES_DIR.glob('*.wav')):
-        pretty = p.stem.replace('_', ' ').title()
+        accent, gender = known_references.get(p.stem, ('Custom', 'Custom'))
+        pretty = accent if p.stem in known_references else p.stem.replace('_', ' ').title()
+        metadata = {'accent': accent, 'gender': gender}
+        if p.stem == 'accent_irish_male':
+            metadata['note'] = 'Previous Chatterbox regional tests had weak Irish accent retention. Listen to judge this take.'
         # setdefault, NOT assignment: a voice curated in VOICES keeps its own
         # name, accent and gender. The accent narrators live in this directory
         # because that is how a WAV reaches the chatterbox container, and they
         # were being relabelled "Custom / your clone" purely as a side effect
         # of where the file sits.
         merged.setdefault(f'{p.stem}_nano', {
-            'name': f'{pretty} (your clone, fast)', 'accent': 'Custom',
-            'gender': 'Custom', 'engine': 'chatterbox_nano'})
+            'name': f'{pretty} (your clone, fast)', **metadata,
+            'engine': 'chatterbox_nano'})
         merged.setdefault(p.stem, {
-            'name': f'{pretty} (your clone, Turbo)', 'accent': 'Custom',
-            'gender': 'Custom', 'engine': 'chatterbox'})
+            'name': f'{pretty} (your clone, Turbo)', **metadata,
+            'engine': 'chatterbox'})
     return merged
 
 
@@ -6322,6 +6355,8 @@ def resume_job(job_id):
     job = get_job(job_id)
     if not job: return jsonify({'error': 'Job not found'}), 404
 
+    if all_voices().get(new_voice or job.get('voice'), {}).get('audition_only'):
+        return jsonify({'error': 'This voice is available for audition only'}), 400
     output_path = OUTPUT_DIR / job.get('output_dirname', '')
     has_partial = any(output_path.glob('*.mp3')) if output_path.exists() else False
 
@@ -6461,6 +6496,8 @@ def start_conversion():
 
     if voice2 and voice2 not in all_voices():
         return jsonify({'error': 'Invalid secondary voice selected'}), 400
+    if all_voices().get(voice2, {}).get('audition_only'):
+        return jsonify({'error': 'The secondary voice is available for audition only'}), 400
 
     # Create job
     job_id = str(uuid.uuid4())[:8]
@@ -7413,17 +7450,19 @@ def batch_reconvert():
         return jsonify({'error': 'Choose a narrator, not a separate engine. '
                         'Voice and engine cannot be overridden independently.'}), 400
 
+    voices = all_voices()
+    override = get_setting('default_voice', DEFAULT_VOICE) if voice_option == 'default' else voice_option
+    if voices.get(override, {}).get('audition_only'):
+        return jsonify({'error': 'This voice is available for audition only'}), 400
     enqueued = []
     for jid in job_ids:
         job = get_job(jid)
         if not job:
             continue
 
-        voice = job['voice'] if voice_option == 'keep' else (
-            get_setting('default_voice', DEFAULT_VOICE) if voice_option == 'default' else voice_option
-        )
-        voice_info = all_voices().get(voice)
-        if not voice_info:
+        voice = job['voice'] if voice_option == 'keep' else override
+        voice_info = voices.get(voice)
+        if not voice_info or voice_info.get('audition_only'):
             continue
         engine = voice_info.get('engine', 'chatterbox_nano')
 
@@ -8702,6 +8741,8 @@ def convert_from_library():
         title_mode = data.get('title_mode', 'auto')
         if voice2 and voice2 not in all_voices():
             return jsonify({'error': 'Invalid secondary voice selected'}), 400
+        if all_voices().get(voice2, {}).get('audition_only'):
+            return jsonify({'error': 'The secondary voice is available for audition only'}), 400
 
         def safe_int(v):
             try: return int(v) if v and str(v).strip() else None

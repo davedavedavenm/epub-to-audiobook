@@ -1,5 +1,18 @@
 # Decisions — EPUB to Audiobook
 
+## 27 November 2026 — Compare four CPU voices per listening round
+
+Use four voices at a time. Round one uses the same ordinary opening to judge
+delivery, then gives each voice the same names-and-numbers challenge. Include
+a familiar control and hide the identities until the listener chooses to reveal
+them. Record any retirement against the exact voice and take Dave assessed.
+
+## 25 November 2026 — Keep the auditioned VoxMel 0.6B voices out of Studio
+
+On Shared Test v1, Dave heard robotic speech with the Zira reference and
+rough, warbly speech with the dry Cillian reference. Both takes fall short
+of the quality needed for book narration. [Matched audition details](VOICES.md#25-november-2026--amy-imogen-and-the-voxmel-gpu-audition).
+
 ## 24 November 2026 — Marcus, Imogen and Reverb are local book narrators
 
 Dave approved all three stock readings of pages 1–3 of Zeinab Badawi’s
