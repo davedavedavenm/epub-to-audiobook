@@ -5391,6 +5391,10 @@ def _request_zonos3_upload(name: str, stream):
         audio = stream.read(ZONOS3_MAX_REFERENCE_BYTES + 1)
         if not 12 <= len(audio) <= ZONOS3_MAX_REFERENCE_BYTES or audio[:4] != b'RIFF' or audio[8:12] != b'WAVE':
             return jsonify({'error': 'Upload a PCM WAV under 12 MiB'}), 400
+        try:
+            requests.get(f"{BOOK_CPU_URLS['zonos3']}/audio/voices", timeout=(2, 3)).raise_for_status()
+        except requests.RequestException:
+            return jsonify({'error': 'The local ZONOS3 service is offline or starting. Retry when it is ready.'}), 503
         _zonos3_upload_state.clear()
         _zonos3_upload_state[name] = 'preparing'
         threading.Thread(target=_prepare_zonos3_reference, args=(name, audio), daemon=True).start()

@@ -24,6 +24,7 @@ def test_zonos3_reference_is_held_until_preview_and_replaces_by_identity(monkeyp
         return next(responses)
 
     monkeypatch.setattr(web.requests, 'post', post)
+    monkeypatch.setattr(web.requests, 'get', Mock())
     client = web.app.test_client()
 
     def run_thread(*, target, args, daemon):
@@ -90,6 +91,17 @@ def test_failed_enrollment_never_publishes_and_can_retry(monkeypatch, tmp_path):
     assert web._zonos3_upload_state == {'failed': 'failed'}
     assert not list(web._zonos3_references().glob('*.npy'))
     assert not list(web._zonos3_references().glob('*.json'))
+
+
+def test_unavailable_backend_refuses_upload_before_starting_preparation(monkeypatch):
+    monkeypatch.setattr(web, '_zonos3_upload_state', {})
+    monkeypatch.setattr(web.requests, 'get', Mock(side_effect=web.requests.ConnectionError()))
+    response = web.app.test_client().post('/api/voices/custom', data={
+        'engine': 'zonos3', 'voice_id': 'test', 'file': (io.BytesIO(b'RIFF\0\0\0\0WAVEtest'), 'test.wav'),
+    })
+    assert response.status_code == 503
+    assert 'offline or starting' in response.json['error']
+    assert not web._zonos3_upload_state
 
 
 def test_completeness_gate_catches_clipped_tail_and_tolerates_isolated_name_variants(monkeypatch, tmp_path):

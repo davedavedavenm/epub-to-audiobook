@@ -2104,7 +2104,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                         <label class="setup-label" for="clone-engine">Engine</label>
                         <select id="clone-engine" class="input-control">
                             <option value="chatterbox">Chatterbox Nano / Turbo</option>
-                            <option value="zonos3">ZONOS3-Mini (local)</option>
+                            <option value="zonos3" ${engineUp('zonos3') ? '' : 'disabled'}>ZONOS3-Mini (local)${engineUp('zonos3') ? '' : ' · offline'}</option>
                         </select>
                     </div>
                     <div class="setup-field">
@@ -2173,7 +2173,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 ['Voice cloning', customization.cloning],
                 ['Voice design', customization.design],
             ].map(([label, details]) => {
-                const studio = details.studio === 'upload'
+                const offline = key === 'zonos3' && details.studio === 'upload' && !engineUp('zonos3');
+                const studio = offline ? 'Local upload service offline' : details.studio === 'upload'
                     ? `<a href="#voice-clone-upload" onclick="document.getElementById('clone-engine').value='${key === 'zonos3' ? 'zonos3' : 'chatterbox'}'">Upload a WAV</a>`
                     : escapeHtml(details.studio_label);
                 return `<div><dt>${label}</dt><dd>${escapeHtml(details.model_label)} · ${studio}</dd></div>`;
