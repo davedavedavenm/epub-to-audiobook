@@ -2154,7 +2154,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         const previewButton = (id, v) => v.preview_cached === true
             ? `<button class="preview-btn" type="button" data-voice-button="${escapeHtml(id)}" onclick="playVoicePreview('${escapeHtml(id)}', this)" title="Play cached preview" aria-label="Listen to ${escapeHtml(v.name)}"><span style="margin-left:2px">&#9654;</span></button>`
             : `<button class="preview-btn" type="button" disabled title="Preview has not been cached" aria-label="Preview pending for ${escapeHtml(v.name)}">&#8212;</button>`;
-        const verdictLabel = v => v.rated_sample_id && v.rated_sample_id === v.preview_sample_id
+        const verdictLabel = v => v.rated_sample_id && v.rated_sample_id === v.preview_sample_id &&
+            (!v.rated_audio_sha256 || v.rated_audio_sha256 === v.preview_audio_sha256)
             ? 'Listening verdict' : 'Previous verdict';
         const verdictHtml = v => {
             if (v.catalogue_status) return `<div class="voice-verdict"><strong>${verdictLabel(v)} · ${escapeHtml(v.catalogue_status)}</strong>${v.note ? ` — ${escapeHtml(v.note)}` : ''}</div>`;

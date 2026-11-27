@@ -150,6 +150,10 @@ def test_only_known_custom_reference_ids_receive_regional_tags(monkeypatch, tmp_
     assert voices['accent_irish_male_nano']['accent'] == 'Irish reference'
     assert 'accent retention' in voices['accent_irish_male_nano']['note']
     assert voices['accent_australian_female']['accent'] == 'Australian reference'
+    assert not voices['accent_australian_female'].get('catalogue_status')
+    assert voices['accent_australian_female_nano']['accent'] == 'Unclassified'
+    assert voices['accent_australian_female_nano']['reference_accent'] == 'Australian reference'
+    assert 'Australian' not in voices['accent_australian_female_nano']['name']
     assert voices['accent_southafrican_male_nano']['accent'] == 'South African reference'
     assert voices['other_irish_clone']['accent'] == 'Custom'
 

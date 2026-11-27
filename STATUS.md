@@ -32,7 +32,11 @@ after listening. All four MP3s matched their original manifests and decoded
 in full. Dave marked Klein/Arthur for retirement consideration and kept Beatrice,
 Edwin and Caro. Round two has four different CPU voices and its own saved ratings at
 `evaluations/cpu-engines/output/blind-cpu-2026-11-27-round-2/index.html`.
-The four openings take 67 seconds. [Round-one listening notes](VOICES.md#27-november-2026--first-blind-cpu-round).
+The four openings take 67 seconds. Dave voted Keep on all four. He rated the
+Nano female reference clone and Rosie clean, and reported minor pronunciation
+issues for Stuart Bell and Hugh. He heard no Australian accent in the Nano
+clone and kept it for general narration. The catalogue correction is local
+pending deployment. [Round-two listening notes](VOICES.md#27-november-2026--second-blind-cpu-round).
 
 ## 24 November 2026 — Free NVIDIA T4 narrator auditions
 

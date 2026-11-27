@@ -777,6 +777,29 @@ for _voice_id, _verdict, _note in (
         'catalogue_status': _verdict, 'liked': _verdict == 'Keep',
         'rating_date': '2026-11-27', 'rated_sample_id': 'narrator-standard-v1', 'note': _note,
     }
+_ROUND_TWO_VERDICTS = {
+    voice_id: {
+        'catalogue_status': 'Keep', 'liked': True, 'rating_date': '2026-11-27',
+        'rated_sample_id': 'narrator-standard-v1', 'rated_audio_sha256': audio_hash,
+        'note': f'Round 2: {note}',
+    }
+    for voice_id, audio_hash, note in (
+        ('pocket4_stuart_bell',
+         '3352272559db45f5f1cceb72cd3f560fc53a74f5c185b4a5b394b17c4789cd26',
+         'Natural, with minor pronunciation issues. Dave questioned the reading of 9:30 a.m. and the final April date.'),
+        ('accent_australian_female_nano',
+         'f2ef35c1cb033e367e727a397109ebeb44f0aa41cded5d4a5314c43b65e4434b',
+         'Natural and clean. Dave heard no Australian accent in the reading. The input WAV is labelled Australian.'),
+        ('kitten2_rosie',
+         '69ef4181e27abb364e4448971b46e51f72bd91267873fddbb939c749b6c279bc',
+         'Natural and clean. Dave disliked an earlier expressive audition.'),
+        ('phonon_hugh',
+         '50a48b5f543eb78e830ae513ccd26aff18ea4a4eb7969c272ddc9c954aad80cc',
+         'Natural, with minor issues around Huawei, kilometres and the two dates. Dave wanted “12th” for 12 March.'),
+    )
+}
+for _voice_id in _ROUND_TWO_VERDICTS.keys() & VOICES.keys():
+    VOICES[_voice_id] = {**VOICES[_voice_id], **_ROUND_TWO_VERDICTS[_voice_id]}
 VOICES['kitten2_john_kani_audition'] = {
     'name': 'John Kani reference (AI clone)', 'accent': 'South African reference',
     'gender': 'Male', 'engine': 'audition', 'audition_only': True,
@@ -5379,9 +5402,17 @@ def all_voices() -> dict:
         # because that is how a WAV reaches the chatterbox container, and they
         # were being relabelled "Custom / your clone" purely as a side effect
         # of where the file sits.
-        merged.setdefault(f'{p.stem}_nano', {
+        nano_id = f'{p.stem}_nano'
+        nano_voice = {
             'name': f'{pretty} (your clone, fast)', **metadata,
-            'engine': 'chatterbox_nano'})
+            'engine': 'chatterbox_nano',
+        }
+        if nano_id == 'accent_australian_female_nano':
+            nano_voice.update(
+                _ROUND_TWO_VERDICTS[nano_id], name='Female reference clone (Nano)',
+                accent='Unclassified', reference_accent=accent,
+            )
+        merged.setdefault(nano_id, nano_voice)
         merged.setdefault(p.stem, {
             'name': f'{pretty} (your clone, Turbo)', **metadata,
             'engine': 'chatterbox'})

@@ -14,14 +14,14 @@ import proxy
 def test_shortlist_respects_newer_verdicts_and_exact_models():
     assert len(LIKED_VOICES) == 19
     assert len(CPU_VOICES) == 11
-    assert sum(1 for v in LIKED_VOICES.values() if v['liked']) == 17
+    assert sum(1 for v in LIKED_VOICES.values() if v['liked']) == 18
     assert not any('isabella' in key or 'harriet' in key or 'edmund' in key
                    for key in LIKED_VOICES)
     assert CPU_VOICES['phonon_edwin'][2:] == ('phonon', 'Edwin')
     assert CPU_VOICES['pocket4_bill_boerst'][1] == 'Pocket 4 / October 100M'
     assert LIKED_VOICES['maya2_siddhant']['audition_only']
-    assert LIKED_VOICES['kitten2_rosie']['liked'] is False
-    assert LIKED_VOICES['kitten2_rosie']['catalogue_status'] == 'disliked'
+    assert all_voices()['kitten2_rosie']['liked'] is True
+    assert all_voices()['kitten2_rosie']['catalogue_status'] == 'Keep'
     assert LIKED_VOICES['silencio2_peter']['liked'] is False
     assert LIKED_VOICES['silencio2_peter']['catalogue_status'] == 'disliked'
     assert 'pocket4_peter_yearsley' in LIKED_VOICES
@@ -46,6 +46,26 @@ def test_round_one_verdicts_are_bound_to_exact_voice_ids_and_sample():
     assert not voices['uk_male_minter_nano'].get('catalogue_status')
 
 
+def test_round_two_verdicts_are_bound_to_exact_audio(monkeypatch, tmp_path):
+    import app as web
+
+    monkeypatch.setattr(web, 'CUSTOM_VOICES_DIR', tmp_path)
+    (tmp_path / 'accent_australian_female.wav').touch()
+    voices = all_voices()
+    expected = {
+        'pocket4_stuart_bell': '3352272559db45f5f1cceb72cd3f560fc53a74f5c185b4a5b394b17c4789cd26',
+        'accent_australian_female_nano': 'f2ef35c1cb033e367e727a397109ebeb44f0aa41cded5d4a5314c43b65e4434b',
+        'kitten2_rosie': '69ef4181e27abb364e4448971b46e51f72bd91267873fddbb939c749b6c279bc',
+        'phonon_hugh': '50a48b5f543eb78e830ae513ccd26aff18ea4a4eb7969c272ddc9c954aad80cc',
+    }
+    for voice_id, audio_hash in expected.items():
+        assert voices[voice_id]['catalogue_status'] == 'Keep'
+        assert voices[voice_id]['rated_sample_id'] == 'narrator-standard-v1'
+        assert voices[voice_id]['rated_audio_sha256'] == audio_hash
+        assert not voices[voice_id].get('audition_only')
+    assert 'no Australian accent' in voices['accent_australian_female_nano']['note']
+
+
 def test_voice_catalogue_has_compact_groups_and_shared_sample_details():
     template_path = Path(__file__).resolve().parents[1] / 'webapp' / 'templates' / 'index.html'
     template = template_path.read_text(encoding='utf-8')
@@ -61,6 +81,7 @@ def test_voice_catalogue_has_compact_groups_and_shared_sample_details():
     assert 'playVoicePreview' in template and 'v.preview_cached === true' in template
     assert 'modelCatalogue' in template and 'engineUnconfigured[group.engine]' in template
     assert 'v.rated_sample_id === v.preview_sample_id' in template
+    assert 'v.rated_audio_sha256 === v.preview_audio_sha256' in template
     assert "'Listening verdict' : 'Previous verdict'" in template
     assert 'verdictLabel(v)' in template and 'verdictLabel(other)' in template
 

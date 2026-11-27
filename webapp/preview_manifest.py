@@ -41,7 +41,8 @@ def sample_info(audio_path: Path, expected_prepared_sha256: str | None = None) -
                     str(audio_path), stat.st_mtime_ns, stat.st_size)):
             return {'preview_sample_current': True,
                     'preview_sample_label': SAMPLE_LABEL,
-                    'preview_sample_id': SAMPLE_ID}
+                    'preview_sample_id': SAMPLE_ID,
+                    'preview_audio_sha256': manifest['audio_sha256']}
     except (OSError, ValueError, TypeError, AttributeError):
         pass
     return earlier

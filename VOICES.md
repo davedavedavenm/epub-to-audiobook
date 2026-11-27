@@ -1,5 +1,33 @@
 # Voices and accents
 
+## 27 November 2026 — Second blind CPU round
+
+Dave marked all four Shared Test v1 recordings Natural and voted Keep. He
+heard no Australian accent in B. Keep B for general narration and retain
+the input WAV's Australian label as reference provenance. The cause of
+the accent failure is open. The earlier expressive Rosie audition retains
+its negative verdict. The new standard Rosie recording earned Keep.
+
+| Voice | Pronunciation | Listening notes |
+|---|---|---|
+| A · Stuart Bell, Pocket 4 | Minor issues | Dave questioned whether 9:30 a.m. sounded like “M M” and whether the voice said “21th” in the closing date. |
+| B · Female reference clone, Chatterbox Nano | Clean | No Australian accent heard. |
+| C · Rosie, KittenTTS 2 | Clean | Natural, with no pronunciation issues reported. |
+| D · Hugh, Phonon 31M | Minor issues | Huawei, “12 March” where Dave wanted “12th”, the pronunciation of kilometres, and the closing 21 April date. |
+
+The exported scorecard matches these original MP3s. The sample ID is
+`narrator-standard-v1`. B used the Nano prepared-text SHA-256
+`74de152cc1ed27890fbbcabc88f26d5cf360953e64e70a5d56d897ff1ceb0ee9`.
+A, C and D used the CPU narrators prepared-text SHA-256
+`d13e1b48bdbfb5ed60fab3736f7287b71ffc6a7418955ca976cb1fc7092e77c9`.
+
+| Voice ID | MP3 SHA-256 |
+|---|---|
+| `pocket4_stuart_bell` | `3352272559db45f5f1cceb72cd3f560fc53a74f5c185b4a5b394b17c4789cd26` |
+| `accent_australian_female_nano` | `f2ef35c1cb033e367e727a397109ebeb44f0aa41cded5d4a5314c43b65e4434b` |
+| `kitten2_rosie` | `69ef4181e27abb364e4448971b46e51f72bd91267873fddbb939c749b6c279bc` |
+| `phonon_hugh` | `50a48b5f543eb78e830ae513ccd26aff18ea4a4eb7969c272ddc9c954aad80cc` |
+
 ## 27 November 2026 — First blind CPU round
 
 Dave rated the four Shared Test v1 recordings before sending his revealed
@@ -78,9 +106,9 @@ their verdict and Earlier audition label until replaced with a verified standard
 reading; a prior Like does not approve the new take.
 
 Jack is the hosted leader. Edwin is the requested CPU comparison, not a claimed
-winner over all CPU speakers. The active shortlist is nine CPU voices, five Flux
-voices and three audition-only GPU voices. Rosie and the Silencio/Peter take are
-archived after Dave's newer objections. Pocket/Peter's older Like is separate;
+winner over all CPU speakers. At the time of this review the shortlist was nine
+CPU voices, five Flux voices and three audition-only GPU voices. The earlier Rosie
+and Silencio/Peter takes were archived after Dave's objections. Pocket/Peter's older Like is separate;
 do not make more Peter clones or infer a blanket ban on a whole model family.
 
 See `TUNING-AUDIT-2026-11.md` for the exact implementation and official-source

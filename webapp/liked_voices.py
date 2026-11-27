@@ -24,13 +24,7 @@ LIKED_VOICES = {
           'rating_date': '2026-11-10'}
     for key, (name, model, _family, _speaker) in CPU_VOICES.items()
 }
-# Catalogue verdicts are separate from engine support: these voices remain
-# registered and available to browse, but are no longer part of the shortlist.
-LIKED_VOICES['kitten2_rosie'].update(
-    liked=False,
-    catalogue_status='disliked',
-    note='Dave disliked an earlier audition of this voice. The new shared-passage take has not yet been rated; the earlier verdict is preserved.',
-)
+# Silencio/Peter remains registered and available to browse outside the shortlist.
 LIKED_VOICES['silencio2_peter'].update(
     liked=False,
     catalogue_status='disliked',

@@ -49,10 +49,13 @@ def test_old_or_replaced_audio_cannot_claim_the_new_passage(tmp_path):
     write_manifest(audio, sample_text_for('cpu_narrators'))
     assert sample_info(audio)['preview_sample_current']
     payload_hash = hashlib.sha256(sample_text_for('cpu_narrators').encode()).hexdigest()
-    assert sample_info(audio, payload_hash)['preview_sample_current']
+    info = sample_info(audio, payload_hash)
+    assert info['preview_sample_current']
+    assert info['preview_audio_sha256'] == hashlib.sha256(b'old recording').hexdigest()
     assert not sample_info(audio, 'different-preparation')['preview_sample_current']
     audio.write_bytes(b'a different recording')
     assert not sample_info(audio)['preview_sample_current']
+    assert 'preview_audio_sha256' not in sample_info(audio)
 
 
 def test_preparation_failure_never_silently_sends_raw_numbers(monkeypatch):

@@ -1,5 +1,17 @@
 # Decisions — EPUB to Audiobook
 
+## 27 November 2026 — Keep all four round-two CPU narrators
+
+Keep Pocket 4 Stuart Bell, the Chatterbox Nano female reference clone,
+KittenTTS 2 Rosie and Phonon 31M Hugh based on their exact Shared Test v1
+recordings. Rosie's new Keep supersedes the earlier catalogue dislike.
+Retain the earlier expressive take's listening history.
+
+Dave heard no Australian accent in the Nano clone. Register the output
+accent as Unclassified and use a neutral name in Studio. Preserve the
+Australian label as WAV provenance. This verdict applies to the Nano
+recording of `accent_australian_female_nano`. [Round-two ratings and audio hashes](VOICES.md#27-november-2026--second-blind-cpu-round).
+
 ## 27 November 2026 — Compare four CPU voices per listening round
 
 The first round recorded a Retire vote for Klein X1.5-Pro/Arthur and Keep
@@ -139,9 +151,9 @@ Historical hash-pinned reproductions retain their named legacy passage.
 
 **Superseded layout interpretation; see the correction above.** Organize the catalogue without discarding history: Jack and Edwin first, other
 CPU and hosted Likes in collapsed groups, GPU auditions separate, full catalogue
-collapsed. Rosie and Silencio 2/Peter are no longer Likes; retain them in the
-changed-verdict archive. There are now **17 Likes: nine CPU, five Flux, three GPU
-auditions**. The older 19-Like snapshot below is historical. This does not approve
+collapsed. Rosie and Silencio 2/Peter were removed from the shortlist at the
+time, leaving **17 Likes: nine CPU, five Flux, three GPU auditions**. Rosie's
+newer Shared Test v1 verdict appears above. This does not approve
 new render quality, remove engine services, or change the production narrator.
 
 `TUNING-AUDIT-2026-11.md` distinguishes vendor defaults, intentional supported
