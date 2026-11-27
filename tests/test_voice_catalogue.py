@@ -4,7 +4,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'webapp'))
 
 from app import TTS_ENGINES, all_voices
-from voice_catalogue import build_voice_catalogue, model_key_for_voice
+from voice_catalogue import MODEL_GROUPS, build_voice_catalogue, model_key_for_voice
+from voice_customization import voice_customization_for
 
 
 def test_every_registered_voice_appears_once_in_its_model_group():
@@ -151,3 +152,43 @@ def test_only_known_custom_reference_ids_receive_regional_tags(monkeypatch, tmp_
     assert voices['accent_australian_female']['accent'] == 'Australian reference'
     assert voices['accent_southafrican_male_nano']['accent'] == 'South African reference'
     assert voices['other_irish_clone']['accent'] == 'Custom'
+
+
+def test_customization_filters_distinguish_upstream_features_from_studio_access():
+    groups = {group['key']: group for group in build_voice_catalogue(all_voices(), TTS_ENGINES)}
+    assert {key for key, group in groups.items() if 'upload' in group['customization_filters']} == {
+        'chatterbox_turbo', 'chatterbox_nano',
+    }
+    assert set(groups['zonos3']['customization_filters']) == {'stock', 'cloning', 'steering'}
+    assert groups['zonos3']['customization']['cloning']['studio'] == 'preset_only'
+    assert groups['qwen3_base']['customization_filters'] == ['cloning']
+    assert groups['qwen3_customvoice']['customization_filters'] == ['stock', 'steering']
+    assert groups['gemini31']['customization_filters'] == ['stock', 'steering']
+    assert groups['breeze2']['customization']['design']['studio'] == 'sample'
+    assert not {'cloning', 'design'} & set(groups['deepgram_aura2']['customization_filters'])
+    assert groups['deepgram_aura2']['customization']['cloning']['model_label'] == 'Unsupported'
+    assert 'Unverified' in groups['kale_base']['customization']['cloning']['model_label']
+    assert voice_customization_for('unclassified:new-model')['customization_filters'] == []
+
+
+def test_documented_customization_covers_model_registry():
+    from voice_customization import _OPTIONS
+
+    assert {group['key'] for group in MODEL_GROUPS} == set(_OPTIONS)
+
+
+def test_history_cards_preserve_drama3_and_ming3_verdicts_without_offering_voices():
+    groups = {group['key']: group for group in build_voice_catalogue(all_voices(), TTS_ENGINES)}
+    for key in ('fish_drama3', 'ming3_05b'):
+        history = groups[key]
+        assert history['verdict_only']
+        assert history['voice_count'] == 0
+        assert history['representative_id'] is None
+        assert history['book_route'] == 'No Studio book route.'
+        assert 'cloning' in history['customization_filters']
+        assert history['customization']['cloning']['studio'] == 'none'
+    assert 'awaits a listening verdict' in groups['fish_drama3']['model_note']
+    assert 'dropped words' in groups['fish_drama3']['model_note']
+    assert {'design', 'steering'} <= set(groups['fish_drama3']['customization_filters'])
+    assert 'tinny' in groups['ming3_05b']['model_note']
+    assert {'design', 'steering'} <= set(groups['ming3_05b']['customization_filters'])

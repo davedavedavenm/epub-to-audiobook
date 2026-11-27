@@ -800,15 +800,17 @@ VOICES['zonos3_imogen_gpu_audition'] = {
     'liked': True, 'rating_date': '2026-11-25', 'rated_sample_id': 'narrator-standard-v1',
     'note': 'Liked on Shared Test v1. Same stock Imogen preset as the CPU book voice.',
 }
-for _voice_id, _name, _accent, _gender in (
-    ('zonos3_rupert_audition', 'Rupert', 'British English', 'Male'),
-    ('zonos3_savannah_audition', 'Savannah', 'American English', 'Female'),
+for _voice_id, _name, _accent, _gender, _note in (
+    ('zonos3_rupert_audition', 'Rupert', 'British English', 'Male',
+     'Single CPU request. Whisper flagged “Helen Carter” and “rose by” for a listening check.'),
+    ('zonos3_savannah_audition', 'Savannah', 'American English', 'Female',
+     'Five CPU requests after two full-passage attempts omitted text. Whisper found all names and values in this take.'),
 ):
     VOICES[_voice_id] = {
         'name': _name, 'accent': _accent, 'gender': _gender,
         'engine': 'audition', 'audition_only': True,
         'catalogue_model': 'zonos3', 'preview_text_engine': 'zonos3',
-        'note': 'Stock ZONOS3-Mini CPU audition. Listening verdict pending.',
+        'note': f'{_note} Listening verdict pending.',
     }
 for _model, _voice_id, _name, _accent, _gender in (
     ('tontaube', 'tontaube_marcus_audition', 'Marcus', 'English', 'Male'),

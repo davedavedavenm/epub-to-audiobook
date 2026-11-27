@@ -185,6 +185,14 @@ automatically.
 
 ## Choosing a voice (when you're ready to fuss)
 
+On **Voices**, the customization filter can show models that accept reference
+audio, models that create a voice from a description, or the models with a WAV
+upload in this Studio. Each card lists the model capability and the controls
+available here. A preconfigured reference is a particular narrator already
+supplied to Studio. To bring your own recording, use the WAV upload on a card
+that offers it. For a regional audiobook voice, listen to the opening, middle
+and end of a chapter before choosing it for a book.
+
 Voices are grouped by **model**. You don't have to care about this to start —
 but when you want the best result:
 

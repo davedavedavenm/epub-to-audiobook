@@ -8,6 +8,17 @@ positive listening verdict. The ZONOS3-Mini CPU book route uses Imogen. Rupert
 and Savannah are stock CPU auditions awaiting a listening verdict. The VoxMel
 0.6B card records the Zira and Cillian verdicts without offering either voice.
 
+Rupert's 78.50-second preview reached the final date. Whisper flagged the
+surname Carter and the ticket-price phrasing. Two single-request Savannah
+takes failed the completeness check. The retained take reads the same text in
+five parts (68.78 seconds including joins). Its transcript recovered the names,
+numbers and ending. Neither new voice has been cleared for book conversion.
+
+For model selection, use the voice-customization filter and read the model
+and Studio labels together. The late-September to November GPU review covers
+reference cloning, prompt-created voices and what has actually been measured
+at chapter length. [GPU review](TTS-WATCH-FINDINGS.md#27-november-2026--gpu-developments-for-customizable-audiobook-narrators).
+
 The first blind CPU round pairs three unresolved voices with the usual book
 default. The four ordinary openings take 66 seconds together. The local page
 at `evaluations/cpu-engines/output/blind-cpu-2026-11-27/index.html` includes

@@ -2,6 +2,12 @@
 
 ## 27 November 2026 — Compare four CPU voices per listening round
 
+Prefer CPU and GPU models that can reuse a custom narrator when selecting new
+book engines. Preserve useful stock voices and score the actual recording.
+Studio distinguishes reference cloning, creating a voice from a description,
+and steering a stock voice. Show both what the exact model supports and what
+the installed Studio route makes available.
+
 Use four voices at a time. Round one uses the same ordinary opening to judge
 delivery, then gives each voice the same names-and-numbers challenge. Include
 a familiar control and hide the identities until the listener chooses to reveal

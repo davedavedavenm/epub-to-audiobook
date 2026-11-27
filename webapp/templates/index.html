@@ -369,8 +369,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 .model-catalogue-intro{ max-width:76ch; color:var(--text-secondary); font-size:.84rem; line-height:1.5; margin:5px 0 0; }
 .catalogue-controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; max-width:100%; }
 .catalogue-search{ width:min(100%,260px); }
-.catalogue-search,.catalogue-accent{ min-height:40px; padding:9px 12px; color:var(--text-primary); background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:9px; font:inherit; }
-.catalogue-accent{ max-width:100%; }
+.catalogue-search,.catalogue-filter{ min-height:40px; padding:9px 12px; color:var(--text-primary); background:var(--paper-raised); border:1px solid var(--border-strong); border-radius:9px; font:inherit; }
+.catalogue-filter{ max-width:100%; }
 .model-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:12px; }
 .model-card{ min-width:0; padding:16px 17px; border:1px solid var(--border); border-radius:12px; background:var(--paper-raised); box-shadow:var(--shadow); }
 .model-title-row{ display:flex; justify-content:space-between; align-items:start; gap:12px; }
@@ -379,6 +379,11 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
 .model-count{ flex:none; color:var(--ink-3); font:600 .62rem var(--mono); text-align:right; }
 .model-route,.model-note,.voice-verdict{ margin:10px 0 0; color:var(--text-secondary); font-size:.78rem; line-height:1.45; }
 .model-route strong,.model-note strong,.voice-verdict strong{ color:var(--text-primary); font-weight:650; }
+.model-customization{ margin:12px 0 0; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:.72rem; line-height:1.4; }
+.model-customization div{ display:grid; grid-template-columns:minmax(88px,.8fr) minmax(0,1.4fr); gap:8px; padding:3px 0; }
+.model-customization dt{ color:var(--text-primary); font-weight:650; }
+.model-customization dd{ margin:0; color:var(--text-secondary); }
+.model-customization a{ color:var(--accent-ink); text-underline-offset:2px; }
 .catalogue-voice{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px; padding:12px 0 0; border-top:1px solid var(--border); }
 .catalogue-voice-copy{ min-width:0; }
 .catalogue-voice-name{ overflow-wrap:anywhere; font-weight:720; font-size:.92rem; }
@@ -2085,7 +2090,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             </div>
         `;
         const cloneCard = `
-            <div class="card" style="margin-bottom:32px;">
+            <div class="card" id="voice-clone-upload" style="margin-bottom:32px;">
                 <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:8px; flex-wrap:wrap;">
                     <div style="font-weight:700; font-size:1.08rem;">Clone a voice</div>
                     <div style="font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);">upload a reference · no rebuild</div>
@@ -2153,6 +2158,19 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             if (v.catalogue_status) return `<div class="voice-verdict"><strong>Previous verdict · ${escapeHtml(v.catalogue_status)}</strong>${v.note ? ` — ${escapeHtml(v.note)}` : ''}</div>`;
             return v.note ? `<div class="voice-verdict"><strong>Notes</strong> — ${escapeHtml(v.note)}</div>` : '';
         };
+        const customizationHtml = ({customization}) => {
+            const rows = [
+                ['Stock voices', customization.stock],
+                ['Voice cloning', customization.cloning],
+                ['Voice design', customization.design],
+            ].map(([label, details]) => {
+                const studio = details.studio === 'upload'
+                    ? '<a href="#voice-clone-upload">Upload a WAV</a>'
+                    : escapeHtml(details.studio_label);
+                return `<div><dt>${label}</dt><dd>${escapeHtml(details.model_label)} · ${studio}</dd></div>`;
+            }).join('');
+            return `<dl class="model-customization" aria-label="Model capabilities and Studio access">${rows}</dl>`;
+        };
         const modelCard = group => {
             const id = group.representative_id;
             const v = group.representative;
@@ -2179,11 +2197,12 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 return `<div class="model-voice-row" data-voice-card="${escapeHtml(otherId)}"><div class="model-voice-copy"><strong>${escapeHtml(other.name)}</strong><span>${metadata}${auditionOnlyLabel(other)}${archived ? ` · ${escapeHtml(archived)}` : ''}</span><div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div><div class="paused-badge">Paused</div><div class="loading-badge">Loading cached sample…</div></div>${previewButton(otherId, other)}</div>`;
             }).join('');
             const more = siblings ? `<details class="model-voices"><summary>Other voices in this model (${group.other_voice_ids.length})</summary>${siblings}</details>` : '';
-            const counts = group.verdict_only ? '' : `<div class="model-count">${group.voice_count} voice${group.voice_count === 1 ? '' : 's'}<br>${group.current_count} v1 · ${group.earlier_count} older · ${group.pending_count} pending</div>`;
+            const counts = group.verdict_only ? '<div class="model-count">Listening record</div>' : `<div class="model-count">${group.voice_count} voice${group.voice_count === 1 ? '' : 's'}<br>${group.current_count} v1 · ${group.earlier_count} older · ${group.pending_count} pending</div>`;
             return `<article class="model-card" data-model-card="${escapeHtml(group.key)}">
                 <div class="model-title-row"><div><h3 class="model-title">${escapeHtml(group.title)}</h3><div class="model-version">${escapeHtml(group.model)}</div></div>${counts}</div>
                 ${group.model_note ? `<div class="model-note">${escapeHtml(group.model_note)}</div>` : ''}
                 <div class="model-route"><strong>Book conversion</strong> · ${escapeHtml(route)}</div>
+                ${customizationHtml(group)}
                 ${repHtml}${more}</article>`;
         };
         const accentOptions = [...new Set(Object.values(voices).map(catalogueAccent))].sort();
@@ -2192,8 +2211,16 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 <p class="model-catalogue-intro">Compare one voice from each model using the shared test. Expand a card to hear its other voices. Accent filters use the recorded voice or reference labels.</p></div>
                 <div class="catalogue-controls">
                     <input id="model-catalogue-search" class="catalogue-search" type="search" placeholder="Find a model or voice" aria-label="Find a model or voice">
-                    <select id="model-catalogue-accent" class="catalogue-accent" aria-label="Filter by recorded accent">
+                    <select id="model-catalogue-accent" class="catalogue-filter" aria-label="Filter by recorded accent">
                         <option value="">All accents</option>${accentOptions.map(accent => `<option>${escapeHtml(accent)}</option>`).join('')}
+                    </select>
+                    <select id="model-catalogue-customization" class="catalogue-filter" aria-label="Filter by voice customization">
+                        <option value="">All model capabilities</option>
+                        <option value="upload">Upload a reference in Studio</option>
+                        <option value="cloning">Models that clone voices</option>
+                        <option value="design">Models with text voice design</option>
+                        <option value="steering">Models with voice or accent controls</option>
+                        <option value="stock">Models with stock voices</option>
                     </select>
                 </div>
             </div>
@@ -2208,16 +2235,18 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         container.innerHTML = catalogueSummary + samplePassage + cloudStrip + modalInfoBanner + compareCard + cloneCard;
         const search = container.querySelector('#model-catalogue-search');
         const accent = container.querySelector('#model-catalogue-accent');
+        const customization = container.querySelector('#model-catalogue-customization');
         const grid = container.querySelector('#model-catalogue-grid');
         const empty = container.querySelector('#catalogue-no-results');
         const updateCatalogue = () => {
-            const shown = filterModelCatalogue(modelCatalogue, voices, search.value, accent.value);
+            const shown = filterModelCatalogue(modelCatalogue, voices, search.value, accent.value, customization.value);
             grid.innerHTML = shown.map(modelCard).join('');
             empty.style.display = shown.length ? 'none' : 'block';
             syncPreviewUi();
         };
         search.addEventListener('input', updateCatalogue);
         accent.addEventListener('change', updateCatalogue);
+        customization.addEventListener('change', updateCatalogue);
         updateCatalogue();
         loadCloneList();
     }
@@ -2228,9 +2257,10 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         return recorded.match(/^(American|Australian|British|Indian|Irish|South African)\b/i)?.[0] || recorded;
     }
 
-    function filterModelCatalogue(groups, voiceData, query, accent) {
+    function filterModelCatalogue(groups, voiceData, query, accent, customization = '') {
         const term = query.trim().toLowerCase();
         return groups.flatMap(group => {
+            if (customization && !group.customization_filters?.includes(customization)) return [];
             const members = [group.representative_id, ...group.other_voice_ids].filter(id => voiceData[id]);
             const modelMatches = [group.title, group.model, group.key].join(' ').toLowerCase().includes(term);
             const candidates = members.filter(id => {

@@ -6,6 +6,8 @@ book conversion route.
 """
 from __future__ import annotations
 
+from voice_customization import voice_customization_for
+
 
 MODEL_GROUPS = (
     {
@@ -132,6 +134,21 @@ MODEL_GROUPS = (
         'book_route': 'Integrated through the locked GPU lane recipe.',
     },
     {
+        'key': 'fish_drama3', 'title': 'Fish Drama 3', 'model': 'Drama 3 · native auditions',
+        'engine': 'fish_drama3', 'preferred': (), 'verdict_only': True,
+        'model_note': ('Dave liked the six-paragraph Peter reading and the 29-second Cillian take. '
+                       'The repaired short Peter take also passed listening. Other takes dropped '
+                       'words, and the rebuilt 14.6-minute Cillian take awaits a listening verdict.'),
+        'book_route': 'No Studio book route.',
+    },
+    {
+        'key': 'ming3_05b', 'title': 'Ming TTS', 'model': '3.0 · 0.5B',
+        'engine': 'ming3', 'preferred': (), 'verdict_only': True,
+        'model_note': ('Dave liked the instruction-guided storytelling apart from Irish pronunciation. '
+                       'The Peter reference clone sounded tinny with some artefacts.'),
+        'book_route': 'No Studio book route.',
+    },
+    {
         'key': 'higgs3', 'title': 'Higgs TTS', 'model': '3',
         'engine': 'fish', 'preferred': ('higgs_cillian_irish',),
         'model_note': 'New named-reference tests require verified speaker permission under the current model terms. Earlier auditions are retained.',
@@ -155,7 +172,7 @@ MODEL_GROUPS = (
         'book_route': 'Integrated; free-tier credentials and quota apply.',
     },
     {
-        'key': 'inworld15', 'title': 'Inworld TTS', 'model': '1.5',
+        'key': 'inworld15', 'title': 'Inworld TTS', 'model': '1.5 Mini',
         'engine': 'inworld', 'preferred': ('inworld_Graham',),
         'book_route': 'Integrated; credentials and pricing apply.',
     },
@@ -312,6 +329,7 @@ def build_voice_catalogue(voices: dict[str, dict], engine_registry: dict | None 
             'model': spec['model'],
             'engine': spec['engine'],
             'book_route': spec['book_route'],
+            **voice_customization_for(spec['key']),
             'model_note': spec.get('model_note', ''),
             'verdict_only': spec.get('verdict_only', False),
             'voice_count': len(members),
