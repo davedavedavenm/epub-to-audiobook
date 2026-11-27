@@ -196,3 +196,22 @@ def test_history_cards_preserve_drama3_and_ming3_verdicts_without_offering_voice
     assert {'design', 'steering'} <= set(groups['fish_drama3']['customization_filters'])
     assert 'tinny' in groups['ming3_05b']['model_note']
     assert {'design', 'steering'} <= set(groups['ming3_05b']['customization_filters'])
+def test_accent_evidence_distinguishes_reference_target_and_listening():
+    from voice_catalogue import accent_evidence_for
+
+    nano = accent_evidence_for('accent_australian_female_nano', {
+        'accent': 'Unclassified', 'reference_accent': 'Australian reference',
+    })
+    assert nano == {'accent_source': 'reference', 'accent_label': 'Australian'}
+    assert accent_evidence_for('uk_male_minter', {
+        'accent': 'British', 'engine': 'chatterbox',
+    }) == {'accent_source': 'reference', 'accent_label': 'British'}
+    assert accent_evidence_for('gemini_achernar', {
+        'accent': 'British (prompted)', 'liked': True,
+    }) == {'accent_source': 'target', 'accent_label': 'British'}
+    assert accent_evidence_for('deepgram_hyperion', {
+        'accent': 'Australian', 'liked': True,
+    }) == {'accent_source': 'listed', 'accent_label': 'Australian'}
+    natasha = accent_evidence_for('en-AU-NatashaNeural', {'accent': 'Australian'})
+    assert natasha['heard_accent'] == 'Australian'
+    assert 'Earlier Edge audition' in natasha['heard_accent_note']

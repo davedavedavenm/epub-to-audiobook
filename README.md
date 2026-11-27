@@ -45,6 +45,12 @@ requires a separately authorised environment-gated session.
 - **Voice Play buttons are cache reads.** They never start a hidden synthesis
   job. A voice appears in audition pickers only after a non-trivial preview MP3
   is persisted.
+- **Model capabilities and Studio controls are listed separately.** Use the
+  Voices customization filter to find models that support reference audio or
+  voice design. Studio offers WAV upload on Chatterbox. Reference accent labels
+  describe the source recording. Use **Heard and accepted** in the accent
+  filter for voices with a documented listening verdict on the accent.
+  [Choosing a voice](GETTING-STARTED.md#choosing-a-voice-when-youre-ready-to-fuss).
 - **Human listening decides audio quality.** ASR is retained only to detect
   missing, repeated, truncated or grossly mismatched speech.
 - **The LAN app is passwordless.** If published, protect the UI with one SSO
@@ -101,7 +107,10 @@ Colab can reclaim lane VMs, so renders checkpoint chunk audio and resume on a fr
   - **Qwen3-TTS 1.7B** - approved for expressive English non-fiction (**Aiden**). `CustomVoice` model with natural-language emotive instruction steering for dynamic non-fiction pacing and question inflection.
   - **F5-TTS (300M)** - ultra-fast non-autoregressive flow matching diffusion model with ConvNeXt v2 acoustic backbone and Vocos 24kHz vocoder. Measured RTF 0.577 on Tesla T4.
   - **CosyVoice 3 (0.5B)** - multilingual bi-streaming diffusion architecture with Qwen2 LLM conditioning, ~150ms latency, and `wetext` text normalization.
-- **EdgeTTS** - free high-quality Microsoft neural voices via `tts-proxy`
+- **EdgeTTS** - Microsoft neural voices via the unofficial `edge-tts` client
+  and `tts-proxy`. The native Australian voices are Natasha and William. They
+  require internet access. Earlier auditions had acceptable accents and poor
+  pronunciation of Chinese company names. [Listening evidence](VOICES.md).
 
 ### Web Application & Media Delivery
 - **Studio Console Web UI** - modern dark obsidian slate theme with Google Fonts (Plus Jakarta Sans & JetBrains Mono)
@@ -296,7 +305,7 @@ Add your own from a 15–30 s WAV clip — see [GETTING-STARTED.md](GETTING-STAR
 ### Other Voices
 - **Optional local stock voices:** Tontaube Marcus (`tontaube_marcus_audition`), ZONOS3-Mini Imogen (`zonos3_imogen_audition`), and Reverb English male narrator 1 (`reverb_en_male_narrator_audition`).
 - **Deepgram (cloud Aura-2):** Orion, Orpheus, Arcas, Pandora, Hyperion
-- **EdgeTTS:** British/American/Australian incl. Ryan, Sonia, Libby, Ava, Andrew, Brian, Aria, Jenny
+- **EdgeTTS:** includes British Ryan, Sonia and Libby, American Ava, Andrew, Brian, Aria and Jenny, and Australian Natasha and William.
 - **Inworld (paid):** Graham, Rupert, Olivia, Blake, Elizabeth, Dennis, Ashley, Luna
 
 ## Configuration

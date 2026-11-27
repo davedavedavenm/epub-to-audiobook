@@ -648,7 +648,7 @@ VOICES = {
     'nigel_boydell': {'name': 'Nigel Boydell (British male, characterful)', 'accent': 'British', 'gender': 'Male', 'engine': 'chatterbox'},
     # --- NO ACCENTED VOICES ON CHATTERBOX. THIS IS SETTLED. ---
     #
-    # Tried twice, failed twice, on the same underlying cause.
+    # Two earlier regional trials failed by ear.
     #
     # Attempt 1: clone from raw VCTK clips. Dave: "those accents are shit."
     # Attempt 2 (2026-07-27): clone from ~20s of smooth continuous prose
@@ -657,12 +657,9 @@ VOICES = {
     # material. Dave: "you softened the shit out of the voices and made them
     # american... almost all of them have lost their accent."
     #
-    # The reference audio was never the variable. Chatterbox is zero-shot: it
-    # takes timbre from the reference and PHONETICS from its own training data,
-    # which is predominantly American. Feeding it a better-accented reference
-    # cannot change that — I had already written exactly this conclusion, then
-    # talked myself out of it and shipped without listening. The cost was a
-    # round of Dave's time.
+    # The pinned Nano/Turbo runtime conditions on the reference audio but
+    # exposes no accent control. The exact cause of the failed accent trials
+    # is open. See VOICES.md and TUNING-AUDIT-2026-11.md.
     #
     # The Piper VCTK path above also failed by ear and remains only for legacy
     # comparison. Do not add an accented Chatterbox or Piper production voice
@@ -870,7 +867,7 @@ from voice_sample import (  # noqa: E402
     ORDINARY_TEXT, CHALLENGE_TEXT, sample_text_for as _preview_text_for,
 )
 from preview_manifest import sample_info as _preview_sample_info, write_manifest as _write_preview_manifest  # noqa: E402
-from voice_catalogue import build_voice_catalogue  # noqa: E402
+from voice_catalogue import accent_evidence_for, build_voice_catalogue  # noqa: E402
 
 PREVIEW_SAMPLE = {'id': SAMPLE_ID, 'sha256': SAMPLE_SHA256, 'text': PREVIEW_TEXT,
                   'ordinary_text': ORDINARY_TEXT, 'challenge_text': CHALLENGE_TEXT}
@@ -5442,7 +5439,8 @@ def voices_for_client() -> dict:
                        for info in catalogue.values()}
     }
     return {
-        voice_id: {**info, 'preview_cached': _preview_is_cached(voice_id),
+        voice_id: {**info, **accent_evidence_for(voice_id, info),
+                   'preview_cached': _preview_is_cached(voice_id),
                    **_preview_sample_info(
                        PREVIEWS_DIR / f'{voice_id}.mp3',
                        prepared_hashes.get(info.get('preview_text_engine', info.get('engine', 'kokoro'))),

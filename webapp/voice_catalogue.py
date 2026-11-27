@@ -9,6 +9,43 @@ from __future__ import annotations
 from voice_customization import voice_customization_for
 
 
+# These are explicit regional listening results, not general narration votes.
+# They describe the cited earlier auditions, regardless of the current preview.
+HEARD_ACCENTS = {
+    # VOICES.md: July Edge accents were acceptable; names still caused trouble.
+    'en-AU-NatashaNeural': ('Australian', 'Earlier Edge audition; Chinese company names sounded wrong.'),
+    'en-AU-WilliamNeural': ('Australian', 'Earlier Edge audition; Chinese company names sounded wrong.'),
+    # VOICES.md: the September Breeze auditions on Irish history passages.
+    'breeze_cillian_irish': ('Irish', 'Earlier Breeze audition; no verified Studio book route.'),
+}
+
+REFERENCE_ENGINES = {'chatterbox', 'chatterbox_nano', 'tada', 'cosyvoice', 'breeze', 'vibevoice', 'fish'}
+
+
+def accent_evidence_for(voice_id: str, info: dict) -> dict:
+    """Report what the accent label describes without reclassifying the voice."""
+    label = info.get('accent') or 'Unspecified'
+    reference = info.get('reference_accent')
+    engine = info.get('engine')
+    if reference or label.endswith(' reference'):
+        source = 'reference'
+        label = (reference or label).removesuffix(' reference')
+    elif label.endswith((' requested', ' (prompted)')):
+        source = 'target'
+        label = label.removesuffix(' requested').removesuffix(' (prompted)')
+    elif label in ('English', 'Unspecified', 'Unclassified', 'Custom', 'Prompt-controlled', 'Character'):
+        source = 'unspecified'
+    elif engine in REFERENCE_ENGINES or (engine == 'qwen3' and voice_id == 'uk_male_minter_qwen3') or voice_id == 'silencio2_peter':
+        source = 'reference'
+    else:
+        source = 'listed'
+
+    evidence = {'accent_source': source, 'accent_label': label.removesuffix(' English')}
+    if voice_id in HEARD_ACCENTS:
+        evidence['heard_accent'], evidence['heard_accent_note'] = HEARD_ACCENTS[voice_id]
+    return evidence
+
+
 MODEL_GROUPS = (
     {
         'key': 'tontaube', 'title': 'Tontaube', 'model': 'V1.1 INT4 · audiobook style',

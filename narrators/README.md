@@ -8,9 +8,10 @@ Default narrator and all existing service boundaries remain unchanged.
 The wrapper uses official upstream runtimes, one resident model family at a time,
 four CPU threads, no CUDA, no cloud fallback. Health and voice-list requests do
 not load a model. Speech requests are serialized; model downloads happen on first
-use. The 12 GiB ceiling accommodates Kitten 2's much heavier CPU path. Kitten's
-short preview Like is historical: Dave subsequently rejected Rosie. That voice
-and Silencio 2/Peter remain registered but are no longer shortlisted.
+use. The 12 GiB ceiling accommodates Kitten 2's much heavier CPU path. Dave
+rejected an earlier expressive Rosie take and voted Keep on the later Shared
+Test v1 take, which he heard as natural and clean. Silencio 2/Peter remains
+registered with its earlier negative verdict. [Round-two listening notes](../VOICES.md#27-november-2026--second-blind-cpu-round).
 
 New auditions use [the shared standard](../AUDITION-STANDARD.md). The current
 [tuning audit](../TUNING-AUDIT-2026-11.md) distinguishes the audition settings

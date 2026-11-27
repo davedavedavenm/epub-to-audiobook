@@ -2096,9 +2096,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                     <div style="font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);">upload a reference · no rebuild</div>
                 </div>
                 <div style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:14px;">
-                    Upload 15–30 seconds of clean speech as a <b>WAV</b>. It becomes a narrator on
-                    both Chatterbox engines. Read at the pace you want the book read —
-                    the clone copies your delivery, not just your timbre.
+                    Upload 15–30 seconds of clean speech as a <b>WAV</b> for the enabled Chatterbox engines.
+                    Listen to the preview to check the generated accent and delivery.
                 </div>
                 <div class="compare-row">
                     <div class="setup-field">
@@ -2185,8 +2184,9 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 const state = sampleState(v);
                 return `<div class="catalogue-voice" data-voice-card="${escapeHtml(id)}">
                     <div class="catalogue-voice-copy"><div class="catalogue-voice-name">${escapeHtml(v.name)}</div>
-                    <div class="catalogue-voice-meta">Representative voice · ${escapeHtml(v.accent || 'Accent not recorded')}${v.gender ? ` · ${escapeHtml(v.gender)}` : ''}${auditionOnlyLabel(v)}</div>
+                    <div class="catalogue-voice-meta">Representative voice · ${escapeHtml(catalogueAccentLabel(v))}${v.gender ? ` · ${escapeHtml(v.gender)}` : ''}${auditionOnlyLabel(v)}</div>
                     <span class="sample-state ${state.cls}">${escapeHtml(state.label)}</span>
+                    ${v.heard_accent_note ? `<div class="voice-verdict">${escapeHtml(v.heard_accent_note)}</div>` : ''}
                     ${verdictHtml(v)}
                     <div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div><div class="paused-badge">Paused</div><div class="loading-badge">Loading cached sample…</div></div>
                     ${previewButton(id, v)}</div>`;
@@ -2196,7 +2196,7 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 if (!other) return '';
                 const state = sampleState(other);
                 const verdict = other.catalogue_status ? `${verdictLabel(other)} · ${other.catalogue_status}${other.note ? ` — ${other.note}` : ''}` : (other.note || '');
-                const metadata = [other.accent, state.label].filter(Boolean).map(escapeHtml).join(' · ');
+                const metadata = [catalogueAccentLabel(other), state.label, other.heard_accent_note].filter(Boolean).map(escapeHtml).join(' · ');
                 return `<div class="model-voice-row" data-voice-card="${escapeHtml(otherId)}"><div class="model-voice-copy"><strong>${escapeHtml(other.name)}</strong><span>${metadata}${auditionOnlyLabel(other)}${verdict ? ` · ${escapeHtml(verdict)}` : ''}</span><div class="speaking-badge"><span class="eq"><i></i><i></i><i></i><i></i></span> Speaking</div><div class="paused-badge">Paused</div><div class="loading-badge">Loading cached sample…</div></div>${previewButton(otherId, other)}</div>`;
             }).join('');
             const more = siblings ? `<details class="model-voices"><summary>Other voices in this model (${group.other_voice_ids.length})</summary>${siblings}</details>` : '';
@@ -2208,14 +2208,19 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
                 ${customizationHtml(group)}
                 ${repHtml}${more}</article>`;
         };
-        const accentOptions = [...new Set(Object.values(voices).map(catalogueAccent))].sort();
+        const accentOptions = Object.entries(catalogueAccentSources).map(([source, heading]) => {
+            const labels = [...new Set(Object.values(voices).flatMap(voice => catalogueAccentCategories(voice)
+                .filter(([category]) => category === source).map(([, label]) => label)))].sort();
+            return labels.length ? `<optgroup label="${heading}">${labels.map(label =>
+                `<option value="${escapeHtml(`${source}:${label}`)}">${escapeHtml(label)} (${heading})</option>`).join('')}</optgroup>` : '';
+        }).join('');
         const catalogueSummary = `<section class="model-catalogue" aria-labelledby="model-catalogue-title">
             <div class="model-catalogue-head"><div><h2 id="model-catalogue-title">Voices by model</h2>
-                <p class="model-catalogue-intro">Compare one voice from each model using the shared test. Expand a card to hear its other voices. Accent filters use the recorded voice or reference labels.</p></div>
+                <p class="model-catalogue-intro">Compare voices using the shared test. The accent filter includes listening results, voice labels, source references and requested accents.</p></div>
                 <div class="catalogue-controls">
                     <input id="model-catalogue-search" class="catalogue-search" type="search" placeholder="Find a model or voice" aria-label="Find a model or voice">
-                    <select id="model-catalogue-accent" class="catalogue-filter" aria-label="Filter by recorded accent">
-                        <option value="">All accents</option>${accentOptions.map(accent => `<option>${escapeHtml(accent)}</option>`).join('')}
+                    <select id="model-catalogue-accent" class="catalogue-filter" aria-label="Filter by accent evidence">
+                        <option value="">All accents</option>${accentOptions}
                     </select>
                     <select id="model-catalogue-customization" class="catalogue-filter" aria-label="Filter by voice customization">
                         <option value="">All model capabilities</option>
@@ -2254,10 +2259,20 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
         loadCloneList();
     }
 
-    function catalogueAccent(voice) {
-        const recorded = voice.accent?.trim() || 'Unspecified';
-        if (recorded === 'English') return 'English (region unspecified)';
-        return recorded.match(/^(American|Australian|British|Indian|Irish|South African)\b/i)?.[0] || recorded;
+    const catalogueAccentSources = {
+        heard: 'Heard and accepted', listed: 'Voice label', reference: 'Source reference', target: 'Requested accent',
+    };
+
+    function catalogueAccentCategories(voice) {
+        const categories = [];
+        if (voice.heard_accent) categories.push(['heard', voice.heard_accent]);
+        if (catalogueAccentSources[voice.accent_source]) categories.push([voice.accent_source, voice.accent_label]);
+        return categories;
+    }
+
+    function catalogueAccentLabel(voice) {
+        return catalogueAccentCategories(voice).map(([source, label]) => `${label} (${catalogueAccentSources[source]})`).join(' · ')
+            || (voice.accent === 'English' ? 'English (region unspecified)' : voice.accent || 'Accent not recorded');
     }
 
     function filterModelCatalogue(groups, voiceData, query, accent, customization = '') {
@@ -2268,8 +2283,8 @@ body.has-voice-player .content-body{ padding-bottom:136px; }
             const modelMatches = [group.title, group.model, group.key].join(' ').toLowerCase().includes(term);
             const candidates = members.filter(id => {
                 const voice = voiceData[id];
-                return (!accent || catalogueAccent(voice) === accent) &&
-                    (modelMatches || [voice.name, id, voice.accent].join(' ').toLowerCase().includes(term));
+                return (!accent || catalogueAccentCategories(voice).some(([source, label]) => `${source}:${label}` === accent)) &&
+                    (modelMatches || [voice.name, id, catalogueAccentLabel(voice)].join(' ').toLowerCase().includes(term));
             });
             if (!candidates.length && (members.length || accent || !modelMatches)) return [];
             if (candidates.length === members.length) return [group];

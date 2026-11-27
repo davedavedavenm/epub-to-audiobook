@@ -215,7 +215,12 @@ but when you want the best result:
   beat/tied paragraph-aware packing. Neither replaces Beatrice/Nano or becomes
   an automatic fallback. Every offered preset is cached before it appears.
 - **Tontaube Marcus, ZONOS3-Mini Imogen, and Reverb English male narrator 1** are optional local CPU book voices. An operator can enable the `tontaube`, `zonos3`, and `reverb` profiles. Each voice uses its existing Shared Test v1 preview. Tontaube is for private noncommercial use and Reverb requires noncommercial use and attribution. [CPU engine setup](README.md#tts-engines).
-- In **Voices**, choose an accent to browse matching recordings across models. The labels describe the stock speaker or the reference used. Play the opening to judge the accent you actually hear.
+- In **Voices**, choose **Heard and accepted** for voices with a documented
+  accent verdict. Each result describes the audition that earned it. The
+  filter also offers voice labels, source references and requested accents.
+  The Nano female clone appears under **Australian (Source reference)**.
+  Its Shared Test v1 reading was natural and clear, and Dave heard no
+  Australian accent. [Round-two listening notes](VOICES.md#27-november-2026--second-blind-cpu-round).
 - Kale Base **Amy** and the GPU take of **Imogen** are listening previews. Under **ZONOS3-Mini**, **Rupert** (British English) and **Savannah** (American English) are additional CPU auditions. Choose the regular **Imogen** in the book picker for local conversion.
 - **Historical GPU auditions** include Breeze 2/Cillian and Qwen3 CustomVoice/Aiden. A cached audition does not make a voice available for book conversion. Check the current voice and route before selecting an engine. [Engine and route inventory](ENGINES.md).
 - **Fish S2 Pro / Cillian Murphy (free render lanes)** — the locked recipe for
@@ -291,19 +296,20 @@ quota-exhausted before starting a job.
 
 ### Add your own voice from a ~15 s clip
 
-**Settings → Clone a voice**: give it a name, choose a **WAV** file and press
-**Upload**. It becomes a narrator on both Chatterbox engines.
+In **Voices → Clone a voice**, give the reference a name, choose a **WAV** file
+and press **Upload**. Studio can prepare a preview for each enabled Chatterbox
+engine using that reference.
 
 - **Real WAV (PCM) only.** An MP3 renamed to `.wav` is refused right there with
   that exact message — Chatterbox opens the file with `wave`, so a fake WAV
   fails at synthesis time with an error pointing nowhere near the upload.
-- **8–45 seconds** is the band the server checks: under 8 s clones far less
-  reliably, over 45 s adds nothing. Mono, 22 kHz or above, is the safer
-  reference — and read at the pace you want the book read, because the clone
-  copies your delivery, not just your timbre.
-- The upload immediately queues both local variants (`<name>` and
-  `<name>_nano`), but the voice appears in **Voices** only once their previews
-  are persisted — so Play is always instant, never a cold synthesis.
+- Aim for **15–30 seconds** of clean speech in mono at 22 kHz or higher. Studio
+  warns about clips shorter than 8 seconds or longer than 45 seconds. The
+  reference conditions the generated voice. Judge its delivery and accent in
+  the resulting audio.
+- The upload starts preview preparation for healthy local variants (`<name>`
+  and `<name>_nano`). Each variant appears in **Voices** once its preview is
+  cached and ready to play.
 - `GET /api/voices/custom` lists them; `DELETE /api/voices/custom/<id>` removes
   one.
 

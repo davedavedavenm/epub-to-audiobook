@@ -5,6 +5,14 @@ and the honest record of incidents found during hardening. **This file is the
 runbook. Current evidence lives in STATUS.md and standing decisions in
 DECISIONS.md.**
 
+## Production checkout and deployment verification
+
+The Zorin checkout is `/home/dave/ai/lab/stacks/epub-to-audiobook`. Deploy the
+stack from Git through `scripts/deploy.sh` when the render lanes are idle.
+Read the deployed revision from both web and worker, confirm the enabled
+engines are healthy and open the exact persisted previews being reported as
+ready. [Deploy procedure](OPERATIONS.md#2026-07-27--deploying-only-webapp-leaves-the-worker-running-old-code).
+
 ## Historical live baseline — 2026-08-15
 
 - `epub-to-audiobook-worker` is **running and healthy**, with `OOMKilled=false`
