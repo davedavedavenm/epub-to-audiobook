@@ -9,9 +9,10 @@ debugging problems the official docs already answered — see OPERATIONS.md
 
 ## Stock CPU book narrators added 24 November 2026
 
-Studio enables one auditioned preset per service. All three upstream models
-can also clone a reference voice. The British Imogen and Irish Cillian names
-below refer to Zyphra’s supplied presets.
+Studio offers the listed presets. All three upstream models support voice
+cloning. Of these three, ZONOS3 also has a Studio enrollment and book route
+for a user's WAV. Marcus and Reverb use their stock narrators in Studio.
+The British Imogen and Irish Cillian names below are Zyphra’s supplied presets.
 
 | Studio narrator | Other upstream choices | Usage and runtime |
 |---|---|---|
@@ -20,6 +21,12 @@ below refer to Zyphra’s supplied presets.
 | English male narrator 1 | Sixteen presets across seven languages include English female narrator and English male narrator 2. Custom cloning takes a clean recording and its transcript. | Pinned INT8 weights under CC BY-NC 4.0, Apache-2.0 runtime. Attribute Software Mansion AI Labs. [Model card](https://huggingface.co/software-mansion/Reverb-TTS) · [Studio backend](reverb/README.md) |
 
 ## Listening outcomes (one user, one book — NOT a general ranking)
+
+For recent GPU developments, the November comparison records sustained chapter
+renders, a quantized Qwen reference-encoder mismatch, whole-passage omissions
+in a VoxCPM2 read and the limits of automatically identifying accents. Native
+Australian Natasha also read the same source via the Studio Edge proxy.
+[Runtime versions, listening evidence and timings](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
 
 Recorded so the repo reflects what was verified by ear. The original comparison
 used `Apple in China` (dense proper nouns, non-fiction) on 2026-07-10; later

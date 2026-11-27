@@ -5,7 +5,7 @@ this pipeline first. Direction set 2026-07 after the Abundance test proved the
 worst listening problems were text defects, not voice defects.
 
 For Marcus, book conversion uses the explicit number profile and preserves
-proper names. For Imogen and Reverb, the `native` profile removes structural
+proper names. For Imogen, enrolled ZONOS3 voices and Reverb, the `native` profile removes structural
 noise such as footnote markup before passing text to the model’s own frontend.
 Their book, recovery and preview paths share this choice. An explicit per-job
 search-and-replace rule still applies. Imogen’s stock frontend read 1916 as
@@ -128,8 +128,9 @@ mid-number": `1976` heard as `1970…6`). It wasn't the spelling. **It was the c
 inside the spelling.**
 
 - Commas are now stripped from all spelled numbers (regression-tested).
-- Years are now spelled for **every** engine, modern included — A/B'd by ear
-  (**#26**): Dave judged the spelled form better.
+- The legacy, explicit and modern text profiles spell years. Dave preferred
+  the spelled form in the #26 audition. The later native profile sends digits
+  to the engine's own text frontend.
 
 **Lesson: when a transform "hurts" an engine, suspect the *formatting* of the
 output before you ban the *idea*.**

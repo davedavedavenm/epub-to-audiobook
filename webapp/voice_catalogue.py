@@ -58,7 +58,8 @@ MODEL_GROUPS = (
     {
         'key': 'zonos3', 'title': 'ZONOS3-Mini', 'model': '800M · 100M active',
         'engine': 'zonos3', 'preferred': ('zonos3_imogen_audition',),
-        'model_note': 'Approved on the Badawi excerpt. Imogen read 1916 as a cardinal number on the Irish history excerpt.',
+        'model_note': 'Dave liked Imogen on the Badawi excerpt. She read 1916 as a cardinal number in Irish history. '
+                      'A WAV upload creates a reusable narrator. Its regional accent needs a listening check.',
         'book_route': 'Local CPU · Imogen preset and enrolled references.',
     },
     {
@@ -160,6 +161,8 @@ MODEL_GROUPS = (
     {
         'key': 'qwen3_base', 'title': 'Qwen3-TTS', 'model': '1.7B base/reference voice',
         'engine': 'qwen3', 'preferred': ('uk_male_minter_qwen3',),
+        'model_note': 'Dave liked the native John Kani take. A separate November Vulkan trial read 1,410 words '
+                      'with the same reference after rebuilding the reference encoder. Its listening verdict is open.',
         'book_route': 'Integrated; profile is opt-in.',
     },
     {
@@ -202,6 +205,8 @@ MODEL_GROUPS = (
     {
         'key': 'voxcpm2', 'title': 'VoxCPM2', 'model': 'Peter Yearsley reference audition',
         'engine': 'audition', 'preferred': ('voxcpm2_peter',),
+        'model_note': 'A separate November GPU trial reused one text-designed narrator for a chapter. '
+                      'It dropped part of a sentence, including on two retries. Hold that configuration for unattended books.',
         'book_route': 'Audition only; book conversion is not integrated.',
     },
     {

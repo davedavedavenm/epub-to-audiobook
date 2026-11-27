@@ -1,5 +1,7 @@
 # August 2026 new-engine auditions
 
+The November regional narrator study compares one continuous chapter across the local CPU, Radeon Vulkan, free NVIDIA GPUs and the deployed Edge proxy. It includes runtime revisions, verified omissions and the limits of automatic accent identification. [Regional narrators for audiobooks](ACCENT-GPU-2026-11-27.md).
+
 > **Historical evaluation runbook.** The commands and claims below apply to the August experiments. See the current inventory and shared test standard. [ENGINES.md](../../ENGINES.md) and [AUDITION-STANDARD.md](../../AUDITION-STANDARD.md).
 
 This is an isolated, CPU-only short-sample gate for the three viable engines

@@ -51,7 +51,8 @@ requires a separately authorised environment-gated session.
   ZONOS3-Mini service. Reference accent labels
   describe the source recording. Use **Heard and accepted** in the accent
   filter for voices with a documented listening verdict on the accent.
-  [Choosing a voice](GETTING-STARTED.md#choosing-a-voice-when-youre-ready-to-fuss).
+  [Choosing a voice](GETTING-STARTED.md#choosing-a-voice-when-youre-ready-to-fuss) ·
+  [Australian controls and chapter-length GPU comparisons](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
 - **Human listening decides audio quality.** ASR is retained only to detect
   missing, repeated, truncated or grossly mismatched speech.
 - **The LAN app is passwordless.** If published, protect the UI with one SSO

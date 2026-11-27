@@ -1,5 +1,11 @@
 # Decisions — EPUB to Audiobook
 
+## 27 November 2026 — Regional verdicts and reusable narrators
+
+Reserve **Heard and accepted** for a listening verdict on that voice and regional accent. Keep the source recording's region, a provider's locale and the requested accent searchable with their own labels. Automated accent predictions can help investigate a failure. Dave's listening verdict determines the regional recommendation.
+
+Offer explicit ZONOS3 WAV enrollment alongside Chatterbox enrollment. Preserve the chosen speaker and chunking profile for previews, queued books and recovery. Require a complete cached preview before offering an enrolled narrator. Use the approved reference across the book. Apply recurring reading corrections through shared text preparation and review flagged passages, so the reader need not mark up every occurrence. [Regional tests](evaluations/new-engines/ACCENT-GPU-2026-11-27.md) · [Backend and verification](zonos3/README.md).
+
 ## 27 November 2026 — Keep all four round-two CPU narrators
 
 Keep Pocket 4 Stuart Bell, the Chatterbox Nano female reference clone,

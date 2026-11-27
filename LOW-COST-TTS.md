@@ -186,10 +186,12 @@ benchmarks. Kaggle therefore remains the least-cash path while quota is
 available: **$0**, but about **28.10 of 30 nominal weekly GPU hours for Vibe** or
 **25.49 hours for Qwen**, before startup, ASR and retries.
 
-Sources: [Kaggle efficient GPU usage](https://www.kaggle.com/docs/efficient-gpu-usage)
-(free P100; quota is 30 hours/week or sometimes higher) ·
-[Vast pricing](https://docs.vast.ai/guides/instances/pricing) (marketplace,
-per-second compute plus storage and bandwidth).
+Kaggle retired the P100 used for this historical estimate in September. Check
+the available accelerator and the account’s weekly quota when scheduling a book.
+Vast bills compute by the second, with storage and bandwidth charges.
+[Kaggle hardware announcement](https://www.kaggle.com/discussions/product-announcements/735239) ·
+[Kaggle GPU usage guide](https://www.kaggle.com/docs/efficient-gpu-usage) ·
+[Vast pricing](https://docs.vast.ai/guides/instances/pricing).
 
 ### 2026-07-29 local Q8 feasibility check — measured and heard
 

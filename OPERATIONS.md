@@ -13,6 +13,15 @@ Read the deployed revision from both web and worker, confirm the enabled
 engines are healthy and open the exact persisted previews being reported as
 ready. [Deploy procedure](OPERATIONS.md#2026-07-27--deploying-only-webapp-leaves-the-worker-running-old-code).
 
+## Recover a partially finalized local book
+
+Local recovery identifies chapters by their numbered audio files. Both
+`001_Part_1.mp3` and the final `01 - Part 1.mp3` identify chapter 1.
+If chapter 2 is missing, Resume keeps chapter 1 and regenerates chapter 2
+with the job's recorded narrator. The final check flags duplicate chapter
+numbers. Preserve both copies for comparison if an older interrupted job
+already contains duplicate outputs. [Recovery verification](STATUS.md).
+
 ## Historical live baseline — 2026-08-15
 
 - `epub-to-audiobook-worker` is **running and healthy**, with `OOMKilled=false`

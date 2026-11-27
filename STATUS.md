@@ -1,5 +1,15 @@
 # Project Status & Remaining Tasks
 
+## 27 November 2026 — Regional narrator controls and chapter measurements
+
+The live Studio at revision `1fe9c80` enrolled the 19.296-second round-two WAV as **Female Reference Nov27** using local ZONOS3. The cached preview decoded through the end and its SHA-256 matched the enrollment record. The catalogue showed 193 IDs, 177/177 configured previews ready and 149 on the current shared standard. We fetched every advertised cached preview through the live API and decoded all 177 through EOF. The current Voices filter distinguishes a region heard in an audition from a provider label, reference or written request.
+
+The same 1,410 words produced 8:09 with Edge Natasha, 7:55 with a ZONOS3 reference and Australian steering on CPU, 7:53 on free T4, 7:44 with a Qwen reference on Radeon Vulkan, and 6:44 with VoxCPM2 on free T4. ZONOS3 T4 took 59 seconds of warm synthesis. The VoxCPM2 read lost a passage, including on two bounded retries. The new accent targets await Dave's listening verdict. [Evidence and recent GPU developments](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
+
+Revision `36fd121` added enrollment-service readiness and grouped the new voice correctly under ZONOS3. It also fixed recovery of a book containing an already-finalized chapter. In an isolated copy of the deployed web and worker, an uploaded two-chapter EPUB used the live enrolled narrator and the local converter. A resume kept the finalized first MP3 byte-for-byte, repeated only chapter two's calls, and produced exactly two chapters. Both the normal and recovered recordings reached 100% normalized transcript coverage (59.95 and 51.70 seconds). Production jobs and Audiobookshelf were separate from the test. [Recovery procedure](OPERATIONS.md#recover-a-partially-finalized-local-book).
+
+The same revision enrolled a second narrator, **Vctk P374**, using the CC BY 4.0 human Australian source. The catalogue then showed 194 voice IDs, 178/178 configured previews ready and 150 current shared tests across 34 model cards. All 178 served files (215,656,451 bytes) decoded through EOF. Both new voices are in the local book picker and are unclassified by output accent.
+
 ## 27 November 2026 — Accent browsing and four-voice CPU listening rounds
 
 Studio's Voices catalogue groups recordings by model and can filter those
@@ -35,8 +45,8 @@ Edwin and Caro. Round two has four different CPU voices and its own saved rating
 The four openings take 67 seconds. Dave voted Keep on all four. He rated the
 Nano female reference clone and Rosie clean, and reported minor pronunciation
 issues for Stuart Bell and Hugh. He heard no Australian accent in the Nano
-clone and kept it for general narration. The catalogue correction is local
-pending deployment. [Round-two listening notes](VOICES.md#27-november-2026--second-blind-cpu-round).
+clone and kept it for general narration. Revision `8496f5b` deployed that
+catalogue correction. [Round-two listening notes](VOICES.md#27-november-2026--second-blind-cpu-round).
 
 ## 24 November 2026 — Free NVIDIA T4 narrator auditions
 

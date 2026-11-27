@@ -1,5 +1,11 @@
 # Voices and accents
 
+## Finding a regional audiobook narrator
+
+In Studio, open **Voices → Voices by model** and choose the region under **Heard and accepted** to find recordings Dave endorsed for that accent. Voice labels, source references and requested accents have separate filter groups. Native Australian English Natasha and William and the Irish Cillian auditions are useful starting points. Check the book-route label before choosing a narrator. The round-two Nano female clone remains a Keep for general narration.
+
+For a custom narrator, open **Voices → Clone a voice**, choose the engine and upload one clean WAV. ZONOS3 can reuse the resulting speaker embedding across a book. Its upload checks whether the standard preview reached the end. The original reference, a complete preview and a convincing accent answer three different questions. The linked experiment includes the same reference through several engines and an uninterrupted 1,410-word reading. [Accent and GPU chapter tests](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
+
 ## 27 November 2026 — Second blind CPU round
 
 Dave marked all four Shared Test v1 recordings Natural and voted Keep. He
@@ -306,14 +312,14 @@ Following extensive auditions on Modal Cloud GPUs across *Breakneck* and *The Ar
 1. **Cillian Murphy (Breeze TTS 2) is the definitive Irish & Multilingual winner.**
    - Dave's listening verdict: **"outstanding... almost perfect"**.
    - Cloned from `chatterbox/voices/cillian_irish_dry.wav` (9.5s clean studio reference).
-   - Fixed `seed=42` eliminates inter-sentence pitch/timbre drift; `guidance_scale=2.5` eliminates date/number warbling.
-   - Flawlessly articulated Irish Gaelic political titles and placenames. Rendered *The Armed Struggle* full-book production.
+   - The audition used `seed=42` and `guidance_scale=2.5`. Dave praised the Irish political titles and placenames on this excerpt.
+   - The full *Armed Struggle* production used Fish S2 Pro. [Production recipe](CILLIAN-RECIPE.md).
    - Broadcast mastered (-20 LUFS integrated loudness, +1.0 dB EQ at 220 Hz, -2 dB high shelf at 7.5 kHz).
 
 2. **Qwen3-TTS Aiden (`qwen3_aiden`) is approved for Emotive English Non-Fiction.**
    - Dave's listening verdict: **"solid voice... great emotive uses... really nice"**.
    - `CustomVoice` 1.7B studio model with dynamic natural-language emotion steering.
-   - Note: Zero-shot base model cloning with Qwen3 produces breath artifacts and poor non-English pronunciation; `CustomVoice` studio voices are the approved operational mode.
+   - The September Base-model reference audition had breath artifacts and weak non-English pronunciation. Dave later liked a separate November John Kani Base-model take. The November GGUF runtime has its own reference-encoding requirements. [November comparison](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
 
 3. **F5-TTS (300M) & CosyVoice 3 (0.5B) Modern Diffusion Cloners**:
    - Evaluated on the same Tough Irish Words challenge with Cillian Murphy studio reference.
@@ -821,7 +827,7 @@ recorded speech if any is available.
 
 | Need | Current answer |
 |---|---|
-| **Irish history narration, production, £0** | **Fish S2 Pro / `fish_cillian_irish`** — the locked recipe (`CILLIAN-RECIPE.md`), Dave's verdict *"Fish S2 Pro retry voice is perfect"* (2026-09-22, reversing the 2026-09-18 theatrical-prompt rejection). Rendered on the **free Colab L4 lane**, gated per chapter by waveform + ASR completeness. Its preview is a 65 s cut from a **gated** chapter, so what you audition is the real output. Currently rendering *The Armed Struggle*. |
+| **Irish history narration, production, £0** | **Fish S2 Pro / `fish_cillian_irish`** — the locked recipe (`CILLIAN-RECIPE.md`), Dave's verdict *"Fish S2 Pro retry voice is perfect"* (2026-09-22, reversing the 2026-09-18 theatrical-prompt rejection). Rendered on the **free Colab L4 lane**, gated per chapter by waveform + ASR completeness. Its preview is a 65 s cut from a **gated** chapter, so what you audition is the real output. The delivered 16.37-hour audiobook passed all ten chapter gates. |
 | Irish or South African, local | **No approved production voice.** The exact Chatterbox Multilingual V3 regional gate failed by ear. |
 | OmniVoice-supported accent, local | Candidate for short work: accents sounded good, but pronunciation needs overrides and CPU speed rules out full books. |
 | Irish, South African or Australian, online | **Azure William (AU), Connor (IE) and Luke (ZA) are accepted opt-in quality-floor voices** on the proven 48 kHz lossless, correctly processed path. Accents are acceptable; emotion is weak and none is as real as Arthur. F0 first, never automatic paid fallback. |
