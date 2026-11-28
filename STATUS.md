@@ -1,5 +1,9 @@
 # Project Status & Remaining Tasks
 
+## 28 November 2026 — OGG TTS chapter trial
+
+The 430k checkpoint rendered all 60 requests for the same 1,410-word chapter on a free T4. FP32 produced 7:40 of audio in 34:44 of synthesis. The plain prose had 0.64% normalized word error rate on unprompted Whisper base.en. Dates and currency in the shared challenge produced substantially more disagreements. OGG is an audition candidate. The listening desk now contains this chapter alongside the ZONOS3, Qwen, VoxCPM2 and Edge readings. [Measurements and sources](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
+
 ## 27 November 2026 — Regional narrator controls and chapter measurements
 
 The live Studio at revision `1fe9c80` enrolled the 19.296-second round-two WAV as **Female Reference Nov27** using local ZONOS3. The cached preview decoded through the end and its SHA-256 matched the enrollment record. The catalogue showed 193 IDs, 177/177 configured previews ready and 149 on the current shared standard. We fetched every advertised cached preview through the live API and decoded all 177 through EOF. The current Voices filter distinguishes a region heard in an audition from a provider label, reference or written request.

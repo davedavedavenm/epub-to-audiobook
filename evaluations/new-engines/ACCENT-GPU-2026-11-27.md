@@ -57,6 +57,7 @@ The short comparison uses the Studio shared audition. The sustained reading uses
 | ZONOS3, same source, reference and steering, free NVIDIA T4 | 7:53 | 0:59 across 11 requests | 99.5% across the joined recording, with no flagged dropped span or missing tail. |
 | VoxCPM2, fictional narrator from one saved prompt, free T4 | 6:44 | 13:11 across 14 requests | Two independent recognizers found a damaged second passage. The other 13 each matched at least 96.9%. |
 | Qwen3-TTS Base, full reference plus transcript, Radeon 780M | 7:44 | 12:36 across 16 requests | 92–100% ordered coverage per part, 97.2% weighted across parts. No flagged missing span or unmatched tail. |
+| OGG TTS 430k, fictional reference and adjacent text, free T4 | 7:40 | 34:44 across 60 requests | 1,392 of 1,401 normalized tokens aligned. Both ends present. The longest unmatched source run was “any one”, heard as “anyone”. |
 
 Times cover synthesis requests, including provider latency for Edge. Finished audio includes joins. Downloading weights, compiling, transcription and retries are separate costs. The ZONOS3 T4 compiled its native runtime in 27:23 on a fresh machine. The cold build alone cost more time than this chapter saved. A warm T4 produced about eight minutes of speech per minute of inference. No paid GPU was used for these chapter trials.
 
@@ -94,6 +95,10 @@ OGG TTS has an actual November checkpoint, in addition to the runtime changes ab
 
 The first free T4 run loaded the checkpoint and codec. Using FP16 in place of the upstream BF16 autocast produced invalid sampling probabilities before any speech. A second allocation requested an L4 but exposed no CUDA device. Those failures concern the actual precision and hardware of the respective runs.
 
+The overnight T4 retry used FP32 throughout and completed. Model and reference loading took 60.13 seconds. At 4.53 seconds of synthesis per second of chapter audio, this was the slowest completed GPU configuration here. The 60-part plain-prose chapter had 0.64% normalized word error rate on unprompted Whisper base.en. The 12-part shared challenge took 4:44 to produce 67.95 seconds and was much harder for the recognizer (20.59% word error rate). Dates, prices and other numbers deserve their own check before considering it for nonfiction. Both WAVs and MP3s decode in full. The result justifies further interest in this model for continuous prose. The voice and its accent have not received a listening verdict.
+
+A second independent, unprompted Whisper medium transcription scored 12.35% word error rate on the challenge. It recovered more names but still disagreed on several numeric phrases, including the final April date. These are transcript discrepancies, with the original recording available for listening.
+
 Fish Drama 3’s November 20 llama.cpp update supports a single reference and transcript. Its published Q4_K_M backbone alone is 20.56 GB. The older native runtime produced a checked and repaired 14.6-minute Cillian reading here. A chapter on the new port would be a new result. Tontaube V1.1 Flash, released November 26, is interesting for fast Marcus narration. Its one English speaker does not expand regional customization. [Drama 3 cloning update](https://github.com/ggml-org/llama.cpp/pull/32586) · [Fish weights and licence](https://huggingface.co/ggml-org/drama-3-GGUF/tree/b11e7887a6cca16f1aa06a2555ece8ad38dad37f) · [Tontaube Flash release](https://github.com/craitech/tontaube/releases/tag/v1.2.0).
 
 ## Local recordings and verification files
@@ -107,4 +112,5 @@ Open `evaluations/new-engines/output/accent-gpu-2026-11-27/index.html` on Dave's
 | `new-engines/output/qwen3-q8-vulkan-nov27/` and `qwen3-q8-icl-vulkan-nov27/` in the same parent | Baseline and rebuilt Qwen companion logs, fixed-reference short tests and transcript checks |
 | `new-engines/output/qwen3-resident-icl-vulkan-nov27/` | Resident-server command, source hashes, all 16 chapter requests, elapsed times and per-part transcripts |
 | `new-engines/output/accent-controls-nov27/` | Classifier revision, input hashes, observation times and labels for the controls and full chapters |
+| `new-engines/output/ogg-430k-nov27/v3-output/out/` | OGG 430k FP32 run, request texts and timings, unprompted ASR, reference hash and complete recordings |
 | `new-engines/output/accent-gpu-2026-11-27/` | Listening page, enrollment records, served preview hashes and API playback audit |

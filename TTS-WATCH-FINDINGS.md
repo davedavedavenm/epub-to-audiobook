@@ -6,6 +6,8 @@
 
 ## 27 November 2026 — Chapter results for regional narrators
 
+On 28 November, the November OGG TTS 430k checkpoint completed the same chapter on a free T4 in FP32. It produced 7:40 of speech in 34:44 across 60 requests. Whisper aligned 1,392 of 1,401 normalized source tokens. Dates and currency were harder in the shared challenge. [Pinned weight revision](https://huggingface.co/FashionFlora/ogg-tts/tree/271d038feb9d8030f8eb4a15112787d4bfefb309) · [Chapter evidence](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
+
 The matched 1,410-word comparison now has audio from the deployed native Australian Edge voice, a directed ZONOS3 clone on CPU and free T4, VoxCPM2 on free T4 and the November Qwen port on a Radeon 780M. ZONOS3 produced 7:53 on the T4 in 59 seconds of inference. In the original VoxCPM2 read, two recognizers independently flagged a damaged passage that a chapter-wide average concealed. The August Qwen conversion silently used only a speaker embedding until we rebuilt its companion model for the new reference encoder. [Full results, runtime revisions and limitations](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
 
 ## 27 November 2026 — GPU developments for customizable audiobook narrators
