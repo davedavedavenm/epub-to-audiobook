@@ -1,5 +1,9 @@
 # Project Status & Remaining Tasks
 
+## 28 November 2026 — Regional desk listening verdict
+
+Dave rejected the accent performances on the regional desk. The timing and text-coverage measurements below still describe those recordings. The Australian accent shortlist from that desk is empty. Fish S2 Pro Cillian and Higgs Cillian have separate, positive Irish audiobook evidence. [Exact scope and CPU round three](VOICES.md#28-november-2026--regional-listening-desk-rejected).
+
 ## 28 November 2026 — OGG TTS chapter trial
 
 The 430k checkpoint rendered all 60 requests for the same 1,410-word chapter on a free T4. FP32 produced 7:40 of audio in 34:44 of synthesis. The plain prose had 0.64% normalized word error rate on unprompted Whisper base.en. Dates and currency in the shared challenge produced substantially more disagreements. OGG is an audition candidate. The listening desk now contains this chapter alongside the ZONOS3, Qwen, VoxCPM2 and Edge readings. [Measurements and sources](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
@@ -8,7 +12,7 @@ The 430k checkpoint rendered all 60 requests for the same 1,410-word chapter on 
 
 The live Studio at revision `1fe9c80` enrolled the 19.296-second round-two WAV as **Female Reference Nov27** using local ZONOS3. The cached preview decoded through the end and its SHA-256 matched the enrollment record. The catalogue showed 193 IDs, 177/177 configured previews ready and 149 on the current shared standard. We fetched every advertised cached preview through the live API and decoded all 177 through EOF. The current Voices filter distinguishes a region heard in an audition from a provider label, reference or written request.
 
-The same 1,410 words produced 8:09 with Edge Natasha, 7:55 with a ZONOS3 reference and Australian steering on CPU, 7:53 on free T4, 7:44 with a Qwen reference on Radeon Vulkan, and 6:44 with VoxCPM2 on free T4. ZONOS3 T4 took 59 seconds of warm synthesis. The VoxCPM2 read lost a passage, including on two bounded retries. The new accent targets await Dave's listening verdict. [Evidence and recent GPU developments](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
+The same 1,410 words produced 8:09 with Edge Natasha, 7:55 with a ZONOS3 reference and Australian steering on CPU, 7:53 on free T4, 7:44 with a Qwen reference on Radeon Vulkan, and 6:44 with VoxCPM2 on free T4. ZONOS3 T4 took 59 seconds of warm synthesis. The VoxCPM2 read lost a passage, including on two bounded retries. Dave subsequently rejected the accent performances on the desk. [Evidence and recent GPU developments](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
 
 Revision `36fd121` added enrollment-service readiness and grouped the new voice correctly under ZONOS3. It also fixed recovery of a book containing an already-finalized chapter. In an isolated copy of the deployed web and worker, an uploaded two-chapter EPUB used the live enrolled narrator and the local converter. A resume kept the finalized first MP3 byte-for-byte, repeated only chapter two's calls, and produced exactly two chapters. Both the normal and recovered recordings reached 100% normalized transcript coverage (59.95 and 51.70 seconds). Production jobs and Audiobookshelf were separate from the test. [Recovery procedure](OPERATIONS.md#recover-a-partially-finalized-local-book).
 

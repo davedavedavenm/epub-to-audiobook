@@ -1,5 +1,9 @@
 # Decisions — EPUB to Audiobook
 
+## 28 November 2026 — The regional desk failed by ear
+
+Dave rejected every accent performance on the November regional listening desk. Withdraw its accent recommendations. Preserve general narration votes independently. Reserve an accent recommendation for a particular take that meets Dave’s listening bar on audiobook prose. Earlier “acceptable” or “quality floor” ratings, provider locales, transcription accuracy and speed do not meet that bar. [Listening record](VOICES.md#28-november-2026--regional-listening-desk-rejected).
+
 ## 27 November 2026 — Regional verdicts and reusable narrators
 
 Reserve **Heard and accepted** for a listening verdict on that voice and regional accent. Keep the source recording's region, a provider's locale and the requested accent searchable with their own labels. Automated accent predictions can help investigate a failure. Dave's listening verdict determines the regional recommendation.

@@ -56,7 +56,7 @@ from text_profiles import MODERN_ENGINES, EXPLICIT_ENGINES, NATIVE_ENGINES  # no
 # These have no integrated book path. Their audited native API receives source
 # text directly; engine-internal normalization is recorded with each render.
 # Never extend this exception to unknown engines or failed preprocessing.
-RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2', 'higgs3', 'voxmel', 'kale', 'ogg_tts')
+RAW_AUDITION_ENGINES = ('maya2', 'voxcpm2', 'higgs3', 'voxmel', 'kale', 'ogg_tts', 'orpheus_au', 'voxcpm_za')
 
 
 def sample_text_for(engine: str, *, sample_id: str = SAMPLE_ID) -> str:

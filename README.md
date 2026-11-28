@@ -111,8 +111,8 @@ Colab can reclaim lane VMs, so renders checkpoint chunk audio and resume on a fr
   - **CosyVoice 3 (0.5B)** - multilingual bi-streaming diffusion architecture with Qwen2 LLM conditioning, ~150ms latency, and `wetext` text normalization.
 - **EdgeTTS** - Microsoft neural voices via the unofficial `edge-tts` client
   and `tts-proxy`. The native Australian voices are Natasha and William. They
-  require internet access. Earlier auditions had acceptable accents and poor
-  pronunciation of Chinese company names. [Listening evidence](VOICES.md).
+  require internet access. Dave rejected Natasha's regional desk takes. William has an earlier
+  quality-floor verdict only. Neither is recommended for high-quality Australian narration. [Listening evidence](VOICES.md).
 
 ### Web Application & Media Delivery
 - **Studio Console Web UI** - modern dark obsidian slate theme with Google Fonts (Plus Jakarta Sans & JetBrains Mono)

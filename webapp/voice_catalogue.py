@@ -12,13 +12,20 @@ from voice_customization import voice_customization_for
 # These are explicit regional listening results, not general narration votes.
 # They describe the cited earlier auditions, regardless of the current preview.
 HEARD_ACCENTS = {
-    # VOICES.md: July Edge accents were acceptable; names still caused trouble.
-    'en-AU-NatashaNeural': ('Australian', 'Earlier Edge audition; Chinese company names sounded wrong.'),
-    'en-AU-WilliamNeural': ('Australian', 'Earlier Edge audition; Chinese company names sounded wrong.'),
     # VOICES.md: the September Breeze auditions on Irish history passages.
     'breeze_cillian_irish': ('Irish', 'Earlier Breeze audition; no verified Studio book route.'),
     # VOICES.md: the October opening and Say Nothing chapter 4.
     'higgs_cillian_irish': ('Irish', 'Dave praised the accent in the Armed Struggle opening and liked the Say Nothing chapter 4 preview. Studio book route uses a GPU lane.'),
+    'fish_cillian_irish': ('Irish', 'Dave called the flat-reference Cillian retry “perfect”. This recipe narrated the delivered Armed Struggle audiobook.'),
+}
+
+# Verdicts apply to the identified recordings. William was never on the desk.
+REGIONAL_LISTENING_NOTES = {
+    'en-AU-NatashaNeural': 'Dave rejected the Australian accent on the November regional desk.',
+    'en-AU-WilliamNeural': 'Earlier audition met a basic quality floor. High-quality Australian narration remains unverified.',
+    'accent_australian_female_nano': 'Keep for general narration. Dave heard no Australian accent.',
+    'zonos3_custom_female_reference_nov27_standard_d49e1465b6c60b73da0aaea6ecffeb7e453f9778f282c2925ee98a6f0d81413b': 'Dave rejected the regional desk recordings as accent performances.',
+    'zonos3_custom_vctk_p374_standard_010de87012bfd138d1ba8eda1fd93aaf1337cb2ca968a1d4f20e544bf1f382d4': 'This take used an Australian speaker as the reference. Dave rejected the desk recordings as accent performances.',
 }
 
 REFERENCE_ENGINES = {'chatterbox', 'chatterbox_nano', 'tada', 'cosyvoice', 'breeze', 'vibevoice', 'fish'}
@@ -45,6 +52,8 @@ def accent_evidence_for(voice_id: str, info: dict) -> dict:
     evidence = {'accent_source': source, 'accent_label': label.removesuffix(' English')}
     if voice_id in HEARD_ACCENTS:
         evidence['heard_accent'], evidence['heard_accent_note'] = HEARD_ACCENTS[voice_id]
+    elif voice_id in REGIONAL_LISTENING_NOTES:
+        evidence['heard_accent_note'] = REGIONAL_LISTENING_NOTES[voice_id]
     return evidence
 
 
@@ -59,7 +68,7 @@ MODEL_GROUPS = (
         'key': 'zonos3', 'title': 'ZONOS3-Mini', 'model': '800M · 100M active',
         'engine': 'zonos3', 'preferred': ('zonos3_imogen_audition',),
         'model_note': 'Dave liked Imogen on the Badawi excerpt. She read 1916 as a cardinal number in Irish history. '
-                      'A WAV upload creates a reusable narrator. Its regional accent needs a listening check.',
+                      'The two Australian-reference voices on the November desk failed the accent test.',
         'book_route': 'Local CPU · Imogen preset and enrolled references.',
     },
     {
@@ -162,7 +171,7 @@ MODEL_GROUPS = (
         'key': 'qwen3_base', 'title': 'Qwen3-TTS', 'model': '1.7B base/reference voice',
         'engine': 'qwen3', 'preferred': ('uk_male_minter_qwen3',),
         'model_note': 'Dave liked the native John Kani take. A separate November Vulkan trial read 1,410 words '
-                      'with the same reference after rebuilding the reference encoder. Its listening verdict is open.',
+                      'with the same reference. Dave rejected the accent on the regional desk.',
         'book_route': 'Integrated; profile is opt-in.',
     },
     {

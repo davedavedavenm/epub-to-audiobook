@@ -55,6 +55,8 @@ test phrasing; they do not imply automatic speaker casting.
   the reference audio and its transcript separately from the text to speak.
   For Kale Base, record the voice pack and Kokoro frontend language.
   GPU Imogen uses the same `zonos3` contract as CPU Imogen.
+- Australian Orpheus receives the source text through `sample_text_for('orpheus_au')`. Its author tokenizes the voice name and supplied prose directly. [Pinned model instructions](https://huggingface.co/ablmontazer/orpheus-australian-en-tts/blob/2ca4be935e33f15484f8d19c7fd4e48e1ad60f24/README.md).
+- The Cape Town VoxCPM-0.5B adapter receives the source through `sample_text_for('voxcpm_za')` and uses the documented native text normalizer. [Pinned adapter instructions](https://huggingface.co/build-small-hackathon/baby-mynah-south-african/blob/94b4586aa3c2aefb3225ef96bfae4dac0b180a43/README.md).
 - OGG TTS 430k receives the source text through `sample_text_for('ogg_tts')`.
   Record the reference audio, its transcript and any neighbouring sentences
   supplied as context separately from the text the model should speak.

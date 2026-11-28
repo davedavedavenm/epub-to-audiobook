@@ -213,7 +213,8 @@ def test_accent_evidence_distinguishes_reference_target_and_listening():
     nano = accent_evidence_for('accent_australian_female_nano', {
         'accent': 'Unclassified', 'reference_accent': 'Australian reference',
     })
-    assert nano == {'accent_source': 'reference', 'accent_label': 'Australian'}
+    assert nano['accent_source'] == 'reference' and nano['accent_label'] == 'Australian'
+    assert 'heard_accent' not in nano and 'no Australian accent' in nano['heard_accent_note']
     assert accent_evidence_for('uk_male_minter', {
         'accent': 'British', 'engine': 'chatterbox',
     }) == {'accent_source': 'reference', 'accent_label': 'British'}
@@ -224,8 +225,11 @@ def test_accent_evidence_distinguishes_reference_target_and_listening():
         'accent': 'Australian', 'liked': True,
     }) == {'accent_source': 'listed', 'accent_label': 'Australian'}
     natasha = accent_evidence_for('en-AU-NatashaNeural', {'accent': 'Australian'})
-    assert natasha['heard_accent'] == 'Australian'
-    assert 'Earlier Edge audition' in natasha['heard_accent_note']
+    assert 'heard_accent' not in natasha and natasha['accent_source'] == 'listed'
+    assert 'rejected' in natasha['heard_accent_note']
+    william = accent_evidence_for('en-AU-WilliamNeural', {'accent': 'Australian'})
+    assert 'heard_accent' not in william and 'unverified' in william['heard_accent_note']
+    assert accent_evidence_for('fish_cillian_irish', {'accent': 'Irish'})['heard_accent'] == 'Irish'
     higgs = accent_evidence_for('higgs_cillian_irish', {'accent': 'Irish', 'engine': 'fish'})
     assert higgs['heard_accent'] == 'Irish'
     assert higgs['accent_source'] == 'reference'

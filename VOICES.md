@@ -2,9 +2,13 @@
 
 ## Finding a regional audiobook narrator
 
-In Studio, open **Voices → Voices by model** and choose the region under **Heard and accepted** to find recordings Dave endorsed for that accent. Voice labels, source references and requested accents have separate filter groups. Native Australian English Natasha and William and the Irish Cillian auditions are useful starting points. Check the book-route label before choosing a narrator. The round-two Nano female clone remains a Keep for general narration.
+In Studio, open **Voices → Voices by model** and choose the region under **Heard and accepted** to find recordings Dave endorsed for that accent. Voice labels, source references and requested accents have separate filter groups. For Irish history, Fish S2 Pro Cillian narrated the delivered book and Higgs Cillian earned a separate positive listening verdict. The November desk supplied no Australian recommendation. Check the book-route label before choosing a narrator. The round-two Nano female clone remains a Keep for general narration.
 
 For a custom narrator, open **Voices → Clone a voice**, choose the engine and upload one clean WAV. ZONOS3 can reuse the resulting speaker embedding across a book. Its upload checks whether the standard preview reached the end. The original reference, a complete preview and a convincing accent answer three different questions. The linked experiment includes the same reference through several engines and an uninterrupted 1,410-word reading. [Accent and GPU chapter tests](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
+
+## 28 November 2026 — Regional listening desk rejected
+
+Dave rejected the accent performances across the regional desk. That includes Natasha and the synthesized regional takes shown there. Retain the source WAV identities, timing results, and general narration scores. William did not appear in the desk. His older acceptable result is below the bar for recommending him as a high-quality Australian narrator. The desk included neither of the Irish Cillian book performances.
 
 ## 28 November 2026 — Third blind CPU round
 
