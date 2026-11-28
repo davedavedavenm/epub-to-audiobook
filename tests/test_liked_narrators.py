@@ -66,6 +66,25 @@ def test_round_two_verdicts_are_bound_to_exact_audio(monkeypatch, tmp_path):
     assert 'no Australian accent' in voices['accent_australian_female_nano']['note']
 
 
+def test_round_three_verdicts_preserve_other_recordings_and_model_variants():
+    voices = all_voices()
+    expected = {
+        'phonon_freya': ('Keep', '0fcb8c57dc9a7b8a31a369779f1fac03d91620f6f87f7cc931e60d28346baf22'),
+        'silencio2_peter': ('Retire', '92568a69e30a5b0bf137f3c6565ac8d8cfae9162f22ab8d31e6cb492ec5b85e0'),
+        'uk_female_golding': ('Keep', 'b5529f1ddfd85a45fe3e99054cb9e67ea504a913d904278958a1f56ead36ab63'),
+        'bm_george': ('Keep', 'c5861f4c53fa7f0b61a26977c905d535335d7974a03a6fc3c97ae68902020d70'),
+    }
+    for voice_id, (verdict, audio_hash) in expected.items():
+        assert voices[voice_id]['catalogue_status'] == verdict
+        assert voices[voice_id]['liked'] is (verdict == 'Keep')
+        assert voices[voice_id]['rated_sample_id'] == 'narrator-standard-v1'
+        assert voices[voice_id]['rated_audio_sha256'] == audio_hash
+
+    assert 'blocking pronunciation issues' in voices['uk_female_golding']['note']
+    assert voices['pocket4_peter_yearsley']['liked'] is True
+    assert not voices['uk_female_golding_nano'].get('catalogue_status')
+
+
 def test_voice_catalogue_has_compact_groups_and_shared_sample_details():
     template_path = Path(__file__).resolve().parents[1] / 'webapp' / 'templates' / 'index.html'
     template = template_path.read_text(encoding='utf-8')

@@ -799,6 +799,22 @@ _ROUND_TWO_VERDICTS = {
 }
 for _voice_id in _ROUND_TWO_VERDICTS.keys() & VOICES.keys():
     VOICES[_voice_id] = {**VOICES[_voice_id], **_ROUND_TWO_VERDICTS[_voice_id]}
+for _voice_id, _audio_hash, _verdict, _note in (
+    ('phonon_freya', '0fcb8c57dc9a7b8a31a369779f1fac03d91620f6f87f7cc931e60d28346baf22', 'Keep',
+     'Natural. Dave marked pronunciation Clean and flagged the reading of kilometres in his notes.'),
+    ('silencio2_peter', '92568a69e30a5b0bf137f3c6565ac8d8cfae9162f22ab8d31e6cb492ec5b85e0', 'Retire',
+     'Dave voted Retire and left narration and pronunciation unrated. He found an earlier Peter audition tiresome.'),
+    ('uk_female_golding', 'b5529f1ddfd85a45fe3e99054cb9e67ea504a913d904278958a1f56ead36ab63', 'Keep',
+     'Usable narration with blocking pronunciation issues. Dave heard “12 of marz”, flagged the currency and questioned whether the final date was read as 23 April.'),
+    ('bm_george', 'c5861f4c53fa7f0b61a26977c905d535335d7974a03a6fc3c97ae68902020d70', 'Keep',
+     'Usable narration with minor pronunciation issues. Dave flagged Chinese pronunciation and poor intonation.'),
+):
+    VOICES[_voice_id] = {
+        **VOICES[_voice_id],
+        'catalogue_status': _verdict, 'liked': _verdict == 'Keep',
+        'rating_date': '2026-11-28', 'rated_sample_id': 'narrator-standard-v1',
+        'rated_audio_sha256': _audio_hash, 'note': f'Round 3: {_note}',
+    }
 VOICES['kitten2_john_kani_audition'] = {
     'name': 'John Kani reference (AI clone)', 'accent': 'South African reference',
     'gender': 'Male', 'engine': 'audition', 'audition_only': True,

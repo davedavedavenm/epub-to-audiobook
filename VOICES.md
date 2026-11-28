@@ -6,6 +6,32 @@ In Studio, open **Voices → Voices by model** and choose the region under **Hea
 
 For a custom narrator, open **Voices → Clone a voice**, choose the engine and upload one clean WAV. ZONOS3 can reuse the resulting speaker embedding across a book. Its upload checks whether the standard preview reached the end. The original reference, a complete preview and a convincing accent answer three different questions. The linked experiment includes the same reference through several engines and an uninterrupted 1,410-word reading. [Accent and GPU chapter tests](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
 
+## 28 November 2026 — Third blind CPU round
+
+Dave voted Keep for Freya, Harriet and George and Retire for Silencio 2
+Peter Yearsley. The screenshot records the ratings below. The local player
+and its manifest establish the letter-to-voice mapping. Each embedded MP3
+matches the original file and decoded through the end.
+
+| Voice | Narration | Pronunciation | Decision | Listening notes |
+|---|---|---|---|---|
+| A · Freya, Phonon 31M | Natural | Clean | Keep | Dave flagged the pronunciation of kilometres in his notes. |
+| B · Peter Yearsley, Silencio 2 | Unrated | Unrated | Retire | No notes. The earlier Silencio 2 Peter take also received a negative verdict. |
+| C · Harriet, Chatterbox Turbo | Usable | Blocking issues | Keep | Dave heard “12 of marz”, flagged the currency and questioned whether the final date was read as 23 April. |
+| D · George, Kokoro | Usable | Minor issues | Keep | Dave flagged Chinese pronunciation and poor intonation. |
+
+Keep and Retire apply to these Shared Test v1 recordings. The Silencio 2
+Peter recording remains available for comparison. The Pocket 4 Peter verdict
+remains in its own listening history. Harriet's Keep records a preference for
+the voice alongside the blocking issues in this passage.
+
+| Voice ID | Prepared-text SHA-256 | MP3 SHA-256 |
+|---|---|---|
+| `phonon_freya` | `d13e1b48bdbfb5ed60fab3736f7287b71ffc6a7418955ca976cb1fc7092e77c9` | `0fcb8c57dc9a7b8a31a369779f1fac03d91620f6f87f7cc931e60d28346baf22` |
+| `silencio2_peter` | `d13e1b48bdbfb5ed60fab3736f7287b71ffc6a7418955ca976cb1fc7092e77c9` | `92568a69e30a5b0bf137f3c6565ac8d8cfae9162f22ab8d31e6cb492ec5b85e0` |
+| `uk_female_golding` | `74de152cc1ed27890fbbcabc88f26d5cf360953e64e70a5d56d897ff1ceb0ee9` | `b5529f1ddfd85a45fe3e99054cb9e67ea504a913d904278958a1f56ead36ab63` |
+| `bm_george` | `447286b994ee94f9cdd67e0109d0cc71d2b616ce120034409bf208b738d2b553` | `c5861f4c53fa7f0b61a26977c905d535335d7974a03a6fc3c97ae68902020d70` |
+
 ## 27 November 2026 — Second blind CPU round
 
 Dave marked all four Shared Test v1 recordings Natural and voted Keep. He
