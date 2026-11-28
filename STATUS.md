@@ -4,6 +4,8 @@
 
 Dave rejected the accent performances on the regional desk. The timing and text-coverage measurements below still describe those recordings. The Australian accent shortlist from that desk is empty. Fish S2 Pro Cillian and Higgs Cillian have separate, positive Irish audiobook evidence. [Exact scope and CPU round three](VOICES.md#28-november-2026--regional-listening-desk-rejected).
 
+Studio revision `ac4b40f` served all four round-three verdicts against the exact audio hashes. In a live browser the Irish filter showed Fish, Higgs and Breeze Cillian. The Australian provider entries retained their listening notes and the accepted filter contained no Australian entry. Both Irish book previews decoded through the end. The API reported 178 of 178 configured previews cached. [Subsequent Australian and South African trials](evaluations/new-engines/REGIONAL-NARRATORS-2026-11-28.md).
+
 ## 28 November 2026 — OGG TTS chapter trial
 
 The 430k checkpoint rendered all 60 requests for the same 1,410-word chapter on a free T4. FP32 produced 7:40 of audio in 34:44 of synthesis. The plain prose had 0.64% normalized word error rate on unprompted Whisper base.en. Dates and currency in the shared challenge produced substantially more disagreements. OGG is an audition candidate. The listening desk now contains this chapter alongside the ZONOS3, Qwen, VoxCPM2 and Edge readings. [Measurements and sources](evaluations/new-engines/ACCENT-GPU-2026-11-27.md).
